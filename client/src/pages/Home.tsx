@@ -7,7 +7,6 @@ import { Tech } from "@/components/sections/Tech";
 import { About } from "@/components/sections/About";
 import { Contact } from "@/components/sections/Contact";
 import { WhatsAppButton } from "@/components/ui/whatsapp-button";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 export default function Home() {
   return (
@@ -23,7 +22,6 @@ export default function Home() {
       </main>
       <Footer />
       <WhatsAppButton />
-      <ThemeSwitcher />
     </div>
   );
 }

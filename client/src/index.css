@@ -33,36 +33,10 @@
 }
 
 /* 
-  DEFAULT THEME: "Trust & Tech" (Blue/Green) 
-*/
-:root {
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 152 76% 36%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221 83% 53%;
-  --radius: 0.5rem;
-}
-
-/* 
-  THEME: "Future Violet" (Vibrant Purple/Pink)
+  DEFAULT THEME: "Future Violet" (Vibrant Purple/Pink)
   Modern, tech-focused, premium gradient feel.
 */
-[data-theme="violet"] {
+:root {
   --background: 260 20% 99%;
   --foreground: 260 40% 15%;
   --card: 0 0% 100%;
@@ -81,56 +55,6 @@
   --input: 260 20% 90%;
   --ring: 270 70% 55%;
   --radius: 0.75rem;
-}
-
-/* 
-  THEME: "Electric Magenta" (Dark/Neon)
-  Bold, disruptive, high-energy.
-*/
-[data-theme="magenta"] {
-  --background: 280 40% 8%; /* Deep Purple/Black */
-  --foreground: 280 10% 98%;
-  --card: 280 35% 12%;
-  --card-foreground: 280 10% 98%;
-  --popover: 280 35% 12%;
-  --popover-foreground: 280 10% 98%;
-  --primary: 310 90% 55%; /* Neon Magenta */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 260 100% 65%; /* Electric Purple */
-  --secondary-foreground: 0 0% 100%;
-  --muted: 280 30% 20%;
-  --muted-foreground: 280 15% 70%;
-  --accent: 310 90% 15%;
-  --accent-foreground: 310 90% 65%;
-  --border: 280 30% 20%;
-  --input: 280 30% 20%;
-  --ring: 310 90% 55%;
-  --radius: 0rem;
-}
-
-/* 
-  THEME: "Soft Lavender" (Pastel/Approachable)
-  Friendly, easy, consumer-focused.
-*/
-[data-theme="lavender"] {
-  --background: 280 20% 99%;
-  --foreground: 270 10% 30%;
-  --card: 0 0% 100%;
-  --card-foreground: 270 10% 30%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 270 10% 30%;
-  --primary: 260 50% 65%; /* Soft Lavender */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 340 60% 75%; /* Soft Pink */
-  --secondary-foreground: 0 0% 100%;
-  --muted: 270 10% 96%;
-  --muted-foreground: 270 10% 60%;
-  --accent: 260 30% 97%;
-  --accent-foreground: 260 50% 50%;
-  --border: 270 10% 92%;
-  --input: 270 10% 92%;
-  --ring: 260 50% 65%;
-  --radius: 1rem;
 }
 
 .dark {

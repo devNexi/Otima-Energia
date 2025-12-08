@@ -1,0 +1,62 @@
+Animation Brief: "Market Layer Reveal" - Condensed 8-Second Version
+Project: Ótima Energia Homepage Hero Animation
+Concept: MARKET LAYER REVEAL (Light Theme)
+Duration: 6-8 seconds total (seamless loop)
+Goal: Create a minimal, striking background video that communicates transparency, market intelligence, and savings.
+
+VISUAL SEQUENCE (6-8 Second Loop)
+0-1s: OPAQUE MARKET
+• Clean light gradient background (#f8fafc to #ffffff)
+• "Fog layer" of muted, tangled data lines in soft grey (represents market opacity)
+
+1-3s: THE REVEAL
+• Sharp cyan line (#00f5d4) sweeps left-to-right
+• Fog dissolves cleanly where line passes (vapor/signal wave effect)
+• Reveals organized data landscape beneath: minimalist Brazil map outline with glowing price bars
+
+3-5s: DATA LANDSCAPE
+• Clean grid of vertical bars in cyan-blue gradient (varying heights = price variations)
+• Bars pulse gently with data energy
+• Camera subtly zooms toward a business location
+
+5-7s: SAVINGS MOMENT
+• One shorter bar highlights with green pulse (#00ff9d)
+• Portion of bar elegantly fades/dissolves (representing savings)
+• Subtle "+XX%" indicator appears briefly
+
+7-8s: RESET
+• Smooth zoom back to original position
+• Fog layer gently reforms
+• Seamless loop restart
+
+CRITICAL SPECIFICATIONS
+Brand Colors:
+• Primary Intelligence: Electric Cyan (#00f5d4)
+• Savings Highlight: Energy Green (#00ff9d)
+• Data/Maps: Cool greys (#e2e8f0 range)
+• Background: Light (#f8fafc to #ffffff)
+
+Style Guidelines:
+• Minimal & Elegant - Every movement has purpose
+• Light theme throughout - Contrast via data visuals, not dark backgrounds
+• Smooth, intelligent motion - No jerkiness, feels premium
+• Clean typography-ready - Animation supports text overlay without distraction
+
+Technical Requirements:
+• Duration: 6-8 seconds total loop
+• Format: MP4 + WebM (optimized for web)
+• Size: Under 2MB
+• Resolution: 1920x1080 minimum
+• Performance: 60fps if possible, seamless loop
+• Overlay-ready: Ensure text remains readable
+
+INSPIRATION & MOOD
+Think: "Apple data reveal" meets "light-themed fintech dashboard"
+• Clean, corporate, but innovative
+• Sophisticated data visualization
+• Intelligent movement that feels like a precision tool
+• The moment of clarity when confusion disappears
+
+Final Feeling: "This company sees what others can't. They'll find my savings in the noise."
+
+Deliverable: One 6-8 second looping video file (MP4+WebM) that works as a homepage background with text overlay.

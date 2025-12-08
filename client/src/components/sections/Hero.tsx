@@ -1,18 +1,22 @@
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroBg from "@assets/generated_images/hero_background_with_brazilian_city_and_energy_data_lines.png";
+import heroVideo from "@assets/generated_videos/minimalist_data_reveal_animation_with_map_of_brazil_and_savings_pulse.mp4";
 
 export function Hero() {
   return (
     <section className="relative min-h-[90vh] flex items-center pt-20 overflow-hidden">
       {/* Background with Overlay */}
       <div className="absolute inset-0 z-0">
-        <img
-          src={heroBg}
-          alt="Modern Sustainable City"
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
           className="w-full h-full object-cover"
-        />
+        >
+          <source src={heroVideo} type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
       </div>
