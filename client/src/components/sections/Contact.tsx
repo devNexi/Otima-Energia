@@ -67,7 +67,7 @@ export function Contact() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Localização</p>
-                  <p className="font-medium">São Paulo, SP</p>
+                  <p className="font-medium">Helios Seelinger, 155 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-040</p>
                 </div>
               </div>
             </div>

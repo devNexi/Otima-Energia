@@ -40,7 +40,7 @@ export function Footer() {
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
           <p>&copy; {new Date().getFullYear()} Ótima Energia. Todos os direitos reservados.</p>
           <div className="flex gap-4">
-            <span>São Paulo, Brasil</span>
+            <span>Rio de Janeiro, Brasil</span>
           </div>
         </div>
       </div>
