@@ -34,7 +34,6 @@
 
 /* 
   DEFAULT THEME: "Trust & Tech" (Blue/Green) 
-  Corporate, safe, established.
 */
 :root {
   --background: 210 20% 98%;
@@ -60,82 +59,80 @@
 }
 
 /* 
-  THEME: "Solar Vitality" (Orange/Charcoal)
-  Disruptive, energetic, warm, consumer-friendly (Fintech vibe).
+  THEME: "Future Violet" (Vibrant Purple/Pink)
+  Modern, tech-focused, premium gradient feel.
 */
-[data-theme="solar"] {
-  --background: 40 20% 99%;
-  --foreground: 220 13% 18%;
+[data-theme="violet"] {
+  --background: 260 20% 99%;
+  --foreground: 260 40% 15%;
   --card: 0 0% 100%;
-  --card-foreground: 220 13% 18%;
+  --card-foreground: 260 40% 15%;
   --popover: 0 0% 100%;
-  --popover-foreground: 220 13% 18%;
-  --primary: 25 95% 53%; /* Solar Orange */
+  --popover-foreground: 260 40% 15%;
+  --primary: 270 70% 55%; /* Vibrant Purple */
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 13% 18%; /* Deep Charcoal */
+  --secondary: 330 80% 60%; /* Hot Pink */
   --secondary-foreground: 0 0% 100%;
-  --muted: 40 20% 96%;
-  --muted-foreground: 220 10% 45%;
-  --accent: 25 95% 96%;
-  --accent-foreground: 25 95% 40%;
-  --border: 220 10% 90%;
-  --input: 220 10% 90%;
-  --ring: 25 95% 53%;
-  --radius: 0.75rem; /* Softer, friendlier corners */
+  --muted: 260 20% 96%;
+  --muted-foreground: 260 20% 50%;
+  --accent: 270 20% 96%;
+  --accent-foreground: 270 70% 40%;
+  --border: 260 20% 90%;
+  --input: 260 20% 90%;
+  --ring: 270 70% 55%;
+  --radius: 0.75rem;
 }
 
 /* 
-  THEME: "Eco Minimal" (Teal/Sage/Clean)
-  Sustainable, airy, lightweight, transparent.
+  THEME: "Electric Magenta" (Dark/Neon)
+  Bold, disruptive, high-energy.
 */
-[data-theme="eco"] {
-  --background: 180 20% 99%;
-  --foreground: 180 40% 20%;
-  --card: 0 0% 100%;
-  --card-foreground: 180 40% 20%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 180 40% 20%;
-  --primary: 170 70% 35%; /* Deep Teal */
+[data-theme="magenta"] {
+  --background: 280 40% 8%; /* Deep Purple/Black */
+  --foreground: 280 10% 98%;
+  --card: 280 35% 12%;
+  --card-foreground: 280 10% 98%;
+  --popover: 280 35% 12%;
+  --popover-foreground: 280 10% 98%;
+  --primary: 310 90% 55%; /* Neon Magenta */
   --primary-foreground: 0 0% 100%;
-  --secondary: 140 30% 60%; /* Soft Sage */
-  --secondary-foreground: 180 40% 10%;
-  --muted: 180 20% 97%;
-  --muted-foreground: 180 20% 50%;
-  --accent: 170 30% 96%;
-  --accent-foreground: 170 70% 30%;
-  --border: 180 20% 90%;
-  --input: 180 20% 90%;
-  --ring: 170 70% 35%;
-  --radius: 0.25rem; /* Sharp, precise corners */
-}
-
-/* 
-  THEME: "Neon Future" (Dark Mode/Lime)
-  High-tech, algorithmic, premium, data-heavy.
-*/
-[data-theme="neon"] {
-  --background: 222 47% 11%; /* Deep Navy */
-  --foreground: 210 40% 98%;
-  --card: 222 47% 14%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 47% 14%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 80 100% 50%; /* Electric Lime */
-  --primary-foreground: 222 47% 11%;
   --secondary: 260 100% 65%; /* Electric Purple */
   --secondary-foreground: 0 0% 100%;
-  --muted: 223 47% 20%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 80 100% 10%;
-  --accent-foreground: 80 100% 50%;
-  --border: 223 47% 20%;
-  --input: 223 47% 20%;
-  --ring: 80 100% 50%;
-  --radius: 0rem; /* Strictly rectangular */
+  --muted: 280 30% 20%;
+  --muted-foreground: 280 15% 70%;
+  --accent: 310 90% 15%;
+  --accent-foreground: 310 90% 65%;
+  --border: 280 30% 20%;
+  --input: 280 30% 20%;
+  --ring: 310 90% 55%;
+  --radius: 0rem;
 }
 
-/* Maintain Dark Mode override support for standard dark class if needed, 
-   but our themes handle colors explicitly */
+/* 
+  THEME: "Soft Lavender" (Pastel/Approachable)
+  Friendly, easy, consumer-focused.
+*/
+[data-theme="lavender"] {
+  --background: 280 20% 99%;
+  --foreground: 270 10% 30%;
+  --card: 0 0% 100%;
+  --card-foreground: 270 10% 30%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 270 10% 30%;
+  --primary: 260 50% 65%; /* Soft Lavender */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 340 60% 75%; /* Soft Pink */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 270 10% 96%;
+  --muted-foreground: 270 10% 60%;
+  --accent: 260 30% 97%;
+  --accent-foreground: 260 50% 50%;
+  --border: 270 10% 92%;
+  --input: 270 10% 92%;
+  --ring: 260 50% 65%;
+  --radius: 1rem;
+}
+
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;

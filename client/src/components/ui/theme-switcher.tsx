@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Palette, Sun, Leaf, Zap, Check } from "lucide-react";
+import { Palette, Zap, Sparkles, Heart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,31 +13,31 @@ import {
 const themes = [
   {
     id: "default",
-    name: "Trust & Tech",
+    name: "Original Trust",
     description: "Corporate Blue & Green. Safe, established.",
-    icon: Sun,
-    color: "bg-[#2563EB]", // Blue-600
+    icon: Palette,
+    color: "bg-[#2563EB]", // Blue
   },
   {
-    id: "solar",
-    name: "Solar Vitality",
-    description: "Vibrant Orange. Disruptive, warm, energetic.",
+    id: "violet",
+    name: "Future Violet",
+    description: "Vibrant Purple & Pink. Modern tech feel.",
     icon: Zap,
-    color: "bg-[#F97316]", // Orange-500
+    color: "bg-[#8B5CF6]", // Purple
   },
   {
-    id: "eco",
-    name: "Eco Minimal",
-    description: "Teal & Sage. Clean, airy, sustainable.",
-    icon: Leaf,
-    color: "bg-[#0D9488]", // Teal-600
+    id: "magenta",
+    name: "Electric Magenta",
+    description: "Dark mode with Neon Pink. Bold & Disruptive.",
+    icon: Sparkles,
+    color: "bg-[#EC4899]", // Pink
   },
   {
-    id: "neon",
-    name: "Neon Future",
-    description: "Dark Mode & Lime. High-tech, data-driven.",
-    icon: Zap,
-    color: "bg-[#84CC16]", // Lime-500
+    id: "lavender",
+    name: "Soft Lavender",
+    description: "Pastel Purple & Pink. Friendly & Approachable.",
+    icon: Heart,
+    color: "bg-[#D8B4FE]", // Lavender
   },
 ];
 
@@ -55,8 +55,8 @@ export function ThemeSwitcher() {
       root.setAttribute("data-theme", currentTheme);
     }
 
-    // Special handling for neon (forces dark mode behavior)
-    if (currentTheme === "neon") {
+    // Special handling for magenta (forces dark mode behavior)
+    if (currentTheme === "magenta") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
