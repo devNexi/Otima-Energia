@@ -1,0 +1,172 @@
+Website Design Brief: Ótima Energia
+To: Replit Design Team
+Project: Ótima Energia Corporate Website
+Timeline: 2–3 weeks for design + development
+Reference: [Business Plan PDF]
+
+1. PROJECT OVERVIEW
+We are building Ótima Energia, a high-performance, tech-augmented energy brokerage launching in Brazil’s newly deregulated electricity market. We are not a traditional broker—we are a data-driven, transparency-first company that uses AI and automation to deliver the best prices and service to business clients.
+
+The website must reflect:
+
+Professionalism & Trust (financial/energy sector)
+
+Modern Tech-Forward vibe (AI, automation, data intelligence)
+
+Brazilian market context (local credibility, Portuguese language)
+
+Target Audience:
+
+Brazilian business owners & facility managers (SMEs → large industrials)
+
+Energy procurement officers
+
+Potential commercial partners & investors
+
+2. BRAND IDENTITY & TONE
+Name: Ótima Energia (“Excellent Energy” in Portuguese)
+
+Tagline: “Transparência, tecnologia e o melhor preço.” (Transparency, technology, and the best price.)
+
+Tone: Confident, clear, innovative, trustworthy, slightly disruptive.
+
+Key Message: We use technology to remove opacity from energy buying, guaranteeing you the best market price with minimal effort.
+
+Visual Direction:
+
+Clean, professional, corporate but not stale
+
+Use of blue (trust, energy), green (sustainability), and tech accents (data visualizations, sleek UI elements)
+
+High-quality imagery: modern Brazilian cityscapes, businesses, clean energy visuals, data dashboards (conceptual)
+
+3. WEBSITE STRUCTURE (PAGES)
+Homepage
+Hero section: Strong headline + subheadline in Portuguese
+
+Value prop: “How we guarantee you the best price” (3–4 icons/points: AI-driven comparison, supplier network, transparency, no hassle)
+
+Simple lead form: “Get your free quote now” (UC code/upload bill)
+
+Trust signals: ANEEL/CCEE badges, “Data-secure”
+
+Brief intro to team/leadership (Callum & Renan photos + titles)
+
+How It Works (Como Funciona)
+Step-by-step visual process:
+
+You share your bill/UC code
+
+Our AI scans the entire market
+
+We present the best 3 options (clear comparison table)
+
+You choose, we handle the switch
+
+Emphasize no cost to client (we are paid by suppliers)
+
+For Businesses (Para Empresas)
+Segmented: SMEs vs. Large Industrials
+
+Case studies/testimonials (placeholder for now)
+
+Benefits: cost reduction, time saved, contract clarity
+
+Transparency & Technology (Transparência & Tecnologia)
+Explain our tech edge: AI, automation, supplier APIs
+
+Our pricing transparency promise: no hidden margins
+
+Data security & compliance
+
+About Us (Quem Somos)
+Mission: To modernize Brazil’s energy market
+
+Team bios: Callum (UK tech/strategy), Renan (Brazil ops/network)
+
+Company backstory: Part of ACR Group, building future market infrastructure
+
+Contact (Contato)
+Contact form
+
+Email: contato@otimaenergia.com.br
+
+WhatsApp business link (critical for Brazil)
+
+Office location (São Paulo/remote)
+
+4. FUNCTIONAL REQUIREMENTS
+Core Features:
+Lead Capture Form: Simple form for UC code/consumption details + file upload for energy bill
+
+WhatsApp Integration: Prominent WhatsApp Business button (floating)
+
+Bilingual Support: Portuguese primary, English toggle (for investors/partners)
+
+Mobile-First: Must work perfectly on mobile (high mobile usage in Brazil)
+
+Fast Loading: Optimized for Brazilian internet speeds
+
+SEO-Ready: Structure for Brazilian search terms (“trocar fornecedor de energia empresarial,” “melhor preço energia mercado livre”)
+
+Nice-to-Have (Phase 1):
+Live chat (Drift/Crisp)
+
+Interactive savings calculator
+
+Blog section (for SEO/content marketing)
+
+5. TECHNICAL SPECS
+Framework: Next.js or similar (fast, SEO-friendly)
+
+Hosting: Vercel or AWS São Paulo region
+
+CMS: Simple (Sanity.io or WordPress headless) for easy updates
+
+Domain: otimaenergia.com.br
+
+Security: SSL, GDPR/LGPD compliant forms
+
+6. CONTENT & ASSETS WE’LL PROVIDE
+Logo (to be designed—clean, modern, typographic)
+
+Team photos
+
+Portuguese copy (we will translate)
+
+Compliance badges (ANEEL/CCEE)
+
+Brand colors/fonts (TBD)
+
+7. SUCCESS METRICS
+Conversion rate: Form submissions + WhatsApp contacts
+
+Time on site / engagement
+
+Mobile performance
+
+SEO ranking for target keywords within 3 months
+
+8. TIMELINE & BUDGET
+Phase 1: Design + core pages (Home, How It Works, Contact) – 2 weeks
+
+Phase 2: Remaining pages + SEO setup – 1 week
+
+Launch: End of Week 3
+
+Budget: To be quoted by Replit team
+
+9. INSPIRATION & REFERENCES
+Look/Feel Inspo:
+
+Modern fintech/brokerage sites (Nubank, Warren, digital banks)
+
+B2B service platforms (Deel, Rippling)
+
+Clean energy/tech companies
+
+Competitors to Avoid:
+
+Outdated Brazilian broker sites (cluttered, slow, non-transparent)
+
+Overly corporate utility websites
