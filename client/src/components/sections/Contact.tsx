@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 
 const formSchema = z.object({
   name: z.string().min(2, "Nome é obrigatório"),
@@ -30,13 +31,39 @@ export function Contact() {
     },
   });
 
+  const submitLead = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação enviada!",
+        description: "Um de nossos especialistas entrará em contato em breve.",
+      });
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    toast({
-      title: "Solicitação enviada!",
-      description: "Um de nossos especialistas entrará em contato em breve.",
-    });
-    form.reset();
+    submitLead.mutate(values);
   }
 
   return (
@@ -94,7 +121,7 @@ export function Contact() {
                         <FormItem>
                           <FormLabel>Nome Completo</FormLabel>
                           <FormControl>
-                            <Input placeholder="Seu nome" {...field} />
+                            <Input placeholder="Seu nome" data-testid="input-name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -107,7 +134,7 @@ export function Contact() {
                         <FormItem>
                           <FormLabel>Telefone / WhatsApp</FormLabel>
                           <FormControl>
-                            <Input placeholder="(11) 99999-9999" {...field} />
+                            <Input placeholder="(21) 99999-9999" data-testid="input-phone" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -122,7 +149,7 @@ export function Contact() {
                       <FormItem>
                         <FormLabel>Email Corporativo</FormLabel>
                         <FormControl>
-                          <Input placeholder="voce@empresa.com.br" {...field} />
+                          <Input placeholder="voce@empresa.com.br" data-testid="input-email" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -136,7 +163,7 @@ export function Contact() {
                       <FormItem>
                         <FormLabel>Nome da Empresa</FormLabel>
                         <FormControl>
-                          <Input placeholder="Sua empresa" {...field} />
+                          <Input placeholder="Sua empresa" data-testid="input-company" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -153,6 +180,7 @@ export function Contact() {
                           <Textarea 
                             placeholder="Conte-nos sobre seu consumo de energia atual..." 
                             className="resize-none min-h-[100px]"
+                            data-testid="input-message"
                             {...field} 
                           />
                         </FormControl>
@@ -161,8 +189,13 @@ export function Contact() {
                     )}
                   />
 
-                  <Button type="submit" className="w-full text-lg h-12">
-                    Solicitar Orçamento Grátis
+                  <Button 
+                    type="submit" 
+                    className="w-full text-lg h-12"
+                    disabled={submitLead.isPending}
+                    data-testid="button-submit-lead"
+                  >
+                    {submitLead.isPending ? "Enviando..." : "Solicitar Orçamento Grátis"}
                   </Button>
                 </form>
               </Form>
