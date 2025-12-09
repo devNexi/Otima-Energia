@@ -13,31 +13,36 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-foreground text-white py-16">
-      <div className="container-dcvc">
+    <footer className="bg-gray-900 text-white py-16">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div className="md:col-span-2">
             <button 
               onClick={() => handleScroll("#top")}
-              className="text-2xl font-bold tracking-tight mb-4 block hover:opacity-80 transition-opacity"
+              className="flex items-center gap-3 mb-6 hover:opacity-80 transition-opacity"
             >
-              ÓTIMA ENERGIA
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
+                Ó
+              </div>
+              <span className="text-xl font-bold tracking-tight">
+                Ótima Energia
+              </span>
             </button>
-            <p className="text-white/60 max-w-md leading-relaxed">
+            <p className="text-gray-400 max-w-md leading-relaxed">
               Transformando a forma como empresas brasileiras compram energia. 
-              Transparência, tecnologia e economia garantida.
+              Transparência, tecnologia e economia garantida no Mercado Livre de Energia.
             </p>
           </div>
 
-          {/* Links */}
+          {/* Navigation */}
           <div>
-            <h4 className="font-semibold mb-4 text-white/90">Navegação</h4>
-            <ul className="space-y-3">
+            <h4 className="font-semibold mb-6 text-white">Navegação</h4>
+            <ul className="space-y-4">
               <li>
                 <button 
                   onClick={() => handleScroll("#process")}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   Como Funciona
                 </button>
@@ -45,7 +50,7 @@ export function Footer() {
               <li>
                 <button 
                   onClick={() => handleScroll("#business")}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   Para Empresas
                 </button>
@@ -53,7 +58,7 @@ export function Footer() {
               <li>
                 <button 
                   onClick={() => handleScroll("#contact")}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   Contato
                 </button>
@@ -63,22 +68,23 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold mb-4 text-white/90">Contato</h4>
-            <ul className="space-y-3 text-white/60">
+            <h4 className="font-semibold mb-6 text-white">Contato</h4>
+            <ul className="space-y-4 text-gray-400">
               <li>contato@otimaenergia.com.br</li>
-              <li>São Paulo, Brasil</li>
+              <li>(21) 99999-9999</li>
+              <li>Rio de Janeiro, Brasil</li>
             </ul>
           </div>
         </div>
 
         {/* Bottom */}
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-white/40 text-sm">
+        <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-gray-500 text-sm">
             © {currentYear} Ótima Energia. Todos os direitos reservados.
           </p>
-          <div className="flex gap-6 text-sm text-white/40">
-            <span>Privacidade</span>
-            <span>Termos</span>
+          <div className="flex gap-6 text-sm text-gray-500">
+            <span className="hover:text-white cursor-pointer transition-colors">Privacidade</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Termos</span>
           </div>
         </div>
       </div>
