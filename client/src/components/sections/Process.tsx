@@ -1,64 +1,61 @@
 import { motion } from "framer-motion";
-import { Search, BarChart3, FileCheck, ArrowRight } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { FileText, Search, CheckCircle } from "lucide-react";
 
 const steps = [
   {
-    icon: FileCheck,
+    number: "01",
+    icon: FileText,
     title: "Envie sua conta",
-    description: "Basta compartilhar sua fatura atual ou código UC. Nossa IA analisa seu perfil de consumo instantaneamente.",
-    color: "bg-blue-100 text-blue-600",
+    description: "Compartilhe sua fatura atual. Nossa tecnologia analisa seu perfil de consumo instantaneamente.",
   },
   {
+    number: "02",
     icon: Search,
-    title: "Nós buscamos o melhor preço",
-    description: "Nossa tecnologia varre todo o mercado livre para encontrar as melhores ofertas de fornecedores certificados.",
-    color: "bg-green-100 text-green-600",
+    title: "Buscamos o melhor preço",
+    description: "Varremos todo o mercado livre para encontrar as melhores ofertas de fornecedores certificados.",
   },
   {
-    icon: BarChart3,
+    number: "03",
+    icon: CheckCircle,
     title: "Você escolhe e economiza",
-    description: "Apresentamos as 3 melhores opções. Você escolhe, e nós cuidamos de toda a burocracia da migração.",
-    color: "bg-purple-100 text-purple-600",
+    description: "Apresentamos as melhores opções. Você escolhe, e nós cuidamos de toda a migração.",
   },
 ];
 
 export function Process() {
   return (
-    <section id="process" className="py-24 bg-muted/30">
-      <div className="container mx-auto px-6">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Como funciona a <span className="text-primary">Ótima Energia</span>
+    <section id="process" className="section-spacing bg-muted">
+      <div className="container-dcvc">
+        <div className="max-w-3xl mb-16">
+          <h2 className="mb-6">
+            Como funciona a <span className="text-gradient">Ótima Energia</span>
           </h2>
-          <p className="text-lg text-muted-foreground">
-            Simplificamos o processo complexo de migração para o Mercado Livre de Energia. Sem taxas escondidas, sem burocracia.
+          <p className="text-xl text-muted-foreground">
+            Simplificamos o processo complexo de migração para o Mercado Livre de Energia. 
+            Sem taxas escondidas, sem burocracia.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connecting Line (Desktop) */}
-          <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-blue-200 via-green-200 to-purple-200 -z-10" />
-
+        <div className="grid md:grid-cols-3 gap-8">
           {steps.map((step, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.2, duration: 0.5 }}
+              transition={{ delay: index * 0.15, duration: 0.5 }}
               viewport={{ once: true }}
+              className="card-dcvc"
             >
-              <Card className="h-full border-none shadow-lg hover:shadow-xl transition-shadow bg-background relative overflow-hidden group">
-                <CardContent className="p-8 flex flex-col items-center text-center h-full">
-                  <div className={`w-16 h-16 rounded-2xl ${step.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <step.icon className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {step.description}
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="flex items-center gap-4 mb-6">
+                <span className="text-4xl font-bold text-primary/20">{step.number}</span>
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <step.icon className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+              <h3 className="mb-3">{step.title}</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {step.description}
+              </p>
             </motion.div>
           ))}
         </div>

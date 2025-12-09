@@ -1,0 +1,95 @@
+DCVC Structure Implementation - Purple/Pink Theme as Placeholder
+
+Perfect! Thank you for fixing those critical issues. Now let's proceed with the structure and layout overhaul using https://www.dcvc.com/ as our reference.
+
+Important Context:
+We ARE keeping purple/pink theme - but as placeholders that can be easily adjusted
+
+Final brand colors may vary slightly - so make everything CSS-variable based
+
+Focus on STRUCTURE and LAYOUT - matching DCVC's exact spacing, typography, and components
+
+1. Core Instructions:
+Redesign the entire Ótima Energia website to match DCVC's exact layout, typography hierarchy, and component structure, using our purple/pink color palette as placeholders.
+
+2. Color Theme (Our Purple/Pink - Keep This):
+css
+:root {
+  /* ÓTIMA ENERGIA PURPLE/PINK THEME - as placeholders */
+  --primary-purple: #6B46C1;    /* Main brand color */
+  --secondary-pink: #D53F8C;    /* Accent color */
+  --dark-purple: #553C9A;       /* Hover/dark states */
+  
+  /* Neutrals (keep like DCVC) */
+  --white: #FFFFFF;
+  --light-gray: #F7FAFC;
+  --dark-gray: #2D3748;
+  --border-gray: #E2E8F0;
+}
+3. Layout & Structure (Copy DCVC Exactly):
+Navigation: Simple top bar: Home | Como Funciona | Para Empresas | Contato
+
+Hero Section: Large centered headline + subheadline + CTA button (match DCVC spacing)
+
+Content Sections: Card-based layout with DCVC's exact spacing
+
+Footer: Minimal like DCVC's
+
+4. Typography System (Copy DCVC Exactly):
+Font: Inter (Google Fonts) - match DCVC's weights: 400, 500, 600, 700
+
+Sizes/Line-heights: Copy DCVC's exact values for H1, H2, H3, body
+
+Hierarchy: Match their visual contrast
+
+5. Apply Our Colors to DCVC Structure:
+Buttons: background-color: var(--primary-purple)
+
+Hover states: background-color: var(--dark-purple)
+
+Accents/Links: color: var(--secondary-pink)
+
+Cards: Use our colors but DCVC's spacing/shadow
+
+6. Component Structure (DCVC Layout + Our Colors):
+Navigation Bar: Logo left, menu right (like DCVC) with our purple
+
+Hero Section: DCVC layout with purple/pink accents
+
+Cards: Same padding/border-radius as DCVC, colored with our theme
+
+Buttons: DCVC size/style with our purple/pink
+
+7. Pages to Redesign:
+Homepage (match DCVC's main page structure + our colors)
+
+How It Works (DCVC content layout + our colors)
+
+Contact Page (DCVC form style + our colors)
+
+Client Portal (DCVC design system + our colors)
+
+Admin Panel (keep functional but match typography + our colors)
+
+8. Technical Implementation (CRITICAL):
+ALL colors must use CSS variables - no hardcoded hex values
+
+Copy DCVC's exact spacing values (padding, margin, gap)
+
+Copy DCVC's mobile breakpoints exactly
+
+Keep all functionality working (upload, portal links)
+
+9. Visual Placeholders:
+Logo: Use text "ÓTIMA ENERGIA" in Inter Bold with --primary-purple
+
+Images: Generic energy/tech stock photos
+
+Icons: Simple, clean icons like DCVC uses
+
+10. What We're Creating:
+DCVC's professional structure + Ótima's purple/pink theme + easy-to-update CSS variables
+
+This gives us: A professional DCVC-style foundation with our established purple/pink branding that can be fine-tuned later when final brand assets are ready.
+
+Please proceed with implementing DCVC's exact layout and structure while maintaining our purple/pink color theme through CSS variables.

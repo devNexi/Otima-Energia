@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileCheck, Loader2, CheckCircle } from "lucide-react";
+import { Upload, Loader2, CheckCircle, ArrowRight } from "lucide-react";
 
 interface PortalSession {
   id: number;
@@ -138,18 +138,18 @@ export default function Portal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-pink-50" data-testid="portal-loading">
-        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+      <div className="min-h-screen flex items-center justify-center bg-muted" data-testid="portal-loading">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-pink-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <Card className="max-w-md w-full" data-testid="portal-error">
           <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Link Inválido</CardTitle>
+            <CardTitle className="text-destructive">Link Inválido</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
         </Card>
@@ -158,19 +158,28 @@ export default function Portal() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-pink-50 p-4 md:p-8" data-testid="portal-page">
+    <div className="min-h-screen bg-muted p-4 md:p-8" data-testid="portal-page">
       <div className="max-w-2xl mx-auto">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-violet-900">Ótima Energia</h1>
-          <p className="text-violet-600 mt-2">Portal do Cliente</p>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">ÓTIMA ENERGIA</h1>
+          <p className="text-muted-foreground mt-2">Portal do Cliente</p>
         </div>
+
+        {/* Company Info */}
+        {client && (
+          <div className="text-center mb-8">
+            <p className="text-sm text-muted-foreground">Bem-vindo</p>
+            <h2 className="text-xl font-semibold text-foreground">{client.companyName}</h2>
+          </div>
+        )}
 
         {!verified ? (
           <Card data-testid="portal-verify-card">
             <CardHeader>
               <CardTitle>Verificação de Acesso</CardTitle>
               <CardDescription>
-                Digite o código de acesso enviado para você
+                Digite o código de acesso de 6 dígitos enviado para você
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -178,87 +187,73 @@ export default function Portal() {
                 <Label htmlFor="accessCode">Código de Acesso</Label>
                 <Input
                   id="accessCode"
-                  type="text"
-                  placeholder="000000"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
+                  placeholder="000000"
                   maxLength={6}
-                  className="text-center text-2xl tracking-widest"
+                  className="text-center text-2xl tracking-widest font-mono"
                   data-testid="input-access-code"
                 />
               </div>
               <Button 
                 onClick={handleVerifyCode} 
-                className="w-full bg-violet-600 hover:bg-violet-700"
-                data-testid="button-verify"
+                className="btn-primary w-full"
+                disabled={accessCode.length !== 6}
+                data-testid="button-verify-code"
               >
                 Verificar
+                <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <Card data-testid="portal-upload-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Envio de Faturas de Energia
-              </CardTitle>
-              <CardDescription>
-                {client?.companyName && (
-                  <span className="font-medium text-violet-600">{client.companyName}</span>
-                )}
-                <br />
-                Envie suas faturas de energia para análise do seu perfil de consumo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="border-2 border-dashed border-violet-200 rounded-lg p-8 text-center bg-violet-50/50">
+          <div className="space-y-6">
+            <Card data-testid="portal-upload-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-primary" />
+                  Upload de Faturas
+                </CardTitle>
+                <CardDescription>
+                  Envie suas faturas de energia para análise. Aceitos: PDF, JPG, PNG (máx. 10MB)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <ObjectUploader
-                  maxNumberOfFiles={10}
-                  maxFileSize={20 * 1024 * 1024}
                   onGetUploadParameters={handleGetUploadParameters}
                   onComplete={handleUploadComplete}
-                  buttonClassName="bg-violet-600 hover:bg-violet-700"
+                  maxFileSize={10 * 1024 * 1024}
                 >
-                  <div className="flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    <span>Selecionar Arquivos</span>
-                  </div>
+                  Selecionar Arquivos
                 </ObjectUploader>
-                <p className="text-sm text-gray-500 mt-4">
-                  Formatos aceitos: PDF, JPG, PNG (máx. 20MB por arquivo)
-                </p>
-              </div>
+              </CardContent>
+            </Card>
 
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-2" data-testid="uploaded-files-list">
-                  <h3 className="font-medium text-sm text-gray-700">Arquivos Enviados:</h3>
-                  {uploadedFiles.map((file, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded"
-                      data-testid={`uploaded-file-${index}`}
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      {file}
-                    </div>
-                  ))}
-                </div>
-              )}
+            {uploadedFiles.length > 0 && (
+              <Card data-testid="portal-uploaded-files">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    Arquivos Enviados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {uploadedFiles.map((file, index) => (
+                      <li key={index} className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        {file}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
-              <div className="bg-violet-50 rounded-lg p-4">
-                <h3 className="font-medium text-violet-900 mb-2">
-                  <FileCheck className="w-4 h-4 inline mr-2" />
-                  Próximos Passos
-                </h3>
-                <ol className="text-sm text-violet-700 space-y-1 list-decimal list-inside">
-                  <li>Nossa equipe analisará suas faturas</li>
-                  <li>Identificaremos oportunidades de economia</li>
-                  <li>Você receberá uma proposta personalizada</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Após o envio, nossa equipe analisará suas faturas e entrará em contato.</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
