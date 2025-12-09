@@ -223,6 +223,7 @@ export default function Portal() {
                   onGetUploadParameters={handleGetUploadParameters}
                   onComplete={handleUploadComplete}
                   maxFileSize={10 * 1024 * 1024}
+                  buttonTestId="button-upload-files"
                 >
                   Selecionar Arquivos
                 </ObjectUploader>

@@ -19,6 +19,7 @@ interface ObjectUploaderProps {
     result: UploadResult<Record<string, unknown>, Record<string, unknown>>
   ) => void;
   buttonClassName?: string;
+  buttonTestId?: string;
   children: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export function ObjectUploader({
   onGetUploadParameters,
   onComplete,
   buttonClassName,
+  buttonTestId,
   children,
 }: ObjectUploaderProps) {
   const [showModal, setShowModal] = useState(false);
@@ -50,7 +52,7 @@ export function ObjectUploader({
 
   return (
     <div>
-      <Button onClick={() => setShowModal(true)} className={buttonClassName}>
+      <Button onClick={() => setShowModal(true)} className={buttonClassName} data-testid={buttonTestId}>
         {children}
       </Button>
 
