@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Menu, X, Search } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
-    { name: "HOME", href: "#top" },
-    { name: "COMO FUNCIONA", href: "#process" },
-    { name: "PARA EMPRESAS", href: "#business" },
-    { name: "CONTATO", href: "#contact" },
+    { name: "Home", href: "#top" },
+    { name: "How It Works", href: "#process" },
+    { name: "Solutions", href: "#business" },
+    { name: "Contact", href: "#contact" },
   ];
 
   const handleScroll = (href: string) => {
@@ -25,37 +25,44 @@ export function Navbar() {
 
   return (
     <nav 
-      className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200"
+      className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#E5E7EB]"
       data-testid="navbar"
     >
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo - Simple text like DCVC */}
+      <div className="max-w-7xl mx-auto" style={{ padding: "1.5rem 2rem" }}>
+        <div className="flex items-center justify-between">
+          {/* Logo - Purple like DCVC's colored logo */}
           <button 
             onClick={() => handleScroll("#top")}
-            className="text-xl font-semibold tracking-tight text-gray-900"
+            className="text-xl font-bold tracking-tight text-[#6B46C1]"
             data-testid="logo-home"
           >
-            ÓTIMA<br/>ENERGIA
+            Ótima Energia
           </button>
 
-          {/* Desktop Navigation - Simple links like DCVC */}
-          <div className="hidden md:flex items-center gap-12">
+          {/* Desktop Navigation - Purple links, pink hover */}
+          <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <button
                 key={link.name}
                 onClick={() => handleScroll(link.href)}
-                className="dcvc-nav-link"
+                className="nav-link-dcvc"
                 data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
               >
                 {link.name}
               </button>
             ))}
+            <button 
+              onClick={() => handleScroll("#contact")}
+              className="btn-primary-dcvc"
+              data-testid="nav-cta"
+            >
+              Get a Quote
+            </button>
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-gray-700"
+            className="md:hidden p-2 text-[#6B46C1]"
             onClick={() => setIsOpen(!isOpen)}
             data-testid="mobile-menu-toggle"
           >
@@ -66,17 +73,23 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="px-6 py-8 space-y-6">
+        <div className="md:hidden bg-white border-t border-[#E5E7EB]">
+          <div className="px-8 py-6 space-y-4">
             {navLinks.map((link) => (
               <button
                 key={link.name}
                 onClick={() => handleScroll(link.href)}
-                className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-purple-600"
+                className="block w-full text-left text-lg text-[#6B46C1] hover:text-[#D53F8C] transition-colors"
               >
                 {link.name}
               </button>
             ))}
+            <button 
+              onClick={() => handleScroll("#contact")}
+              className="btn-primary-dcvc w-full text-center mt-4"
+            >
+              Get a Quote
+            </button>
           </div>
         </div>
       )}
