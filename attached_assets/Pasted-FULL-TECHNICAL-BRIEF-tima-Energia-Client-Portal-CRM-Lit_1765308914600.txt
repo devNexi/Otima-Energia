@@ -1,0 +1,208 @@
+FULL TECHNICAL BRIEF: Ótima Energia Client Portal & CRM Lite
+To: Replit Development Team
+Subject: Build Client Portal with Dual-Channel Onboarding (Inbound & Outbound)
+Context: We are a tech-driven energy brokerage. We need a system to manage clients who find us online AND clients our sales team finds directly.
+
+1. Core User Stories / Workflows
+A. Inbound Client (Website Visitor)
+Visitor fills out contact form on contato page.
+
+System creates a lead and automatically generates a unique client portal link.
+
+Auto-email sends: "Welcome! Upload your bill here: [LINK]"
+
+Client clicks link, uploads bill, system creates client + rfq.
+
+B. Outbound Client (Renan's Network)
+Renan logs into Admin Dashboard.
+
+Clicks "Add New Client Manually".
+
+Enters: Company Name, Contact Person, Email, Phone.
+
+System immediately generates a unique portal link.
+
+Renan copies link and sends via WhatsApp/email: "As discussed, please upload your bill here for analysis: [LINK]"
+
+Client clicks link, uploads bill—same seamless experience as inbound.
+
+2. Required Database Schema (Extending Current)
+Please update shared/schema.ts:
+
+sql
+-- 1. Leads (from contact form - EXTENDED)
+CREATE TABLE leads (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    company_name VARCHAR(255),
+    message TEXT,
+    source VARCHAR(50) DEFAULT 'website', -- 'website', 'manual_entry', 'referral'
+    portal_token VARCHAR(64) UNIQUE, -- Unique token for portal access
+    portal_sent_at TIMESTAMP, -- When link was sent to client
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Clients (qualified leads with full data)
+CREATE TABLE clients (
+    id SERIAL PRIMARY KEY,
+    lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+    sales_owner VARCHAR(100) DEFAULT 'Renan', -- Who manages this account
+    company_name VARCHAR(255) NOT NULL,
+    cnpj VARCHAR(18),
+    uc_code VARCHAR(50),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'prospect', -- 'prospect', 'active', 'closed', 'lost'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Portal Upload Sessions
+CREATE TABLE upload_sessions (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES clients(id),
+    token VARCHAR(64) UNIQUE NOT NULL, -- Shared with client for portal access
+    access_code VARCHAR(6), -- Optional simple PIN for extra security
+    is_used BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '7 days'), -- Links expire
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Consumption Profiles (same as before, but linked to client)
+CREATE TABLE consumption_profiles (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES clients(id),
+    billing_cycle VARCHAR(50),
+    data_source VARCHAR(20), -- 'bill_upload', 'manual_entry', 'api'
+    file_url TEXT, -- Link to uploaded PDF
+    original_filename VARCHAR(255),
+    monthly_consumption_kwh JSONB,
+    demand_kw DECIMAL(10,2),
+    voltage VARCHAR(20),
+    distributor VARCHAR(100),
+    upload_session_id INTEGER REFERENCES upload_sessions(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Quote Requests (RFQs)
+CREATE TABLE quote_requests (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES clients(id),
+    profile_id INTEGER REFERENCES consumption_profiles(id),
+    status VARCHAR(50) DEFAULT 'draft', -- 'draft', 'awaiting_bill', 'pending_quotes', 'quotes_ready', 'expired'
+    priority VARCHAR(20) DEFAULT 'normal', -- 'high', 'normal', 'low'
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. Supplier Quotes (for later)
+CREATE TABLE supplier_quotes (
+    id SERIAL PRIMARY KEY,
+    rfq_id INTEGER REFERENCES quote_requests(id),
+    supplier_name VARCHAR(255) NOT NULL,
+    price_per_mwh DECIMAL(10,2),
+    contract_terms TEXT,
+    validity_days INTEGER,
+    commission_rate DECIMAL(5,2),
+    is_selected BOOLEAN DEFAULT FALSE,
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+3. Key API Endpoints Needed
+A. Client & Portal Management
+POST /api/clients/manual - Renan creates client manually (outbound)
+
+POST /api/clients/:id/generate-portal - Generate new upload link for existing client
+
+GET /api/portal/:token - Validate portal token & get client info
+
+POST /api/portal/:token/upload - Client uploads bill via portal
+
+B. File Upload & Processing
+POST /api/upload - Handle PDF uploads (use Replit/S3 storage)
+
+POST /api/upload/process - Webhook for future AI bill parsing
+
+C. Admin Dashboard
+GET /api/admin/clients - List all clients with status
+
+GET /api/admin/leads - List website leads
+
+GET /api/admin/rfqs - List all RFQs by status
+
+PUT /api/admin/clients/:id/status - Update client status
+
+4. Frontend Components Needed
+A. Client-Facing Portal (/portal/[token])
+Minimal, brand-consistent page (Ótima logo, clean design)
+
+Client greeting: "Hello [Company Name], please upload your energy bill"
+
+Drag-and-drop PDF upload zone with preview
+
+Optional fields: UC code, notes
+
+Progress indicator: "Uploading..." → "Success! We'll contact you soon."
+
+Mobile-optimized: Critical for WhatsApp links
+
+B. Admin Dashboard (/admin) - PROTECTED
+Quick Stats Panel: Total clients, pending RFQs, new leads
+
+Client Table: Searchable list with columns: Company | Contact | Status | Last Activity | Action
+
+"Add Client" Button: Modal form for manual client creation
+
+Client Detail View: Click any client to see:
+
+Contact info
+
+All uploaded bills
+
+RFQ history
+
+"Send Portal Link" button (generates & copies link)
+
+Leads Inbox: Website form submissions with "Convert to Client" button
+
+5. Automation Rules
+Auto-creation: When lead form submitted → auto-generate portal_token → auto-send email with link.
+
+Link Expiry: Portal links expire after 7 days. Admin can regenerate.
+
+Status Flow:
+
+Client created → status: prospect
+
+Bill uploaded → status: awaiting_quote + RFQ created
+
+Quote selected → status: negotiating
+
+Contract signed → status: active
+
+6. Security & Privacy
+Admin Authentication: Simple password protection for /admin routes.
+
+Portal Security: Tokens are long, random strings (64 chars). Optional 6-digit PIN for sensitive clients.
+
+Data Separation: Clients can only access their own portal via token.
+
+File Security: Uploaded PDFs stored with client-specific paths.
+
+7. Success Metrics
+Reduction in Renan's manual data entry (Goal: 80% of client data via self-serve portal)
+
+Faster time-to-quote: From first contact to RFQ creation (Goal: < 24 hours)
+
+Portal usage rate: % of clients who successfully upload bills (Goal: > 70%)
+
+8. Why This Matters
+This system directly enables the "AI-Driven, Light-Touch Processing" described in our business plan:
+
+Clients get a professional, easy experience
+
+Renan spends less time chasing documents, more time negotiating deals
+
+Foundation for future AI bill parsing and automated supplier RFQs
+
+Scalable from day one for both inbound and outbound channels
