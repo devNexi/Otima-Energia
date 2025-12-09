@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import heroVideo from "@assets/generated_videos/solar_farm_aerial_sunset.mp4";
 
 export function Hero() {
   const handleScroll = (href: string) => {
@@ -18,12 +19,8 @@ export function Hero() {
           muted
           playsInline
           className="w-full h-full object-cover"
-          poster="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1920&q=80"
         >
-          <source 
-            src="https://cdn.coverr.co/videos/coverr-aerial-view-of-solar-panels-1644/1080p.mp4" 
-            type="video/mp4" 
-          />
+          <source src={heroVideo} type="video/mp4" />
         </video>
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/30" />
