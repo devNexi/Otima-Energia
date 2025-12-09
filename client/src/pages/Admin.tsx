@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
 import { 
   Users, 
   Inbox, 
@@ -21,8 +21,7 @@ import {
   Mail,
   Phone,
   Loader2,
-  Copy,
-  ExternalLink
+  Languages
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -34,17 +33,9 @@ const statusColors: Record<string, string> = {
   lost: "bg-red-100 text-red-800"
 };
 
-const statusLabels: Record<string, string> = {
-  prospect: "Prospecto",
-  awaiting_quote: "Aguardando Cotação",
-  negotiating: "Negociando",
-  active: "Ativo",
-  closed: "Fechado",
-  lost: "Perdido"
-};
-
 export default function Admin() {
   const { toast } = useToast();
+  const { t, language, setLanguage } = useI18n();
   const queryClient = useQueryClient();
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientForm, setNewClientForm] = useState({
@@ -55,6 +46,15 @@ export default function Admin() {
     contactPerson: "",
     ucCode: ""
   });
+
+  const statusLabels: Record<string, string> = {
+    prospect: t("status.prospect"),
+    awaiting_quote: t("status.awaiting_quote"),
+    negotiating: t("status.negotiating"),
+    active: t("status.active"),
+    closed: t("status.closed"),
+    lost: t("status.lost")
+  };
 
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ["/api/leads"],
@@ -93,7 +93,7 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setNewClientOpen(false);
       setNewClientForm({ companyName: "", cnpj: "", email: "", phone: "", contactPerson: "", ucCode: "" });
-      toast({ title: "Cliente criado com sucesso!" });
+      toast({ title: t("admin.toast.client_created") });
     }
   });
 
@@ -105,7 +105,7 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: "Lead convertido em cliente!" });
+      toast({ title: t("admin.toast.lead_converted") });
     }
   });
 
@@ -118,8 +118,8 @@ export default function Admin() {
       const fullUrl = `${window.location.origin}${data.uploadUrl}`;
       navigator.clipboard.writeText(fullUrl);
       toast({ 
-        title: "Link de upload gerado!", 
-        description: `Código de acesso: ${data.accessCode}. Link copiado!`
+        title: t("admin.toast.link_generated"), 
+        description: `${t("admin.toast.access_code")} ${data.accessCode}. ${t("admin.toast.link_copied")}`
       });
     }
   });
@@ -131,7 +131,7 @@ export default function Admin() {
     },
     onSuccess: (data) => {
       toast({ 
-        title: "Sincronização Zoho", 
+        title: t("admin.toast.sync_initiated"), 
         description: data.message
       });
     }
@@ -141,24 +141,40 @@ export default function Admin() {
   const clients = clientsData?.clients || [];
   const rfqs = rfqsData?.requests || [];
 
+  const toggleLanguage = () => {
+    setLanguage(language === "pt" ? "en" : "pt");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" data-testid="admin-page">
       <header className="bg-violet-900 text-white p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">Ótima Energia</h1>
-            <p className="text-violet-200 text-sm">Painel Administrativo</p>
+            <h1 className="text-xl font-bold">{t("admin.title")}</h1>
+            <p className="text-violet-200 text-sm">{t("admin.subtitle")}</p>
           </div>
-          <Button 
-            variant="outline" 
-            className="text-violet-900 border-white hover:bg-violet-800 hover:text-white"
-            onClick={() => syncToZohoMutation.mutate()}
-            disabled={syncToZohoMutation.isPending}
-            data-testid="button-sync-zoho"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncToZohoMutation.isPending ? 'animate-spin' : ''}`} />
-            Sincronizar com Zoho
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-white hover:bg-violet-800"
+              onClick={toggleLanguage}
+              data-testid="button-toggle-language"
+            >
+              <Languages className="w-4 h-4 mr-2" />
+              {t("language.toggle")}
+            </Button>
+            <Button 
+              variant="outline" 
+              className="text-violet-900 border-white hover:bg-violet-800 hover:text-white"
+              onClick={() => syncToZohoMutation.mutate()}
+              disabled={syncToZohoMutation.isPending}
+              data-testid="button-sync-zoho"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncToZohoMutation.isPending ? 'animate-spin' : ''}`} />
+              {t("admin.sync_zoho")}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -166,7 +182,7 @@ export default function Admin() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Leads</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.leads")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-violet-900" data-testid="stat-leads">{leads.length}</div>
@@ -174,7 +190,7 @@ export default function Admin() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Clientes</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.clients")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-violet-900" data-testid="stat-clients">{clients.length}</div>
@@ -182,7 +198,7 @@ export default function Admin() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Cotações</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.rfqs")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-violet-900" data-testid="stat-rfqs">{rfqs.length}</div>
@@ -194,23 +210,23 @@ export default function Admin() {
           <TabsList>
             <TabsTrigger value="leads" className="flex items-center gap-2" data-testid="tab-leads">
               <Inbox className="w-4 h-4" />
-              Leads
+              {t("admin.tab.leads")}
             </TabsTrigger>
             <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
               <Users className="w-4 h-4" />
-              Clientes
+              {t("admin.tab.clients")}
             </TabsTrigger>
             <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
               <FileText className="w-4 h-4" />
-              Cotações
+              {t("admin.tab.rfqs")}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="leads">
             <Card>
               <CardHeader>
-                <CardTitle>Leads Recebidos</CardTitle>
-                <CardDescription>Leads capturados do site</CardDescription>
+                <CardTitle>{t("admin.leads.title")}</CardTitle>
+                <CardDescription>{t("admin.leads.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {leadsLoading ? (
@@ -218,7 +234,7 @@ export default function Admin() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : leads.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Nenhum lead ainda</p>
+                  <p className="text-center text-gray-500 py-8">{t("admin.leads.empty")}</p>
                 ) : (
                   <div className="space-y-4">
                     {leads.map((lead: any) => (
@@ -245,7 +261,7 @@ export default function Admin() {
                           data-testid={`button-convert-lead-${lead.id}`}
                         >
                           <ArrowRight className="w-4 h-4 mr-1" />
-                          Converter
+                          {t("admin.leads.convert")}
                         </Button>
                       </div>
                     ))}
@@ -259,24 +275,24 @@ export default function Admin() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Clientes</CardTitle>
-                  <CardDescription>Gerenciar clientes e gerar links de upload</CardDescription>
+                  <CardTitle>{t("admin.clients.title")}</CardTitle>
+                  <CardDescription>{t("admin.clients.description")}</CardDescription>
                 </div>
                 <Dialog open={newClientOpen} onOpenChange={setNewClientOpen}>
                   <DialogTrigger asChild>
                     <Button data-testid="button-new-client">
                       <Plus className="w-4 h-4 mr-2" />
-                      Novo Cliente
+                      {t("admin.clients.new")}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Adicionar Novo Cliente</DialogTitle>
-                      <DialogDescription>Preencha os dados do cliente</DialogDescription>
+                      <DialogTitle>{t("admin.clients.dialog.title")}</DialogTitle>
+                      <DialogDescription>{t("admin.clients.dialog.description")}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="companyName">Empresa *</Label>
+                        <Label htmlFor="companyName">{t("admin.clients.dialog.company")}</Label>
                         <Input
                           id="companyName"
                           value={newClientForm.companyName}
@@ -285,7 +301,7 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="cnpj">CNPJ</Label>
+                        <Label htmlFor="cnpj">{t("admin.clients.dialog.cnpj")}</Label>
                         <Input
                           id="cnpj"
                           value={newClientForm.cnpj}
@@ -294,7 +310,7 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="contactPerson">Contato</Label>
+                        <Label htmlFor="contactPerson">{t("admin.clients.dialog.contact")}</Label>
                         <Input
                           id="contactPerson"
                           value={newClientForm.contactPerson}
@@ -303,7 +319,7 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">{t("admin.clients.dialog.email")}</Label>
                         <Input
                           id="email"
                           type="email"
@@ -313,7 +329,7 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="phone">Telefone</Label>
+                        <Label htmlFor="phone">{t("admin.clients.dialog.phone")}</Label>
                         <Input
                           id="phone"
                           value={newClientForm.phone}
@@ -322,7 +338,7 @@ export default function Admin() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="ucCode">Código UC</Label>
+                        <Label htmlFor="ucCode">{t("admin.clients.dialog.uc_code")}</Label>
                         <Input
                           id="ucCode"
                           value={newClientForm.ucCode}
@@ -336,7 +352,7 @@ export default function Admin() {
                         disabled={!newClientForm.companyName || createClientMutation.isPending}
                         data-testid="button-save-client"
                       >
-                        Salvar Cliente
+                        {t("admin.clients.dialog.save")}
                       </Button>
                     </div>
                   </DialogContent>
@@ -348,7 +364,7 @@ export default function Admin() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : clients.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Nenhum cliente ainda</p>
+                  <p className="text-center text-gray-500 py-8">{t("admin.clients.empty")}</p>
                 ) : (
                   <div className="space-y-4">
                     {clients.map((client: any) => (
@@ -381,7 +397,7 @@ export default function Admin() {
                               data-testid={`button-upload-link-${client.id}`}
                             >
                               <LinkIcon className="w-4 h-4 mr-1" />
-                              Gerar Link
+                              {t("admin.clients.generate_link")}
                             </Button>
                           </div>
                         </div>
@@ -396,8 +412,8 @@ export default function Admin() {
           <TabsContent value="rfqs">
             <Card>
               <CardHeader>
-                <CardTitle>Solicitações de Cotação</CardTitle>
-                <CardDescription>Gerenciar RFQs e cotações de fornecedores</CardDescription>
+                <CardTitle>{t("admin.rfqs.title")}</CardTitle>
+                <CardDescription>{t("admin.rfqs.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {rfqsLoading ? (
@@ -405,7 +421,7 @@ export default function Admin() {
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
                 ) : rfqs.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Nenhuma cotação ainda</p>
+                  <p className="text-center text-gray-500 py-8">{t("admin.rfqs.empty")}</p>
                 ) : (
                   <div className="space-y-4">
                     {rfqs.map((rfq: any) => (
@@ -426,8 +442,7 @@ export default function Admin() {
                             </Badge>
                           </div>
                           <Button size="sm" variant="outline">
-                            <ExternalLink className="w-4 h-4 mr-1" />
-                            Ver Detalhes
+                            {t("admin.rfqs.view_details")}
                           </Button>
                         </div>
                       </div>

@@ -367,6 +367,51 @@ export async function registerRoutes(
     }
   });
 
+  // ============== ADDITIONAL API ENDPOINTS FOR EMAIL INTEGRATION ==============
+
+  // Alias for generate-portal (delegates to upload-link logic)
+  app.post("/api/clients/:id/generate-portal", async (req, res) => {
+    // Reuse the same handler as upload-link
+    try {
+      const { token, accessCode } = await storage.generateClientUploadLink(parseInt(req.params.id));
+      const uploadUrl = `/portal/upload/${token}`;
+      res.json({ success: true, uploadUrl, token, accessCode });
+    } catch (error: any) {
+      console.error("Error generating portal link:", error);
+      res.status(500).json({ success: false, error: "Failed to generate portal link" });
+    }
+  });
+
+  // Webhook for when bills are uploaded (for future email notifications)
+  app.post("/api/webhooks/bill-uploaded", async (req, res) => {
+    // Validate payload
+    const { clientId, sessionId, fileName, fileUrl, uploadedAt } = req.body;
+    
+    if (!clientId || !fileName) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: clientId and fileName are required" 
+      });
+    }
+    
+    console.log("Bill uploaded webhook received:", {
+      clientId,
+      sessionId,
+      fileName,
+      fileUrl,
+      uploadedAt: uploadedAt || new Date().toISOString()
+    });
+    
+    // TODO: Integrate with email service (SendGrid) to notify sales team
+    // TODO: Update client status if needed
+    
+    res.json({ 
+      success: true, 
+      message: "Webhook received",
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // ============== ZOHO WEBHOOK ENDPOINT (PLACEHOLDER) ==============
 
   // Zoho CRM sync webhook - placeholder for future integration
