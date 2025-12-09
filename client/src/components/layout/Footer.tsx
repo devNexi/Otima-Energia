@@ -13,78 +13,68 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-gray-900 text-white py-16">
-      <div className="max-w-7xl mx-auto px-6 lg:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          {/* Brand */}
-          <div className="md:col-span-2">
+    <footer className="bg-[#F5F5F0] py-24 lg:py-32 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        {/* Large Navigation Links - DCVC Style */}
+        <div className="grid md:grid-cols-3 gap-8 mb-24">
+          {/* Main Nav */}
+          <div className="space-y-4">
             <button 
-              onClick={() => handleScroll("#top")}
-              className="flex items-center gap-3 mb-6 hover:opacity-80 transition-opacity"
+              onClick={() => handleScroll("#process")}
+              className="dcvc-footer-link block text-left"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                Ó
-              </div>
-              <span className="text-xl font-bold tracking-tight">
-                Ótima Energia
-              </span>
+              How It Works
             </button>
-            <p className="text-gray-400 max-w-md leading-relaxed">
-              Transformando a forma como empresas brasileiras compram energia. 
-              Transparência, tecnologia e economia garantida no Mercado Livre de Energia.
-            </p>
+            <button 
+              onClick={() => handleScroll("#business")}
+              className="dcvc-footer-link block text-left"
+            >
+              Solutions
+            </button>
+            <button 
+              onClick={() => handleScroll("#contact")}
+              className="dcvc-footer-link block text-left"
+            >
+              Contact
+            </button>
           </div>
 
-          {/* Navigation */}
+          {/* Topics */}
           <div>
-            <h4 className="font-semibold mb-6 text-white">Navegação</h4>
-            <ul className="space-y-4">
-              <li>
-                <button 
-                  onClick={() => handleScroll("#process")}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Como Funciona
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleScroll("#business")}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Para Empresas
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleScroll("#contact")}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Contato
-                </button>
-              </li>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Services</p>
+            <ul className="space-y-3 text-gray-600">
+              <li>SME Energy</li>
+              <li>Industrial Energy</li>
+              <li>Energy Consulting</li>
+              <li>Market Analysis</li>
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Location */}
           <div>
-            <h4 className="font-semibold mb-6 text-white">Contato</h4>
-            <ul className="space-y-4 text-gray-400">
-              <li>contato@otimaenergia.com.br</li>
-              <li>(21) 99999-9999</li>
-              <li>Rio de Janeiro, Brasil</li>
-            </ul>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Location</p>
+            <div className="text-gray-600 space-y-1">
+              <p>Rio de Janeiro</p>
+              <p>Brazil</p>
+            </div>
           </div>
         </div>
 
         {/* Bottom */}
-        <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm">
-            © {currentYear} Ótima Energia. Todos os direitos reservados.
-          </p>
-          <div className="flex gap-6 text-sm text-gray-500">
-            <span className="hover:text-white cursor-pointer transition-colors">Privacidade</span>
-            <span className="hover:text-white cursor-pointer transition-colors">Termos</span>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-8 border-t border-gray-300">
+          {/* Logo */}
+          <button 
+            onClick={() => handleScroll("#top")}
+            className="text-xl font-semibold tracking-tight text-gray-900"
+          >
+            ÓTIMA<br/>ENERGIA
+          </button>
+
+          {/* Copyright & Links */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
+            <span>©{currentYear} Ótima Energia. All rights reserved.</span>
+            <span className="hover:text-purple-600 cursor-pointer transition-colors">Privacy</span>
+            <span className="hover:text-purple-600 cursor-pointer transition-colors">Terms of Use</span>
           </div>
         </div>
       </div>

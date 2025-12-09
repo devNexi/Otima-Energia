@@ -1,0 +1,119 @@
+CRITICAL REDESIGN TASK: Rebuild entire site to match DCVC.com exactly
+
+Current Problem: Our current design has too many heavy gradients, large shadows, bold colors everywhere, and crowded layouts. We need extreme minimalism like DCVC.com.
+
+Reference Site: https://www.dcvc.com/
+
+IMPORTANT: We are keeping purple/pink as ACCENT COLORS ONLY within DCVC's minimalist structure.
+
+DELIVERABLE: Completely rebuild the site to match DCVC's:
+
+Spacing (exact padding/margin values)
+
+Typography (exact font sizes/weights)
+
+Layout (clean grid with white space)
+
+Components (simple cards, buttons, navigation)
+
+Mobile breakpoints (copy DCVC exactly)
+
+DCVC Design Principles to Implement:
+
+90% white space, 10% color as accents
+
+Clean Inter typography with hierarchy
+
+Subtle borders (1px solid #E5E7EB)
+
+Minimal shadows (if any)
+
+Professional stock photos
+
+Centered, spacious layouts
+
+OUR Colors (Use Sparingly as Accents):
+
+Primary Purple: #6B46C1 (for buttons, links ONLY)
+
+Secondary Pink: #D53F8C (for hover states ONLY)
+
+Dark Purple: #553C9A (for button hovers)
+
+SECTIONS to Rebuild (DCVC Style):
+
+1. NAVIGATION (Minimal Like DCVC):
+
+Logo left (text "ÓTIMA ENERGIA")
+
+Simple menu right: Home | Como Funciona | Para Empresas | Contato
+
+Thin bottom border only
+
+NO background color, NO gradients
+
+2. HERO SECTION (DCVC Layout):
+
+Centered text only
+
+Large headline (3.75rem on desktop)
+
+Smaller subheadline below
+
+Single CTA button
+
+NO badges, NO trust metrics inline
+
+Ample white space above/below
+
+3. CONTENT SECTIONS (DCVC Card Style):
+
+Cards with 1px borders, NOT thick colored borders
+
+Subtle hover effects (slight lift, NO dramatic shadows)
+
+Clean, spacious padding inside cards
+
+Numbered steps should be minimal circles with numbers
+
+4. FOOTER (DCVC Minimal):
+
+Simple dark background
+
+Logo + copyright
+
+NO complex layouts
+
+Minimal links
+
+5. TYPOGRAPHY (Copy DCVC Exactly):
+
+Font: Inter (400, 500, 600, 700)
+
+H1: 3.75rem (60px)
+
+H2: 2.25rem (36px)
+
+H3: 1.5rem (24px)
+
+Body: 1rem (16px) / 1.5 line-height
+
+TECHNICAL REQUIREMENTS:
+
+Use CSS variables for ALL colors
+
+Match DCVC's mobile breakpoints
+
+Keep ALL existing functionality
+
+Remove ALL heavy gradients
+
+Remove ALL large shadows
+
+Remove ALL inline trust metrics/badges
+
+Use purple/pink ONLY on interactive elements (buttons, links)
+
+MOST IMPORTANT: Make it look EXACTLY like DCVC.com but with our purple/pink as subtle accent colors. The screenshots show DCVC's minimalist aesthetic. Match their spacing, their typography, their component styling.
+
+VISUAL REFERENCE
