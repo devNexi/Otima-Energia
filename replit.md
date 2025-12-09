@@ -84,6 +84,7 @@ The application implements a unique token-based portal system where:
   - Client management (create, view, generate upload links)
   - Quote requests management
   - Zoho sync button (placeholder for future integration)
+  - **Language toggle**: English/Portuguese with localStorage persistence (default: Portuguese)
 
 ### API Endpoints
 - `POST /api/leads` - Submit lead from contact form
@@ -97,6 +98,8 @@ The application implements a unique token-based portal system where:
 - `POST /api/portal/upload/verify/:token` - Verify access code
 - `POST /api/objects/upload` - Get presigned upload URL
 - `POST /api/consumption-profiles` - Register uploaded file
+- `POST /api/clients/:id/generate-portal` - Generate upload link for client (alias)
+- `POST /api/webhooks/bill-uploaded` - Webhook for bill upload notifications
 - `POST /api/webhooks/zoho-sync` - Zoho webhook (placeholder)
 - `POST /api/admin/sync-to-zoho` - Manual Zoho sync (placeholder)
 
