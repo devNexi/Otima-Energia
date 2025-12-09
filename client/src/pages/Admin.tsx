@@ -119,7 +119,13 @@ export default function Admin() {
       navigator.clipboard.writeText(fullUrl);
       toast({ 
         title: t("admin.toast.link_generated"), 
-        description: `${t("admin.toast.access_code")} ${data.accessCode}. ${t("admin.toast.link_copied")}`
+        description: (
+          <div className="space-y-1">
+            <p>{t("admin.toast.access_code")} <strong>{data.accessCode}</strong></p>
+            <p className="text-xs break-all">{fullUrl}</p>
+            <p className="text-xs text-green-600">{t("admin.toast.link_copied")}</p>
+          </div>
+        )
       });
     }
   });
