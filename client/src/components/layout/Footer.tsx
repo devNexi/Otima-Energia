@@ -13,54 +13,36 @@ export function Footer() {
   };
 
   return (
-    <footer className="footer-dark" style={{ padding: "4rem 2rem" }}>
-      <div className="max-w-6xl mx-auto">
-        {/* Main footer content */}
-        <div className="grid md:grid-cols-4 gap-12 mb-12">
-          {/* Logo and tagline */}
-          <div className="md:col-span-1">
+    <footer className="bg-[#F5F5F0] py-24 lg:py-32 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        {/* Large Navigation Links - DCVC Style */}
+        <div className="grid md:grid-cols-3 gap-8 mb-24">
+          {/* Main Nav */}
+          <div className="space-y-4">
             <button 
-              onClick={() => handleScroll("#top")}
-              className="text-xl font-bold text-white mb-4 block"
+              onClick={() => handleScroll("#process")}
+              className="dcvc-footer-link block text-left"
             >
-              Ótima Energia
+              How It Works
             </button>
-            <p className="text-[#9CA3AF] text-sm leading-relaxed">
-              Intelligent energy solutions for Brazilian businesses.
-            </p>
+            <button 
+              onClick={() => handleScroll("#business")}
+              className="dcvc-footer-link block text-left"
+            >
+              Solutions
+            </button>
+            <button 
+              onClick={() => handleScroll("#contact")}
+              className="dcvc-footer-link block text-left"
+            >
+              Contact
+            </button>
           </div>
 
-          {/* Navigation */}
+          {/* Topics */}
           <div>
-            <p className="text-white font-semibold mb-4">Navigation</p>
-            <ul className="space-y-3">
-              <li>
-                <button onClick={() => handleScroll("#top")} className="footer-link">
-                  Home
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleScroll("#process")} className="footer-link">
-                  How It Works
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleScroll("#business")} className="footer-link">
-                  Solutions
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleScroll("#contact")} className="footer-link">
-                  Contact
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Services */}
-          <div>
-            <p className="text-white font-semibold mb-4">Services</p>
-            <ul className="space-y-3 text-[#9CA3AF]">
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Services</p>
+            <ul className="space-y-3 text-gray-600">
               <li>SME Energy</li>
               <li>Industrial Energy</li>
               <li>Energy Consulting</li>
@@ -68,25 +50,31 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Location */}
           <div>
-            <p className="text-white font-semibold mb-4">Contact</p>
-            <ul className="space-y-3 text-[#9CA3AF]">
-              <li>contato@otimaenergia.com.br</li>
-              <li>+55 21 99999-9999</li>
-              <li>Rio de Janeiro, Brazil</li>
-            </ul>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Location</p>
+            <div className="text-gray-600 space-y-1">
+              <p>Rio de Janeiro</p>
+              <p>Brazil</p>
+            </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-8 border-t border-[#374151] flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[#9CA3AF] text-sm">
-            © {currentYear} Ótima Energia. All rights reserved.
-          </p>
-          <div className="flex gap-6 text-sm">
-            <span className="footer-link cursor-pointer">Privacy Policy</span>
-            <span className="footer-link cursor-pointer">Terms of Use</span>
+        {/* Bottom */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-8 border-t border-gray-300">
+          {/* Logo */}
+          <button 
+            onClick={() => handleScroll("#top")}
+            className="text-xl font-semibold tracking-tight text-gray-900"
+          >
+            ÓTIMA<br/>ENERGIA
+          </button>
+
+          {/* Copyright & Links */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
+            <span>©{currentYear} Ótima Energia. All rights reserved.</span>
+            <span className="hover:text-purple-600 cursor-pointer transition-colors">Privacy</span>
+            <span className="hover:text-purple-600 cursor-pointer transition-colors">Terms of Use</span>
           </div>
         </div>
       </div>
