@@ -98,7 +98,7 @@ export function Navbar() {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
+                  className="block w-full text-left text-lg tracking-wide text-[#16163f] hover:text-[#9e3ffd]"
                 >
                   {link.name}
                 </Link>
@@ -106,7 +106,7 @@ export function Navbar() {
                 <button
                   key={link.name}
                   onClick={() => handleNavClick(link.href, link.isPage)}
-                  className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
+                  className="block w-full text-left text-lg tracking-wide text-[#16163f] hover:text-[#9e3ffd]"
                 >
                   {link.name}
                 </button>
