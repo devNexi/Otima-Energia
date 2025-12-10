@@ -11,7 +11,7 @@ export function Process() {
   return (
     <>
       {/* Statement Section - Like DCVC's "For 13 years..." */}
-      <section className="bg-[#F5F5F0] py-24 lg:py-32">
+      <section className="bg-[#eee7f1] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl">
             Há anos, ajudamos empresas brilhantes a economizar até{" "}
@@ -32,12 +32,12 @@ export function Process() {
             {/* Step 1 */}
             <div className="group">
               <div className="mb-6">
-                <span className="text-6xl font-light text-gray-200">01</span>
+                <span className="text-6xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Envie sua conta
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-[#736d77] leading-relaxed">
                 Compartilhe sua conta de luz atual. Nossa tecnologia analisa seu perfil de consumo instantaneamente.
               </p>
             </div>
@@ -45,12 +45,12 @@ export function Process() {
             {/* Step 2 */}
             <div className="group">
               <div className="mb-6">
-                <span className="text-6xl font-light text-gray-200">02</span>
+                <span className="text-6xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Encontramos o melhor preço
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-[#736d77] leading-relaxed">
                 Varremos todo o mercado livre para encontrar as melhores ofertas de fornecedores certificados.
               </p>
             </div>
@@ -58,12 +58,12 @@ export function Process() {
             {/* Step 3 */}
             <div className="group">
               <div className="mb-6">
-                <span className="text-6xl font-light text-gray-200">03</span>
+                <span className="text-6xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Você escolhe e economiza
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-[#736d77] leading-relaxed">
                 Apresentamos as melhores opções. Você escolhe e nós cuidamos de toda a burocracia da migração.
               </p>
             </div>
@@ -79,7 +79,7 @@ export function Process() {
               <span className="arrow">
                 <ArrowRight className="w-5 h-5" />
               </span>
-              <span className="text-gray-900 group-hover:text-[#D53F8C] transition-colors">
+              <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
                 SOLICITAR COTAÇÃO
               </span>
             </button>

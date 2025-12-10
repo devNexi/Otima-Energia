@@ -65,7 +65,7 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="bg-[#F5F3FF] py-24 lg:py-32 border-t border-gray-200">
+    <section id="contact" className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Left Column - Info */}
@@ -76,7 +76,7 @@ export function Contact() {
               <span className="text-highlight">começar a economizar</span>?
             </p>
             
-            <div className="space-y-6 text-gray-600">
+            <div className="space-y-6 text-[#736d77]">
               <div>
                 <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">E-mail</p>
                 <p className="text-lg">contato@otimaenergia.com.br</p>
@@ -109,7 +109,7 @@ export function Contact() {
                           <Input 
                             placeholder="Seu nome" 
                             data-testid="input-name" 
-                            className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
+                            className="h-12 border-gray-200 rounded-none focus:border-[#9e3ffd] focus:ring-0 bg-white"
                             {...field} 
                           />
                         </FormControl>
@@ -129,7 +129,7 @@ export function Contact() {
                           <Input 
                             placeholder="+55 21 99999-9999" 
                             data-testid="input-phone" 
-                            className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
+                            className="h-12 border-gray-200 rounded-none focus:border-[#9e3ffd] focus:ring-0 bg-white"
                             {...field} 
                           />
                         </FormControl>
@@ -151,7 +151,7 @@ export function Contact() {
                         <Input 
                           placeholder="voce@empresa.com.br" 
                           data-testid="input-email" 
-                          className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
+                          className="h-12 border-gray-200 rounded-none focus:border-[#9e3ffd] focus:ring-0 bg-white"
                           {...field} 
                         />
                       </FormControl>
@@ -172,7 +172,7 @@ export function Contact() {
                         <Input 
                           placeholder="Nome da empresa" 
                           data-testid="input-company" 
-                          className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
+                          className="h-12 border-gray-200 rounded-none focus:border-[#9e3ffd] focus:ring-0 bg-white"
                           {...field} 
                         />
                       </FormControl>
@@ -192,7 +192,7 @@ export function Contact() {
                       <FormControl>
                         <Textarea 
                           placeholder="Conte-nos sobre seu consumo de energia..." 
-                          className="resize-none min-h-[120px] border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
+                          className="resize-none min-h-[120px] border-gray-200 rounded-none focus:border-[#9e3ffd] focus:ring-0 bg-white"
                           data-testid="input-message"
                           {...field} 
                         />
@@ -211,7 +211,7 @@ export function Contact() {
                   <span className="arrow">
                     <ArrowRight className="w-5 h-5" />
                   </span>
-                  <span className="text-gray-900 group-hover:text-[#D53F8C] transition-colors">
+                  <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
                     {submitLead.isPending ? "ENVIANDO..." : "ENVIAR SOLICITAÇÃO"}
                   </span>
                 </button>

@@ -46,7 +46,7 @@ export function Navbar() {
           {/* Logo - Simple text like DCVC */}
           <Link 
             href="/"
-            className="text-xl font-semibold tracking-tight text-gray-900"
+            className="text-xl font-semibold tracking-tight text-[#9e3ffd]"
             data-testid="logo-home"
           >
             ÓTIMA<br/>ENERGIA

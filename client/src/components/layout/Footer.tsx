@@ -22,7 +22,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#F5F5F0] py-24 lg:py-32 border-t border-gray-200">
+    <footer className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         {/* Large Navigation Links - DCVC Style */}
         <div className="grid md:grid-cols-3 gap-8 mb-24">
@@ -57,7 +57,7 @@ export function Footer() {
           {/* Topics */}
           <div>
             <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Serviços</p>
-            <ul className="space-y-3 text-gray-600">
+            <ul className="space-y-3 text-[#736d77]">
               <li>Energia para PMEs</li>
               <li>Energia Industrial</li>
               <li>Consultoria Energética</li>
@@ -68,7 +68,7 @@ export function Footer() {
           {/* Location */}
           <div>
             <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Localização</p>
-            <div className="text-gray-600 space-y-1">
+            <div className="text-[#736d77] space-y-1">
               <p>Rio de Janeiro</p>
               <p>Brasil</p>
             </div>
@@ -80,7 +80,7 @@ export function Footer() {
           {/* Logo */}
           <Link 
             href="/"
-            className="text-xl font-semibold tracking-tight text-gray-900"
+            className="text-xl font-semibold tracking-tight text-[#9e3ffd]"
           >
             ÓTIMA<br/>ENERGIA
           </Link>
@@ -88,8 +88,8 @@ export function Footer() {
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
             <span>©{currentYear} Ótima Energia. Todos os direitos reservados.</span>
-            <span className="hover:text-[#D53F8C] cursor-pointer transition-colors">Privacidade</span>
-            <span className="hover:text-[#D53F8C] cursor-pointer transition-colors">Termos de Uso</span>
+            <span className="hover:text-[#df0af2] cursor-pointer transition-colors">Privacidade</span>
+            <span className="hover:text-[#df0af2] cursor-pointer transition-colors">Termos de Uso</span>
           </div>
         </div>
       </div>

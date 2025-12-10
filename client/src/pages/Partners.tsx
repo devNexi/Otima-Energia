@@ -111,13 +111,13 @@ export default function Partners() {
       <Navbar />
       
       {/* Hero Section - Matches DCVC Companies page */}
-      <section className="bg-[#F5F5F0] pt-32 pb-16 lg:pt-40 lg:pb-24">
+      <section className="bg-[#eee7f1] pt-32 pb-16 lg:pt-40 lg:pb-24">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
-            <h1 className="text-[3.5rem] lg:text-[4.5rem] leading-[1] font-normal tracking-tight text-[#6B46C1]">
+            <h1 className="text-[3.5rem] lg:text-[4.5rem] leading-[1] font-normal tracking-tight text-[#9e3ffd]">
               Parceiros
             </h1>
-            <p className="text-lg lg:text-xl text-gray-700 leading-relaxed max-w-xl">
+            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed max-w-xl">
               Trabalhamos com os principais fornecedores de energia e parceiros tecnológicos do Brasil para entregar as melhores soluções para o seu negócio.
             </p>
           </div>
@@ -125,19 +125,19 @@ export default function Partners() {
       </section>
 
       {/* Filter Bar - Matches DCVC exactly */}
-      <section className="bg-[#F5F5F0] pb-12">
+      <section className="bg-[#eee7f1] pb-12">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex items-center gap-4 mb-6">
-            <button className="flex items-center gap-2 text-[#6B46C1]">
+            <button className="flex items-center gap-2 text-[#9e3ffd]">
               <Filter className="w-5 h-5" />
               <span className="text-sm font-medium">Filtrar</span>
             </button>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[#736d77]">
             Exibindo {filteredPartners.length} Parceiros em Destaque, de Todos os Setores.{" "}
             <button 
               onClick={() => setFilter(filter === "todos" ? "destaque" : "todos")}
-              className="text-[#6B46C1] hover:underline"
+              className="text-[#9e3ffd] hover:text-[#df0af2] hover:underline transition-colors"
             >
               {filter === "todos" ? "Mostrar Destaques" : "Mostrar Todos os Parceiros"}
             </button>
@@ -146,7 +146,7 @@ export default function Partners() {
       </section>
 
       {/* Partners Grid - Matches DCVC Companies grid exactly */}
-      <section className="bg-[#F5F5F0] pb-24 lg:pb-32">
+      <section className="bg-[#eee7f1] pb-24 lg:pb-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredPartners.map((partner) => (
@@ -165,25 +165,25 @@ export default function Partners() {
 function PartnerCard({ partner }: { partner: Partner }) {
   return (
     <div 
-      className="group bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-[#6B46C1] hover:-translate-y-1 cursor-pointer"
+      className="group bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-[#9e3ffd] hover:-translate-y-1 cursor-pointer"
       data-testid={`partner-card-${partner.id}`}
     >
       {/* Logo Area */}
-      <div className="h-40 bg-gray-50 flex items-center justify-center p-6">
-        <span className="text-2xl font-semibold text-gray-400 tracking-tight text-center">
+      <div className="h-40 bg-[#eee7f1] flex items-center justify-center p-6">
+        <span className="text-2xl font-semibold text-[#9e3ffd] tracking-tight text-center">
           {partner.name}
         </span>
       </div>
       
       {/* Content */}
       <div className="p-6">
-        <h3 className="text-lg font-medium text-gray-900 group-hover:text-[#6B46C1] transition-colors mb-2">
+        <h3 className="text-lg font-medium text-[#16163f] group-hover:text-[#9e3ffd] transition-colors mb-2">
           {partner.name}
         </h3>
-        <p className="text-sm text-gray-600 leading-relaxed mb-4">
+        <p className="text-sm text-[#736d77] leading-relaxed mb-4">
           {partner.description}
         </p>
-        <p className="text-xs uppercase tracking-wide text-gray-400">
+        <p className="text-xs uppercase tracking-wide text-[#c88ff5]">
           {partner.category}
         </p>
       </div>

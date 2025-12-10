@@ -1,0 +1,187 @@
+UPDATE WEBSITE THEME WITH NEW BRAND COLORS
+URGENT THEME UPDATE: Apply new brand colors to match DCVC's bold style
+
+CURRENT STATUS: The website structure is good (following DCVC layout), but needs updated colors.
+
+NEW BRAND COLOR PALETTE:
+
+text
+#9e3ffd → Primary brand color (use BOLDLY like DCVC uses their green)
+#16163f → Dark background/headlines
+#c88ff5 → Light purple for accents/backgrounds
+#df0af2 → Pink accent for CTAs/hover states
+#eee7f1 → Light background for sections
+#736d77 → Gray for body text
+#004a98 → Blue accent (optional)
+#ffffff → White
+#000000 → Black
+1. COLOR STRATEGY (Match DCVC's Confidence):
+DCVC uses green BOLDLY. We should use #9e3ffd with the same confidence.
+
+Where DCVC uses green, we use #9e3ffd:
+
+Headlines
+
+Section backgrounds
+
+Primary buttons
+
+Key accents
+
+2. SPECIFIC CHANGES TO MAKE:
+A. UPDATE CSS VARIABLES:
+
+css
+:root {
+  /* New Brand Colors */
+  --primary-purple: #9e3ffd;      /* Main brand - USE BOLDLY */
+  --dark-purple: #16163f;         /* Dark backgrounds/headlines */
+  --light-purple: #c88ff5;        /* Light accents */
+  --accent-pink: #df0af2;         /* CTA/hover accents */
+  --light-bg: #eee7f1;            /* Light section backgrounds */
+  --text-gray: #736d77;           /* Body text */
+  --accent-blue: #004a98;         /* Optional accent */
+  --white: #ffffff;
+  --black: #000000;
+}
+B. HEADLINES (Make Bold Like DCVC):
+
+css
+h1, h2 {
+  color: var(--primary-purple); /* #9e3ffd */
+  /* Keep DCVC typography sizes: h1=3.75rem, h2=2.25rem */
+}
+
+h3, h4 {
+  color: var(--dark-purple); /* #16163f */
+}
+C. NAVIGATION:
+
+Logo text: color: var(--primary-purple);
+
+Menu links: color: var(--dark-purple);
+
+Hover states: color: var(--primary-purple); or var(--accent-pink);
+
+D. HERO SECTION:
+
+Headline: Already var(--primary-purple) from above
+
+Consider adding: background-color: var(--light-bg); for the whole hero section (like DCVC's colored sections)
+
+E. BUTTONS:
+
+css
+.primary-button {
+  background-color: var(--primary-purple); /* #9e3ffd */
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: var(--accent-pink); /* #df0af2 */
+  transform: translateY(-2px);
+}
+
+.secondary-button {
+  border: 2px solid var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.secondary-button:hover {
+  background-color: var(--primary-purple);
+  color: white;
+}
+F. CARDS:
+
+Background: var(--white) or var(--light-bg) for alternating sections
+
+Border: 1px solid #E2E8F0 (keep DCVC's subtle borders)
+
+Headlines inside cards: var(--primary-purple)
+
+Hover effect: Slight lift + border-color: var(--primary-purple);
+
+G. SECTION BACKGROUNDS (Like DCVC's Green Sections):
+
+css
+/* Alternate some sections with light background */
+section:nth-child(even) {
+  background-color: var(--light-bg); /* #eee7f1 */
+}
+
+/* Or pick strategic sections for full color */
+.contact-section {
+  background-color: var(--light-bg);
+}
+H. ACCENTS & LINKS:
+
+css
+a {
+  color: var(--primary-purple);
+}
+
+a:hover {
+  color: var(--accent-pink);
+}
+
+.highlight {
+  color: var(--accent-pink);
+}
+3. COLOR APPLICATION RULES:
+USE #9e3ffd BOLDLY ON:
+
+All H1 and H2 headlines
+
+Primary CTA buttons
+
+Navigation logo
+
+Key section backgrounds (strategically)
+
+Important icons/graphics
+
+USE #16163f FOR:
+
+H3, H4 headlines
+
+Important text
+
+Footer backgrounds
+
+USE #df0af2 FOR:
+
+Button hover states
+
+Special highlights
+
+Secondary CTAs
+
+USE #eee7f1 FOR:
+
+Alternating section backgrounds
+
+Card backgrounds (alternating)
+
+Subtle highlights
+
+4. FINAL CHECKLIST:
+All headlines H1-H2 are now #9e3ffd
+
+Primary buttons are #9e3ffd with white text
+
+Button hovers are #df0af2
+
+Navigation logo is #9e3ffd
+
+Links are #9e3ffd with pink hovers
+
+Strategic sections have #eee7f1 backgrounds
+
+Body text is #736d77 for readability
+
+Keep DCVC's spacing, typography, and layout EXACTLY as is
+
+5. KEY INSTRUCTION FOR REPLIT:
+"Match DCVC's bold color confidence. Where DCVC uses green prominently, we use #9e3ffd. Where DCVC uses green backgrounds, we use #eee7f1 or #c88ff5. Make the website feel colorful and confident, not minimal. Keep all DCVC spacing and typography exactly as they are now - ONLY update the colors."
+
+VISUAL GOAL: When someone looks at the site, they should think "This has DCVC's professional structure but with Ótima's vibrant purple identity.
