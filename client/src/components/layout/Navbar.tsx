@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Menu, X, Search } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
-    { name: "HOME", href: "#top" },
+    { name: "INÍCIO", href: "#top" },
     { name: "COMO FUNCIONA", href: "#process" },
-    { name: "PARA EMPRESAS", href: "#business" },
+    { name: "SOLUÇÕES", href: "#business" },
     { name: "CONTATO", href: "#contact" },
   ];
 
@@ -72,7 +72,7 @@ export function Navbar() {
               <button
                 key={link.name}
                 onClick={() => handleScroll(link.href)}
-                className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-purple-600"
+                className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
               >
                 {link.name}
               </button>

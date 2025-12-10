@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 
 const formSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
-  company: z.string().min(2, "Company name is required"),
-  phone: z.string().min(10, "Invalid phone"),
+  name: z.string().min(2, "Nome é obrigatório"),
+  email: z.string().email("E-mail inválido"),
+  company: z.string().min(2, "Nome da empresa é obrigatório"),
+  phone: z.string().min(10, "Telefone inválido"),
   message: z.string().optional(),
 });
 
@@ -39,21 +39,21 @@ export function Contact() {
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to submit");
+        throw new Error(error.error || "Falha ao enviar");
       }
       
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Request submitted!",
-        description: "One of our specialists will contact you soon.",
+        title: "Solicitação enviada!",
+        description: "Um de nossos especialistas entrará em contato em breve.",
       });
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Erro",
         description: error.message,
         variant: "destructive",
       });
@@ -65,29 +65,29 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="bg-white py-24 lg:py-32 border-t border-gray-200">
+    <section id="contact" className="bg-[#F5F3FF] py-24 lg:py-32 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Left Column - Info */}
           <div>
-            <h2 className="dcvc-section-title text-gray-900 mb-6">Contact</h2>
+            <h2 className="dcvc-section-title mb-6">Contato</h2>
             <p className="dcvc-statement text-gray-900 mb-12">
-              Ready to{" "}
-              <span className="text-highlight">start saving</span>?
+              Pronto para{" "}
+              <span className="text-highlight">começar a economizar</span>?
             </p>
             
             <div className="space-y-6 text-gray-600">
               <div>
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Email</p>
+                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">E-mail</p>
                 <p className="text-lg">contato@otimaenergia.com.br</p>
               </div>
               <div>
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Phone</p>
+                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Telefone</p>
                 <p className="text-lg">+55 21 99999-9999</p>
               </div>
               <div>
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Location</p>
-                <p className="text-lg">Rio de Janeiro, Brazil</p>
+                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Localização</p>
+                <p className="text-lg">Rio de Janeiro, Brasil</p>
               </div>
             </div>
           </div>
@@ -103,13 +103,13 @@ export function Contact() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm tracking-wide text-gray-500 uppercase">
-                          Full Name
+                          Nome Completo
                         </FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="Your name" 
+                            placeholder="Seu nome" 
                             data-testid="input-name" 
-                            className="h-12 border-gray-200 rounded-none focus:border-purple-600 focus:ring-0"
+                            className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
                             {...field} 
                           />
                         </FormControl>
@@ -123,13 +123,13 @@ export function Contact() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm tracking-wide text-gray-500 uppercase">
-                          Phone
+                          Telefone
                         </FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="+55 21 99999-9999" 
                             data-testid="input-phone" 
-                            className="h-12 border-gray-200 rounded-none focus:border-purple-600 focus:ring-0"
+                            className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
                             {...field} 
                           />
                         </FormControl>
@@ -145,13 +145,13 @@ export function Contact() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm tracking-wide text-gray-500 uppercase">
-                        Email
+                        E-mail
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="you@company.com" 
+                          placeholder="voce@empresa.com.br" 
                           data-testid="input-email" 
-                          className="h-12 border-gray-200 rounded-none focus:border-purple-600 focus:ring-0"
+                          className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
                           {...field} 
                         />
                       </FormControl>
@@ -166,13 +166,13 @@ export function Contact() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm tracking-wide text-gray-500 uppercase">
-                        Company
+                        Empresa
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Company name" 
+                          placeholder="Nome da empresa" 
                           data-testid="input-company" 
-                          className="h-12 border-gray-200 rounded-none focus:border-purple-600 focus:ring-0"
+                          className="h-12 border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
                           {...field} 
                         />
                       </FormControl>
@@ -187,12 +187,12 @@ export function Contact() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm tracking-wide text-gray-500 uppercase">
-                        Message (Optional)
+                        Mensagem (Opcional)
                       </FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Tell us about your energy consumption..." 
-                          className="resize-none min-h-[120px] border-gray-200 rounded-none focus:border-purple-600 focus:ring-0"
+                          placeholder="Conte-nos sobre seu consumo de energia..." 
+                          className="resize-none min-h-[120px] border-gray-200 rounded-none focus:border-[#6B46C1] focus:ring-0 bg-white"
                           data-testid="input-message"
                           {...field} 
                         />
@@ -211,8 +211,8 @@ export function Contact() {
                   <span className="arrow">
                     <ArrowRight className="w-5 h-5" />
                   </span>
-                  <span className="text-gray-900 group-hover:text-purple-600 transition-colors">
-                    {submitLead.isPending ? "SENDING..." : "SUBMIT REQUEST"}
+                  <span className="text-gray-900 group-hover:text-[#D53F8C] transition-colors">
+                    {submitLead.isPending ? "ENVIANDO..." : "ENVIAR SOLICITAÇÃO"}
                   </span>
                 </button>
               </form>

@@ -30,9 +30,9 @@ export function Hero() {
       <div className="relative z-10 min-h-screen flex items-end">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
           <h1 className="dcvc-statement text-white max-w-4xl">
-            We are{" "}
-            <span className="text-highlight">intelligent energy</span>
-            {" "}for Brazilian businesses.
+            Somos{" "}
+            <span className="text-highlight">energia inteligente</span>
+            {" "}para empresas brasileiras.
           </h1>
         </div>
       </div>

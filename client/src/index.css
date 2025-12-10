@@ -119,9 +119,9 @@
     @apply bg-[var(--accent-pink)] text-white px-1;
   }
   
-  /* Section headers */
+  /* Section headers - purple color */
   .dcvc-section-title {
-    @apply text-2xl md:text-3xl font-normal tracking-tight;
+    @apply text-2xl md:text-3xl font-normal tracking-tight text-[var(--accent-purple)];
   }
   
   /* Body text */
@@ -129,9 +129,9 @@
     @apply text-base md:text-lg text-gray-600 leading-relaxed;
   }
   
-  /* Navigation link style */
+  /* Navigation link style - hover to pink */
   .dcvc-nav-link {
-    @apply text-sm font-normal text-gray-800 hover:text-[var(--accent-purple)] transition-colors tracking-wide uppercase;
+    @apply text-sm font-normal text-gray-800 hover:text-[var(--accent-pink)] transition-colors tracking-wide uppercase;
   }
   
   /* Arrow button like DCVC */
@@ -140,7 +140,11 @@
   }
   
   .dcvc-arrow-btn .arrow {
-    @apply w-10 h-10 bg-[var(--accent-purple)] flex items-center justify-center text-white;
+    @apply w-10 h-10 bg-[var(--accent-purple)] flex items-center justify-center text-white transition-colors;
+  }
+  
+  .dcvc-arrow-btn:hover .arrow {
+    @apply bg-[var(--accent-pink)];
   }
   
   /* Card - minimal DCVC style */

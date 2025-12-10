@@ -23,39 +23,39 @@ export function Footer() {
               onClick={() => handleScroll("#process")}
               className="dcvc-footer-link block text-left"
             >
-              How It Works
+              Como Funciona
             </button>
             <button 
               onClick={() => handleScroll("#business")}
               className="dcvc-footer-link block text-left"
             >
-              Solutions
+              Soluções
             </button>
             <button 
               onClick={() => handleScroll("#contact")}
               className="dcvc-footer-link block text-left"
             >
-              Contact
+              Contato
             </button>
           </div>
 
           {/* Topics */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Services</p>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Serviços</p>
             <ul className="space-y-3 text-gray-600">
-              <li>SME Energy</li>
-              <li>Industrial Energy</li>
-              <li>Energy Consulting</li>
-              <li>Market Analysis</li>
+              <li>Energia para PMEs</li>
+              <li>Energia Industrial</li>
+              <li>Consultoria Energética</li>
+              <li>Análise de Mercado</li>
             </ul>
           </div>
 
           {/* Location */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Location</p>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Localização</p>
             <div className="text-gray-600 space-y-1">
               <p>Rio de Janeiro</p>
-              <p>Brazil</p>
+              <p>Brasil</p>
             </div>
           </div>
         </div>
@@ -72,9 +72,9 @@ export function Footer() {
 
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
-            <span>©{currentYear} Ótima Energia. All rights reserved.</span>
-            <span className="hover:text-purple-600 cursor-pointer transition-colors">Privacy</span>
-            <span className="hover:text-purple-600 cursor-pointer transition-colors">Terms of Use</span>
+            <span>©{currentYear} Ótima Energia. Todos os direitos reservados.</span>
+            <span className="hover:text-[#D53F8C] cursor-pointer transition-colors">Privacidade</span>
+            <span className="hover:text-[#D53F8C] cursor-pointer transition-colors">Termos de Uso</span>
           </div>
         </div>
       </div>
