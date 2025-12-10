@@ -1,17 +1,31 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [location] = useLocation();
+  const isHomePage = location === "/";
 
   const navLinks = [
-    { name: "INÍCIO", href: "#top" },
-    { name: "COMO FUNCIONA", href: "#process" },
-    { name: "SOLUÇÕES", href: "#business" },
-    { name: "CONTATO", href: "#contact" },
+    { name: "INÍCIO", href: "/", isPage: true },
+    { name: "COMO FUNCIONA", href: "#process", isPage: false },
+    { name: "SOLUÇÕES", href: "#business", isPage: false },
+    { name: "PARCEIROS", href: "/parceiros", isPage: true },
+    { name: "CONTATO", href: "#contact", isPage: false },
   ];
 
-  const handleScroll = (href: string) => {
+  const handleNavClick = (href: string, isPage: boolean) => {
+    if (isPage) {
+      setIsOpen(false);
+      return;
+    }
+    
+    if (!isHomePage) {
+      window.location.href = "/" + href;
+      return;
+    }
+    
     if (href === "#top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
@@ -31,25 +45,36 @@ export function Navbar() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-20">
           {/* Logo - Simple text like DCVC */}
-          <button 
-            onClick={() => handleScroll("#top")}
+          <Link 
+            href="/"
             className="text-xl font-semibold tracking-tight text-gray-900"
             data-testid="logo-home"
           >
             ÓTIMA<br/>ENERGIA
-          </button>
+          </Link>
 
           {/* Desktop Navigation - Simple links like DCVC */}
           <div className="hidden md:flex items-center gap-12">
             {navLinks.map((link) => (
-              <button
-                key={link.name}
-                onClick={() => handleScroll(link.href)}
-                className="dcvc-nav-link"
-                data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
-              >
-                {link.name}
-              </button>
+              link.isPage ? (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="dcvc-nav-link"
+                  data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <button
+                  key={link.name}
+                  onClick={() => handleNavClick(link.href, link.isPage)}
+                  className="dcvc-nav-link"
+                  data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  {link.name}
+                </button>
+              )
             ))}
           </div>
 
@@ -69,13 +94,24 @@ export function Navbar() {
         <div className="md:hidden bg-white border-t border-gray-200">
           <div className="px-6 py-8 space-y-6">
             {navLinks.map((link) => (
-              <button
-                key={link.name}
-                onClick={() => handleScroll(link.href)}
-                className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
-              >
-                {link.name}
-              </button>
+              link.isPage ? (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setIsOpen(false)}
+                  className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <button
+                  key={link.name}
+                  onClick={() => handleNavClick(link.href, link.isPage)}
+                  className="block w-full text-left text-lg tracking-wide text-gray-800 hover:text-[#D53F8C]"
+                >
+                  {link.name}
+                </button>
+              )
             ))}
           </div>
         </div>

@@ -7,12 +7,14 @@ import { I18nProvider } from "@/lib/i18n";
 import Home from "@/pages/Home";
 import Portal from "@/pages/Portal";
 import Admin from "@/pages/Admin";
+import Partners from "@/pages/Partners";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/parceiros" component={Partners} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />

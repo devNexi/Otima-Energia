@@ -1,7 +1,16 @@
+import { Link, useLocation } from "wouter";
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const [location] = useLocation();
+  const isHomePage = location === "/";
 
   const handleScroll = (href: string) => {
+    if (!isHomePage) {
+      window.location.href = "/" + href;
+      return;
+    }
+    
     if (href === "#top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
@@ -31,6 +40,12 @@ export function Footer() {
             >
               Soluções
             </button>
+            <Link 
+              href="/parceiros"
+              className="dcvc-footer-link block text-left"
+            >
+              Parceiros
+            </Link>
             <button 
               onClick={() => handleScroll("#contact")}
               className="dcvc-footer-link block text-left"
@@ -63,12 +78,12 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-8 border-t border-gray-300">
           {/* Logo */}
-          <button 
-            onClick={() => handleScroll("#top")}
+          <Link 
+            href="/"
             className="text-xl font-semibold tracking-tight text-gray-900"
           >
             ÓTIMA<br/>ENERGIA
-          </button>
+          </Link>
 
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">

@@ -1,0 +1,128 @@
+TASK: Create a new page /partners.html that exactly copies the structure and styling of DCVC's Companies page (https://www.dcvc.com/companies/) but adapted for Ótima Energia's partners/suppliers.
+
+REFERENCE: See attached DCVC Companies page screenshots for exact layout.
+
+1. PAGE STRUCTURE (Copy DCVC Exactly):
+text
+- Navigation (same as homepage)
+- Hero Section: "Partners" headline + brief description
+- Filter Bar: "Showing X Partners" + filter options
+- Grid of Partner Cards (3 columns desktop, 2 tablet, 1 mobile)
+- Footer (same as homepage)
+2. HERO SECTION (Copy DCVC's Companies Hero):
+html
+<h1>Partners</h1>
+<p>We work with Brazil's leading energy suppliers and technology partners to deliver the best solutions for your business.</p>
+3. FILTER BAR (Copy DCVC Exactly):
+Text: "Showing [X] Partners, [Status Filter], [Sector Filter]"
+
+Layout: Left-aligned, clean typography
+
+Optional: Add filter dropdowns like DCVC (but can be simple text for now)
+
+4. PARTNER CARDS (CRITICAL - Match DCVC Exactly):
+Each card should have:
+
+Company logo/name (where DCVC has company names)
+
+Brief 1-2 line description
+
+Optional: Category tags (like "Solar", "Wind", "Hydro", etc.)
+
+Card Styling (Must match DCVC):
+
+White background
+
+1px solid #E2E8F0 border
+
+Rounded corners (8px)
+
+Padding: 1.5rem
+
+Clean, minimal typography
+
+5. HOVER EFFECT (MOST IMPORTANT - Match DCVC Exactly):
+css
+.partner-card:hover .partner-name {
+  color: #6B46C1; /* Our purple instead of DCVC's green */
+}
+
+.partner-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border-color: #6B46C1; /* Optional: purple border on hover */
+}
+Exactly like DCVC: When you hover over a card, ONLY the company name/headline changes to purple. Everything else stays the same.
+
+6. GRID LAYOUT (Match DCVC Exactly):
+css
+.partners-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns desktop */
+  gap: 2rem; /* Exact DCVC spacing */
+}
+
+/* Tablet: 2 columns */
+@media (max-width: 1024px) {
+  .partners-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile: 1 column */
+@media (max-width: 768px) {
+  .partners-grid {
+    grid-template-columns: 1fr;
+  }
+}
+7. SAMPLE PARTNER DATA (Use These Examples):
+Neoenergia - One of Brazil's largest energy distributors
+
+CPFL Energia - Leading renewable energy provider
+
+ENGIE Brasil - Global energy transition leader
+
+Enel Brasil - Major renewable energy operator
+
+Equinor Brazil - Offshore wind and solar development
+
+Shell Energy Brazil - Integrated energy solutions
+
+Statkraft Brasil - Renewable power generation
+
+Voltalia Brasil - Solar and wind energy producer
+
+8. COLOR APPLICATION (Strategic Like DCVC):
+Page headline (H1): #6B46C1 (purple)
+
+Hover effect: Company name turns #6B46C1 (purple) on hover
+
+Everything else: Grayscale (like DCVC)
+
+Optional accent: Category tags could be #D53F8C (pink)
+
+9. NAVIGATION UPDATE:
+Add "Partners" to the main navigation
+
+Link: /partners.html
+
+10. MOBILE RESPONSIVENESS (Must Match DCVC):
+Exact same breakpoints as DCVC's Companies page
+
+Cards stack cleanly on mobile
+
+Touch-friendly hover states
+
+DELIVERABLE:
+
+New page: /partners.html
+
+Exact DCVC Companies page structure
+
+Hover effect that turns partner names purple
+
+Clean 3-column grid (responsive)
+
+Updated navigation with "Partners" link
+
+KEY INSTRUCTION: "Copy DCVC's Companies page EXACTLY, but change 'Companies' to 'Partners', 'Portfolio' to 'Energy Suppliers', and use our purple (#6B46C1) for the hover effect instead of their green."
