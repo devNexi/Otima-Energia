@@ -8,9 +8,8 @@ export function Navbar() {
   const isHomePage = location === "/";
 
   const navLinks = [
-    { name: "INÍCIO", href: "/", isPage: true },
-    { name: "COMO FUNCIONA", href: "#process", isPage: false },
-    { name: "SOLUÇÕES", href: "#business", isPage: false },
+    { name: "SOBRE", href: "/sobre", isPage: true },
+    { name: "EQUIPE", href: "/equipe", isPage: true },
     { name: "PARCEIROS", href: "/parceiros", isPage: true },
     { name: "CONTATO", href: "#contact", isPage: false },
   ];

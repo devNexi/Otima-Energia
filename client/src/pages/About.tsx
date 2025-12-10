@@ -1,0 +1,151 @@
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+import { ArrowRight } from "lucide-react";
+import { Link } from "wouter";
+
+export default function About() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      {/* Hero Section */}
+      <section className="bg-[#F5F5F0] pt-32 pb-24 lg:pt-40 lg:pb-32">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
+            <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#6B46C1]">
+              Somos infraestrutura inteligente de energia para o Brasil.
+            </h1>
+            <p className="text-lg lg:text-xl text-gray-700 leading-relaxed">
+              Há anos, ajudamos empresas brasileiras a economizar até 35% na conta de luz através de transparência, tecnologia e as melhores condições do mercado livre de energia.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Mission Statement Section */}
+      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-gray-900 mb-6">
+                Estamos com pressa.
+              </h2>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                A Lei nº 15.269/2025 abre o mercado livre de energia para 80 milhões de consumidores nos próximos 36 meses. Esta é a maior transformação do setor elétrico brasileiro desde sua privatização. Queremos estar na linha de frente dessa revolução.
+              </p>
+            </div>
+            <div className="flex items-start lg:justify-end">
+              <Link 
+                href="/#business"
+                className="inline-flex items-center gap-3 text-sm font-normal tracking-wide uppercase group"
+              >
+                <span className="w-10 h-10 bg-[#6B46C1] group-hover:bg-[#D53F8C] flex items-center justify-center text-white transition-colors">
+                  <ArrowRight className="w-5 h-5" />
+                </span>
+                <span className="text-gray-900 group-hover:text-[#D53F8C] transition-colors">
+                  EXPLORAR SOLUÇÕES
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Approach Section */}
+      <section className="bg-[#F5F5F0] py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="max-w-4xl">
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#6B46C1] mb-12">
+              Acreditamos em transparência radical.
+            </h2>
+            <div className="space-y-6 text-lg text-gray-700 leading-relaxed">
+              <p>
+                O mercado livre de energia brasileiro movimenta mais de R$100 bilhões por ano, mas continua opaco e fragmentado. Fornecedores, distribuidoras e comercializadores operam com informações assimétricas, deixando empresas pagando mais do que deveriam.
+              </p>
+              <p>
+                Acreditamos que <span className="font-medium text-[#6B46C1]">tecnologia e dados</span> podem nivelar esse campo. Nossa plataforma analisa consumo, compara ofertas e negocia condições que empresas individuais nunca conseguiriam sozinhas.
+              </p>
+              <p>
+                Não somos apenas corretores. Somos a <span className="font-medium text-[#6B46C1]">camada de infraestrutura</span> que conecta toda a cadeia de valor do setor elétrico brasileiro.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid md:grid-cols-3 gap-12 lg:gap-16">
+            <div>
+              <div className="text-5xl lg:text-6xl font-light text-[#6B46C1] mb-4">
+                35%
+              </div>
+              <p className="text-gray-600">
+                Economia média dos nossos clientes na conta de luz
+              </p>
+            </div>
+            <div>
+              <div className="text-5xl lg:text-6xl font-light text-[#6B46C1] mb-4">
+                R$100B+
+              </div>
+              <p className="text-gray-600">
+                Volume anual do mercado livre de energia brasileiro
+              </p>
+            </div>
+            <div>
+              <div className="text-5xl lg:text-6xl font-light text-[#6B46C1] mb-4">
+                80M
+              </div>
+              <p className="text-gray-600">
+                Consumidores elegíveis ao mercado livre até 2028
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Strategy Section */}
+      <section className="bg-[#F5F5F0] py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#6B46C1] mb-16">
+            Nossa Estratégia
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white border border-gray-200 rounded-lg p-8">
+              <p className="text-sm tracking-wide text-[#D53F8C] uppercase mb-4">Fase 1</p>
+              <h3 className="text-xl font-medium text-gray-900 mb-4">
+                Ótima Energia
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Corretagem de alta performance gerando receita imediata e inteligência de mercado. Construímos relacionamentos com fornecedores e aprendemos as nuances do mercado brasileiro.
+              </p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-8">
+              <p className="text-sm tracking-wide text-[#D53F8C] uppercase mb-4">Fase 2</p>
+              <h3 className="text-xl font-medium text-gray-900 mb-4">
+                Mercado Invisível
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Sistema operacional B2B para o mercado livre de energia brasileiro. Plataforma que conecta fornecedores, distribuidoras e consumidores com eficiência sem precedentes.
+              </p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-8">
+              <p className="text-sm tracking-wide text-[#D53F8C] uppercase mb-4">Fase 3</p>
+              <h3 className="text-xl font-medium text-gray-900 mb-4">
+                Trocaluz
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Portal de comparação e troca de energia para o mercado de massa. Atendendo os 80 milhões de consumidores que entrarão no mercado livre até 2028.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+      <WhatsAppButton />
+    </div>
+  );
+}

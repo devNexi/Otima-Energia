@@ -28,18 +28,18 @@ export function Footer() {
         <div className="grid md:grid-cols-3 gap-8 mb-24">
           {/* Main Nav */}
           <div className="space-y-4">
-            <button 
-              onClick={() => handleScroll("#process")}
+            <Link 
+              href="/sobre"
               className="dcvc-footer-link block text-left"
             >
-              Como Funciona
-            </button>
-            <button 
-              onClick={() => handleScroll("#business")}
+              Sobre
+            </Link>
+            <Link 
+              href="/equipe"
               className="dcvc-footer-link block text-left"
             >
-              Soluções
-            </button>
+              Equipe
+            </Link>
             <Link 
               href="/parceiros"
               className="dcvc-footer-link block text-left"

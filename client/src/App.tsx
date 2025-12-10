@@ -8,12 +8,16 @@ import Home from "@/pages/Home";
 import Portal from "@/pages/Portal";
 import Admin from "@/pages/Admin";
 import Partners from "@/pages/Partners";
+import About from "@/pages/About";
+import Team from "@/pages/Team";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/sobre" component={About} />
+      <Route path="/equipe" component={Team} />
       <Route path="/parceiros" component={Partners} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />

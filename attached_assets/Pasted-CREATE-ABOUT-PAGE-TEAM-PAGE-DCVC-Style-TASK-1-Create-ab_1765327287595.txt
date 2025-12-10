@@ -1,0 +1,190 @@
+CREATE ABOUT PAGE & TEAM PAGE (DCVC Style)
+TASK 1: Create /about.html - About Page (Copy DCVC's About Page Structure)
+
+REFERENCE: See attached DCVC About page screenshots.
+
+1. PAGE STRUCTURE (Copy DCVC Exactly):
+text
+Navigation (same as homepage)
+Hero Section: Clean, bold headline
+Main Content: Multi-column text sections
+Stats Section: Clean number display
+Footer (same as homepage)
+2. HERO SECTION (Copy DCVC's "About" Hero):
+html
+<h1>We are intelligent energy infrastructure for Brazil.</h1>
+<p>For years, we've helped Brazilian businesses save up to 35% on electricity through transparency, technology, and the best conditions in the free energy market.</p>
+3. MAIN CONTENT SECTIONS (Copy DCVC's Multi-column Layout):
+Section 1: Mission Statement (like DCVC's "We are in a hurry" section)
+
+Left column: Headline + paragraph
+
+Right column: "EXPLORE OUR SOLUTIONS" button
+
+Section 2: Our Approach (like DCVC's "We believe" section)
+
+Multi-paragraph, clean typography
+
+Key phrase in bold purple: #6B46C1
+
+Section 3: Stats Display (like DCVC's number section)
+
+html
+<div class="stats-grid">
+  <div class="stat">
+    <div class="stat-number">35%</div>
+    <div class="stat-label">Average client savings</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number">R$100B+</div>
+    <div class="stat-label">Market volume served</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number">80M</div>
+    <div class="stat-label">Eligible consumers by 2028</div>
+  </div>
+</div>
+4. DESIGN SPECIFICS (Match DCVC):
+Typography: Headlines in purple (#6B46C1)
+
+Spacing: Massive whitespace between sections (96px padding)
+
+Layout: Clean 2-column where appropriate
+
+Buttons: Purple background, pink hover
+
+TASK 2: Create /team.html - Team Page (DCVC Style with ACR Group Info)
+
+REFERENCE: Use ACR Group document for team info (Callum & Renan).
+
+1. HERO SECTION:
+html
+<h1>Team</h1>
+<p>We combine deep energy market expertise with technology to transform how Brazil buys electricity.</p>
+2. TEAM MEMBER CARDS (DCVC Style - Simple, Clean):
+Team Member 1: Callum Sinclair
+
+html
+<div class="team-card">
+  <div class="team-info">
+    <h3>Callum Sinclair</h3>
+    <p class="team-role">Founder & CEO</p>
+    <p class="team-bio">Vision, strategy, and technology architecture. Brings UK energy market playbook to Brazil's R$100B free energy market.</p>
+    <p class="team-bio">Leads ACR Group's three-phase strategy: brokerage → platform infrastructure → mass-market switching.</p>
+  </div>
+</div>
+Team Member 2: Renan
+
+html
+<div class="team-card">
+  <div class="team-info">
+    <h3>Renan</h3>
+    <p class="team-role">Head of Brazil Operations</p>
+    <p class="team-bio">Operational backbone and Brazilian market execution. Manages supplier relationships and daily operations.</p>
+    <p class="team-bio">15% performance equity vested from revenue milestones: €500k, €1.5M, €5M.</p>
+  </div>
+</div>
+3. TEAM PAGE STYLING (Match DCVC):
+css
+/* Team Cards */
+.team-card {
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 2rem;
+  background: white;
+}
+
+.team-card h3 {
+  color: #6B46C1; /* Purple like DCVC */
+  margin-bottom: 0.5rem;
+}
+
+.team-role {
+  color: #D53F8C; /* Pink accent */
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.team-bio {
+  color: #4A5568;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+/* Team Grid */
+.team-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 768px) {
+  .team-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+4. ADDITIONAL TEAM SECTION (ACR Group Structure):
+html
+<section class="acr-structure">
+  <h2>ACR Group Structure</h2>
+  <div class="structure-grid">
+    <div class="structure-item">
+      <h4>ACR Group Ltda.</h4>
+      <p>Holding company overseeing Ótima Energia, Mercado Invisível, and Trocaluz.</p>
+    </div>
+    <div class="structure-item">
+      <h4>Ótima Energia</h4>
+      <p>High-performance brokerage generating immediate revenue and market intelligence.</p>
+    </div>
+    <div class="structure-item">
+      <h4>Mercado Invisível</h4>
+      <p>B2B operating system for Brazil's free energy market.</p>
+    </div>
+    <div class="structure-item">
+      <h4>Trocaluz</h4>
+      <p>Mass-market comparison and switching portal for 80M consumers.</p>
+    </div>
+  </div>
+</section>
+5. NAVIGATION UPDATES:
+Add "About" to main navigation (links to /about.html)
+
+Add "Team" to main navigation (links to /team.html)
+
+6. CONSISTENT STYLING RULES:
+Headlines: color: #6B46C1 (purple)
+
+Subheads: color: #2D3748 (dark gray)
+
+Body text: color: #4A5568 (medium gray)
+
+Accents: color: #D53F8C (pink for roles/special text)
+
+Spacing: 96px between sections, 32px between cards
+
+Cards: White background, 1px #E2E8F0 border, 8px radius
+
+Hover effects: Card lifts slightly, no dramatic shadows
+
+7. CONTENT FROM ACR GROUP DOCUMENT:
+Key Points to Include:
+
+"Three-phase strategy to capture Brazilian Free Energy Market (R$100B annual)"
+
+"Lei nº 15.269/2025 opens market to 80M consumers over 36 months"
+
+"Ótima Energia → Mercado Invisível → Trocaluz progression"
+
+"Goal: Become infrastructure layer for Brazil's energy switching"
+
+DELIVERABLES:
+
+New page: /about.html (DCVC About page clone with our content)
+
+New page: /team.html (DCVC style with Callum & Renan bios + ACR structure)
+
+Updated navigation with "About" and "Team" links
+
+Consistent DCVC styling across all pages
+
+KEY INSTRUCTION: "Copy DCVC's About page layout exactly. Use our purple/pink colors strategically (headlines purple, accents pink). For Team page, create simple, clean cards like DCVC would. Pull content from the ACR Group document for authenticity."
