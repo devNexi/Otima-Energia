@@ -29,8 +29,8 @@ export function Process() {
               <p className="text-[#736d77] mt-2">Economia de até</p>
             </div>
             <div>
-              <p className="text-4xl font-light text-[#9e3ffd]">R$100B+</p>
-              <p className="text-[#736d77] mt-2">Mercado anual</p>
+              <p className="text-4xl font-light text-[#9e3ffd]">90%+</p>
+              <p className="text-[#736d77] mt-2">Das empresas ainda estão fora do Mercado Livre</p>
             </div>
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">80M</p>
