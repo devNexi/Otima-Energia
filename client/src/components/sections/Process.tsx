@@ -1,4 +1,7 @@
 import { ArrowRight } from "lucide-react";
+import step1Image from "@assets/stock_images/electricity_bill_doc_0a81d9e9.jpg";
+import step2Image from "@assets/stock_images/data_analytics_dashb_444d348a.jpg";
+import step3Image from "@assets/stock_images/business_partnership_5011a1f6.jpg";
 
 export function Process() {
   const handleScroll = (href: string) => {
@@ -54,8 +57,15 @@ export function Process() {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {/* Step 1 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">01</span>
+              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
+                <img 
+                  src={step1Image} 
+                  alt="Análise de conta de energia" 
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Envie sua conta de luz para um diagnóstico gratuito
@@ -67,8 +77,15 @@ export function Process() {
 
             {/* Step 2 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">02</span>
+              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
+                <img 
+                  src={step2Image} 
+                  alt="Análise de dados e comparação de mercado" 
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Comparamos o mercado e negociamos as melhores condições
@@ -80,8 +97,15 @@ export function Process() {
 
             {/* Step 3 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">03</span>
+              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
+                <img 
+                  src={step3Image} 
+                  alt="Parceria e acompanhamento contínuo" 
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Migramos, contratamos e acompanhamos
