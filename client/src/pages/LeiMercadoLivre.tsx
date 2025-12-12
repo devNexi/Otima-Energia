@@ -17,8 +17,14 @@ export default function LeiMercadoLivre() {
               Lei nº 15.269/2025: quando sua empresa pode migrar para o mercado livre de energia
             </h1>
             <div>
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
+                A abertura do Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
+              </p>
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
+                Com a Lei nº 15.269/2025, milhões de empresas que antes não podiam escolher seu fornecedor de energia passarão a ter acesso ao mercado livre nos próximos anos.
+              </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-                A Lei nº 15.269/2025 moderniza o setor elétrico brasileiro e inicia a abertura total do mercado livre de energia. Isso significa que, gradualmente, todas as empresas poderão escolher seu fornecedor de energia.
+                A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar — de forma correta, segura e sem riscos.
               </p>
               <Link 
                 href="/seja-cliente"
@@ -37,8 +43,34 @@ export default function LeiMercadoLivre() {
         </div>
       </section>
 
+      {/* When Can You Migrate Section */}
+      <section className="bg-white py-16 lg:py-24 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-8">
+            Quando sua empresa pode migrar?
+          </h2>
+          <ul className="space-y-4 text-lg text-[#736d77] max-w-3xl mb-8">
+            <li className="flex items-start gap-3">
+              <span className="text-[#9e3ffd] mt-1">•</span>
+              <span>Empresas que já atendem aos critérios atuais podem migrar imediatamente</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-[#9e3ffd] mt-1">•</span>
+              <span>Empresas comerciais e industriais fora do mercado livre passam a migrar gradualmente a partir de 2026</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-[#9e3ffd] mt-1">•</span>
+              <span>Pequenas empresas terão acesso ampliado até 2028</span>
+            </li>
+          </ul>
+          <p className="text-lg text-[#736d77] max-w-3xl">
+            Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar. A Ótima Energia acompanha todo o processo desde o início.
+          </p>
+        </div>
+      </section>
+
       {/* Timeline Section */}
-      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-16">
             Cronograma de Abertura do Mercado
@@ -46,7 +78,7 @@ export default function LeiMercadoLivre() {
           
           <div className="grid md:grid-cols-3 gap-8">
             {/* Current */}
-            <div className="bg-[#eee7f1] border-2 border-[#9e3ffd] rounded-lg p-8">
+            <div className="bg-white border-2 border-[#9e3ffd] rounded-lg p-8">
               <div className="flex items-center gap-3 mb-6">
                 <Factory className="w-8 h-8 text-[#9e3ffd]" />
                 <span className="text-sm tracking-wide text-[#9e3ffd] uppercase font-medium">Já Podem Migrar</span>

@@ -17,7 +17,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: "Quanto custa o serviço?",
-    answer: "Nosso serviço de comparação é gratuito. Não cobramos do empresário. Realizamos auditorias energéticas sem custo e sem qualquer obrigação para você."
+    answer: "Nosso serviço de comparação é gratuito. Não cobramos nada do empresário. Nossa remuneração vem diretamente dos fornecedores de energia, sem impactar o preço final apresentado a você."
   },
   {
     question: "Como vocês ganham dinheiro?",

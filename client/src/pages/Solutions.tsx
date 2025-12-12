@@ -17,8 +17,11 @@ export default function Solutions() {
               Soluções completas para sua empresa economizar energia.
             </h1>
             <div>
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
+                A Ótima Energia existe para ajudar sua empresa a pagar menos pela energia elétrica — com segurança, clareza e zero complicação.
+              </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-                Oferecemos um portfólio completo de serviços para empresas que querem reduzir custos com energia elétrica através do mercado livre.
+                Atuamos como seu parceiro completo no Mercado Livre de Energia: analisamos, migramos, contratamos e acompanhamos, sempre com foco em economia contínua.
               </p>
               <Link 
                 href="/seja-cliente"

@@ -1,0 +1,86 @@
+1️⃣ Homepage — Hero Section (REPLACE ONLY THIS BLOCK)
+
+Current intent is correct, but lead harder with savings.
+
+Replace Hero headline + sub-headline with:
+
+Headline
+
+Economize até 40% na conta de luz da sua empresa com o Mercado Livre de Energia.
+
+Sub-headline
+
+A Ótima Energia compara o mercado por você e cuida de toda a migração, contratação e otimização — com total transparência e sem custo para sua empresa.
+
+CTA
+
+Solicitar diagnóstico gratuito
+
+2️⃣ Homepage — Statement / Value Section (REPLACE THIS PARAGRAPH ONLY)
+Replace with:
+
+Ajudamos empresas brasileiras a reduzir custos de energia usando o Mercado Livre de Energia de forma segura e inteligente.
+Nosso serviço de comparação é gratuito: analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis.
+Cuidamos de todo o processo — da análise inicial à migração e gestão do contrato — enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
+
+3️⃣ Homepage — “Como Funciona” (TIGHTEN, NOT REWRITE)
+
+Keep the 3 steps, replace text only:
+
+Step 01
+
+Envie sua conta de luz para um diagnóstico gratuito.
+Nossa tecnologia analisa seu perfil de consumo e verifica se sua empresa já pode migrar para o Mercado Livre.
+
+Step 02
+
+Comparamos o mercado e negociamos as melhores condições.
+Buscamos preços transparentes e contratos flexíveis para gerar economia real — sem viés e sem custo para você.
+
+Step 03
+
+Migramos, contratamos e acompanhamos.
+Você começa a economizar, enquanto cuidamos de toda a migração e seguimos otimizando seu contrato ao longo do tempo.
+
+4️⃣ Soluções Page — Opening Section (REPLACE OPENING ONLY)
+Replace intro paragraph with:
+
+A Ótima Energia existe para ajudar sua empresa a pagar menos pela energia elétrica — com segurança, clareza e zero complicação.
+Atuamos como seu parceiro completo no Mercado Livre de Energia: analisamos, migramos, contratamos e acompanhamos, sempre com foco em economia contínua.
+
+5️⃣ Soluções — PME Section (MINOR SHIFT, MONEY FIRST)
+Replace PME paragraph with:
+
+Para PMEs, simplificamos toda a migração para o Mercado Livre de Energia, eliminando burocracia, riscos e falta de transparência.
+Nossa comparação é gratuita, sem obrigação, e focada em gerar economia de até 40% para reinvestir no crescimento do seu negócio.
+
+6️⃣ Soluções — Industrial Section (REMOVE “WHOLESALE” LANGUAGE)
+Replace industrial paragraph with:
+
+Para empresas de maior porte, estruturamos estratégias personalizadas de contratação, com foco em previsibilidade, flexibilidade contratual e redução consistente de custos.
+Atuamos desde a análise inicial até a gestão contínua do contrato, sempre buscando as melhores condições do mercado.
+
+7️⃣ /lei-mercado-livre — Opening Block (CRITICAL CHANGE)
+Replace opening with:
+
+A abertura do Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
+Com a Lei nº 15.269/2025, milhões de empresas que antes não podiam escolher seu fornecedor de energia passarão a ter acesso ao mercado livre nos próximos anos.
+A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar — de forma correta, segura e sem riscos.
+
+8️⃣ /lei-mercado-livre — Timeline Section (INSERT AFTER INTRO)
+
+Add this short, scannable block:
+
+Quando sua empresa pode migrar?
+• Empresas que já atendem aos critérios atuais podem migrar imediatamente
+• Empresas comerciais e industriais fora do mercado livre passam a migrar gradualmente a partir de 2026
+• Pequenas empresas terão acesso ampliado até 2028
+
+Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar. A Ótima Energia acompanha todo o processo desde o início.
+
+9️⃣ FAQ — “Quanto custa?” (VERY IMPORTANT)
+Replace answer with:
+
+Nosso serviço de comparação é gratuito.
+Não cobramos nada do empresário.
+Nossa remuneração vem diretamente dos fornecedores de energia, sem impactar o preço final apresentado a você.

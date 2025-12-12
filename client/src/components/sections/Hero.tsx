@@ -24,12 +24,12 @@ export function Hero() {
       <div className="relative z-10 min-h-screen flex items-end">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
           <h1 className="dcvc-statement text-white max-w-4xl mb-6">
-            Somos a{" "}
-            <span className="text-highlight">corretora de energia inteligente</span>
-            , impulsionada por IA, para empresas brasileiras.
+            Economize até{" "}
+            <span className="text-highlight">40%</span>{" "}
+            na conta de luz da sua empresa com o Mercado Livre de Energia.
           </h1>
           <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
-            Economize até 40% na conta de luz com o mercado livre de energia.
+            A Ótima Energia compara o mercado por você e cuida de toda a migração, contratação e otimização — com total transparência e sem custo para sua empresa.
           </p>
           <Link 
             href="/seja-cliente"

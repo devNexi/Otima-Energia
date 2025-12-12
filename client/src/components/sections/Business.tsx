@@ -38,7 +38,7 @@ export function Business() {
                 Migração Simplificada
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-8">
-                Migração simplificada para o mercado livre, faturamento organizado e economia de até 40%, com auditoria gratuita e sem obrigação.
+                Para PMEs, simplificamos toda a migração para o Mercado Livre de Energia, eliminando burocracia, riscos e falta de transparência. Nossa comparação é gratuita, sem obrigação, e focada em gerar economia de até 40% para reinvestir no crescimento do seu negócio.
               </p>
               <button 
                 onClick={() => handleScroll("#contact")}
@@ -62,7 +62,7 @@ export function Business() {
                 Estratégias Personalizadas
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-8">
-                Estratégias personalizadas de contratação, comparação ampla do mercado e negociação eficiente para maximizar economia e previsibilidade.
+                Para empresas de maior porte, estruturamos estratégias personalizadas de contratação, com foco em previsibilidade, flexibilidade contratual e redução consistente de custos. Atuamos desde a análise inicial até a gestão contínua do contrato, sempre buscando as melhores condições do mercado.
               </p>
               <button 
                 onClick={() => handleScroll("#contact")}

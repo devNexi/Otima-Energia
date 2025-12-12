@@ -14,12 +14,14 @@ export function Process() {
       <section className="bg-[#eee7f1] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
-            Com anos de experiência no setor elétrico, ajudamos empresas a combater a ineficiência do mercado brasileiro atual. Utilizamos{" "}
-            <span className="text-highlight">inteligência artificial</span>{" "}
-            para comparar o máximo possível do mercado, oferecendo preços transparentes e condições flexíveis para que você economize e reinvista no seu negócio.
+            Ajudamos empresas brasileiras a reduzir custos de energia usando o Mercado Livre de Energia de forma{" "}
+            <span className="text-highlight">segura e inteligente</span>.
+          </p>
+          <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-4">
+            Nosso serviço de comparação é gratuito: analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            A Lei nº 15.269/2025 está abrindo o mercado livre de energia para milhões de empresas. Nosso serviço de comparação é gratuito, com auditorias energéticas sem custo e sem qualquer obrigação para o empresário.
+            Cuidamos de todo o processo — da análise inicial à migração e gestão do contrato — enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
           </p>
           <div className="grid md:grid-cols-4 gap-8 max-w-4xl">
             <div>
@@ -56,10 +58,10 @@ export function Process() {
                 <span className="text-6xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Envie sua conta
+                Envie sua conta de luz para um diagnóstico gratuito
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Envie sua conta de luz e Unidade Consumidora para uma análise gratuita impulsionada por IA, eliminando a falta de visibilidade do mercado.
+                Nossa tecnologia analisa seu perfil de consumo e verifica se sua empresa já pode migrar para o Mercado Livre.
               </p>
             </div>
 
@@ -69,10 +71,10 @@ export function Process() {
                 <span className="text-6xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Comparamos o mercado
+                Comparamos o mercado e negociamos as melhores condições
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Nossa tecnologia compara ofertas de diferentes fornecedores, quebrando plataformas isoladas e promovendo competição real para encontrar as melhores condições.
+                Buscamos preços transparentes e contratos flexíveis para gerar economia real — sem viés e sem custo para você.
               </p>
             </div>
 
@@ -82,10 +84,10 @@ export function Process() {
                 <span className="text-6xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Você escolhe e economiza
+                Migramos, contratamos e acompanhamos
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Você escolhe a proposta mais transparente e flexível e começa a economizar. Nosso serviço de comparação é gratuito e nossa remuneração vem diretamente dos fornecedores.
+                Você começa a economizar, enquanto cuidamos de toda a migração e seguimos otimizando seu contrato ao longo do tempo.
               </p>
             </div>
           </div>
