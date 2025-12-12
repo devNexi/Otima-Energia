@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
-import step1Image from "@assets/stock_images/electricity_bill_doc_0a81d9e9.jpg";
-import step2Image from "@assets/stock_images/data_analytics_dashb_444d348a.jpg";
-import step3Image from "@assets/stock_images/business_partnership_5011a1f6.jpg";
+import step1Image from "@assets/generated_images/energy_bill_data_analysis_visualization.png";
+import step2Image from "@assets/generated_images/market_comparison_matrix_visualization.png";
+import step3Image from "@assets/generated_images/migration_timeline_journey_visualization.png";
 
 export function Process() {
   const handleScroll = (href: string) => {
@@ -61,7 +61,7 @@ export function Process() {
                 <img 
                   src={step1Image} 
                   alt="Análise de conta de energia" 
-                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                  className="w-full h-full object-contain bg-white"
                 />
               </div>
               <div className="mb-4">
@@ -81,7 +81,7 @@ export function Process() {
                 <img 
                   src={step2Image} 
                   alt="Análise de dados e comparação de mercado" 
-                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                  className="w-full h-full object-contain bg-white"
                 />
               </div>
               <div className="mb-4">
@@ -101,7 +101,7 @@ export function Process() {
                 <img 
                   src={step3Image} 
                   alt="Parceria e acompanhamento contínuo" 
-                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                  className="w-full h-full object-contain bg-white"
                 />
               </div>
               <div className="mb-4">

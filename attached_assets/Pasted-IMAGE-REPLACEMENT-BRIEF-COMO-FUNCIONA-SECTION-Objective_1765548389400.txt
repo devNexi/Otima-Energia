@@ -1,0 +1,113 @@
+IMAGE REPLACEMENT BRIEF — “COMO FUNCIONA” SECTION
+
+Objective:
+Replace the current generic stock-style images with high-signal, concept-driven visuals that clearly explain the process, build trust, and reinforce Ótima Energia as an intelligent, professional partner — not a generic broker.
+
+Hard rules (important):
+
+❌ No handshake photos
+
+❌ No laptops with random charts
+
+❌ No floating money / dollar bills
+
+❌ No corporate stock clichés
+
+✅ Prefer illustrations, diagrams, abstract systems, or realistic-but-specific scenes
+
+✅ Visuals should feel calm, intelligent, technical, trustworthy
+
+✅ Neutral palette with subtle energy/data motifs (grids, flows, nodes, timelines)
+
+Section 01 — Diagnóstico Gratuito
+
+Text:
+Envie sua conta de luz para um diagnóstico gratuito
+
+Image concept to replace current image
+
+Concept: Energy bill → insight
+A clean visual representation of an electricity bill being transformed into structured data.
+
+Execution ideas (pick one):
+
+Minimal illustration of a real Brazilian-style energy bill partially overlayed with:
+
+Highlighted data fields (kWh, demanda, tarifa)
+
+Subtle AI/data markers (lines, nodes, annotations)
+
+Abstract flow: document → analysis → clarity
+
+Close-up of a real printed energy bill on a neutral surface, with no people, overlaid with a clean digital grid
+
+What this communicates:
+“We start with your real data. Nothing vague. Nothing salesy.”
+
+Section 02 — Comparação e Negociação
+
+Text:
+Comparamos o mercado e negociamos as melhores condições
+
+Image concept to replace current image
+
+Concept: Market-wide comparison, not a single chart
+
+Execution ideas:
+
+Abstract comparison matrix or layered panels showing:
+
+Multiple offers normalized into the same format
+
+Clear visual contrast (aligned columns, comparable terms)
+
+Stylised energy network diagram where multiple inputs converge into one optimal outcome
+
+Illustration of overlapping transparent panels representing suppliers competing invisibly
+
+Avoid:
+Any single line graph, pie chart, or “finance dashboard” cliché.
+
+What this communicates:
+“Whole-market visibility. Real competition. No blind spots.”
+
+Section 03 — Migração e Acompanhamento
+
+Text:
+Migramos, contratamos e acompanhamos
+
+Image concept to replace current image
+
+Concept: Safe transition over time
+
+Execution ideas:
+
+Timeline-style illustration showing:
+
+Regulated → Free Market → Optimised state
+
+Visual metaphor of a bridge, path, or handover — but abstract, architectural, not people
+
+Calm, reassuring visual of continuity (same energy flowing, different contract layer)
+
+Avoid:
+Handshakes, money visuals, smiling businesspeople.
+
+What this communicates:
+“We manage the complexity so nothing breaks — and we stay with you.”
+
+Style Guidance (apply to all three)
+
+White or very light background
+
+Subtle motion-friendly compositions (work well if animated later)
+
+Looks credible to a CFO, not just “pretty”
+
+Feels Brazilian in context but globally professional
+
+If using AI-generated images: no surrealism, no fantasy
+
+One-line instruction you can add to Replit
+
+“Please replace all three images in the ‘Como Funciona’ section using the concepts above. The current images feel generic and reduce trust — the new visuals must explain the process and signal intelligence, not sales.”
