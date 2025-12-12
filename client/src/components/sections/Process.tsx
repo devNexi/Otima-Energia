@@ -1,7 +1,4 @@
 import { ArrowRight } from "lucide-react";
-import step1Image from "@assets/generated_images/data_transformation_flow_abstraction.png";
-import step2Image from "@assets/generated_images/convergence_paths_optimal_outcome.png";
-import step3Image from "@assets/generated_images/system_transition_continuity_flow.png";
 
 export function Process() {
   const handleScroll = (href: string) => {
@@ -24,7 +21,7 @@ export function Process() {
             Nosso serviço de comparação é gratuito: analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            Cuidamos de todo o processo — da análise inicial à migração e gestão do contrato — enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
+            Cuidamos de todo o processo, da análise inicial à migração e gestão do contrato, enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
           </p>
           <div className="grid md:grid-cols-4 gap-8 max-w-4xl">
             <div>
@@ -57,15 +54,8 @@ export function Process() {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {/* Step 1 */}
             <div className="group">
-              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
-                <img 
-                  src={step1Image} 
-                  alt="Análise de conta de energia" 
-                  className="w-full h-full object-contain bg-white"
-                />
-              </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">01</span>
+              <div className="mb-6">
+                <span className="text-6xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Envie sua conta de luz para um diagnóstico gratuito
@@ -77,35 +67,21 @@ export function Process() {
 
             {/* Step 2 */}
             <div className="group">
-              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
-                <img 
-                  src={step2Image} 
-                  alt="Análise de dados e comparação de mercado" 
-                  className="w-full h-full object-contain bg-white"
-                />
-              </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">02</span>
+              <div className="mb-6">
+                <span className="text-6xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Comparamos o mercado e negociamos as melhores condições
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Buscamos preços transparentes e contratos flexíveis para gerar economia real — sem viés e sem custo para você.
+                Buscamos preços transparentes e contratos flexíveis para gerar economia real, sem viés e sem custo para você.
               </p>
             </div>
 
             {/* Step 3 */}
             <div className="group">
-              <div className="aspect-[4/3] mb-6 overflow-hidden rounded-lg">
-                <img 
-                  src={step3Image} 
-                  alt="Parceria e acompanhamento contínuo" 
-                  className="w-full h-full object-contain bg-white"
-                />
-              </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">03</span>
+              <div className="mb-6">
+                <span className="text-6xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Migramos, contratamos e acompanhamos
@@ -119,7 +95,7 @@ export function Process() {
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
-              <strong className="text-[#16163f]">Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW — mas esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração.{" "}
+              <strong className="text-[#16163f]">Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW. Esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração.{" "}
               <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre a Lei</a>
             </p>
           </div>

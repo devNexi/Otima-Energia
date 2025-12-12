@@ -29,7 +29,7 @@ export function Hero() {
             na conta de luz da sua empresa com o Mercado Livre de Energia.
           </h1>
           <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
-            A Ótima Energia compara o mercado por você e cuida de toda a migração, contratação e otimização — com total transparência e sem custo para sua empresa.
+            A Ótima Energia compara o mercado por você e cuida de toda a migração, contratação e otimização, com total transparência e sem custo para sua empresa.
           </p>
           <Link 
             href="/seja-cliente"

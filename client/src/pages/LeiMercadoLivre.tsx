@@ -24,7 +24,7 @@ export default function LeiMercadoLivre() {
                 Com a Lei nº 15.269/2025, milhões de empresas que antes não podiam escolher seu fornecedor de energia passarão a ter acesso ao mercado livre nos próximos anos.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-                A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar — de forma correta, segura e sem riscos.
+                A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar de forma correta, segura e sem riscos.
               </p>
               <Link 
                 href="/seja-cliente"

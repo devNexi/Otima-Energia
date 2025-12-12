@@ -18,7 +18,7 @@ export default function Solutions() {
             </h1>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Ótima Energia existe para ajudar sua empresa a pagar menos pela energia elétrica — com segurança, clareza e zero complicação.
+                A Ótima Energia existe para ajudar sua empresa a pagar menos pela energia elétrica, com segurança, clareza e zero complicação.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
                 Atuamos como seu parceiro completo no Mercado Livre de Energia: analisamos, migramos, contratamos e acompanhamos, sempre com foco em economia contínua.
@@ -44,7 +44,7 @@ export default function Solutions() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white text-lg">
-              <strong>Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW — mas esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração
+              <strong>Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW. Esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração
             </p>
             <Link 
               href="/lei-mercado-livre"
