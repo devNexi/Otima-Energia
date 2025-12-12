@@ -106,38 +106,38 @@ export default function About() {
         </div>
       </section>
 
-      {/* Strategy Section */}
+      {/* Why Choose Us Section */}
       <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-16">
-            Nossa Estratégia
+            Por Que a Ótima Energia
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Fase 1</p>
+              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Expertise</p>
               <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Ótima Energia
+                Conhecimento de Mercado
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Corretagem de alta performance gerando receita imediata e inteligência de mercado. Construímos relacionamentos com fornecedores e aprendemos as nuances do mercado brasileiro.
+                Fundada por especialistas com experiência internacional no setor de energia. Trazemos as melhores práticas globais para o mercado brasileiro.
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Fase 2</p>
+              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Tecnologia</p>
               <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Mercado Invisível
+                Plataforma Inteligente
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Sistema operacional B2B para o mercado livre de energia brasileiro. Plataforma que conecta fornecedores, distribuidoras e consumidores com eficiência sem precedentes.
+                Nossa tecnologia analisa seu consumo, compara ofertas de múltiplos fornecedores e encontra as melhores condições automaticamente.
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Fase 3</p>
+              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Resultados</p>
               <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Trocaluz
+                Economia Comprovada
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Portal de comparação e troca de energia para o mercado de massa. Atendendo os 80 milhões de consumidores que entrarão no mercado livre até 2028.
+                Nossos clientes economizam em média 35% na conta de luz. Cuidamos de toda a burocracia da migração para o mercado livre.
               </p>
             </div>
           </div>

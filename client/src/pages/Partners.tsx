@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/ui/whatsapp-button";
-import { Filter } from "lucide-react";
+import { Filter, ArrowRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Partner {
   id: string;
@@ -152,6 +154,101 @@ export default function Partners() {
             {filteredPartners.map((partner) => (
               <PartnerCard key={partner.id} partner={partner} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partnership CTA Section */}
+      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-6">
+                Seja Nosso Parceiro
+              </h2>
+              <p className="text-lg text-[#736d77] leading-relaxed mb-8">
+                Você é fornecedor de energia, comercializador ou prestador de serviços no setor elétrico? Queremos conhecer você.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  <p className="text-[#736d77]">Acesso a uma base crescente de clientes empresariais</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  <p className="text-[#736d77]">Processo de cotação simplificado e digital</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  <p className="text-[#736d77]">Transparência total nas negociações</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#eee7f1] rounded-lg p-8 lg:p-10">
+              <h3 className="text-xl font-medium text-[#16163f] mb-6">
+                Entre em contato
+              </h3>
+              <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); alert('Formulário enviado! Entraremos em contato em breve.'); }}>
+                <div>
+                  <label className="block text-sm text-[#16163f] mb-2">Empresa *</label>
+                  <Input 
+                    placeholder="Nome da empresa" 
+                    className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white"
+                    data-testid="input-partner-company"
+                    required
+                  />
+                </div>
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm text-[#16163f] mb-2">Nome *</label>
+                    <Input 
+                      placeholder="Seu nome" 
+                      className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white"
+                      data-testid="input-partner-name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-[#16163f] mb-2">E-mail *</label>
+                    <Input 
+                      type="email"
+                      placeholder="email@empresa.com.br" 
+                      className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white"
+                      data-testid="input-partner-email"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-[#16163f] mb-2">Tipo de Parceria</label>
+                  <select className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white text-[#736d77] focus:border-[#9e3ffd] focus:outline-none">
+                    <option value="">Selecione...</option>
+                    <option value="fornecedor">Fornecedor de Energia</option>
+                    <option value="comercializador">Comercializador</option>
+                    <option value="distribuidora">Distribuidora</option>
+                    <option value="tecnologia">Tecnologia/Serviços</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-[#16163f] mb-2">Mensagem</label>
+                  <Textarea 
+                    placeholder="Conte-nos sobre sua empresa e interesse em parceria..." 
+                    className="resize-none min-h-[100px] border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white"
+                    data-testid="input-partner-message"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+                  data-testid="button-submit-partner"
+                >
+                  Enviar
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </section>

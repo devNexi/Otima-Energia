@@ -8,10 +8,11 @@ export function Navbar() {
   const isHomePage = location === "/";
 
   const navLinks = [
+    { name: "SOLUÇÕES", href: "/solucoes", isPage: true },
     { name: "SOBRE", href: "/sobre", isPage: true },
-    { name: "EQUIPE", href: "/equipe", isPage: true },
-    { name: "PARCEIROS", href: "/parceiros", isPage: true },
-    { name: "CONTATO", href: "#contact", isPage: false },
+    { name: "FAQ", href: "/faq", isPage: true },
+    { name: "PORTAL", href: "/portal-cliente", isPage: true },
+    { name: "SEJA CLIENTE", href: "/seja-cliente", isPage: true },
   ];
 
   const handleNavClick = (href: string, isPage: boolean) => {

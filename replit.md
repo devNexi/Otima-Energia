@@ -75,7 +75,16 @@ The application implements a unique token-based portal system where:
 ## Routes
 
 ### Public Routes
-- `/` - Corporate website with lead capture form
+- `/` - Corporate website with hero video, process steps, and lead capture form
+- `/sobre` - About page with company mission, approach, and differentiators
+- `/equipe` - Team page with founders and brief bios
+- `/parceiros` - Partners page with supplier grid and partnership form
+- `/solucoes` - Detailed services breakdown (economy, renewables, management, migration)
+- `/faq` - 10 frequently asked questions about free energy market
+- `/seja-cliente` - Onboarding page with diagnosis form (submits to /api/leads)
+- `/privacidade` - LGPD-compliant privacy policy
+- `/termos` - Terms of use
+- `/portal-cliente` - Client portal login page (UI ready, auth pending)
 - `/portal/upload/:token` - Client portal for bill uploads (token-based access)
 
 ### Admin Routes

@@ -10,6 +10,12 @@ import Admin from "@/pages/Admin";
 import Partners from "@/pages/Partners";
 import About from "@/pages/About";
 import Team from "@/pages/Team";
+import Solutions from "@/pages/Solutions";
+import FAQ from "@/pages/FAQ";
+import BecomeClient from "@/pages/BecomeClient";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
+import ClientPortal from "@/pages/ClientPortal";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +25,12 @@ function Router() {
       <Route path="/sobre" component={About} />
       <Route path="/equipe" component={Team} />
       <Route path="/parceiros" component={Partners} />
+      <Route path="/solucoes" component={Solutions} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/seja-cliente" component={BecomeClient} />
+      <Route path="/privacidade" component={Privacy} />
+      <Route path="/termos" component={Terms} />
+      <Route path="/portal-cliente" component={ClientPortal} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />

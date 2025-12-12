@@ -24,10 +24,16 @@ export function Footer() {
   return (
     <footer className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        {/* Large Navigation Links - DCVC Style */}
-        <div className="grid md:grid-cols-3 gap-8 mb-24">
+        {/* Large Navigation Links */}
+        <div className="grid md:grid-cols-4 gap-8 mb-24">
           {/* Main Nav */}
           <div className="space-y-4">
+            <Link 
+              href="/solucoes"
+              className="dcvc-footer-link block text-left"
+            >
+              Soluções
+            </Link>
             <Link 
               href="/sobre"
               className="dcvc-footer-link block text-left"
@@ -46,22 +52,27 @@ export function Footer() {
             >
               Parceiros
             </Link>
-            <button 
-              onClick={() => handleScroll("#contact")}
-              className="dcvc-footer-link block text-left"
-            >
-              Contato
-            </button>
           </div>
 
-          {/* Topics */}
+          {/* Resources */}
+          <div>
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Recursos</p>
+            <ul className="space-y-3">
+              <li><Link href="/faq" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Perguntas Frequentes</Link></li>
+              <li><Link href="/seja-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Diagnóstico Gratuito</Link></li>
+              <li><Link href="/portal-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Portal do Cliente</Link></li>
+              <li><button onClick={() => handleScroll("#contact")} className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Contato</button></li>
+            </ul>
+          </div>
+
+          {/* Services */}
           <div>
             <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Serviços</p>
             <ul className="space-y-3 text-[#736d77]">
-              <li>Energia para PMEs</li>
-              <li>Energia Industrial</li>
-              <li>Consultoria Energética</li>
-              <li>Análise de Mercado</li>
+              <li>Economia de Energia</li>
+              <li>Energia Renovável</li>
+              <li>Gestão Energética</li>
+              <li>Migração para ACL</li>
             </ul>
           </div>
 
@@ -71,6 +82,8 @@ export function Footer() {
             <div className="text-[#736d77] space-y-1">
               <p>Rio de Janeiro</p>
               <p>Brasil</p>
+              <p className="mt-4">contato@otimaenergia.com.br</p>
+              <p>+55 21 99999-9999</p>
             </div>
           </div>
         </div>
@@ -88,8 +101,8 @@ export function Footer() {
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
             <span>©{currentYear} Ótima Energia. Todos os direitos reservados.</span>
-            <span className="hover:text-[#df0af2] cursor-pointer transition-colors">Privacidade</span>
-            <span className="hover:text-[#df0af2] cursor-pointer transition-colors">Termos de Uso</span>
+            <Link href="/privacidade" className="hover:text-[#df0af2] transition-colors">Privacidade</Link>
+            <Link href="/termos" className="hover:text-[#df0af2] transition-colors">Termos de Uso</Link>
           </div>
         </div>
       </div>

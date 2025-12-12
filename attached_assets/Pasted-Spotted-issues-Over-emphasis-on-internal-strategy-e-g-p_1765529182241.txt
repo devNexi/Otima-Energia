@@ -1,0 +1,54 @@
+Spotted issues: Over-emphasis on internal strategy (e.g., phases in Sobre), no educational content, weak CTAs beyond contact, no stats/testimonials, no FAQ/eligibility details, no legal pages, no onboarding tool, no sustainability focus, limited services explanation, no blog. Client portal login is missing (you noted I forgot it last time—confirmed absent in structure). Partners page lists names but no details/forms. Overall, to match TYR's level, add content that builds trust, educates on ACL, and drives leads—aim for 2x more pages/content for comprehensiveness.
+New Pages Suggestions
+To get as good as TYR (which has 5-6 core pages + blog articles), add these new pages for education, conversion, and compliance. Each can be simple HTML/JS in Replit, with routes in app.js.
+
+Soluções Page (/solucoes): Detail services like TYR's breakdowns. Content: Sections for "Economia" (savings via comparisons), "Sustentabilidade" (renewables), "Gestão Energética" (monitoring/optimization), "Migração para ACL" (process explanation). Include eligibility (>R$8k/month bill, 500kW+ demand). CTA: "Solicitar Cotação."
+Insights Page (/insights): Blog for thought leadership, like TYR's. Content: 3-5 articles (e.g., "Impacto da Lei 15.269/2025 no Mercado Livre," "Como Reduzir Custos com Energia Renovável," "O que é Curtailment e Como Evitá-lo"). Each with title, date, excerpt, read more link.
+Seja Cliente Page (/seja-cliente): Onboarding like TYR's. Content: Free diagnosis form (bill upload, UC code, contact fields). Explain migration steps, benefits (35% savings). CTA: "Fazer Diagnóstico Gratuito."
+Perguntas Frequentes Page (/faq): FAQ like TYR's implicit explanations. Content: 8-10 Q&A (e.g., "O que é o Mercado Livre de Energia?" "Quem pode migrar?" "Quanto posso economizar?" "O que é UC?").
+Política de Privacidade Page (/privacidade) and Termos de Uso Page (/termos): Legal essentials, like TYR's footer links. Content: Standard templates (LGPD compliance, data use, terms for services/portals).
+Client Portal Login Page (/portal-cliente): Dedicated login, like TYR's "Acessar o sistema." Content: Form (email/password), forgot password link, registration prompt. Explain features (bill history, savings tracking, quotes).
+
+Content Suggestions for Existing Pages
+Enhance with more detail to match TYR's educational, stat-driven style—add explanations, stats, CTAs for engagement.
+
+Home Page (/)
+Spotted Issues: Hero is vague; "Como Funciona" is basic; Soluções brief; no stats/testimonials; no eligibility/migration info.
+Suggestions:
+Hero: Add savings claim ("Economize até 35% na conta de luz") and free diagnosis CTA.
+Statement: Expand with stats (e.g., "R$100B+ mercado anual, 80M consumidores elegíveis até 2028").
+Como Funciona: Add details (e.g., Step 1: "Envie UC e contas recentes"; Step 2: "Comparamos ofertas de múltiplos comercializadores").
+Soluções: Expand Modelo Varejo ("Para PMEs: Migração simplificada, faturamento unificado"); Acesso Atacado ("Para industriais: Estratégias personalizadas, acesso atacado").
+Contato: Add eligibility note ("Para contas >R$8.000/mês").
+
+
+Sobre Page (/sobre)
+Spotted Issues: Mission/approach good but references Lei; stats present; Strategy phases mention Mercado Invisível/TrocaLuz (remove); no company history/credibility beyond stats.
+Suggestions:
+Hero/Mission: Add "Fundada por especialistas com experiência no UK, agora no Brasil para democratizar energia."
+Approach: Expand transparency ("Usamos tecnologia para comparar o mercado inteiro, garantindo o melhor preço").
+Stats: Add testimonials/quotes (e.g., "Cliente X economizou 30%").
+Strategy: Remove phases 2/3; revise to "Foco em corretagem de alta performance para PMEs e industriais."
+
+
+Equipe Page (/equipe)
+Spotted Issues: Only names/titles; no bios/photos like implied in TYR's expertise.
+Suggestions: Add short bios (e.g., Callum: "Fundador com anos no mercado UK, cidadão brasileiro focado em inovação energética"; Renan: "Experiência em operações no setor brasileiro"). Add photos if possible.
+
+Parceiros Page (/parceiros)
+Spotted Issues: Lists names but no details/forms; TYR invites partnerships with form.
+Suggestions: Group by type (Distribuidoras, Renováveis). Add descriptions (e.g., "Neoenergia: Parceira para distribuição eficiente"). Include partnership CTA/form ("Quero ser parceiro").
+
+
+How to Improve to Get as Good as TYR
+TYR excels in education (insights), lead gen (diagnosis), credibility (stats), and tools (dashboard/app)—Ótima is functional but lacks these for user trust/conversion. Step-by-step improvements:
+
+Boost Credibility: Add stats/testimonials everywhere (e.g., homepage: "91% satisfação como TYR"); explain Lei 15.269 benefits.
+Enhance Education: Add Insights/FAQ to position as experts, like TYR's blog.
+Drive Leads: Add diagnosis form/onboarding page; strengthen CTAs (e.g., "Diagnóstico Gratuito" on every page).
+Add Compliance: Include legal pages for LGPD/trust.
+Portal Integration: Add dedicated client login page; mention features (savings tracking like TYR+).
+Content Depth: Expand all sections with explanations (e.g., free market basics, migration steps).
+Removals: Tell Replit: "Remove all mentions of Mercado Invisível and TrocaLuz from the code and content; this site is for Ótima Energia only. Specifically, delete Fase 2 and Fase 3 from the Sobre page, and revise Strategy to focus solely on Ótima's brokerage services."
+
+This will make Ótima comprehensive and competitive—aim for 8-10 pages total.

@@ -1,14 +1,8 @@
 import { ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import heroVideo from "@assets/generated_videos/solar_farm_aerial_sunset.mp4";
 
 export function Hero() {
-  const handleScroll = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   return (
     <section id="top" className="relative min-h-screen pt-20">
       {/* Video Background */}
@@ -29,11 +23,22 @@ export function Hero() {
       {/* Content - Bottom left like DCVC */}
       <div className="relative z-10 min-h-screen flex items-end">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
-          <h1 className="dcvc-statement text-white max-w-4xl">
+          <h1 className="dcvc-statement text-white max-w-4xl mb-6">
             Somos{" "}
             <span className="text-highlight">energia inteligente</span>
             {" "}para empresas brasileiras.
           </h1>
+          <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
+            Economize até 35% na conta de luz com o mercado livre de energia.
+          </p>
+          <Link 
+            href="/seja-cliente"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+            data-testid="hero-cta"
+          >
+            Diagnóstico Gratuito
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
       </div>
     </section>
