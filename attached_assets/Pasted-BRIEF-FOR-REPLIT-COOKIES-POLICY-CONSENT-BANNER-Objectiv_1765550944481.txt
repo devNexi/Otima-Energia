@@ -1,0 +1,152 @@
+BRIEF FOR REPLIT — COOKIES POLICY + CONSENT BANNER
+Objective
+
+Create a Cookies Policy page and a cookie consent pop-up banner for the Ótima Energia website, fully compliant with Brazilian law (LGPD – Lei nº 13.709/2018) and consistent with our Privacy Policy and Terms of Use.
+
+The solution must:
+
+Be clear, simple, and professional
+
+Require explicit user consent
+
+Allow continued navigation only after acceptance
+
+Store consent choice (cookie/localStorage)
+
+Link clearly to Terms of Use and Privacy Policy
+
+1. NEW PAGE: COOKIES POLICY
+
+URL: /cookies
+Page title: Política de Cookies
+Language: Brazilian Portuguese
+
+Page Content (copy to use exactly)
+Política de Cookies
+
+Data de atualização: [INSERIR DATA]
+
+A Ótima Energia Ltda. (“Ótima Energia”, “nós” ou “nosso”) utiliza cookies e tecnologias semelhantes para melhorar a experiência do usuário, garantir o correto funcionamento do site e compreender como nossos visitantes interagem com nossos conteúdos.
+
+Esta Política de Cookies explica o que são cookies, como os utilizamos, quais tipos de cookies empregamos e como você pode gerenciá-los, em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+
+1. O que são cookies?
+
+Cookies são pequenos arquivos de texto armazenados no seu navegador ou dispositivo quando você visita um site. Eles permitem reconhecer seu dispositivo, lembrar preferências e coletar informações sobre sua navegação.
+
+2. Para que utilizamos cookies?
+
+Utilizamos cookies para:
+
+Garantir o funcionamento adequado do site
+
+Melhorar desempenho e segurança
+
+Entender como os usuários navegam pelo site
+
+Aperfeiçoar conteúdos, funcionalidades e experiência do usuário
+
+Não utilizamos cookies para fins ilegais ou para vender dados pessoais.
+
+3. Tipos de cookies utilizados
+
+Cookies Necessários
+Essenciais para o funcionamento do site. Permitem navegação, envio de formulários e acesso a áreas seguras. Sem eles, o site pode não funcionar corretamente.
+
+Cookies de Desempenho e Análise
+Coletam informações agregadas e anônimas sobre como os visitantes utilizam o site, permitindo melhorias contínuas.
+
+Cookies Funcionais
+Permitem lembrar preferências do usuário, como idioma ou região, proporcionando uma experiência mais personalizada.
+
+Cookies de Marketing (se aplicável)
+Podem ser utilizados para apresentar conteúdos mais relevantes. Caso sejam implementados no futuro, o usuário será informado e poderá consentir.
+
+4. Consentimento
+
+Ao acessar nosso site pela primeira vez, você verá um aviso de cookies. Ao clicar em “Aceitar”, você concorda com o uso de cookies conforme descrito nesta Política, na Política de Privacidade e nos Termos de Uso.
+
+Você pode retirar seu consentimento a qualquer momento ajustando as configurações do seu navegador.
+
+5. Como gerenciar ou desativar cookies
+
+Você pode configurar seu navegador para bloquear ou alertar sobre cookies. A desativação de cookies essenciais pode impactar o funcionamento do site.
+
+Links úteis:
+
+Google Chrome
+
+Mozilla Firefox
+
+Safari
+
+Microsoft Edge
+
+6. Alterações nesta Política
+
+Esta Política pode ser atualizada a qualquer momento. Recomendamos a revisão periódica desta página para se manter informado.
+
+7. Contato
+
+Em caso de dúvidas sobre esta Política de Cookies ou sobre o uso de dados pessoais, entre em contato:
+
+Ótima Energia Ltda.
+CNPJ: [INSERIR]
+E-mail: contato@otimaenergia.com.br
+
+Endereço: [INSERIR]
+
+2. COOKIE CONSENT POP-UP (BANNER)
+Behavior Requirements
+
+Display fixed banner at the bottom of the site
+
+Block tracking cookies until consent
+
+One clear CTA: ACEITAR
+
+Clicking “ACEITAR” stores consent and hides banner
+
+Banner should not reappear once accepted (unless cookies are cleared)
+
+Banner Copy (Brazilian Portuguese)
+
+Text:
+
+Cookies: coletamos e salvamos dados da sua visita ao nosso site para aperfeiçoar as funcionalidades e melhorar a sua experiência. Ao clicar em “Aceitar”, você concorda com nossos Termos de Uso e Política de Privacidade.
+
+Buttons:
+
+ACEITAR
+
+Links (clickable):
+
+Termos de Uso → /termos
+
+Política de Privacidade → /privacidade
+
+Política de Cookies → /cookies
+
+3. LEGAL & COMPLIANCE NOTES (for Replit implementation)
+
+Must align with LGPD principles:
+
+Transparência
+
+Finalidade
+
+Necessidade
+
+Consent must be:
+
+Livre
+
+Informado
+
+Inequívoco
+
+Store consent timestamp if possible
+
+No dark patterns
+
+No pre-checked boxes

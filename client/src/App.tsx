@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
+import { CookieConsent } from "@/components/ui/cookie-consent";
 import Home from "@/pages/Home";
 import Portal from "@/pages/Portal";
 import Admin from "@/pages/Admin";
@@ -15,6 +16,7 @@ import FAQ from "@/pages/FAQ";
 import BecomeClient from "@/pages/BecomeClient";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import Cookies from "@/pages/Cookies";
 import ClientPortal from "@/pages/ClientPortal";
 import LeiMercadoLivre from "@/pages/LeiMercadoLivre";
 import Insights from "@/pages/Insights";
@@ -32,6 +34,7 @@ function Router() {
       <Route path="/seja-cliente" component={BecomeClient} />
       <Route path="/privacidade" component={Privacy} />
       <Route path="/termos" component={Terms} />
+      <Route path="/cookies" component={Cookies} />
       <Route path="/portal-cliente" component={ClientPortal} />
       <Route path="/lei-mercado-livre" component={LeiMercadoLivre} />
       <Route path="/insights" component={Insights} />
@@ -49,6 +52,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <CookieConsent />
         </TooltipProvider>
       </I18nProvider>
     </QueryClientProvider>
