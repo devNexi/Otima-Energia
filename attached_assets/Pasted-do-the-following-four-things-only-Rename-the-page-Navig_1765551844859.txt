@@ -1,0 +1,114 @@
+do the following four things only:
+
+✅ Rename the page
+
+Navigation label: Mercado Livre de Energia
+
+Page H1 must no longer start with “Lei nº…”
+
+✅ Reframe the page identity
+
+The page is about the Mercado Livre and savings
+
+The law supports the timeline, not the headline
+
+✅ Keep all existing sections
+
+Timeline
+
+Eligibility
+
+Early preparation
+
+CTAs
+(No structural rebuild required)
+
+✅ Update the hero and first section copy
+
+Lead with savings and opportunity
+
+Introduce Lei nº 15.269/2025 as context, not the subject
+
+Revised Copy (Drop-in Replacement)
+
+Below is a polished version of your current copy, rewritten only where necessary.
+
+You can paste this directly to Replit.
+
+PAGE TITLE (H1)
+
+Mercado Livre de Energia: quando sua empresa pode migrar e começar a economizar
+
+HERO INTRO (replace first 3 paragraphs)
+
+O Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
+
+Com a abertura gradual do mercado, empresas de todos os portes poderão escolher seus fornecedores de energia, negociar contratos mais eficientes e reduzir significativamente a conta de luz.
+
+A Lei nº 15.269/2025 formaliza essa abertura ao longo dos próximos anos. A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar — de forma correta, segura e sem riscos.
+
+CTA:
+DESCUBRA QUANDO SUA EMPRESA PODE MIGRAR
+
+SECTION: Quando sua empresa pode migrar?
+
+(keep structure, minor language polish)
+
+Empresas que já atendem aos critérios atuais podem migrar imediatamente
+
+Empresas comerciais e industriais fora do mercado livre passam a migrar gradualmente a partir de 2026
+
+Pequenas empresas terão acesso ampliado até 2028
+
+Mesmo que sua empresa ainda não possa migrar hoje, já é possível iniciar o diagnóstico e se preparar. A Ótima Energia acompanha todo o processo desde o início.
+
+Empresas que começam esse processo com antecedência ganham vantagem competitiva, mais poder de negociação e melhores condições quando chega o momento da migração.
+
+SECTION: Cronograma de Abertura do Mercado
+
+(no structural change, just headings clarified)
+
+Já podem migrar — Empresas elegíveis hoje
+
+Empresas com demanda a partir de aproximadamente 500 kW
+
+Consumidores de média e alta tensão
+
+Indústrias e grandes operações comerciais
+
+2026–2027 — Próxima fase
+
+Regulamentação prática pela ANEEL a partir de 2026
+
+Expansão para empresas comerciais e industriais hoje no mercado regulado
+
+Até 2028 — Abertura total
+
+Inclusão de pequenas empresas
+
+Até 80 milhões de consumidores elegíveis
+
+SECTION: Por que se preparar com antecedência?
+
+(light polish only)
+
+Empresas que se preparam com antecedência evitam decisões apressadas, reduzem riscos e aumentam seu poder de negociação.
+Nosso serviço de comparação é gratuito, independentemente de sua empresa já estar apta ou não a migrar.
+
+STATS (keep exactly)
+
+40%
+Economia de até
+
+R$0
+Custo do diagnóstico
+
+0
+Obrigação de contratar
+
+FINAL CTA (keep, tiny polish)
+
+Descubra quando sua empresa pode migrar
+Faça uma análise gratuita impulsionada por IA e descubra seu potencial de economia no mercado livre de energia.
+
+Solicitar Diagnóstico Gratuito

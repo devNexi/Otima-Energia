@@ -92,7 +92,7 @@ export function Process() {
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
               <strong className="text-[#16163f]">Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW. Esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração.{" "}
-              <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre a Lei</a>
+              <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre o Mercado Livre</a>
             </p>
           </div>
 

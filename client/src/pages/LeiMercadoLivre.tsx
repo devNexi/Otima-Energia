@@ -14,17 +14,17 @@ export default function LeiMercadoLivre() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
             <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd]">
-              Lei nº 15.269/2025: quando sua empresa pode migrar para o mercado livre de energia
+              Mercado Livre de Energia: quando sua empresa pode migrar e começar a economizar
             </h1>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A abertura do Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
+                O Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                Com a Lei nº 15.269/2025, milhões de empresas que antes não podiam escolher seu fornecedor de energia passarão a ter acesso ao mercado livre nos próximos anos.
+                Com a abertura gradual do mercado, empresas de todos os portes poderão escolher seus fornecedores de energia, negociar contratos mais eficientes e reduzir significativamente a conta de luz.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-                A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar de forma correta, segura e sem riscos.
+                A Lei nº 15.269/2025 formaliza essa abertura ao longo dos próximos anos. A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar de forma correta, segura e sem riscos.
               </p>
               <Link 
                 href="/seja-cliente"
@@ -64,10 +64,10 @@ export default function LeiMercadoLivre() {
             </li>
           </ul>
           <p className="text-lg text-[#736d77] max-w-3xl mb-4">
-            Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar. A Ótima Energia acompanha todo o processo desde o início.
+            Mesmo que sua empresa ainda não possa migrar hoje, já é possível iniciar o diagnóstico e se preparar. A Ótima Energia acompanha todo o processo desde o início.
           </p>
           <p className="text-lg text-[#736d77] max-w-3xl">
-            Empresas que iniciam esse processo com antecedência ganham vantagem competitiva e maior poder de negociação quando chega o momento da migração.
+            Empresas que começam esse processo com antecedência ganham vantagem competitiva, mais poder de negociação e melhores condições quando chega o momento da migração.
           </p>
         </div>
       </section>
@@ -117,11 +117,11 @@ export default function LeiMercadoLivre() {
               <ul className="space-y-3 text-[#736d77]">
                 <li className="flex items-start gap-2">
                   <Building2 className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                  <span>A partir de 2026, com a regulamentação prática</span>
+                  <span>Regulamentação prática pela ANEEL a partir de 2026</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Building2 className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                  <span>Até 2027, expansão para empresas comerciais e industriais hoje no mercado regulado</span>
+                  <span>Expansão para empresas comerciais e industriais hoje no mercado regulado</span>
                 </li>
               </ul>
             </div>
@@ -142,7 +142,7 @@ export default function LeiMercadoLivre() {
                 </li>
                 <li className="flex items-start gap-2">
                   <Store className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                  <span>80 milhões de consumidores elegíveis</span>
+                  <span>Até 80 milhões de consumidores elegíveis</span>
                 </li>
               </ul>
             </div>
@@ -158,7 +158,7 @@ export default function LeiMercadoLivre() {
               Por que se preparar com antecedência?
             </h2>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-              Empresas que se preparam com antecedência evitam decisões apressadas e ganham poder de negociação. Nosso serviço de comparação é gratuito, independentemente de sua empresa já estar apta ou não.
+              Empresas que se preparam com antecedência evitam decisões apressadas, reduzem riscos e aumentam seu poder de negociação. Nosso serviço de comparação é gratuito, independentemente de sua empresa já estar apta ou não a migrar.
             </p>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg p-6">
