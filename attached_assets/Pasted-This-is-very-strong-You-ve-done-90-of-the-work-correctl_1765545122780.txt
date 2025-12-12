@@ -1,0 +1,145 @@
+This is very strong. You’ve done 90% of the work correctly already.
+Nothing is “broken”, but there are a few subtle places where a business owner who is NOT yet eligible could still hesitate or self-disqualify.
+
+Below is a precise, minimal set of changes to make sure non-ACL businesses feel explicitly welcome, without diluting your high-value positioning.
+
+I’ll structure this as:
+
+What’s already working (so you don’t over-edit)
+
+Where hesitation could still occur
+
+Exact copy tweaks (surgical, not rewrites)
+
+1️⃣ What’s Already Working Very Well
+
+You’ve nailed the big things:
+
+“Serviço de comparação é gratuito” is clear and repeated
+
+You explicitly say:
+
+“Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar”
+
+The Lei page is excellent — reassuring, educational, not salesy
+
+You don’t say “você não pode” anywhere — good
+
+You position Ótima as process owner, not just a broker
+
+So: do not panic or overhaul anything. This is about removing micro-friction.
+
+2️⃣ Where a Non-Eligible Business Might Still Feel Unsure
+
+There are 3 subtle friction points:
+
+A. Eligibility notes feel like “rules” instead of “today’s snapshot”
+
+Examples:
+
+“Atendemos empresas com contas acima de R$8.000/mês…”
+
+“Empresas elegíveis hoje incluem…”
+
+A cautious SMB owner might think:
+
+“Ah… então não é pra mim ainda.”
+
+We want them thinking:
+
+“Mesmo se eu não entrar agora, vale a pena falar com eles hoje.”
+
+B. Home page Step 01 still implies a binary outcome
+
+“verifica se sua empresa já pode migrar”
+
+That’s factually correct — but emotionally it implies:
+
+pass / fail
+
+We want:
+
+now / soon / preparation
+
+C. /Seja-cliente page could do more “pre-eligibility nurturing”
+
+They submit bills — good
+But we should explicitly say that submitting early helps them:
+
+lock timing
+
+model savings
+
+avoid rushed decisions later
+
+3️⃣ Exact Copy Tweaks (ONLY Where Needed)
+
+Below are exact replacement lines, not rewrites.
+
+🔧 CHANGE 1 — Home Page / Como Funciona / Step 01
+
+Current
+
+“Nossa tecnologia analisa seu perfil de consumo e verifica se sua empresa já pode migrar para o Mercado Livre.”
+
+Replace with
+
+“Nossa tecnologia analisa seu perfil de consumo, verifica se sua empresa já pode migrar para o Mercado Livre ou quando ela poderá migrar, e prepara o caminho desde já.”
+
+✅ This single clause removes fear completely.
+
+🔧 CHANGE 2 — Eligibility Note (Home + Soluções)
+
+Current
+
+“Atendemos empresas com contas acima de R$8.000/mês e demanda a partir de aproximadamente 500 kW (limite em redução com a nova lei).”
+
+Replace with
+
+“Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW — mas esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração.”
+
+This keeps you premium without closing the door.
+
+🔧 CHANGE 3 — /Seja-cliente Page (Add ONE sentence)
+
+Under the hero copy, add:
+
+“Mesmo que sua empresa ainda não possa migrar imediatamente, o diagnóstico antecipado permite planejar a transição, estimar economias futuras e evitar decisões apressadas quando o mercado abrir.”
+
+This is VERY important for conversion.
+
+🔧 CHANGE 4 — /Lei Mercado Livre Page (Minor reinforcement)
+
+You’re already 90% there. Add one reinforcing line under the timeline:
+
+After:
+
+“Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar.”
+
+Add:
+
+“Empresas que iniciam esse processo com antecedência ganham vantagem competitiva e maior poder de negociação quando chega o momento da migração.”
+
+This reframes “waiting” as a strategic advantage, not a delay.
+
+🔧 CHANGE 5 — FAQ: “Quem pode participar?”
+
+Current
+
+“Empresas elegíveis hoje incluem aquelas com demanda a partir de aproximadamente 500 kW…”
+
+Replace with
+
+“Hoje, empresas com demanda a partir de aproximadamente 500 kW já podem migrar. Com a Lei nº 15.269/2025, esse acesso será ampliado gradualmente, e empresas que ainda não são elegíveis já podem iniciar o diagnóstico e o planejamento conosco.”
+
+This avoids a hard stop.
+
+4️⃣ Optional (But High-Impact) Micro-Addition
+
+If you want ONE optional trust-boost (not required):
+
+Add a small badge or line (Home or Lei page):
+
+“Diagnóstico gratuito disponível para empresas elegíveis e não elegíveis ainda.”
+
+This alone can lift submissions materially.

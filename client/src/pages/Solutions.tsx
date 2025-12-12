@@ -44,7 +44,7 @@ export default function Solutions() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white text-lg">
-              <strong>Elegibilidade:</strong> Empresas com contas acima de R$8.000/mês e demanda a partir de ~500 kW (limite em redução com a nova lei)
+              <strong>Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW — mas esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração
             </p>
             <Link 
               href="/lei-mercado-livre"

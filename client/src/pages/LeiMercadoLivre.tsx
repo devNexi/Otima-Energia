@@ -63,8 +63,11 @@ export default function LeiMercadoLivre() {
               <span>Pequenas empresas terão acesso ampliado até 2028</span>
             </li>
           </ul>
-          <p className="text-lg text-[#736d77] max-w-3xl">
+          <p className="text-lg text-[#736d77] max-w-3xl mb-4">
             Mesmo que sua empresa ainda não possa migrar hoje, já é possível se preparar. A Ótima Energia acompanha todo o processo desde o início.
+          </p>
+          <p className="text-lg text-[#736d77] max-w-3xl">
+            Empresas que iniciam esse processo com antecedência ganham vantagem competitiva e maior poder de negociação quando chega o momento da migração.
           </p>
         </div>
       </section>

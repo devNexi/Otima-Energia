@@ -25,7 +25,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: "Quem pode participar?",
-    answer: "Empresas elegíveis hoje incluem aquelas com demanda a partir de aproximadamente 500 kW e contas acima de R$8.000/mês. Com a Lei nº 15.269/2025, o mercado está se abrindo gradualmente para todas as empresas até 2028."
+    answer: "Hoje, empresas com demanda a partir de aproximadamente 500 kW já podem migrar. Com a Lei nº 15.269/2025, esse acesso será ampliado gradualmente, e empresas que ainda não são elegíveis já podem iniciar o diagnóstico e o planejamento conosco."
   },
   {
     question: "Quanto posso economizar?",

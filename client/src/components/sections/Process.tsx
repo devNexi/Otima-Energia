@@ -61,7 +61,7 @@ export function Process() {
                 Envie sua conta de luz para um diagnóstico gratuito
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Nossa tecnologia analisa seu perfil de consumo e verifica se sua empresa já pode migrar para o Mercado Livre.
+                Nossa tecnologia analisa seu perfil de consumo, verifica se sua empresa já pode migrar para o Mercado Livre ou quando ela poderá migrar, e prepara o caminho desde já.
               </p>
             </div>
 
@@ -95,7 +95,7 @@ export function Process() {
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
-              <strong className="text-[#16163f]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda a partir de aproximadamente 500 kW (limite em redução com a nova lei).{" "}
+              <strong className="text-[#16163f]">Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW — mas esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração.{" "}
               <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre a Lei</a>
             </p>
           </div>

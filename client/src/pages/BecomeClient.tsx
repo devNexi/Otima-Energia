@@ -103,7 +103,7 @@ export default function BecomeClient() {
                 Envie sua conta de luz para uma estimativa de economia sem custo ou obrigação.
               </p>
               <p className="text-base text-[#736d77] mt-4">
-                <strong>Elegibilidade:</strong> contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução com a nova lei).
+                Mesmo que sua empresa ainda não possa migrar imediatamente, o diagnóstico antecipado permite planejar a transição, estimar economias futuras e evitar decisões apressadas quando o mercado abrir.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4">
