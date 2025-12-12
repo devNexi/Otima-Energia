@@ -1,0 +1,158 @@
+IMAGE DIRECTION — “COMO FUNCIONA” SECTION
+
+IMPORTANT: Replace all current images. No text, no labels, no numbers, no words inside images. Visuals only.
+
+Global Rules (Apply to ALL 3 Images)
+
+❌ No text inside images (no labels, no charts with words, no captions baked in)
+
+❌ No stock-photo clichés (handshakes, money, laptops, people in suits, smiling teams)
+
+❌ No UI screenshots, no fake dashboards with text
+
+❌ No “corporate photography” look
+
+✅ Clean white or very light background
+
+✅ Abstract, conceptual, system-level visuals
+
+✅ Neutral, technical, elegant
+
+✅ Subtle use of lines, flows, nodes, energy motifs
+
+✅ Style should feel closer to:
+
+infrastructure
+
+systems
+
+networks
+
+flow
+
+optimisation
+not marketing or finance stock imagery
+
+Think: “energy infrastructure meets data flow”, not “business stock photos”.
+
+SECTION 01 — “Envie sua conta de luz para um diagnóstico gratuito”
+Concept
+
+Transformation of raw information into structured insight.
+This step is about analysis, eligibility, preparation, not uploading a file.
+
+Visual Direction
+
+Abstract representation of:
+
+a document or data source
+
+being broken into signals, nodes, or streams
+
+flowing into a clean system
+
+Visual metaphor examples (choose ONE direction):
+
+A sheet or block dissolving into data points
+
+Energy lines being measured or mapped
+
+Raw input flowing into an organised grid
+
+No literal bill images
+
+No paper, phones, or people
+
+Feeling
+
+Calm
+
+Intelligent
+
+Trustworthy
+
+“We know what we’re doing”
+
+SECTION 02 — “Comparamos o mercado e negociamos as melhores condições”
+Concept
+
+Many options → clarity → optimal outcome.
+This is about comparison, transparency, and real competition.
+
+Visual Direction
+
+Abstract market comparison without numbers or text:
+
+Multiple lines, paths, or flows converging into one
+
+A chaotic field becoming ordered
+
+A funnel of possibilities resolving into a single clear channel
+
+Avoid charts with axes or labels
+
+Avoid graphs that look like finance dashboards
+
+Feeling
+
+Precision
+
+Control
+
+Neutrality (no bias)
+
+Market-wide visibility
+
+SECTION 03 — “Migramos, contratamos e acompanhamos”
+Concept
+
+Safe transition + long-term optimisation.
+Not “deal closed”, but ongoing stewardship.
+
+Visual Direction
+
+A smooth transition from one state to another:
+
+One system morphing into a cleaner, more efficient system
+
+Flow moving from constrained → open → stable
+
+Can subtly suggest:
+
+continuity
+
+stability
+
+long-term flow
+
+No money imagery
+
+No handshake metaphors
+
+Feeling
+
+Reassurance
+
+Continuity
+
+Long-term partnership
+
+Infrastructure-level reliability
+
+FINAL CHECK BEFORE SHIPPING
+
+Before committing images, verify:
+
+If I remove the text below the image, does the visual still communicate the step?
+
+Does this look like infrastructure / systems, not marketing?
+
+Would this still feel credible to:
+
+an industrial client
+
+a CFO
+
+an operations manager?
+
+If the answer is no → replace.

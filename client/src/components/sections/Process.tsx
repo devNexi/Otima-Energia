@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
-import step1Image from "@assets/generated_images/energy_bill_data_analysis_visualization.png";
-import step2Image from "@assets/generated_images/market_comparison_matrix_visualization.png";
-import step3Image from "@assets/generated_images/migration_timeline_journey_visualization.png";
+import step1Image from "@assets/generated_images/data_transformation_flow_abstraction.png";
+import step2Image from "@assets/generated_images/convergence_paths_optimal_outcome.png";
+import step3Image from "@assets/generated_images/system_transition_continuity_flow.png";
 
 export function Process() {
   const handleScroll = (href: string) => {
