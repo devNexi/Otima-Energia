@@ -23,7 +23,7 @@ export function Process() {
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
             Cuidamos de todo o processo, da análise inicial à migração e gestão do contrato, enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
           </p>
-          <div className="grid md:grid-cols-4 gap-8 max-w-4xl">
+          <div className="grid md:grid-cols-3 gap-8 max-w-3xl">
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">40%</p>
               <p className="text-[#736d77] mt-2">Economia de até</p>
@@ -35,10 +35,6 @@ export function Process() {
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">80M</p>
               <p className="text-[#736d77] mt-2">Elegíveis até 2028</p>
-            </div>
-            <div>
-              <p className="text-4xl font-light text-[#9e3ffd]">0</p>
-              <p className="text-[#736d77] mt-2">Custo para você</p>
             </div>
           </div>
         </div>
