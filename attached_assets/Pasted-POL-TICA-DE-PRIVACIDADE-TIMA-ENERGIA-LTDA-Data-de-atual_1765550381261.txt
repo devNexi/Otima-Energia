@@ -1,0 +1,195 @@
+POLÍTICA DE PRIVACIDADE — ÓTIMA ENERGIA LTDA.
+
+Data de atualização: [DD] de [Mês] de [Ano]
+
+A Ótima Energia Ltda. (“Ótima Energia”, “nós”, “nosso” ou “conosco”) reconhece a importância da sua privacidade e está comprometida em proteger os seus Dados Pessoais.
+
+Esta Política de Privacidade (“Política”) explica, de forma clara e objetiva, quais dados coletamos, como os utilizamos, com quem podemos compartilhá-los, por quanto tempo os armazenamos e quais são os seus direitos, sempre em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados – LGPD) e demais normas aplicáveis.
+
+Recomendamos a leitura atenta desta Política para compreender como tratamos os seus dados e como você pode exercer seus direitos.
+
+1. QUEM SOMOS
+
+Controladora: Ótima Energia Ltda.
+CNPJ: [●]
+Endereço: [●]
+E-mail de contato: [●]
+Site: [https://otimaenergia.com.br
+] (ou outro domínio que você utilizar)
+
+Encarregado(a) pelo Tratamento de Dados Pessoais (DPO): [NOME DO DPO]
+E-mail do DPO: [EMAIL DO DPO]
+
+2. DEFINIÇÕES
+
+Para fins desta Política:
+
+“Dado Pessoal”: informação relacionada a pessoa natural identificada ou identificável (ex.: nome, e-mail, telefone).
+
+“Dado Pessoal Sensível”: dado sobre origem racial/étnica, convicção religiosa, opinião política, filiação sindical, dado de saúde/vida sexual, dado genético ou biométrico, quando vinculado a pessoa natural.
+
+“Titular”: pessoa natural a quem se referem os Dados Pessoais (você).
+
+“Tratamento”: qualquer operação com Dados Pessoais (coleta, uso, armazenamento, compartilhamento, eliminação etc.).
+
+“LGPD”: Lei nº 13.709/2018.
+
+“ANPD”: Autoridade Nacional de Proteção de Dados.
+
+“Site”: páginas e ambientes digitais operados pela Ótima Energia.
+
+3. DADOS PESSOAIS QUE COLETAMOS
+
+Tratamos Dados Pessoais para viabilizar nossos serviços de diagnóstico, comparação e apoio à migração/contratação no Mercado Livre de Energia, bem como para operar nosso Site e nossas rotinas administrativas.
+
+Podemos coletar:
+
+3.1. Dados cadastrais e de identificação
+
+Nome, e-mail, telefone/WhatsApp, cargo, empresa, CNPJ da empresa (quando aplicável), endereço (quando necessário), documento de identificação (quando necessário para contratação).
+
+3.2. Dados de consumo e informações técnicas
+
+Dados de fatura/conta de energia, Unidade Consumidora (UC), histórico de consumo, demanda/contratação, informações do fornecimento, perfil de consumo e demais dados necessários para análises e simulações.
+
+3.3. Dados de navegação e tecnologia
+
+Endereço IP, data e hora de acesso, páginas visitadas, dispositivo, navegador, cookies, identificadores e registros de uso.
+
+3.4. Dados financeiros e de pagamento (quando aplicável)
+
+Dados bancários e informações necessárias para faturamento/recebimento/pagamento, quando houver contratação e/ou obrigações administrativas correlatas.
+
+Observação importante: Em regra, nossos serviços são direcionados a empresas. Ainda assim, podemos tratar dados de pessoas naturais (ex.: representante legal, sócio, responsável financeiro, contato comercial).
+
+4. FINALIDADES, BASES LEGAIS E CATEGORIAS DE DADOS
+
+A seguir, exemplos das principais atividades de tratamento:
+
+4.1. Tabela de tratamento de dados
+Finalidade	Titulares afetados	Base legal (LGPD)	Categorias de dados
+Diagnóstico e análise de elegibilidade/migração	Leads e clientes	Procedimentos preliminares / Execução de contrato	Dados cadastrais; dados de consumo; dados técnicos
+Modelagem de propostas e simulações (comparação de mercado)	Leads e clientes	Procedimentos preliminares / Execução de contrato; Legítimo interesse (quando aplicável)	Dados cadastrais; dados de consumo; dados técnicos
+Atendimento e comunicação (e-mail, telefone, WhatsApp)	Leads, clientes e parceiros	Procedimentos preliminares / Execução de contrato; Legítimo interesse	Dados cadastrais; dados de contato; registros de comunicação
+Gestão de contratos e documentação	Clientes e parceiros	Execução de contrato	Dados cadastrais; documentos; dados de consumo; dados técnicos
+Pós-atendimento e suporte	Clientes	Execução de contrato; Legítimo interesse	Dados cadastrais; dados de consumo; registros de suporte
+Marketing institucional (newsletter, conteúdos, convites)	Leads e interessados	Consentimento (quando exigido) ou Legítimo interesse	Dados de contato; preferências (quando fornecidas)
+Cumprimento de obrigação legal/regulatória	Clientes, parceiros e fornecedores	Cumprimento de obrigação legal/regulatória	Dados cadastrais; documentos; dados financeiros (quando aplicável)
+Prevenção à fraude e segurança	Usuários do Site	Legítimo interesse	Logs, IP, dados de navegação
+Melhoria do Site e analytics	Usuários do Site	Legítimo interesse; Consentimento (cookies não necessários)	Dados de navegação; cookies
+
+Nota: Em casos específicos, poderemos tratar dados com base em outras hipóteses legais previstas na LGPD, sempre de forma proporcional e necessária.
+
+5. COOKIES E TECNOLOGIAS SEMELHANTES
+
+Cookies são pequenos arquivos armazenados no seu dispositivo quando você acessa um site. Eles ajudam a garantir o funcionamento do Site, melhorar a experiência e compreender como o Site é utilizado.
+
+Podemos utilizar:
+
+Cookies necessários: essenciais para funcionamento do Site.
+
+Cookies funcionais: personalizam preferências e melhoram a experiência.
+
+Cookies analíticos: medem performance e uso do Site.
+
+Cookies de marketing: permitem conteúdos e comunicações mais relevantes.
+
+Você pode gerenciar cookies nas configurações do seu navegador. Bloquear certos cookies pode afetar o funcionamento do Site.
+
+6. LINKS PARA SITES DE TERCEIROS
+
+Nosso Site pode conter links para sites de terceiros. Esta Política não se aplica a esses ambientes. Recomendamos que você leia as políticas de privacidade desses terceiros. Não nos responsabilizamos por conteúdo, segurança ou práticas de privacidade de terceiros.
+
+7. COMPARTILHAMENTO DE DADOS PESSOAIS
+
+Compartilhamos dados somente quando necessário, nos limites e finalidades descritos nesta Política, com:
+
+Prestadores de serviços (ex.: hospedagem, ferramentas de atendimento, analytics, armazenamento em nuvem, automação, assinatura eletrônica, e-mail).
+
+Parceiros operacionais estritamente necessários para execução de serviços solicitados (ex.: quando você solicita formalmente uma proposta/contratação que demande interação com agentes do setor).
+
+Autoridades públicas quando houver obrigação legal/regulatória ou ordem judicial.
+
+Exigimos, sempre que aplicável, que terceiros adotem padrões de segurança e confidencialidade compatíveis com a LGPD.
+
+8. TRANSFERÊNCIA INTERNACIONAL DE DADOS
+
+Podemos armazenar ou processar dados em serviços de nuvem e ferramentas que operam fora do Brasil. Nesses casos, adotamos salvaguardas adequadas para assegurar conformidade com a LGPD e regulamentações da ANPD, incluindo cláusulas contratuais e avaliação de medidas de segurança.
+
+Se você quiser mais detalhes sobre os mecanismos utilizados, entre em contato pelos canais desta Política.
+
+9. TRANSFERÊNCIA DE CONTROLE / OPERAÇÕES SOCIETÁRIAS
+
+Em caso de fusão, aquisição, reorganização, cisão ou venda de ativos, os Dados Pessoais poderão ser transferidos a terceiros envolvidos na operação, respeitando esta Política e a legislação aplicável. Se houver mudanças materiais no tratamento, poderemos comunicar você e, quando necessário, solicitar consentimento.
+
+10. SEGURANÇA DA INFORMAÇÃO
+
+Adotamos medidas técnicas e organizacionais para proteger seus dados contra acessos não autorizados, perda, alteração, divulgação indevida e outros incidentes.
+
+Apesar disso, nenhuma transmissão na Internet é 100% segura. Caso ocorra incidente relevante, atuaremos para mitigar impactos e, quando aplicável, adotaremos as comunicações exigidas pela LGPD.
+
+11. RETENÇÃO E ELIMINAÇÃO DE DADOS
+
+Mantemos seus dados pelo tempo necessário para cumprir as finalidades descritas nesta Política, inclusive para:
+
+cumprimento de obrigações legais/regulatórias;
+
+exercício regular de direitos em processos;
+
+auditorias e segurança;
+
+resguardo de evidências e prevenção à fraude.
+
+Ao final do prazo aplicável, os dados são eliminados ou anonimizados, conforme viável e permitido.
+
+12. DADOS DE CRIANÇAS E ADOLESCENTES
+
+Nossos serviços não são direcionados a crianças e adolescentes. Não coletamos intencionalmente dados de menores de 18 anos. Se identificarmos tratamento indevido, poderemos excluir os dados e adotar providências necessárias.
+
+13. DIREITOS DO TITULAR
+
+Nos termos da LGPD, você pode solicitar:
+
+confirmação de tratamento;
+
+acesso;
+
+correção;
+
+anonimização, bloqueio ou eliminação;
+
+portabilidade (quando aplicável);
+
+informação sobre compartilhamentos;
+
+informação sobre transferência internacional;
+
+revogação de consentimento (quando aplicável);
+
+revisão de decisões automatizadas (quando aplicável).
+
+Para exercer seus direitos, contate nosso DPO: [EMAIL DO DPO].
+
+Podemos solicitar comprovação de identidade e/ou informações adicionais para segurança. Responderemos dentro de prazos razoáveis e conforme exigências legais.
+
+14. DECISÕES AUTOMATIZADAS E PERFILAMENTO
+
+Podemos utilizar recursos tecnológicos para análise e organização de dados (ex.: extração de informações de faturas e simulações). Quando houver decisão automatizada com impacto relevante, o titular poderá solicitar revisão, nos termos da LGPD, por meio do canal do DPO.
+
+15. ALTERAÇÕES DESTA POLÍTICA
+
+Podemos alterar esta Política a qualquer momento, com indicação da data da última atualização. Alterações relevantes poderão ser comunicadas por meios razoáveis (ex.: Site, e-mail), quando apropriado.
+
+16. CONTATO
+
+Encarregado(a) (DPO): [NOME DO DPO]
+E-mail: [EMAIL DO DPO]
+
+Contato geral: [EMAIL GERAL]
+Endereço: [ENDEREÇO COMPLETO]
+
+17. CONSENTIMENTO (QUANDO APLICÁVEL)
+
+Quando o tratamento se basear em consentimento, você poderá recusá-lo ou revogá-lo a qualquer momento. A recusa pode limitar determinados recursos (ex.: envio de marketing).
+
+Ao interagir conosco e utilizar nossos canais, você declara estar ciente desta Política e autoriza o tratamento de seus dados nos termos aqui previstos, conforme a base legal aplicável a cada finalidade.
