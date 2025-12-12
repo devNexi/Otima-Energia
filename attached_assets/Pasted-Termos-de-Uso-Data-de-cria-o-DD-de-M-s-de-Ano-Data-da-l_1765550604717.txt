@@ -1,0 +1,107 @@
+Termos de Uso
+Data de criação: [DD] de [Mês] de [Ano]
+Data da última atualização: [DD] de [Mês] de [Ano]
+
+Introdução
+1.1. Estes Termos de Uso (“Termos”) regulam o acesso e a utilização do site operado pela Ótima Energia Ltda. (“Ótima Energia”, “nós”, “nosso”), disponível em [https://otimaenergia.com.br
+] (ou outro domínio aplicável) e de quaisquer páginas, formulários, áreas de acesso e conteúdos relacionados (em conjunto, o “Site”).
+1.2. Ao acessar, navegar, enviar informações, utilizar formulários, criar conta, acessar área restrita ou utilizar qualquer funcionalidade do Site, você (“Você” ou “Usuário”) declara ter lido, entendido e concordado com estes Termos e com a Política de Privacidade do Site.
+1.3. Se você não concordar com estes Termos, não deve utilizar o Site.
+1.4. O Site pode conter conteúdos informativos e canais para solicitação de diagnóstico, contato e envio de documentos (por exemplo, faturas de energia). O uso do Site não cria, por si só, obrigação de contratação de serviços.
+
+Quem somos
+2.1. Controladora/Responsável pelo Site: Ótima Energia Ltda.
+2.2. CNPJ: [●]
+2.3. Endereço: [●]
+2.4. E-mail de contato: [●]
+2.5. Encarregado (DPO): [NOME DO DPO] – [E-MAIL DO DPO]
+
+Elegibilidade e uso permitido
+3.1. O Site é destinado principalmente a empresas e a seus representantes, gestores e responsáveis autorizados.
+3.2. Ao utilizar o Site, você declara que:
+a) tem capacidade legal para aceitar estes Termos;
+b) se estiver agindo em nome de uma empresa, possui poderes para representar e vincular essa empresa;
+c) fornecerá informações verdadeiras, atuais e completas;
+d) utilizará o Site apenas para finalidades lícitas.
+
+Descrição dos serviços e natureza das informações
+4.1. A Ótima Energia atua como intermediadora e parceira de migração, contratação e otimização para empresas que desejam avaliar condições no Mercado Livre de Energia, inclusive com análise de faturas e elaboração de simulações e propostas.
+4.2. As informações apresentadas no Site têm finalidade geral e podem ser atualizadas a qualquer momento. Mesmo quando fornecemos estimativas e simulações, resultados reais podem variar conforme perfil de consumo, condições contratuais, prazos, regras setoriais, disponibilidade de fornecedores e requisitos técnicos/regulatórios.
+4.3. O “serviço de comparação” é gratuito para o empresário/empresa usuária do Site. A remuneração da Ótima Energia pode ocorrer por meio de comissões pagas por fornecedores e/ou parceiros, sem cobrança direta ao usuário, conforme aplicável e conforme instrumentos contratuais específicos.
+
+Cadastro, formulários e envio de documentos
+5.1. Para utilizar determinadas funcionalidades (por exemplo, solicitar diagnóstico, enviar faturas, acessar área restrita), você pode precisar fornecer dados e documentos.
+5.2. Você se compromete a enviar apenas informações que tenha direito de compartilhar e que não violem sigilo, confidencialidade, direitos de terceiros ou normas aplicáveis.
+5.3. Caso você envie faturas ou dados de consumo, você declara estar autorizado a fazê-lo e compreende que tais dados serão tratados conforme nossa Política de Privacidade, para fins de diagnóstico, simulação, comunicação e eventual contratação.
+5.4. Podemos recusar, bloquear ou excluir envios que estejam ilegíveis, incompletos, suspeitos, fraudulentos, ofensivos ou em desconformidade com estes Termos.
+
+Licença de uso do Site e Propriedade Intelectual
+6.1. Todo o conteúdo do Site, incluindo textos, marcas, logotipos, layout, bases de dados, gráficos, imagens, vídeos, materiais, códigos e funcionalidades, é de propriedade da Ótima Energia ou de seus licenciantes e está protegido por legislação aplicável de propriedade intelectual.
+6.2. Concedemos a você uma licença limitada, revogável, não exclusiva, intransferível e sem sublicenciamento para acessar e utilizar o Site para fins internos e não comerciais, exclusivamente conforme estes Termos.
+6.3. É proibido: copiar, reproduzir, modificar, distribuir, exibir publicamente, realizar engenharia reversa, explorar comercialmente, ou criar obras derivadas do conteúdo do Site sem autorização prévia e expressa.
+6.4. “Ótima Energia” e sinais distintivos associados são marcas de titularidade da Ótima Energia (ou de terceiros, quando indicado).
+
+Condutas proibidas
+7.1. Você concorda em não:
+a) utilizar o Site para fins ilícitos, fraudulentos ou abusivos;
+b) enviar informações falsas, enganosas ou imprecisas;
+c) tentar obter acesso não autorizado a sistemas, contas, servidores ou redes;
+d) interferir ou interromper o funcionamento do Site, inclusive por meio de ataques, sobrecarga, exploração de vulnerabilidades, “hacking”, “password mining” ou similares;
+e) utilizar robôs, spiders, scrapers, crawling automatizado, ou qualquer meio automatizado para coletar conteúdo, dados ou informações do Site sem autorização;
+f) inserir códigos maliciosos, vírus, ou qualquer elemento que possa prejudicar o Site ou terceiros;
+g) violar direitos de propriedade intelectual, sigilo ou confidencialidade;
+h) utilizar o Site de forma a impor carga desproporcional à infraestrutura.
+
+Conteúdos de terceiros e links externos
+8.1. O Site pode conter links para sites de terceiros. A Ótima Energia não controla, não endossa e não se responsabiliza por conteúdos, políticas, práticas ou segurança de sites de terceiros.
+8.2. O uso de sites de terceiros é por sua conta e risco. Recomendamos a leitura dos termos e políticas desses terceiros.
+
+Disponibilidade do Site e alterações
+9.1. Podemos, a qualquer momento, modificar, suspender, descontinuar ou restringir o acesso a qualquer parte do Site, temporária ou permanentemente, com ou sem aviso prévio.
+9.2. Não garantimos que o Site funcionará de forma ininterrupta, livre de erros ou totalmente segura. Podemos realizar manutenções e atualizações.
+
+Isenções e limitações de responsabilidade
+10.1. O Site e seu conteúdo são fornecidos “no estado em que se encontram” e “conforme disponível”, sem garantias expressas ou implícitas, inclusive de adequação a um propósito específico, não violação ou disponibilidade contínua.
+10.2. Na máxima extensão permitida pela lei, a Ótima Energia não se responsabiliza por:
+a) danos indiretos, lucros cessantes, perda de receita, perda de dados, interrupção de negócios;
+b) decisões tomadas com base em informações gerais do Site;
+c) falhas decorrentes de terceiros (ex.: provedores de internet, hospedagem, ataques externos);
+d) incompatibilidades técnicas do dispositivo do usuário;
+e) atrasos, indisponibilidades ou alterações regulatórias do setor elétrico que impactem prazos e condições.
+10.3. Nada nestes Termos exclui responsabilidades que não possam ser excluídas pela legislação aplicável.
+
+Indenização
+11.1. Você concorda em indenizar, defender e isentar a Ótima Energia, seus administradores, colaboradores, parceiros e prestadores de serviços contra quaisquer reivindicações, perdas, danos, custos e despesas (incluindo honorários advocatícios), decorrentes:
+a) do uso indevido do Site;
+b) do envio de informações ou documentos sem autorização;
+c) da violação destes Termos, da Política de Privacidade ou de direitos de terceiros.
+
+Privacidade e proteção de dados
+12.1. O tratamento de Dados Pessoais realizado pela Ótima Energia está descrito na Política de Privacidade do Site.
+12.2. Ao utilizar o Site, você declara ciência de que dados podem ser coletados e tratados conforme a Política de Privacidade.
+
+Comunicações
+13.1. Podemos enviar comunicações operacionais relacionadas ao seu contato/diagnóstico (por e-mail, telefone, WhatsApp ou outros meios informados).
+13.2. Comunicações de marketing dependerão da base legal aplicável e, quando necessário, do seu consentimento, com opção de descadastro.
+
+Rescisão e bloqueio de acesso
+14.1. Podemos suspender ou encerrar seu acesso ao Site (incluindo área restrita), a qualquer tempo, se identificarmos violação destes Termos, condutas suspeitas, fraude, risco de segurança ou exigência legal/regulatória.
+
+Atualizações destes Termos
+15.1. Podemos alterar estes Termos periodicamente. A versão vigente será sempre a publicada no Site, com indicação da data de atualização.
+15.2. O uso continuado do Site após a publicação de alterações será considerado como aceitação dos Termos atualizados.
+
+Legislação aplicável e foro
+16.1. Estes Termos são regidos pelas leis da República Federativa do Brasil.
+16.2. Fica eleito o foro da Comarca de [CIDADE/UF], com renúncia a qualquer outro, por mais privilegiado que seja, para dirimir eventuais controvérsias relacionadas a estes Termos, salvo quando a legislação aplicável determinar foro diverso.
+
+Disposições gerais
+17.1. Se qualquer disposição destes Termos for considerada inválida ou inexequível, as demais permanecerão em pleno vigor.
+17.2. A eventual tolerância ao descumprimento de qualquer cláusula não constitui renúncia de direito.
+17.3. Estes Termos constituem o acordo integral entre você e a Ótima Energia sobre o uso do Site.
+
+Contato
+Em caso de dúvidas, solicitações ou reclamações:
+E-mail: [●]
+DPO: [NOME DO DPO] – [E-MAIL DO DPO]
+Endereço: [●]
