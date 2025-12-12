@@ -97,27 +97,30 @@ export default function BecomeClient() {
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
               <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
-                Diagnóstico Gratuito de Economia
+                Solicite seu diagnóstico gratuito impulsionado por IA
               </h1>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-                Descubra quanto sua empresa pode economizar no mercado livre de energia. Análise completa em até 48 horas, sem compromisso.
+                Envie sua conta de luz para uma estimativa de economia sem custo ou obrigação.
+              </p>
+              <p className="text-base text-[#736d77] mt-4">
+                <strong>Elegibilidade:</strong> contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução com a nova lei).
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-lg p-6 text-center">
                 <TrendingDown className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
-                <p className="text-2xl font-light text-[#9e3ffd]">35%</p>
-                <p className="text-sm text-[#736d77]">Economia média</p>
+                <p className="text-2xl font-light text-[#9e3ffd]">40%</p>
+                <p className="text-sm text-[#736d77]">Economia de até</p>
               </div>
               <div className="bg-white rounded-lg p-6 text-center">
                 <Clock className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
-                <p className="text-2xl font-light text-[#9e3ffd]">48h</p>
-                <p className="text-sm text-[#736d77]">Resposta</p>
+                <p className="text-2xl font-light text-[#9e3ffd]">IA</p>
+                <p className="text-sm text-[#736d77]">Impulsionado</p>
               </div>
               <div className="bg-white rounded-lg p-6 text-center">
                 <CheckCircle className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
-                <p className="text-2xl font-light text-[#9e3ffd]">100%</p>
-                <p className="text-sm text-[#736d77]">Gratuito</p>
+                <p className="text-2xl font-light text-[#9e3ffd]">R$0</p>
+                <p className="text-sm text-[#736d77]">Custo para você</p>
               </div>
             </div>
           </div>

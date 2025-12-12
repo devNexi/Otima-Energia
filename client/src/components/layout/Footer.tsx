@@ -58,10 +58,11 @@ export function Footer() {
           <div>
             <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Recursos</p>
             <ul className="space-y-3">
+              <li><Link href="/lei-mercado-livre" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Lei nº 15.269/2025</Link></li>
               <li><Link href="/faq" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Perguntas Frequentes</Link></li>
+              <li><Link href="/insights" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Insights</Link></li>
               <li><Link href="/seja-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Diagnóstico Gratuito</Link></li>
               <li><Link href="/portal-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Portal do Cliente</Link></li>
-              <li><button onClick={() => handleScroll("#contact")} className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Contato</button></li>
             </ul>
           </div>
 

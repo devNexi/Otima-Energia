@@ -16,6 +16,8 @@ import BecomeClient from "@/pages/BecomeClient";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import ClientPortal from "@/pages/ClientPortal";
+import LeiMercadoLivre from "@/pages/LeiMercadoLivre";
+import Insights from "@/pages/Insights";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +33,8 @@ function Router() {
       <Route path="/privacidade" component={Privacy} />
       <Route path="/termos" component={Terms} />
       <Route path="/portal-cliente" component={ClientPortal} />
+      <Route path="/lei-mercado-livre" component={LeiMercadoLivre} />
+      <Route path="/insights" component={Insights} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />

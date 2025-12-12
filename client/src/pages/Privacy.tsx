@@ -23,7 +23,7 @@ export default function Privacy() {
           <div className="prose prose-lg max-w-none text-[#736d77]">
             <h2 className="text-2xl font-medium text-[#16163f] mb-4">1. Introdução</h2>
             <p>
-              A Ótima Energia ("nós", "nosso" ou "Empresa") está comprometida em proteger a privacidade de seus usuários, clientes e parceiros. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).
+              A Ótima Energia ("nós", "nosso" ou "Empresa") está comprometida em proteger a privacidade de seus usuários, clientes e parceiros. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018). Nosso compromisso é com o uso responsável dos dados para análises energéticas e serviços gratuitos de comparação, sempre com total transparência.
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">2. Dados que Coletamos</h2>

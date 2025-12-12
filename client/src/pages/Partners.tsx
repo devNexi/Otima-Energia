@@ -120,7 +120,7 @@ export default function Partners() {
               Parceiros
             </h1>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed max-w-xl">
-              Trabalhamos com os principais fornecedores de energia e parceiros tecnológicos do Brasil para entregar as melhores soluções para o seu negócio.
+              Trabalhamos com diferentes agentes do setor elétrico para ampliar opções e promover concorrência real. Se você deseja colaborar para oferecer mais transparência e eficiência ao mercado, entre em contato.
             </p>
           </div>
         </div>
@@ -164,10 +164,10 @@ export default function Partners() {
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
             <div>
               <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-6">
-                Seja Nosso Parceiro
+                Quero ser Parceiro
               </h2>
               <p className="text-lg text-[#736d77] leading-relaxed mb-8">
-                Você é fornecedor de energia, comercializador ou prestador de serviços no setor elétrico? Queremos conhecer você.
+                Você é fornecedor de energia, comercializador ou prestador de serviços no setor elétrico? Queremos conhecer você e colaborar para oferecer mais transparência e eficiência ao mercado.
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">

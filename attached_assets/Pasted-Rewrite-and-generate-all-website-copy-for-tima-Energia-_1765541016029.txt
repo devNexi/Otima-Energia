@@ -1,0 +1,209 @@
+Rewrite and generate all website copy for Ótima Energia, focused exclusively on its brokerage services. The site should educate, build trust, and convert Brazilian business owners into leads.
+
+Important constraints (must follow):
+
+Write the prompt in English, but ALL website copy must be in Brazilian Portuguese
+
+Do NOT mention Mercado Invisível, TrocaLuz, or any future phases
+
+Do NOT reference any specific suppliers or comercializadores
+
+Do NOT use the term “wholesale market” — use “mercado” or “mercado livre”
+
+Always say “nosso serviço de comparação é gratuito”, never “nosso serviço é gratuito”
+
+Make it clear we earn commission from suppliers, not from business owners
+
+Emphasise transparency, whole-of-market comparison, AI-driven efficiency
+
+Target businesses with energy bills above R$8.000/mês and ~500 kW demand, while making clear this threshold is being reduced under the new law
+
+Tone: professional, clear, trustworthy, action-oriented
+
+Include strong CTAs throughout
+
+The client portal is not fully built — only mention access and bill upload, nothing more
+
+BRAND POSITIONING
+
+Company: Ótima Energia
+What we do: AI-powered energy brokerage helping Brazilian businesses reduce electricity costs by up to 40% through the Mercado Livre de Energia (ACL).
+
+Core messages to reinforce everywhere:
+
+Economia de até 40%
+
+Transparência total
+
+Comparação ampla do mercado
+
+Serviço de comparação gratuito
+
+Auditoria energética gratuita e sem obrigação
+
+Comissão paga pelos fornecedores
+
+Lei nº 15.269/2025 abrindo o mercado
+
+Redução de ineficiências manuais e opacidade do setor
+
+WEBSITE STRUCTURE & COPY
+1. HOME PAGE (/)
+Hero Section
+
+Headline:
+Somos a corretora de energia inteligente, impulsionada por IA, para empresas brasileiras.
+
+Subheadline:
+Economize até 40% na conta de luz com o mercado livre de energia.
+
+CTA Button:
+Solicitar Diagnóstico Gratuito
+
+Statement Section
+
+Com anos de experiência no setor elétrico, ajudamos empresas a combater a ineficiência do mercado brasileiro atual. Utilizamos inteligência artificial para comparar o máximo possível do mercado, oferecendo preços transparentes e condições flexíveis para que você economize e reinvista no seu negócio.
+
+A Lei nº 15.269/2025 está abrindo o mercado livre de energia para milhões de empresas. Nosso serviço de comparação é gratuito, com auditorias energéticas sem custo e sem qualquer obrigação para o empresário.
+
+Como Funciona
+
+Passo 01
+Envie sua conta de luz e Unidade Consumidora para uma análise gratuita impulsionada por IA, eliminando a falta de visibilidade do mercado.
+
+Passo 02
+Nossa tecnologia compara ofertas de diferentes fornecedores, quebrando plataformas isoladas e promovendo competição real para encontrar as melhores condições.
+
+Passo 03
+Você escolhe a proposta mais transparente e flexível e começa a economizar. Nosso serviço de comparação é gratuito e nossa remuneração vem diretamente dos fornecedores.
+
+Soluções (Resumo)
+
+Empresas e PMEs
+Migração simplificada para o mercado livre, faturamento organizado e economia de até 40%, com auditoria gratuita e sem obrigação.
+
+Empresas de Maior Porte
+Estratégias personalizadas de contratação, comparação ampla do mercado e negociação eficiente para maximizar economia e previsibilidade.
+
+CTA Final
+
+Atendemos empresas com contas acima de R$8.000/mês e demanda a partir de aproximadamente 500 kW (limite em redução).
+Envie sua mensagem para um diagnóstico inicial gratuito e sem compromisso.
+
+2. SOBRE (/sobre)
+
+Ótima Energia é uma corretora especializada em ajudar empresas brasileiras a acessar o mercado livre de energia com clareza, eficiência e total transparência.
+
+Atuamos como parceiros de longo prazo, comparando o máximo possível do mercado para garantir que nossos clientes tomem decisões bem-informadas, com contratos flexíveis e preços justos. Nosso modelo é alinhado aos interesses do cliente: nosso serviço de comparação é gratuito, e somos remunerados exclusivamente pelos fornecedores.
+
+3. SOLUÇÕES (/solucoes)
+Economia
+
+Contratação personalizada com apoio de IA para gerar previsibilidade e economia de até 40%. Auditoria gratuita e sem obrigação.
+
+Soluções Financeiras
+
+Estruturação de custos energéticos e apoio na gestão contratual para reduzir desperdícios e surpresas na fatura.
+
+Sustentabilidade
+
+Acesso a opções de energia renovável certificada e estratégias de neutralização de carbono, sempre com transparência total.
+
+Gestão Energética
+
+Otimização contínua de contratos e suporte regulatório, reduzindo riscos e processos manuais.
+
+Monitoramento Inteligente
+
+Análises periódicas e insights baseados em dados para identificar oportunidades de melhoria ao longo do tempo.
+
+4. LEI DO MERCADO LIVRE (/lei-mercado-livre)
+Título
+
+Lei nº 15.269/2025: quando sua empresa pode migrar para o mercado livre de energia
+
+Conteúdo
+
+A Lei nº 15.269/2025 moderniza o setor elétrico brasileiro e inicia a abertura total do mercado livre de energia. Isso significa que, gradualmente, todas as empresas poderão escolher seu fornecedor de energia.
+
+Empresas que já podem migrar
+Empresas com demanda a partir de aproximadamente 500 kW, consumidores de média e alta tensão, indústrias e grandes operações comerciais.
+
+Empresas que poderão migrar em breve
+A abertura ocorre de forma gradual:
+– A partir de 2026, com a regulamentação prática
+– Até 2027, expansão para empresas comerciais e industriais hoje no mercado regulado
+– Até 2028, inclusão de pequenas empresas
+
+Empresas que se preparam com antecedência evitam decisões apressadas e ganham poder de negociação. Nosso serviço de comparação é gratuito, independentemente de sua empresa já estar apta ou não.
+
+CTA:
+Descubra quando sua empresa pode migrar
+
+5. PARCEIROS (/parceiros)
+
+Trabalhamos com diferentes agentes do setor elétrico para ampliar opções e promover concorrência real.
+Se você deseja colaborar para oferecer mais transparência e eficiência ao mercado, entre em contato.
+
+CTA:
+Quero ser parceiro
+
+(Form: Nome, Empresa, E-mail, Mensagem)
+
+6. CONTATO (/contato)
+
+Entre em contato para uma análise gratuita impulsionada por IA.
+Comparamos o máximo possível do mercado para gerar economia real de até 40%.
+Nosso serviço de comparação é gratuito e nossa comissão é paga pelos fornecedores.
+
+(Form: Nome, Empresa, E-mail, Telefone, Mensagem)
+
+7. SEJA CLIENTE (/seja-cliente)
+
+Solicite seu diagnóstico gratuito impulsionado por IA.
+Envie sua conta de luz para uma estimativa de economia sem custo ou obrigação.
+
+Elegibilidade: contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução com a nova lei).
+
+8. FAQ (/faq)
+
+O que é o mercado livre de energia?
+É o ambiente onde empresas podem escolher seu fornecedor de energia, com mais transparência e competição.
+
+Quanto custa o serviço?
+Nosso serviço de comparação é gratuito. Não cobramos do empresário.
+
+Como vocês ganham dinheiro?
+Somos remunerados diretamente pelos fornecedores.
+
+Quem pode participar?
+Empresas elegíveis hoje e empresas que passarão a ser elegíveis com a Lei nº 15.269/2025.
+
+9. INSIGHTS (/insights)
+
+Criar artigos educativos, por exemplo:
+
+Impactos da Lei nº 15.269/2025 para empresas
+
+Como reduzir custos de energia de forma estratégica
+
+Sustentabilidade e energia renovável no Brasil
+
+10. PORTAL DO CLIENTE (/portal-cliente)
+
+Acesse sua área exclusiva para enviar contas de energia e acompanhar sua jornada conosco.
+Nosso serviço de comparação é gratuito e focado em ajudar sua empresa a economizar com total transparência.
+
+(Login simples: E-mail, Senha)
+
+11. PRIVACIDADE (/privacidade)
+
+Compromisso com a LGPD e uso responsável dos dados para análises energéticas e serviços gratuitos, sempre com transparência.
+
+12. TERMOS (/termos)
+
+Termos de uso do site e dos serviços de comparação gratuita, auditorias sem obrigação e modelo de remuneração via fornecedores.
+
+FINAL INSTRUCTION
+
+Generate the full website copy based on the structure above. Optimise for clarity, trust, and lead conversion. Use professional Brazilian Portuguese and ensure consistency across all pages.

@@ -29,7 +29,7 @@ export default function ClientPortal() {
                 Portal do Cliente
               </h1>
               <p className="text-lg lg:text-xl text-gray-300 leading-relaxed">
-                Acesse sua área exclusiva para acompanhar economia, histórico de consumo, cotações e documentos do seu contrato de energia.
+                Acesse sua área exclusiva para enviar contas de energia e acompanhar sua jornada conosco. Nosso serviço de comparação é gratuito e focado em ajudar sua empresa a economizar com total transparência.
               </p>
             </div>
 

@@ -79,11 +79,13 @@ The application implements a unique token-based portal system where:
 - `/sobre` - About page with company mission, approach, and differentiators
 - `/equipe` - Team page with founders and brief bios
 - `/parceiros` - Partners page with supplier grid and partnership form
-- `/solucoes` - Detailed services breakdown (economy, renewables, management, migration)
-- `/faq` - 10 frequently asked questions about free energy market
+- `/solucoes` - Detailed services breakdown (Economia, Soluções Financeiras, Sustentabilidade, Gestão Energética, Monitoramento)
+- `/lei-mercado-livre` - Law 15.269/2025 explanation page with migration timeline
+- `/faq` - 9 frequently asked questions about free energy market
+- `/insights` - Blog/articles section with educational content
 - `/seja-cliente` - Onboarding page with diagnosis form (submits to /api/leads)
 - `/privacidade` - LGPD-compliant privacy policy
-- `/termos` - Terms of use
+- `/termos` - Terms of use with free service and commission model explanation
 - `/portal-cliente` - Client portal login page (UI ready, auth pending)
 - `/portal/upload/:token` - Client portal for bill uploads (token-based access)
 

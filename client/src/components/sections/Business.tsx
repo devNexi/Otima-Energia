@@ -14,9 +14,9 @@ export function Business() {
       <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl">
-            Ajudamos empresas a{" "}
-            <span className="text-highlight-pink">liberar economia</span>{" "}
-            em todos os níveis de consumo de energia.
+            Ajudamos empresas de todos os portes a{" "}
+            <span className="text-highlight-pink">economizar até 40%</span>{" "}
+            na conta de luz com total transparência.
           </p>
         </div>
       </section>
@@ -32,13 +32,13 @@ export function Business() {
             {/* SME Solution */}
             <div className="bg-white p-8 lg:p-12">
               <p className="text-sm tracking-wide text-gray-500 uppercase mb-4">
-                Pequenas e Médias Empresas
+                Empresas e PMEs
               </p>
               <h3 className="text-2xl font-medium text-gray-900 mb-4">
-                Modelo Varejo
+                Migração Simplificada
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-8">
-                Economia garantida sem investimento inicial. Processo de migração simplificado com fatura unificada e proteção contra flutuações de tarifa.
+                Migração simplificada para o mercado livre, faturamento organizado e economia de até 40%, com auditoria gratuita e sem obrigação.
               </p>
               <button 
                 onClick={() => handleScroll("#contact")}
@@ -56,13 +56,13 @@ export function Business() {
             {/* Industrial Solution */}
             <div className="bg-white p-8 lg:p-12">
               <p className="text-sm tracking-wide text-gray-500 uppercase mb-4">
-                Grandes Indústrias
+                Empresas de Maior Porte
               </p>
               <h3 className="text-2xl font-medium text-gray-900 mb-4">
-                Acesso Atacado
+                Estratégias Personalizadas
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-8">
-                Acesso direto ao mercado atacadista com estratégias personalizadas de compra, relatórios de inteligência de mercado e gestão de conformidade regulatória.
+                Estratégias personalizadas de contratação, comparação ampla do mercado e negociação eficiente para maximizar economia e previsibilidade.
               </p>
               <button 
                 onClick={() => handleScroll("#contact")}

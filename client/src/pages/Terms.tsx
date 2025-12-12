@@ -27,15 +27,18 @@ export default function Terms() {
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">2. Descrição dos Serviços</h2>
-            <p>A Ótima Energia oferece serviços de:</p>
+            <p>A Ótima Energia oferece serviços de corretagem de energia, incluindo:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Consultoria para migração ao mercado livre de energia</li>
-              <li>Análise de perfil de consumo energético</li>
-              <li>Comparação de ofertas de fornecedores de energia</li>
+              <li>Serviço de comparação gratuito de ofertas de energia</li>
+              <li>Auditorias energéticas sem custo e sem obrigação</li>
+              <li>Análise de perfil de consumo energético impulsionada por IA</li>
               <li>Intermediação na contratação de energia</li>
               <li>Gestão e monitoramento de consumo</li>
-              <li>Portal do cliente para acompanhamento</li>
+              <li>Portal do cliente para envio de contas e acompanhamento</li>
             </ul>
+            <p className="mt-4">
+              <strong>Modelo de remuneração:</strong> Nosso serviço de comparação é gratuito para o empresário. Nossa remuneração vem exclusivamente dos fornecedores de energia, garantindo total alinhamento aos interesses do cliente.
+            </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">3. Elegibilidade</h2>
             <p>

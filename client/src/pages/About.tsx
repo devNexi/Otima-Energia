@@ -12,12 +12,12 @@ export default function About() {
       {/* Hero Section */}
       <section className="bg-[#eee7f1] pt-32 pb-24 lg:pt-40 lg:pb-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
-            <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd]">
-              Somos infraestrutura inteligente de energia para o Brasil.
-            </h1>
+          <div className="max-w-4xl">
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-              Há anos, ajudamos empresas brasileiras a economizar até 35% na conta de luz através de transparência, tecnologia e as melhores condições do mercado livre de energia.
+              Ótima Energia é uma corretora especializada em ajudar empresas brasileiras a acessar o mercado livre de energia com clareza, eficiência e total transparência.
+            </p>
+            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mt-6">
+              Atuamos como parceiros de longo prazo, comparando o máximo possível do mercado para garantir que nossos clientes tomem decisões bem-informadas, com contratos flexíveis e preços justos. Nosso modelo é alinhado aos interesses do cliente: nosso serviço de comparação é gratuito, e somos remunerados exclusivamente pelos fornecedores.
             </p>
           </div>
         </div>
@@ -77,13 +77,13 @@ export default function About() {
       {/* Stats Section */}
       <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <div className="grid md:grid-cols-3 gap-12 lg:gap-16">
+          <div className="grid md:grid-cols-4 gap-12 lg:gap-16">
             <div>
               <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                35%
+                40%
               </div>
               <p className="text-[#736d77]">
-                Economia média dos nossos clientes na conta de luz
+                Economia de até na conta de luz
               </p>
             </div>
             <div>
@@ -91,7 +91,7 @@ export default function About() {
                 R$100B+
               </div>
               <p className="text-[#736d77]">
-                Volume anual do mercado livre de energia brasileiro
+                Volume anual do mercado livre de energia
               </p>
             </div>
             <div>
@@ -99,7 +99,15 @@ export default function About() {
                 80M
               </div>
               <p className="text-[#736d77]">
-                Consumidores elegíveis ao mercado livre até 2028
+                Consumidores elegíveis até 2028
+              </p>
+            </div>
+            <div>
+              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
+                R$0
+              </div>
+              <p className="text-[#736d77]">
+                Custo do serviço de comparação
               </p>
             </div>
           </div>

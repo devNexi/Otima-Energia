@@ -12,44 +12,40 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
-    question: "O que é o Mercado Livre de Energia?",
-    answer: "O Mercado Livre de Energia, também chamado de Ambiente de Contratação Livre (ACL), é um ambiente onde consumidores podem escolher livremente seu fornecedor de energia elétrica, negociando preços, prazos e condições diretamente. Diferente do mercado cativo (regulado), onde você só pode comprar da distribuidora local, no mercado livre você tem poder de escolha e pode economizar significativamente."
+    question: "O que é o mercado livre de energia?",
+    answer: "É o ambiente onde empresas podem escolher seu fornecedor de energia, com mais transparência e competição. Diferente do mercado regulado (cativo), onde você só pode comprar da distribuidora local, no mercado livre você tem poder de escolha e pode economizar significativamente."
   },
   {
-    question: "Quem pode migrar para o Mercado Livre?",
-    answer: "Atualmente, podem migrar para o mercado livre: empresas com demanda contratada igual ou superior a 500kW; consumidores especiais (entre 500kW e 1.500kW) que comprem energia de fontes incentivadas; e, a partir da Lei 15.269/2025, todos os consumidores poderão migrar gradualmente até 2028. Como regra prática, empresas com conta de luz acima de R$8.000/mês geralmente são elegíveis."
+    question: "Quanto custa o serviço?",
+    answer: "Nosso serviço de comparação é gratuito. Não cobramos do empresário. Realizamos auditorias energéticas sem custo e sem qualquer obrigação para você."
   },
   {
-    question: "Quanto posso economizar no Mercado Livre?",
-    answer: "A economia média varia entre 20% e 35% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Alguns clientes conseguem economias ainda maiores, especialmente em contratos de longo prazo ou com fontes renováveis incentivadas. Oferecemos um diagnóstico gratuito para calcular sua economia potencial."
+    question: "Como vocês ganham dinheiro?",
+    answer: "Somos remunerados diretamente pelos fornecedores. Nosso modelo é alinhado aos interesses do cliente: você não paga nada pelo serviço de comparação, e nós ganhamos uma comissão do fornecedor escolhido."
   },
   {
-    question: "O que é UC (Unidade Consumidora)?",
-    answer: "UC é o código único que identifica cada ponto de consumo de energia elétrica. Cada estabelecimento (fábrica, loja, escritório) possui uma UC própria, que aparece na sua conta de luz. Esse código é essencial para análise do seu consumo e migração para o mercado livre."
+    question: "Quem pode participar?",
+    answer: "Empresas elegíveis hoje incluem aquelas com demanda a partir de aproximadamente 500 kW e contas acima de R$8.000/mês. Com a Lei nº 15.269/2025, o mercado está se abrindo gradualmente para todas as empresas até 2028."
+  },
+  {
+    question: "Quanto posso economizar?",
+    answer: "A economia pode chegar a até 40% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Oferecemos um diagnóstico gratuito impulsionado por IA para calcular sua economia potencial."
+  },
+  {
+    question: "O que é a Lei nº 15.269/2025?",
+    answer: "A Lei nº 15.269/2025 moderniza o setor elétrico brasileiro e inicia a abertura total do mercado livre de energia. A partir de 2026, com a regulamentação prática, mais empresas poderão migrar, e até 2028 todas as empresas terão essa opção."
+  },
+  {
+    question: "O que acontece com a qualidade da energia?",
+    answer: "A energia que chega até sua empresa é exatamente a mesma, entregue pela mesma rede de distribuição. O que muda é apenas quem você paga pela energia consumida. A distribuidora continua responsável pela entrega física e pela qualidade do fornecimento."
   },
   {
     question: "Quanto tempo demora a migração?",
-    answer: "O processo completo de migração leva em média de 60 a 180 dias, dependendo da complexidade e do ciclo de faturamento. A Ótima Energia cuida de toda a burocracia: análise de viabilidade, negociação com fornecedores, documentação para a CCEE (Câmara de Comercialização de Energia Elétrica) e acompanhamento pós-migração."
+    answer: "O processo completo de migração leva em média de 60 a 180 dias, dependendo da complexidade e do ciclo de faturamento. A Ótima Energia cuida de toda a burocracia, da análise de viabilidade ao acompanhamento pós-migração."
   },
   {
     question: "Preciso fazer algum investimento inicial?",
-    answer: "Na maioria dos casos, não é necessário investimento inicial. A migração para o mercado livre não requer instalação de equipamentos especiais para a maioria das empresas. Nossa consultoria trabalha com um modelo de sucesso: você só paga quando começar a economizar."
-  },
-  {
-    question: "O que acontece se eu consumir mais ou menos que o contratado?",
-    answer: "No mercado livre, você contrata um volume de energia baseado no seu histórico de consumo. Se consumir mais, pode comprar energia adicional no mercado de curto prazo (spot). Se consumir menos, dependendo do contrato, pode haver flexibilidade ou a energia excedente pode ser negociada. Nossa gestão contínua ajuda a otimizar esses cenários."
-  },
-  {
-    question: "A qualidade da energia muda no Mercado Livre?",
-    answer: "Não. A energia que chega até sua empresa é exatamente a mesma, entregue pela mesma rede de distribuição. O que muda é apenas quem você paga pela energia consumida. A distribuidora continua responsável pela entrega física e pela qualidade do fornecimento."
-  },
-  {
-    question: "Posso voltar para o mercado regulado?",
-    answer: "Sim, é possível retornar ao mercado regulado (cativo), mas existe um prazo de aviso prévio de 5 anos para consumidores livres convencionais. Consumidores especiais têm prazo de 180 dias. Por isso, é importante fazer uma análise cuidadosa antes de migrar – algo que fazemos gratuitamente para você."
-  },
-  {
-    question: "O que é energia incentivada?",
-    answer: "Energia incentivada é aquela gerada por fontes renováveis como solar, eólica, biomassa e pequenas centrais hidrelétricas (PCHs). Ela recebe descontos nas tarifas de uso do sistema de transmissão (TUST) e distribuição (TUSD), que podem chegar a 50% ou 100%, tornando-a ainda mais vantajosa economicamente além dos benefícios ambientais."
+    answer: "Na maioria dos casos, não é necessário investimento inicial. A migração para o mercado livre não requer instalação de equipamentos especiais para a maioria das empresas."
   }
 ];
 

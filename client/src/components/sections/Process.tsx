@@ -13,23 +13,30 @@ export function Process() {
       {/* Statement Section - Like DCVC's "For 13 years..." */}
       <section className="bg-[#eee7f1] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <p className="dcvc-statement text-gray-900 max-w-5xl mb-12">
-            Há anos, ajudamos empresas brilhantes a economizar até{" "}
-            <span className="text-highlight">35% na conta de luz</span>{" "}
-            através do mercado livre de energia.
+          <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
+            Com anos de experiência no setor elétrico, ajudamos empresas a combater a ineficiência do mercado brasileiro atual. Utilizamos{" "}
+            <span className="text-highlight">inteligência artificial</span>{" "}
+            para comparar o máximo possível do mercado, oferecendo preços transparentes e condições flexíveis para que você economize e reinvista no seu negócio.
           </p>
-          <div className="grid md:grid-cols-3 gap-8 max-w-3xl">
+          <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
+            A Lei nº 15.269/2025 está abrindo o mercado livre de energia para milhões de empresas. Nosso serviço de comparação é gratuito, com auditorias energéticas sem custo e sem qualquer obrigação para o empresário.
+          </p>
+          <div className="grid md:grid-cols-4 gap-8 max-w-4xl">
+            <div>
+              <p className="text-4xl font-light text-[#9e3ffd]">40%</p>
+              <p className="text-[#736d77] mt-2">Economia de até</p>
+            </div>
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">R$100B+</p>
               <p className="text-[#736d77] mt-2">Mercado anual</p>
             </div>
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">80M</p>
-              <p className="text-[#736d77] mt-2">Consumidores elegíveis até 2028</p>
+              <p className="text-[#736d77] mt-2">Elegíveis até 2028</p>
             </div>
             <div>
-              <p className="text-4xl font-light text-[#9e3ffd]">35%</p>
-              <p className="text-[#736d77] mt-2">Economia média</p>
+              <p className="text-4xl font-light text-[#9e3ffd]">0</p>
+              <p className="text-[#736d77] mt-2">Custo para você</p>
             </div>
           </div>
         </div>
@@ -52,7 +59,7 @@ export function Process() {
                 Envie sua conta
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Compartilhe o código UC e suas contas de luz recentes. Nossa tecnologia analisa seu perfil de consumo e verifica elegibilidade.
+                Envie sua conta de luz e Unidade Consumidora para uma análise gratuita impulsionada por IA, eliminando a falta de visibilidade do mercado.
               </p>
             </div>
 
@@ -65,7 +72,7 @@ export function Process() {
                 Comparamos o mercado
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Cotamos ofertas de múltiplos comercializadores certificados. Você recebe um relatório comparativo em até 48 horas.
+                Nossa tecnologia compara ofertas de diferentes fornecedores, quebrando plataformas isoladas e promovendo competição real para encontrar as melhores condições.
               </p>
             </div>
 
@@ -78,7 +85,7 @@ export function Process() {
                 Você escolhe e economiza
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Apresentamos as melhores opções. Você decide e nós cuidamos de toda a documentação e migração para o mercado livre.
+                Você escolhe a proposta mais transparente e flexível e começa a economizar. Nosso serviço de comparação é gratuito e nossa remuneração vem diretamente dos fornecedores.
               </p>
             </div>
           </div>
@@ -86,8 +93,8 @@ export function Process() {
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
-              <strong className="text-[#16163f]">Elegibilidade:</strong> Para empresas com conta de luz acima de R$8.000/mês ou demanda contratada de 500kW+.{" "}
-              <a href="/faq" className="text-[#9e3ffd] hover:underline">Saiba mais</a>
+              <strong className="text-[#16163f]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda a partir de aproximadamente 500 kW (limite em redução com a nova lei).{" "}
+              <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre a Lei</a>
             </p>
           </div>
 
