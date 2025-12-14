@@ -7,7 +7,8 @@ import {
   type ConsumptionProfile, type InsertConsumptionProfile,
   type QuoteRequest, type InsertQuoteRequest,
   type SupplierQuote, type InsertSupplierQuote,
-  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes
+  type BillUpload, type InsertBillUpload,
+  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -57,6 +58,12 @@ export interface IStorage {
   getSupplierQuotes(rfqId: number): Promise<SupplierQuote[]>;
   updateSupplierQuote(id: number, data: Partial<InsertSupplierQuote>): Promise<SupplierQuote | undefined>;
   selectSupplierQuote(id: number): Promise<void>;
+  
+  // Bill Uploads
+  createBillUpload(billUpload: InsertBillUpload): Promise<BillUpload>;
+  getBillUploads(clientId: number): Promise<BillUpload[]>;
+  getBillUpload(id: number): Promise<BillUpload | undefined>;
+  updateBillUpload(id: number, data: Partial<InsertBillUpload>): Promise<BillUpload | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -239,6 +246,26 @@ export class Storage implements IStorage {
       await db.update(supplierQuotes).set({ isSelected: false }).where(eq(supplierQuotes.rfqId, quote[0].rfqId));
       await db.update(supplierQuotes).set({ isSelected: true }).where(eq(supplierQuotes.id, id));
     }
+  }
+
+  // Bill Uploads
+  async createBillUpload(billUpload: InsertBillUpload): Promise<BillUpload> {
+    const result = await db.insert(billUploads).values(billUpload).returning();
+    return result[0];
+  }
+
+  async getBillUploads(clientId: number): Promise<BillUpload[]> {
+    return await db.select().from(billUploads).where(eq(billUploads.clientId, clientId)).orderBy(desc(billUploads.createdAt));
+  }
+
+  async getBillUpload(id: number): Promise<BillUpload | undefined> {
+    const result = await db.select().from(billUploads).where(eq(billUploads.id, id));
+    return result[0];
+  }
+
+  async updateBillUpload(id: number, data: Partial<InsertBillUpload>): Promise<BillUpload | undefined> {
+    const result = await db.update(billUploads).set({ ...data, updatedAt: new Date() }).where(eq(billUploads.id, id)).returning();
+    return result[0];
   }
 }
 
