@@ -363,22 +363,32 @@ export const insertRfoSupplierTrackingSchema = createInsertSchema(rfoSupplierTra
 export type InsertRfoSupplierTracking = z.infer<typeof insertRfoSupplierTrackingSchema>;
 export type RfoSupplierTracking = typeof rfoSupplierTracking.$inferSelect;
 
-// Supplier Contacts - Multiple contacts per supplier
+// Supplier Contacts - Multiple contacts per supplier with multi-channel preferences
 export const supplierContacts = pgTable("supplier_contacts", {
   id: serial("id").primaryKey(),
   supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
   
   // Contact Details
   name: varchar("name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
-  role: varchar("role", { length: 100 }), // 'comercial', 'vendas', 'orcamento'
+  role: varchar("role", { length: 100 }), // 'comercial', 'vendas', 'orcamento', 'gerente'
   department: varchar("department", { length: 100 }),
   
-  // Preferences
-  preferredFormat: text("preferred_format").default("email"), // 'email', 'whatsapp', 'portal'
+  // Multi-Channel Preferences
+  preferredFormat: text("preferred_format").default("email"), // 'email', 'whatsapp', 'portal', 'phone'
+  formatDetails: jsonb("format_details"), // Portal URL, WhatsApp number, submission format, etc.
+  
+  // Response Expectations
+  typicalResponseHours: integer("typical_response_hours").default(48),
+  bestContactTime: varchar("best_contact_time", { length: 50 }), // "9-12h manhã", "14-17h tarde"
+  responsivenessScore: integer("responsiveness_score").default(3), // 1-5 scale
+  lastContacted: timestamp("last_contacted"),
+  
+  // Template Overrides
+  customSubjectTemplate: varchar("custom_subject_template", { length: 200 }),
+  customBodyTemplate: text("custom_body_template"),
   emailTemplate: varchar("email_template", { length: 50 }),
-  responseTimeHours: integer("response_time_hours").default(48),
   
   // Status
   isActive: boolean("is_active").default(true),
@@ -393,10 +403,73 @@ export const insertSupplierContactSchema = createInsertSchema(supplierContacts).
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastContacted: true,
 });
 
 export type InsertSupplierContact = z.infer<typeof insertSupplierContactSchema>;
 export type SupplierContact = typeof supplierContacts.$inferSelect;
+
+// Supplier Portals - Portal submission details for suppliers that require portal access
+export const supplierPortals = pgTable("supplier_portals", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Portal Info
+  portalName: varchar("portal_name", { length: 100 }), // "TXM", "2W Trade", "NEO", "Portal Comerc"
+  portalUrl: varchar("portal_url", { length: 500 }).notNull(),
+  loginRequired: boolean("login_required").default(true),
+  
+  // Submission Details
+  submissionFormat: varchar("submission_format", { length: 50 }), // "excel_upload", "web_form", "pdf_email"
+  requiredFields: jsonb("required_fields"), // ["UC", "Consumo", "Demanda", "Histórico 12m"]
+  
+  // Portal Notes
+  notes: text("notes"), // "Usar planilha modelo do portal", "Upload apenas .xlsx"
+  lastUsed: timestamp("last_used"),
+  successRate: decimal("success_rate", { precision: 3, scale: 2 }), // 0-1.0
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSupplierPortalSchema = createInsertSchema(supplierPortals).omit({
+  id: true,
+  createdAt: true,
+  lastUsed: true,
+});
+
+export type InsertSupplierPortal = z.infer<typeof insertSupplierPortalSchema>;
+export type SupplierPortal = typeof supplierPortals.$inferSelect;
+
+// RFO Templates - Multi-format message templates for different channels
+export const rfoTemplates = pgTable("rfo_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // "WhatsApp Rápido", "Email Completo", "Planilha Modelo"
+  formatType: varchar("format_type", { length: 20 }).notNull(), // 'whatsapp', 'email', 'pdf', 'excel', 'portal_form'
+  
+  // Template Content
+  subjectTemplate: varchar("subject_template", { length: 200 }),
+  bodyTemplate: text("body_template").notNull(),
+  variables: jsonb("variables").notNull(), // Available variables: {client_name}, {consumption}, etc.
+  
+  // Attachments
+  generatePdf: boolean("generate_pdf").default(false),
+  generateExcel: boolean("generate_excel").default(false),
+  attachmentTemplate: varchar("attachment_template", { length: 50 }), // Which template to use for attachments
+  
+  // Usage
+  defaultForFormat: varchar("default_for_format", { length: 20 }),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertRfoTemplateSchema = createInsertSchema(rfoTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRfoTemplate = z.infer<typeof insertRfoTemplateSchema>;
+export type RfoTemplate = typeof rfoTemplates.$inferSelect;
 
 // Relations
 export const leadsRelations = relations(leads, ({ one }) => ({
@@ -507,12 +580,20 @@ export const rfoSupplierTrackingRelations = relations(rfoSupplierTracking, ({ on
 
 export const suppliersRelations = relations(suppliers, ({ many }) => ({
   contacts: many(supplierContacts),
+  portals: many(supplierPortals),
   rfoTracking: many(rfoSupplierTracking),
 }));
 
 export const supplierContactsRelations = relations(supplierContacts, ({ one }) => ({
   supplier: one(suppliers, {
     fields: [supplierContacts.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+export const supplierPortalsRelations = relations(supplierPortals, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierPortals.supplierId],
     references: [suppliers.id],
   }),
 }));

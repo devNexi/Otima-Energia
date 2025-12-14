@@ -1,0 +1,1010 @@
+Task 3.5 - Supplier Contact Manager & Multi-Format RFO Generator
+🎯 PROJECT: Supplier Relationship Manager + Multi-Channel RFO System
+The Brazilian Reality Problem:
+Each supplier in Brazil has:
+
+Different preferred channels: WhatsApp, Email, Portal, Phone
+
+Different contact persons: João (sales), Maria (quotes), Carlos (commercial)
+
+Different data formats: Some want PDF, some want Excel, some want their portal form
+
+Different response times: Some reply in 2 hours, some in 2 weeks
+
+Current System Gap:
+Replit built a great email-only RFO system. But in Brazil, Renan needs to:
+
+Contact Joana at TYR via WhatsApp (she responds fastest there)
+
+Contact Carlos at 2W via their portal (they require portal submissions)
+
+Contact Ana at Comerc via email (she prefers detailed PDF attachments)
+
+Solution: Build a "How Each Supplier Likes to Be Contacted" System
+🗂️ DATABASE UPDATES NEEDED
+1. Enhance supplier_contacts table:
+sql
+ALTER TABLE supplier_contacts ADD COLUMN (
+  -- Contact Preferences
+  preferred_format VARCHAR(20) NOT NULL DEFAULT 'email', -- 'email', 'whatsapp', 'portal', 'phone'
+  format_details JSONB, -- Portal URL, WhatsApp number, etc.
+  
+  -- Response Expectations
+  typical_response_hours INTEGER, -- e.g., 24, 48, 72
+  best_contact_time VARCHAR(50), -- "9-12h manhã", "14-17h tarde"
+  
+  -- Communication Notes
+  notes TEXT, -- "Prefere WhatsApp para urgente", "Só responde após 10h"
+  last_contacted TIMESTAMP,
+  responsiveness_score INTEGER DEFAULT 3, -- 1-5 scale
+  
+  -- Template Overrides
+  custom_subject_template VARCHAR(200),
+  custom_body_template TEXT
+);
+2. Create supplier_portals table:
+sql
+CREATE TABLE supplier_portals (
+  id SERIAL PRIMARY KEY,
+  supplier_id INTEGER REFERENCES suppliers(id) NOT NULL,
+  
+  -- Portal Info
+  portal_name VARCHAR(100), -- "TXM", "2W Trade", "NEO", "Portal Comerc"
+  portal_url VARCHAR(500) NOT NULL,
+  login_required BOOLEAN DEFAULT TRUE,
+  
+  -- Submission Details
+  submission_format VARCHAR(50), -- "excel_upload", "web_form", "pdf_email"
+  required_fields JSONB, -- ["UC", "Consumo", "Demanda", "Histórico 12m"]
+  
+  -- Portal Notes
+  notes TEXT, -- "Usar planilha modelo do portal", "Upload apenas .xlsx"
+  last_used TIMESTAMP,
+  success_rate DECIMAL(3,2), -- 0-1.0
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+3. Create rfo_templates table:
+sql
+CREATE TABLE rfo_templates (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL, -- "WhatsApp Rápido", "Email Completo", "Planilha Modelo"
+  format_type VARCHAR(20) NOT NULL, -- 'whatsapp', 'email', 'pdf', 'excel', 'portal_form'
+  
+  -- Template Content
+  subject_template VARCHAR(200),
+  body_template TEXT NOT NULL,
+  variables JSONB NOT NULL, -- Available variables: {client_name}, {consumption}, etc.
+  
+  -- Attachments
+  generate_pdf BOOLEAN DEFAULT FALSE,
+  generate_excel BOOLEAN DEFAULT FALSE,
+  attachment_template VARCHAR(50), -- Which template to use for attachments
+  
+  -- Usage
+  default_for_format VARCHAR(20),
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert default templates
+INSERT INTO rfo_templates (name, format_type, body_template, variables) VALUES
+('WhatsApp Rápido', 'whatsapp', 
+  'Olá {contact_name}, tudo bem? 
+
+Precisamos de cotação para:
+Cliente: {client_name}
+UC: {uc_code}
+Consumo: {consumption_kwh} MWh/ano
+Demanda: {demanda_kw} kW
+
+Prazo: {deadline}
+Comissão Ótima: R$ 5/MWh
+
+Pode enviar para renan@otimaenergia.com.br?
+Obrigado!',
+  '["contact_name", "client_name", "uc_code", "consumption_kwh", "demanda_kw", "deadline"]'
+),
+('Email Profissional', 'email',
+  'Prezado(a) {contact_name},
+
+Solicitamos proposta comercial para o cliente abaixo:
+
+**CLIENTE**
+- Empresa: {client_name}
+- UC: {uc_code}
+- Consumo Anual: {consumption_kwh} MWh
+- Demanda Contratada: {demanda_kw} kW
+- Distribuidora: {distribuidora}
+- Subgrupo: {subgrupo}
+
+**SOLICITAÇÃO**
+- Prazo: {deadline}
+- Contrato: 12-36 meses
+- Preço: Spread PLD ou Fixo
+- Comissão Ótima Energia: R$ 5,00/MWh
+
+Anexos: Histórico consumo (12 meses)
+
+Agradecemos a proposta.
+
+Atenciosamente,
+Renan - Ótima Energia
+renan@otimaenergia.com.br
++55 (11) 99999-9999',
+  '["contact_name", "client_name", "uc_code", "consumption_kwh", "demanda_kw", "distribuidora", "subgrupo", "deadline"]'
+);
+🖥️ FRONTEND IMPLEMENTATION
+Component 1: SupplierManager.jsx - NEW PAGE
+Location: New page /admin/suppliers - Manage all supplier contacts & preferences
+
+jsx
+const SupplierManager = () => {
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+
+  // Format options with icons
+  const formatOptions = [
+    { value: 'whatsapp', label: '📱 WhatsApp', color: '#25D366' },
+    { value: 'email', label: '📧 Email', color: '#EA4335' },
+    { value: 'portal', label: '🌐 Portal', color: '#4285F4' },
+    { value: 'phone', label: '📞 Telefone', color: '#34A853' }
+  ];
+
+  // Add a new contact
+  const addContact = (supplierId, contactData) => {
+    // API call to add contact
+    // Refresh supplier list
+  };
+
+  // Update contact preferences
+  const updateContactFormat = (contactId, format, details) => {
+    // API call to update
+  };
+
+  return (
+    <div className="supplier-manager">
+      <h3>👥 Gestão de Fornecedores</h3>
+      
+      {/* SUPPLIER LIST */}
+      <div className="supplier-list">
+        {suppliers.map(supplier => (
+          <div 
+            key={supplier.id} 
+            className="supplier-card"
+            onClick={() => setSelectedSupplier(supplier)}
+          >
+            <div className="supplier-header">
+              <h4>{supplier.name}</h4>
+              <span className="supplier-code">{supplier.short_code}</span>
+            </div>
+            
+            <div className="supplier-contacts">
+              {supplier.contacts?.map(contact => (
+                <div key={contact.id} className="contact-item">
+                  <div className="contact-name">{contact.name}</div>
+                  <div className="contact-method">
+                    <span 
+                      className="method-badge"
+                      style={{ backgroundColor: formatOptions.find(f => f.value === contact.preferred_format)?.color }}
+                    >
+                      {formatOptions.find(f => f.value === contact.preferred_format)?.label}
+                    </span>
+                  </div>
+                  <div className="contact-info">
+                    {contact.preferred_format === 'whatsapp' && `📱 ${contact.phone}`}
+                    {contact.preferred_format === 'email' && `📧 ${contact.email}`}
+                    {contact.preferred_format === 'portal' && `🌐 ${contact.format_details?.portal_url || 'Portal'}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <button 
+              className="btn-add-contact"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedSupplier(supplier);
+                setShowContactForm(true);
+              }}
+            >
+              + Add Contact
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* SUPPLIER DETAIL MODAL */}
+      {selectedSupplier && (
+        <SupplierDetailModal
+          supplier={selectedSupplier}
+          onClose={() => setSelectedSupplier(null)}
+          onUpdate={(updatedSupplier) => {
+            // Update in state
+            setSuppliers(suppliers.map(s => 
+              s.id === updatedSupplier.id ? updatedSupplier : s
+            ));
+          }}
+        />
+      )}
+
+      {/* ADD CONTACT MODAL */}
+      {showContactForm && (
+        <ContactFormModal
+          supplierId={selectedSupplier?.id}
+          onClose={() => setShowContactForm(false)}
+          onSave={(newContact) => {
+            // Add to selected supplier
+            const updated = {
+              ...selectedSupplier,
+              contacts: [...(selectedSupplier.contacts || []), newContact]
+            };
+            setSelectedSupplier(updated);
+            setShowContactForm(false);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+Component 2: ContactFormModal.jsx
+jsx
+const ContactFormModal = ({ supplierId, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'comercial',
+    preferred_format: 'whatsapp',
+    format_details: {},
+    notes: ''
+  });
+
+  const [showPortalFields, setShowPortalFields] = useState(false);
+  const [showWhatsAppFields, setShowWhatsAppFields] = useState(false);
+
+  // When format changes, show relevant fields
+  useEffect(() => {
+    setShowPortalFields(formData.preferred_format === 'portal');
+    setShowWhatsAppFields(formData.preferred_format === 'whatsapp');
+  }, [formData.preferred_format]);
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content contact-modal">
+        <div className="modal-header">
+          <h4>➕ Novo Contato de Fornecedor</h4>
+          <button onClick={onClose}>×</button>
+        </div>
+
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          onSave(formData);
+        }}>
+          {/* BASIC INFO */}
+          <div className="form-section">
+            <h5>Informações Básicas</h5>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Nome *</label>
+                <input
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required
+                  placeholder="João Silva"
+                />
+              </div>
+              <div className="form-group">
+                <label>Cargo/Função</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                >
+                  <option value="comercial">Comercial</option>
+                  <option value="vendas">Vendas</option>
+                  <option value="orcamento">Orçamentos</option>
+                  <option value="gerente">Gerente</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* CONTACT METHOD SELECTION */}
+          <div className="form-section">
+            <h5>Como Este Contato Prefere Receber RFOs?</h5>
+            
+            <div className="format-selector">
+              {[
+                { value: 'whatsapp', label: '📱 WhatsApp', desc: 'Mensagem direta' },
+                { value: 'email', label: '📧 Email', desc: 'Email formal' },
+                { value: 'portal', label: '🌐 Portal', desc: 'Portal do fornecedor' },
+                { value: 'phone', label: '📞 Telefone', desc: 'Ligação + email' }
+              ].map(format => (
+                <label key={format.value} className="format-option">
+                  <input
+                    type="radio"
+                    name="preferred_format"
+                    value={format.value}
+                    checked={formData.preferred_format === format.value}
+                    onChange={(e) => setFormData({...formData, preferred_format: e.target.value})}
+                  />
+                  <div className="format-content">
+                    <div className="format-label">{format.label}</div>
+                    <div className="format-desc">{format.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* WHATSAPP SPECIFIC FIELDS */}
+            {showWhatsAppFields && (
+              <div className="whatsapp-fields">
+                <div className="form-group">
+                  <label>Número do WhatsApp *</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+55 (11) 99999-9999"
+                    required
+                  />
+                  <small>Formato brasileiro com DDD</small>
+                </div>
+                <div className="form-group">
+                  <label>Email (para cópia)</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="joao@fornecedor.com.br"
+                  />
+                  <small>Para enviar anexos por email</small>
+                </div>
+              </div>
+            )}
+
+            {/* PORTAL SPECIFIC FIELDS */}
+            {showPortalFields && (
+              <div className="portal-fields">
+                <div className="form-group">
+                  <label>URL do Portal *</label>
+                  <input
+                    type="url"
+                    value={formData.format_details.portal_url || ''}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      format_details: {...formData.format_details, portal_url: e.target.value}
+                    })}
+                    placeholder="https://portal.fornecedor.com.br"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email do Portal</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="portal@fornecedor.com.br"
+                  />
+                  <small>Para notificações do portal</small>
+                </div>
+                <div className="form-group">
+                  <label>Formato Requerido</label>
+                  <select
+                    value={formData.format_details.submission_format || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      format_details: {...formData.format_details, submission_format: e.target.value}
+                    })}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="excel_upload">Upload de Excel</option>
+                    <option value="web_form">Formulário Web</option>
+                    <option value="pdf_email">PDF por Email</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* EMAIL SPECIFIC (DEFAULT) */}
+            {formData.preferred_format === 'email' && (
+              <div className="form-group">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="joao@fornecedor.com.br"
+                  required
+                />
+              </div>
+            )}
+          </div>
+
+          {/* NOTES */}
+          <div className="form-section">
+            <h5>Observações</h5>
+            <div className="form-group">
+              <label>Notas Internas</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Ex: Responde rápido no WhatsApp, melhor contatar das 10h-12h, prefere planilha Excel..."
+                rows="3"
+              />
+              <small>Informações úteis para o Renan</small>
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary">
+              Salvar Contato
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+Component 3: MultiFormatRFOGenerator.jsx - UPDATED RFO FLOW
+Location: Updated /admin/clients/[id] - RFO button now opens this
+
+jsx
+const MultiFormatRFOGenerator = ({ clientId, clientData }) => {
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+  const [selectedFormat, setSelectedFormat] = useState({});
+  const [generatedContent, setGeneratedContent] = useState({});
+  
+  // Get suppliers with their preferred formats
+  const suppliers = [
+    {
+      id: 1,
+      name: 'TYR Energia',
+      contacts: [
+        { id: 101, name: 'Joana Silva', preferred_format: 'whatsapp', phone: '+55 (11) 99999-9999' }
+      ]
+    },
+    {
+      id: 2, 
+      name: '2W Energia',
+      contacts: [
+        { id: 201, name: 'Carlos Mendes', preferred_format: 'portal', format_details: { portal_url: 'https://portal.2w.com.br' } }
+      ]
+    },
+    {
+      id: 3,
+      name: 'Comerc Energia',
+      contacts: [
+        { id: 301, name: 'Ana Paula', preferred_format: 'email', email: 'ana@comerc.com.br' }
+      ]
+    }
+  ];
+
+  // When supplier selection changes
+  const handleSupplierToggle = (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    const primaryContact = supplier.contacts[0];
+    
+    if (selectedSuppliers.includes(supplierId)) {
+      // Remove
+      setSelectedSuppliers(selectedSuppliers.filter(id => id !== supplierId));
+      const newFormat = {...selectedFormat};
+      delete newFormat[supplierId];
+      setSelectedFormat(newFormat);
+    } else {
+      // Add with default format
+      setSelectedSuppliers([...selectedSuppliers, supplierId]);
+      setSelectedFormat({
+        ...selectedFormat,
+        [supplierId]: primaryContact.preferred_format
+      });
+    }
+  };
+
+  // Generate content for each selected supplier
+  const generateContent = () => {
+    const content = {};
+    
+    selectedSuppliers.forEach(supplierId => {
+      const supplier = suppliers.find(s => s.id === supplierId);
+      const contact = supplier.contacts[0];
+      const format = selectedFormat[supplierId];
+      
+      // Get template for this format
+      const template = getTemplateForFormat(format);
+      
+      // Fill template with client data
+      const filled = fillTemplate(template, {
+        client_name: clientData.company_name,
+        contact_name: contact.name,
+        consumption_kwh: clientData.avg_consumption_kwh,
+        // ... other data
+      });
+      
+      content[supplierId] = {
+        supplier: supplier.name,
+        contact: contact.name,
+        format: format,
+        content: filled,
+        destination: getDestination(contact, format)
+      };
+    });
+    
+    setGeneratedContent(content);
+  };
+
+  // Get destination string for display
+  const getDestination = (contact, format) => {
+    switch(format) {
+      case 'whatsapp': return `📱 ${contact.phone}`;
+      case 'email': return `📧 ${contact.email}`;
+      case 'portal': return `🌐 ${contact.format_details?.portal_url}`;
+      case 'phone': return `📞 ${contact.phone}`;
+      default: return '—';
+    }
+  };
+
+  // Copy content to clipboard for manual sending
+  const copyToClipboard = (supplierId, format) => {
+    const content = generatedContent[supplierId].content;
+    
+    if (format === 'whatsapp') {
+      // Copy WhatsApp-ready text
+      navigator.clipboard.writeText(content);
+      alert('Copiado para WhatsApp! Agora cole no WhatsApp do fornecedor.');
+    } else if (format === 'email') {
+      // Copy email subject and body
+      const emailContent = `Assunto: ${generatedContent[supplierId].subject}\n\n${content}`;
+      navigator.clipboard.writeText(emailContent);
+      alert('Email copiado! Agora cole no seu cliente de email.');
+    }
+  };
+
+  return (
+    <div className="multi-format-rfo">
+      <h4>📤 Solicitar Cotações - Multi-Formato</h4>
+      
+      {/* SUPPLIER SELECTION WITH FORMATS */}
+      <div className="supplier-format-grid">
+        {suppliers.map(supplier => {
+          const isSelected = selectedSuppliers.includes(supplier.id);
+          const primaryContact = supplier.contacts[0];
+          
+          return (
+            <div 
+              key={supplier.id}
+              className={`supplier-format-card ${isSelected ? 'selected' : ''}`}
+            >
+              <div className="supplier-checkbox">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => handleSupplierToggle(supplier.id)}
+                />
+              </div>
+              
+              <div className="supplier-info">
+                <div className="supplier-name">{supplier.name}</div>
+                <div className="supplier-contact">{primaryContact.name}</div>
+              </div>
+              
+              {/* FORMAT SELECTOR */}
+              {isSelected && (
+                <div className="format-selector-small">
+                  <label>Enviar via:</label>
+                  <select
+                    value={selectedFormat[supplier.id] || primaryContact.preferred_format}
+                    onChange={(e) => setSelectedFormat({
+                      ...selectedFormat,
+                      [supplier.id]: e.target.value
+                    })}
+                  >
+                    <option value="whatsapp">📱 WhatsApp</option>
+                    <option value="email">📧 Email</option>
+                    <option value="portal">🌐 Portal</option>
+                    <option value="phone">📞 Telefone</option>
+                  </select>
+                  
+                  {/* Format-specific preview */}
+                  <div className="format-preview">
+                    {selectedFormat[supplier.id] === 'whatsapp' && (
+                      <span>Mensagem WhatsApp</span>
+                    )}
+                    {selectedFormat[supplier.id] === 'portal' && (
+                      <a href={primaryContact.format_details?.portal_url} target="_blank">
+                        Abrir Portal →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* GENERATE BUTTON */}
+      {selectedSuppliers.length > 0 && (
+        <div className="generate-section">
+          <button onClick={generateContent} className="btn-generate">
+            🧮 Gerar Conteúdo para {selectedSuppliers.length} Fornecedor(es)
+          </button>
+        </div>
+      )}
+
+      {/* GENERATED CONTENT DISPLAY */}
+      {Object.keys(generatedContent).length > 0 && (
+        <div className="generated-content">
+          <h5>📝 Conteúdo Gerado (Copie e Cole)</h5>
+          
+          {Object.entries(generatedContent).map(([supplierId, content]) => (
+            <div key={supplierId} className="content-card">
+              <div className="content-header">
+                <div className="supplier-title">
+                  <strong>{content.supplier}</strong>
+                  <span className="format-badge">{content.format}</span>
+                </div>
+                <div className="content-destination">
+                  Para: {content.destination}
+                </div>
+              </div>
+              
+              <div className="content-body">
+                <pre>{content.content}</pre>
+              </div>
+              
+              <div className="content-actions">
+                <button 
+                  onClick={() => copyToClipboard(supplierId, content.format)}
+                  className="btn-copy"
+                >
+                  📋 Copiar {content.format === 'whatsapp' ? 'para WhatsApp' : 'para Email'}
+                </button>
+                
+                {content.format === 'portal' && (
+                  <a 
+                    href={content.destination.replace('🌐 ', '')}
+                    target="_blank"
+                    className="btn-portal"
+                  >
+                    🌐 Abrir Portal
+                  </a>
+                )}
+                
+                <button className="btn-mark-sent">
+                  ✅ Marcar como Enviado
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          {/* BULK ACTIONS */}
+          <div className="bulk-actions">
+            <button className="btn-secondary">
+              📥 Exportar Todos (ZIP)
+            </button>
+            <button className="btn-primary">
+              📊 Criar RFO Tracking
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+🎨 CSS UPDATES NEEDED
+css
+/* Supplier Format Grid */
+.supplier-format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.supplier-format-card {
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.supplier-format-card.selected {
+  border-color: #0366d6;
+  background: #f6f8fa;
+}
+
+.supplier-checkbox {
+  float: right;
+}
+
+.supplier-info {
+  margin-bottom: 12px;
+}
+
+.supplier-name {
+  font-weight: 600;
+  color: #24292e;
+}
+
+.supplier-contact {
+  font-size: 13px;
+  color: #6a737d;
+}
+
+.format-selector-small {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #eaecef;
+}
+
+.format-selector-small label {
+  display: block;
+  font-size: 12px;
+  color: #6a737d;
+  margin-bottom: 4px;
+}
+
+.format-selector-small select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.format-preview {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+/* Format Badges */
+.format-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 8px;
+  text-transform: uppercase;
+}
+
+.format-badge[data-format="whatsapp"] { background: #25D366; color: white; }
+.format-badge[data-format="email"] { background: #EA4335; color: white; }
+.format-badge[data-format="portal"] { background: #4285F4; color: white; }
+.format-badge[data-format="phone"] { background: #34A853; color: white; }
+
+/* Generated Content */
+.generated-content {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #eaecef;
+}
+
+.content-card {
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: white;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eaecef;
+}
+
+.content-destination {
+  font-size: 12px;
+  color: #6a737d;
+}
+
+.content-body {
+  background: #f6f8fa;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.content-body pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.content-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-copy, .btn-portal, .btn-mark-sent {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid;
+  cursor: pointer;
+}
+
+.btn-copy {
+  background: #f6f8fa;
+  border-color: #0366d6;
+  color: #0366d6;
+}
+
+.btn-portal {
+  background: #4285F4;
+  color: white;
+  border-color: #4285F4;
+  text-decoration: none;
+}
+
+.btn-mark-sent {
+  background: #2ea44f;
+  color: white;
+  border-color: #2ea44f;
+}
+
+/* Format Selector Grid */
+.format-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.format-option {
+  border: 2px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.format-option:hover {
+  border-color: #0366d6;
+}
+
+.format-option input:checked + .format-content {
+  border-color: #0366d6;
+  background: #f6f8fa;
+}
+
+.format-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.format-label {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.format-desc {
+  font-size: 12px;
+  color: #6a737d;
+}
+
+/* WhatsApp & Portal Specific Fields */
+.whatsapp-fields, .portal-fields {
+  background: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  margin-top: 12px;
+  border-left: 4px solid;
+}
+
+.whatsapp-fields {
+  border-left-color: #25D366;
+}
+
+.portal-fields {
+  border-left-color: #4285F4;
+}
+🔧 BACKEND UPDATES NEEDED
+1. Template Management Endpoints:
+javascript
+// GET /api/templates?format=whatsapp
+router.get('/templates', async (req, res) => {
+  const { format } = req.query;
+  
+  const templates = await db.selectFrom('rfo_templates')
+    .selectAll()
+    .where('is_active', '=', true)
+    .where(format ? 'format_type' : '1', '=', format || '1')
+    .execute();
+  
+  res.json(templates);
+});
+
+// POST /api/templates/preview
+router.post('/templates/preview', async (req, res) => {
+  const { templateId, variables } = req.body;
+  
+  const template = await db.selectFrom('rfo_templates')
+    .select(['body_template', 'variables'])
+    .where('id', '=', templateId)
+    .executeTakeFirst();
+  
+  // Fill template with variables
+  let content = template.body_template;
+  Object.entries(variables).forEach(([key, value]) => {
+    content = content.replace(new RegExp(`{${key}}`, 'g'), value);
+  });
+  
+  res.json({ content });
+});
+2. Supplier Format Preferences:
+javascript
+// GET /api/suppliers/:id/preferences
+router.get('/suppliers/:id/preferences', async (req, res) => {
+  const supplier = await db.selectFrom('suppliers')
+    .leftJoin('supplier_contacts', 'suppliers.id', 'supplier_contacts.supplier_id')
+    .select([
+      'suppliers.name',
+      'supplier_contacts.preferred_format',
+      'supplier_contacts.format_details',
+      'supplier_contacts.notes'
+    ])
+    .where('suppliers.id', '=', req.params.id)
+    .where('supplier_contacts.is_primary', '=', true)
+    .executeTakeFirst();
+  
+  res.json(supplier);
+});
+🎯 HOW THIS SOLVES THE BRAZILIAN PROBLEM:
+TYR (Joana - WhatsApp):
+
+System generates WhatsApp message
+
+Renan copies → pastes in WhatsApp
+
+System tracks as "sent via WhatsApp"
+
+2W (Carlos - Portal):
+
+System shows portal URL
+
+Renan opens portal, fills form manually
+
+System tracks as "submitted via portal"
+
+Comerc (Ana - Email):
+
+System generates professional email
+
+Renan copies → pastes in email client
+
+System tracks as "sent via email"
+
+Value Created:
+
+✅ Consistent templates (Renan looks professional)
+
+✅ Format-aware (respects supplier preferences)
+
+✅ Easy copy/paste (no complex integration needed)
+
+✅ Tracking (you see what Renan sent)
+
+✅ Brazilian reality (works with actual market chaos)
+
+This is the MVP that actually works in Brazil.
