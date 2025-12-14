@@ -70,6 +70,37 @@ export const insertClientSchema = createInsertSchema(clients).omit({
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
+// Bill Uploads - OCR-extracted energy bill data
+export const billUploads = pgTable("bill_uploads", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type"), // 'pdf', 'jpg', 'png'
+  fileSize: integer("file_size"), // in bytes
+  ocrRawText: text("ocr_raw_text"), // First 5000 chars of OCR output
+  ocrConfidence: decimal("ocr_confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  ocrStatus: text("ocr_status").default("pending"), // 'pending', 'success', 'failed', 'manual'
+  ucCode: text("uc_code"), // Unidade Consumidora
+  consumoKwh: decimal("consumo_kwh", { precision: 10, scale: 2 }),
+  demandaKw: decimal("demanda_kw", { precision: 10, scale: 2 }),
+  valorTotal: decimal("valor_total", { precision: 10, scale: 2 }),
+  distribuidora: text("distribuidora"), // Utility company
+  mesReferencia: text("mes_referencia"), // MM/AAAA
+  extractionMethod: text("extraction_method"), // 'tesseract', 'manual'
+  reviewedBy: text("reviewed_by").default("system"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBillUploadSchema = createInsertSchema(billUploads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillUpload = z.infer<typeof insertBillUploadSchema>;
+export type BillUpload = typeof billUploads.$inferSelect;
+
 // Upload Sessions - portal access tokens for clients
 export const uploadSessions = pgTable("upload_sessions", {
   id: serial("id").primaryKey(),
@@ -172,6 +203,14 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   uploadSessions: many(uploadSessions),
   consumptionProfiles: many(consumptionProfiles),
   quoteRequests: many(quoteRequests),
+  billUploads: many(billUploads),
+}));
+
+export const billUploadsRelations = relations(billUploads, ({ one }) => ({
+  client: one(clients, {
+    fields: [billUploads.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const uploadSessionsRelations = relations(uploadSessions, ({ one, many }) => ({
