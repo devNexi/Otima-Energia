@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -57,6 +57,10 @@ export const clients = pgTable("clients", {
   phone: text("phone"),
   contactPerson: text("contact_person"),
   status: text("status").default("prospect"), // 'prospect', 'awaiting_quote', 'negotiating', 'active', 'closed', 'lost'
+  currentSupplier: text("current_supplier"), // Current distributor/supplier
+  currentPriceRmwh: decimal("current_price_rmwh", { precision: 10, scale: 2 }), // Current price for savings comparison
+  avgConsumptionKwh: decimal("avg_consumption_kwh", { precision: 12, scale: 2 }), // Average monthly consumption
+  selectedQuoteId: integer("selected_quote_id"), // References supplier_quotes(id) - added later to avoid circular ref
   zohoId: text("zoho_id"), // Zoho CRM Contact ID for future sync
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -145,6 +149,28 @@ export const insertConsumptionProfileSchema = createInsertSchema(consumptionProf
 export type InsertConsumptionProfile = z.infer<typeof insertConsumptionProfileSchema>;
 export type ConsumptionProfile = typeof consumptionProfiles.$inferSelect;
 
+// Suppliers master table
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  shortCode: text("short_code").notNull().unique(),
+  category: text("category"), // 'large', 'medium', 'small', 'renewable'
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  website: text("website"),
+  commissionTerms: text("commission_terms"), // Standard terms with this supplier
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type Supplier = typeof suppliers.$inferSelect;
+
 // Quote Requests (RFQs)
 export const quoteRequests = pgTable("quote_requests", {
   id: serial("id").primaryKey(),
@@ -166,22 +192,71 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests).omit({
 export type InsertQuoteRequest = z.infer<typeof insertQuoteRequestSchema>;
 export type QuoteRequest = typeof quoteRequests.$inferSelect;
 
-// Supplier Quotes
+// Supplier Quotes - Brazilian ACL Market Pricing Structure
 export const supplierQuotes = pgTable("supplier_quotes", {
   id: serial("id").primaryKey(),
-  rfqId: integer("rfq_id").references(() => quoteRequests.id),
+  
+  // Relationships
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  billUploadId: integer("bill_upload_id").references(() => billUploads.id),
+  rfqId: integer("rfq_id").references(() => quoteRequests.id), // Keep for backwards compatibility
+  
+  // Supplier Information
   supplierName: text("supplier_name").notNull(),
-  pricePerMwh: decimal("price_per_mwh", { precision: 10, scale: 2 }),
-  contractTerms: text("contract_terms"),
-  validityDays: integer("validity_days"),
-  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }),
-  isSelected: boolean("is_selected").default(false),
-  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  supplierContact: text("supplier_contact"),
+  quoteReference: text("quote_reference"),
+  
+  // Quote Dates
+  quoteDate: date("quote_date").defaultNow().notNull(),
+  validUntil: date("valid_until").notNull(),
+  
+  // Pricing Structure (Brazilian ACL Specific)
+  priceRmwh: decimal("price_rmwh", { precision: 10, scale: 2 }), // Fixed price R$/MWh
+  pldSpreadRmwh: decimal("pld_spread_rmwh", { precision: 10, scale: 2 }), // Spread over PLD
+  demandaPriceRkwMes: decimal("demanda_price_rkw_mes", { precision: 10, scale: 2 }), // R$/kW/month
+  
+  // Contract Details
+  contractStart: date("contract_start"),
+  contractDuration: integer("contract_duration"), // Months (12, 24, 36, 48)
+  contractType: text("contract_type"), // 'Convencional', '11', '15', 'Bior'
+  
+  // Modulation (Time-of-Day Rates)
+  modulacaoPontaRmwh: decimal("modulacao_ponta_rmwh", { precision: 10, scale: 2 }),
+  modulacaoForaPontaRmwh: decimal("modulacao_fora_ponta_rmwh", { precision: 10, scale: 2 }),
+  modulacaoReservadaRmwh: decimal("modulacao_reservada_rmwh", { precision: 10, scale: 2 }),
+  
+  // Seasonality (Sazonalidade)
+  sazonalidadeSecaRmwh: decimal("sazonalidade_seca_rmwh", { precision: 10, scale: 2 }),
+  sazonalidadeUmidaRmwh: decimal("sazonalidade_umida_rmwh", { precision: 10, scale: 2 }),
+  
+  // Flexibility
+  flexibilidadePercent: decimal("flexibilidade_percent", { precision: 5, scale: 2 }),
+  flexibilidadePenaltyRmwh: decimal("flexibilidade_penalty_rmwh", { precision: 10, scale: 2 }),
+  
+  // Commission & Financials
+  ourCommissionRmwh: decimal("our_commission_rmwh", { precision: 10, scale: 2 }),
+  commissionPercent: decimal("commission_percent", { precision: 5, scale: 2 }),
+  commissionPaidBy: text("commission_paid_by").default("supplier"), // 'supplier' or 'client'
+  
+  // Calculated Fields
+  totalClientCostAnnual: decimal("total_client_cost_annual", { precision: 12, scale: 2 }),
+  ourCommissionAnnual: decimal("our_commission_annual", { precision: 12, scale: 2 }),
+  clientSavingsAnnual: decimal("client_savings_annual", { precision: 12, scale: 2 }),
+  effectivePriceRmwh: decimal("effective_price_rmwh", { precision: 10, scale: 2 }),
+  
+  // Status & Metadata
+  status: text("status").default("draft"), // 'draft', 'active', 'won', 'lost', 'expired'
+  notes: text("notes"),
+  attachmentUrl: text("attachment_url"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertSupplierQuoteSchema = createInsertSchema(supplierQuotes).omit({
   id: true,
-  receivedAt: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertSupplierQuote = z.infer<typeof insertSupplierQuoteSchema>;
@@ -204,6 +279,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   consumptionProfiles: many(consumptionProfiles),
   quoteRequests: many(quoteRequests),
   billUploads: many(billUploads),
+  supplierQuotes: many(supplierQuotes),
 }));
 
 export const billUploadsRelations = relations(billUploads, ({ one }) => ({
@@ -245,6 +321,14 @@ export const quoteRequestsRelations = relations(quoteRequests, ({ one, many }) =
 }));
 
 export const supplierQuotesRelations = relations(supplierQuotes, ({ one }) => ({
+  client: one(clients, {
+    fields: [supplierQuotes.clientId],
+    references: [clients.id],
+  }),
+  billUpload: one(billUploads, {
+    fields: [supplierQuotes.billUploadId],
+    references: [billUploads.id],
+  }),
   quoteRequest: one(quoteRequests, {
     fields: [supplierQuotes.rfqId],
     references: [quoteRequests.id],

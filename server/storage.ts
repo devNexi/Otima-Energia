@@ -8,7 +8,8 @@ import {
   type QuoteRequest, type InsertQuoteRequest,
   type SupplierQuote, type InsertSupplierQuote,
   type BillUpload, type InsertBillUpload,
-  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads
+  type Supplier, type InsertSupplier,
+  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -53,11 +54,19 @@ export interface IStorage {
   updateQuoteRequest(id: number, data: Partial<InsertQuoteRequest>): Promise<QuoteRequest | undefined>;
   getQuoteRequestsForClient(clientId: number): Promise<QuoteRequest[]>;
   
+  // Suppliers (Master List)
+  getSuppliers(): Promise<Supplier[]>;
+  getActiveSuppliers(): Promise<Supplier[]>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  
   // Supplier Quotes
   createSupplierQuote(quote: InsertSupplierQuote): Promise<SupplierQuote>;
   getSupplierQuotes(rfqId: number): Promise<SupplierQuote[]>;
+  getSupplierQuotesForClient(clientId: number): Promise<SupplierQuote[]>;
+  getSupplierQuote(id: number): Promise<SupplierQuote | undefined>;
   updateSupplierQuote(id: number, data: Partial<InsertSupplierQuote>): Promise<SupplierQuote | undefined>;
   selectSupplierQuote(id: number): Promise<void>;
+  markQuoteAsWon(id: number, clientId: number): Promise<void>;
   
   // Bill Uploads
   createBillUpload(billUpload: InsertBillUpload): Promise<BillUpload>;
@@ -225,6 +234,20 @@ export class Storage implements IStorage {
     return await db.select().from(quoteRequests).where(eq(quoteRequests.clientId, clientId));
   }
 
+  // Suppliers (Master List)
+  async getSuppliers(): Promise<Supplier[]> {
+    return await db.select().from(suppliers).orderBy(suppliers.name);
+  }
+
+  async getActiveSuppliers(): Promise<Supplier[]> {
+    return await db.select().from(suppliers).where(eq(suppliers.isActive, true)).orderBy(suppliers.name);
+  }
+
+  async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
+    const result = await db.insert(suppliers).values(supplier).returning();
+    return result[0];
+  }
+
   // Supplier Quotes
   async createSupplierQuote(quote: InsertSupplierQuote): Promise<SupplierQuote> {
     const result = await db.insert(supplierQuotes).values(quote).returning();
@@ -235,17 +258,34 @@ export class Storage implements IStorage {
     return await db.select().from(supplierQuotes).where(eq(supplierQuotes.rfqId, rfqId));
   }
 
+  async getSupplierQuotesForClient(clientId: number): Promise<SupplierQuote[]> {
+    return await db.select().from(supplierQuotes)
+      .where(eq(supplierQuotes.clientId, clientId))
+      .orderBy(desc(supplierQuotes.createdAt));
+  }
+
+  async getSupplierQuote(id: number): Promise<SupplierQuote | undefined> {
+    const result = await db.select().from(supplierQuotes).where(eq(supplierQuotes.id, id));
+    return result[0];
+  }
+
   async updateSupplierQuote(id: number, data: Partial<InsertSupplierQuote>): Promise<SupplierQuote | undefined> {
-    const result = await db.update(supplierQuotes).set(data).where(eq(supplierQuotes.id, id)).returning();
+    const result = await db.update(supplierQuotes).set({ ...data, updatedAt: new Date() }).where(eq(supplierQuotes.id, id)).returning();
     return result[0];
   }
 
   async selectSupplierQuote(id: number): Promise<void> {
     const quote = await db.select().from(supplierQuotes).where(eq(supplierQuotes.id, id));
     if (quote[0] && quote[0].rfqId) {
-      await db.update(supplierQuotes).set({ isSelected: false }).where(eq(supplierQuotes.rfqId, quote[0].rfqId));
-      await db.update(supplierQuotes).set({ isSelected: true }).where(eq(supplierQuotes.id, id));
+      await db.update(supplierQuotes).set({ status: "active" }).where(eq(supplierQuotes.rfqId, quote[0].rfqId));
+      await db.update(supplierQuotes).set({ status: "won" }).where(eq(supplierQuotes.id, id));
     }
+  }
+
+  async markQuoteAsWon(id: number, clientId: number): Promise<void> {
+    await db.update(supplierQuotes).set({ status: "active" }).where(eq(supplierQuotes.clientId, clientId));
+    await db.update(supplierQuotes).set({ status: "won" }).where(eq(supplierQuotes.id, id));
+    await db.update(clients).set({ selectedQuoteId: id }).where(eq(clients.id, clientId));
   }
 
   // Bill Uploads

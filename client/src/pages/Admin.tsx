@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { BillUploadSection } from "@/components/BillUploadSection";
+import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { 
   Users, 
   Inbox, 
@@ -23,7 +24,8 @@ import {
   Phone,
   Loader2,
   Languages,
-  Upload
+  Upload,
+  DollarSign
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -41,6 +43,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
+  const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [newClientForm, setNewClientForm] = useState({
     companyName: "",
     cnpj: "",
@@ -401,6 +404,21 @@ export default function Admin() {
                             <Button 
                               size="sm" 
                               variant="default"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => setQuotesClient({ 
+                                id: client.id, 
+                                companyName: client.companyName,
+                                currentPriceRmwh: client.currentPriceRmwh,
+                                avgConsumptionKwh: client.avgConsumptionKwh
+                              })}
+                              data-testid={`button-quotes-${client.id}`}
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              Cotações
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="default"
                               className="bg-violet-600 hover:bg-violet-700"
                               onClick={() => setBillUploadClient({ id: client.id, name: client.companyName })}
                               data-testid={`button-upload-bill-${client.id}`}
@@ -431,6 +449,15 @@ export default function Admin() {
                       clientId={billUploadClient.id}
                       clientName={billUploadClient.name}
                       onClose={() => setBillUploadClient(null)}
+                    />
+                  </div>
+                )}
+
+                {quotesClient && (
+                  <div className="mt-6">
+                    <SupplierQuoteManager 
+                      client={quotesClient}
+                      onClose={() => setQuotesClient(null)}
                     />
                   </div>
                 )}

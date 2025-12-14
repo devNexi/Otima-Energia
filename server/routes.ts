@@ -344,9 +344,112 @@ export async function registerRoutes(
     }
   });
 
+  // ============== SUPPLIER MASTER LIST ==============
+
+  // Get all suppliers (master list)
+  app.get("/api/suppliers", async (req, res) => {
+    try {
+      const allSuppliers = await storage.getActiveSuppliers();
+      res.json({ success: true, suppliers: allSuppliers });
+    } catch (error: any) {
+      console.error("Error fetching suppliers:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch suppliers" });
+    }
+  });
+
   // ============== SUPPLIER QUOTE ENDPOINTS ==============
 
-  // Add supplier quote
+  // Get quotes for a client
+  app.get("/api/clients/:id/quotes", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const quotes = await storage.getSupplierQuotesForClient(clientId);
+      res.json({ success: true, quotes });
+    } catch (error: any) {
+      console.error("Error fetching client quotes:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch quotes" });
+    }
+  });
+
+  // Create quote for a client
+  app.post("/api/clients/:id/quotes", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const quoteData = { ...req.body, clientId };
+      const validatedData = insertSupplierQuoteSchema.parse(quoteData);
+      const quote = await storage.createSupplierQuote(validatedData);
+      res.json({ success: true, quote });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating client quote:", error);
+        res.status(500).json({ success: false, error: "Failed to create quote" });
+      }
+    }
+  });
+
+  // Calculate quote economics
+  app.post("/api/quotes/calculate", async (req, res) => {
+    try {
+      const { client_data, quote_data } = req.body;
+      
+      // Get average monthly consumption in MWh
+      const avgConsumptionKwh = parseFloat(client_data.avg_consumption_kwh || client_data.avgConsumptionKwh || 0);
+      const avgConsumptionMwh = avgConsumptionKwh / 1000;
+      const annualConsumptionMwh = avgConsumptionMwh * 12;
+      
+      // Get demand in kW
+      const demandKw = parseFloat(client_data.demand_kw || client_data.demandaKw || 0);
+      
+      // Calculate effective price per MWh
+      let effectivePriceRmwh = 0;
+      if (quote_data.price_type === "fixed" || quote_data.priceRmwh) {
+        effectivePriceRmwh = parseFloat(quote_data.price_rmwh || quote_data.priceRmwh || 0);
+      } else {
+        // PLD spread - assume average PLD of R$150/MWh for calculation
+        const avgPld = 150;
+        const spread = parseFloat(quote_data.pld_spread_rmwh || quote_data.pldSpreadRmwh || 0);
+        effectivePriceRmwh = avgPld + spread;
+      }
+      
+      // Calculate energy cost
+      const energyCostAnnual = annualConsumptionMwh * effectivePriceRmwh;
+      
+      // Calculate demand cost
+      const demandPriceRkwMes = parseFloat(quote_data.demanda_price_rkw_mes || quote_data.demandaPriceRkwMes || 0);
+      const demandCostAnnual = demandKw * demandPriceRkwMes * 12;
+      
+      // Total client cost
+      const totalClientCostAnnual = energyCostAnnual + demandCostAnnual;
+      
+      // Calculate our commission
+      const ourCommissionRmwh = parseFloat(quote_data.our_commission_rmwh || quote_data.ourCommissionRmwh || 5);
+      const ourCommissionAnnual = annualConsumptionMwh * ourCommissionRmwh;
+      
+      // Calculate client savings
+      const currentPriceRmwh = parseFloat(client_data.current_price_rmwh || client_data.currentPriceRmwh || 0);
+      const currentCostAnnual = annualConsumptionMwh * currentPriceRmwh + demandCostAnnual;
+      const clientSavingsAnnual = currentPriceRmwh > 0 ? currentCostAnnual - totalClientCostAnnual : 0;
+      
+      res.json({
+        success: true,
+        total_client_cost_annual: Math.round(totalClientCostAnnual * 100) / 100,
+        our_commission_annual: Math.round(ourCommissionAnnual * 100) / 100,
+        client_savings_annual: Math.round(clientSavingsAnnual * 100) / 100,
+        effective_price_rmwh: Math.round(effectivePriceRmwh * 100) / 100,
+        annual_consumption_mwh: Math.round(annualConsumptionMwh * 100) / 100,
+        energy_cost_annual: Math.round(energyCostAnnual * 100) / 100,
+        demand_cost_annual: Math.round(demandCostAnnual * 100) / 100
+      });
+    } catch (error: any) {
+      console.error("Error calculating quote:", error);
+      res.status(500).json({ success: false, error: "Failed to calculate quote" });
+    }
+  });
+
+  // Add supplier quote (standalone)
   app.post("/api/supplier-quotes", async (req, res) => {
     try {
       const validatedData = insertSupplierQuoteSchema.parse(req.body);
@@ -363,7 +466,37 @@ export async function registerRoutes(
     }
   });
 
-  // Select supplier quote
+  // Update supplier quote
+  app.patch("/api/supplier-quotes/:id", async (req, res) => {
+    try {
+      const quote = await storage.updateSupplierQuote(parseInt(req.params.id), req.body);
+      if (!quote) {
+        return res.status(404).json({ success: false, error: "Quote not found" });
+      }
+      res.json({ success: true, quote });
+    } catch (error: any) {
+      console.error("Error updating supplier quote:", error);
+      res.status(500).json({ success: false, error: "Failed to update quote" });
+    }
+  });
+
+  // Mark quote as won
+  app.post("/api/supplier-quotes/:id/won", async (req, res) => {
+    try {
+      const quoteId = parseInt(req.params.id);
+      const quote = await storage.getSupplierQuote(quoteId);
+      if (!quote) {
+        return res.status(404).json({ success: false, error: "Quote not found" });
+      }
+      await storage.markQuoteAsWon(quoteId, quote.clientId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error marking quote as won:", error);
+      res.status(500).json({ success: false, error: "Failed to mark quote as won" });
+    }
+  });
+
+  // Select supplier quote (legacy - keeps backward compatibility)
   app.post("/api/supplier-quotes/:id/select", async (req, res) => {
     try {
       await storage.selectSupplierQuote(parseInt(req.params.id));
