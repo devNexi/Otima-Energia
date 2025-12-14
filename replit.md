@@ -7,6 +7,7 @@
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Language: English only (the website is in Portuguese, but communicate with user in English).
 
 ## System Architecture
 
