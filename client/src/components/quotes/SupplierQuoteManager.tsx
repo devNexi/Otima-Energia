@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
 import { 
   Plus, 
   Calculator, 
@@ -84,6 +85,7 @@ const CONTRACT_TYPES = [
 
 export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerProps) {
   const { toast } = useToast();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [addQuoteOpen, setAddQuoteOpen] = useState(false);
   const [priceType, setPriceType] = useState<"fixed" | "pld_spread">("fixed");
@@ -153,7 +155,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
       queryClient.invalidateQueries({ queryKey: ["/api/clients", client.id, "quotes"] });
       setAddQuoteOpen(false);
       resetForm();
-      toast({ title: "Cotação adicionada com sucesso!" });
+      toast({ title: t("quotes.toast.added") });
     }
   });
 
@@ -165,7 +167,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients", client.id, "quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: "Cotação marcada como ganha!" });
+      toast({ title: t("quotes.toast.won") });
     }
   });
 
@@ -217,7 +219,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
 
   const handleSaveQuote = () => {
     if (!formData.supplierName || !formData.validUntil) {
-      toast({ title: "Erro", description: "Preencha fornecedor e data de validade", variant: "destructive" });
+      toast({ title: t("quotes.toast.error"), description: t("quotes.toast.fill_required"), variant: "destructive" });
       return;
     }
 
@@ -251,15 +253,15 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
   const getStatusBadge = (status: string | null | undefined) => {
     switch (status) {
       case "won":
-        return <Badge className="bg-green-100 text-green-800">Ganha</Badge>;
+        return <Badge className="bg-green-100 text-green-800">{t("quotes.status.won")}</Badge>;
       case "active":
-        return <Badge className="bg-blue-100 text-blue-800">Ativa</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">{t("quotes.status.active")}</Badge>;
       case "expired":
-        return <Badge className="bg-gray-100 text-gray-800">Expirada</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">{t("quotes.status.expired")}</Badge>;
       case "lost":
-        return <Badge className="bg-red-100 text-red-800">Perdida</Badge>;
+        return <Badge className="bg-red-100 text-red-800">{t("quotes.status.lost")}</Badge>;
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800">Rascunho</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">{t("quotes.status.draft")}</Badge>;
     }
   };
 
@@ -269,11 +271,11 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Building2 className="w-5 h-5" />
-            Cotações de Fornecedores - {client.companyName}
+            {t("quotes.title")} - {client.companyName}
           </h3>
           <p className="text-sm text-gray-500 mt-1">
-            Consumo médio: {avgConsumptionKwh ? `${avgConsumptionKwh.toLocaleString("pt-BR")} kWh/mês` : "Não informado"} | 
-            Preço atual: {currentPriceRmwh ? `${formatCurrency(currentPriceRmwh)}/MWh` : "Não informado"}
+            {t("quotes.avg_consumption")}: {avgConsumptionKwh ? `${avgConsumptionKwh.toLocaleString("pt-BR")} kWh/mês` : t("quotes.not_informed")} | 
+            {t("quotes.current_price")}: {currentPriceRmwh ? `${formatCurrency(currentPriceRmwh)}/MWh` : t("quotes.not_informed")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -281,24 +283,24 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
             <DialogTrigger asChild>
               <Button data-testid="button-add-quote">
                 <Plus className="w-4 h-4 mr-2" />
-                Nova Cotação
+                {t("quotes.new_quote")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Adicionar Cotação de Fornecedor</DialogTitle>
-                <DialogDescription>Insira os dados da proposta recebida</DialogDescription>
+                <DialogTitle>{t("quotes.add_quote_title")}</DialogTitle>
+                <DialogDescription>{t("quotes.add_quote_desc")}</DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="supplierName">Fornecedor *</Label>
+                  <Label htmlFor="supplierName">{t("quotes.supplier")}</Label>
                   <Input
                     id="supplierName"
                     list="suppliers-list"
                     value={formData.supplierName}
                     onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                    placeholder="Selecione ou digite o nome..."
+                    placeholder={t("quotes.supplier_placeholder")}
                     data-testid="input-supplier-name"
                   />
                   <datalist id="suppliers-list">
@@ -306,11 +308,11 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                       <option key={s.id} value={s.name} />
                     ))}
                   </datalist>
-                  <p className="text-xs text-gray-400 mt-1">Digite para adicionar um novo fornecedor</p>
+                  <p className="text-xs text-gray-400 mt-1">{t("quotes.supplier_hint")}</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="quoteReference">Referência da Proposta</Label>
+                  <Label htmlFor="quoteReference">{t("quotes.quote_reference")}</Label>
                   <Input
                     id="quoteReference"
                     value={formData.quoteReference}
@@ -321,7 +323,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label htmlFor="validUntil">Válido até *</Label>
+                  <Label htmlFor="validUntil">{t("quotes.valid_until")}</Label>
                   <Input
                     id="validUntil"
                     type="date"
@@ -332,7 +334,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label>Tipo de Preço</Label>
+                  <Label>{t("quotes.price_type")}</Label>
                   <Select
                     value={priceType}
                     onValueChange={(v: "fixed" | "pld_spread") => setPriceType(v)}
@@ -341,15 +343,15 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">Preço Fixo (R$/MWh)</SelectItem>
-                      <SelectItem value="pld_spread">PLD + Spread</SelectItem>
+                      <SelectItem value="fixed">{t("quotes.fixed_price")}</SelectItem>
+                      <SelectItem value="pld_spread">{t("quotes.pld_spread")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {priceType === "fixed" ? (
                   <div>
-                    <Label htmlFor="priceRmwh">Preço (R$/MWh)</Label>
+                    <Label htmlFor="priceRmwh">{t("quotes.price_rmwh")}</Label>
                     <Input
                       id="priceRmwh"
                       type="number"
@@ -362,7 +364,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                   </div>
                 ) : (
                   <div>
-                    <Label htmlFor="pldSpreadRmwh">Spread sobre PLD (R$/MWh)</Label>
+                    <Label htmlFor="pldSpreadRmwh">{t("quotes.spread_rmwh")}</Label>
                     <Input
                       id="pldSpreadRmwh"
                       type="number"
@@ -376,7 +378,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 )}
 
                 <div>
-                  <Label htmlFor="demandaPriceRkwMes">Demanda (R$/kW/mês)</Label>
+                  <Label htmlFor="demandaPriceRkwMes">{t("quotes.demand_price")}</Label>
                   <Input
                     id="demandaPriceRkwMes"
                     type="number"
@@ -389,7 +391,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label htmlFor="contractDuration">Duração do Contrato</Label>
+                  <Label htmlFor="contractDuration">{t("quotes.contract_duration")}</Label>
                   <Select
                     value={formData.contractDuration}
                     onValueChange={(v) => setFormData({ ...formData, contractDuration: v })}
@@ -406,7 +408,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label htmlFor="contractType">Tipo de Contrato</Label>
+                  <Label htmlFor="contractType">{t("quotes.contract_type")}</Label>
                   <Select
                     value={formData.contractType}
                     onValueChange={(v) => setFormData({ ...formData, contractType: v })}
@@ -423,7 +425,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label htmlFor="ourCommissionRmwh">Nossa Comissão (R$/MWh)</Label>
+                  <Label htmlFor="ourCommissionRmwh">{t("quotes.our_commission")}</Label>
                   <Input
                     id="ourCommissionRmwh"
                     type="number"
@@ -435,7 +437,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                 </div>
 
                 <div>
-                  <Label>Comissão Paga Por</Label>
+                  <Label>{t("quotes.commission_paid_by")}</Label>
                   <Select
                     value={formData.commissionPaidBy}
                     onValueChange={(v) => setFormData({ ...formData, commissionPaidBy: v })}
@@ -444,8 +446,8 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="supplier">Fornecedor</SelectItem>
-                      <SelectItem value="client">Cliente</SelectItem>
+                      <SelectItem value="supplier">{t("quotes.by_supplier")}</SelectItem>
+                      <SelectItem value="client">{t("quotes.by_client")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -459,32 +461,32 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                   data-testid="button-calculate"
                 >
                   <Calculator className="w-4 h-4 mr-2" />
-                  {calculateMutation.isPending ? "Calculando..." : "Calcular"}
+                  {calculateMutation.isPending ? t("quotes.calculating") : t("quotes.calculate")}
                 </Button>
               </div>
 
               {calculationResult && (
                 <Card className="mt-4 bg-green-50 border-green-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-green-800">Resultado do Cálculo</CardTitle>
+                    <CardTitle className="text-sm text-green-800">{t("quotes.calc_result")}</CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Custo Anual Cliente:</span>
+                      <span className="text-gray-600">{t("quotes.annual_cost")}:</span>
                       <p className="font-semibold text-lg">{formatCurrency(calculationResult.total_client_cost_annual)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Nossa Comissão Anual:</span>
+                      <span className="text-gray-600">{t("quotes.annual_commission")}:</span>
                       <p className="font-semibold text-lg text-violet-600">{formatCurrency(calculationResult.our_commission_annual)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Economia Anual Cliente:</span>
+                      <span className="text-gray-600">{t("quotes.annual_savings")}:</span>
                       <p className={`font-semibold text-lg ${calculationResult.client_savings_annual > 0 ? "text-green-600" : "text-red-600"}`}>
                         {formatCurrency(calculationResult.client_savings_annual)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Preço Efetivo:</span>
+                      <span className="text-gray-600">{t("quotes.effective_price")}:</span>
                       <p className="font-semibold text-lg">{formatCurrency(calculationResult.effective_price_rmwh)}/MWh</p>
                     </div>
                   </CardContent>
@@ -493,7 +495,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
 
               <div className="flex gap-2 mt-4 justify-end">
                 <Button variant="outline" onClick={() => { setAddQuoteOpen(false); resetForm(); }}>
-                  Cancelar
+                  {t("quotes.cancel")}
                 </Button>
                 <Button 
                   onClick={handleSaveQuote}
@@ -501,7 +503,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                   data-testid="button-save-quote"
                 >
                   {createQuoteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Salvar Cotação
+                  {t("quotes.save_quote")}
                 </Button>
               </div>
             </DialogContent>
@@ -521,8 +523,8 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
         <Card>
           <CardContent className="py-12 text-center text-gray-500">
             <Zap className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>Nenhuma cotação cadastrada</p>
-            <p className="text-sm">Clique em "Nova Cotação" para adicionar</p>
+            <p>{t("quotes.no_quotes")}</p>
+            <p className="text-sm">{t("quotes.no_quotes_hint")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -545,7 +547,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                       {isBest && quote.status !== "won" && (
                         <Badge className="bg-green-500 text-white">
                           <Trophy className="w-3 h-3 mr-1" />
-                          Melhor Preço
+                          {t("quotes.best_price")}
                         </Badge>
                       )}
                       <CardTitle className="text-base">{quote.supplierName}</CardTitle>
@@ -562,7 +564,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                           data-testid={`button-mark-won-${quote.id}`}
                         >
                           <Trophy className="w-4 h-4 mr-1" />
-                          Marcar Ganha
+                          {t("quotes.mark_won")}
                         </Button>
                       )}
                     </div>
@@ -575,7 +577,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                   <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Preço
+                        <DollarSign className="w-3 h-3" /> {t("quotes.price")}
                       </span>
                       <p className="font-medium">
                         {quote.priceRmwh 
@@ -587,17 +589,17 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                     </div>
                     <div>
                       <span className="text-gray-500 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> Validade
+                        <Calendar className="w-3 h-3" /> {t("quotes.validity")}
                       </span>
                       <p className="font-medium">{new Date(quote.validUntil).toLocaleDateString("pt-BR")}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Custo Anual</span>
+                      <span className="text-gray-500">{t("quotes.annual_cost")}</span>
                       <p className="font-medium">{formatCurrency(quote.totalClientCostAnnual)}</p>
                     </div>
                     <div>
                       <span className="text-gray-500 flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> Economia
+                        <TrendingDown className="w-3 h-3" /> {t("quotes.savings")}
                       </span>
                       <p className={`font-medium ${savingsPercent && parseFloat(savingsPercent) > 0 ? "text-green-600" : ""}`}>
                         {savingsPercent ? `${savingsPercent}%` : "-"}
@@ -607,22 +609,22 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
 
                   <div className="grid grid-cols-4 gap-4 text-sm mt-4 pt-4 border-t">
                     <div>
-                      <span className="text-gray-500">Duração</span>
-                      <p className="font-medium">{quote.contractDuration ? `${quote.contractDuration} meses` : "-"}</p>
+                      <span className="text-gray-500">{t("quotes.duration")}</span>
+                      <p className="font-medium">{quote.contractDuration ? `${quote.contractDuration} ${t("quotes.months")}` : "-"}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Tipo</span>
+                      <span className="text-gray-500">{t("quotes.type")}</span>
                       <p className="font-medium">{quote.contractType || "-"}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Nossa Comissão</span>
+                      <span className="text-gray-500">{t("quotes.annual_commission")}</span>
                       <p className="font-medium text-violet-600">
-                        {formatCurrency(quote.ourCommissionAnnual)}/ano
+                        {formatCurrency(quote.ourCommissionAnnual)}{t("quotes.per_year")}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Paga por</span>
-                      <p className="font-medium">{quote.commissionPaidBy === "supplier" ? "Fornecedor" : "Cliente"}</p>
+                      <span className="text-gray-500">{t("quotes.paid_by")}</span>
+                      <p className="font-medium">{quote.commissionPaidBy === "supplier" ? t("quotes.by_supplier") : t("quotes.by_client")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -633,13 +635,13 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
           {sortedQuotes.length > 1 && (
             <Card className="bg-violet-50 border-violet-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-violet-800">Resumo de Comissões</CardTitle>
+                <CardTitle className="text-sm text-violet-800">{t("quotes.commission_summary")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-violet-700">
                   <p>
-                    Melhor cotação: <strong>{sortedQuotes[0].supplierName}</strong> - 
-                    Comissão anual: <strong>{formatCurrency(sortedQuotes[0].ourCommissionAnnual)}</strong>
+                    {t("quotes.best_quote")}: <strong>{sortedQuotes[0].supplierName}</strong> - 
+                    {t("quotes.annual_commission_label")}: <strong>{formatCurrency(sortedQuotes[0].ourCommissionAnnual)}</strong>
                   </p>
                 </div>
               </CardContent>

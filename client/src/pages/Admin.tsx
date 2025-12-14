@@ -414,7 +414,7 @@ export default function Admin() {
                               data-testid={`button-quotes-${client.id}`}
                             >
                               <DollarSign className="w-4 h-4 mr-1" />
-                              Cotações
+                              {t("quotes.quotes_btn")}
                             </Button>
                             <Button 
                               size="sm" 
@@ -424,7 +424,7 @@ export default function Admin() {
                               data-testid={`button-upload-bill-${client.id}`}
                             >
                               <Upload className="w-4 h-4 mr-1" />
-                              Upload Fatura
+                              {t("quotes.upload_bill")}
                             </Button>
                             <Button 
                               size="sm" 
