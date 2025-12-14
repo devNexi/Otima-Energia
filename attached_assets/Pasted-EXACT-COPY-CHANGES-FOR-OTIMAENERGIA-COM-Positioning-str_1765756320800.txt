@@ -1,0 +1,72 @@
+EXACT COPY CHANGES FOR OTIMAENERGIA.COM
+(Positioning: structural inefficiency → savings as outcome)
+
+HOME PAGE — HERO SECTION
+🔁 Replace sub-headline ONLY
+(Keep headline: “Economize até 40%…”)
+Current sub-headline:
+A Ótima Energia compara o mercado por você e cuida de toda a migração, contratação e otimização — com total transparência e sem custo para sua empresa.
+Replace with:
+A Ótima Energia resolve a falta de transparência do mercado livre, comparando o máximo possível de ofertas e estruturando contratos corretos — com total segurança e sem custo para sua empresa.
+HOME PAGE — STATEMENT / VALUE SECTION
+🔁 Replace entire section text with the following (exact):
+Headline (unchanged if exists):
+Ajudamos empresas brasileiras a pagar menos por energia — resolvendo um problema estrutural do mercado.
+Paragraph 1 (replace):
+A maioria das empresas brasileiras paga mais do que deveria pela energia elétrica — não porque os preços são altos, mas porque o mercado é opaco, fragmentado e difícil de comparar.
+Paragraph 2 (replace):
+Nosso serviço de comparação é gratuito. Analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis. Nossa remuneração vem exclusivamente dos fornecedores — nunca do empresário.
+HOME PAGE — STATS (CRITICAL CHANGE)
+🔁 Replace ONLY the middle stat
+Current middle stat:
+R$100B+Mercado anual
+Replace with:
+80%+Das empresas não estão no Mercado Livre hoje
+(This is defensible and psychologically powerful — far more relevant to business owners.)
+Final stat row should read:
+
+
+40% Economia de até
+80%+ Das empresas fora do Mercado Livre
+80M Elegíveis até 2028
+
+
+HOME PAGE — “COMO FUNCIONA” (STEP 02 ONLY)
+🔁 Replace Step 02 description
+Current:
+Buscamos preços transparentes e contratos flexíveis para gerar economia real — sem viés e sem custo para você.
+Replace with:
+Tornamos visível um mercado que normalmente é fechado e fragmentado, comparando ofertas e negociando contratos estruturados para gerar economia real — sem viés e sem custo para você.
+SOLUÇÕES PAGE — INTRO SECTION
+➕ Add this paragraph below the first intro paragraph
+Insert exactly:
+A economia no mercado livre não vem de promoções, mas de estrutura, visibilidade e contratos bem desenhados. É isso que entregamos de forma contínua para nossos clientes.
+SOLUÇÕES PAGE — ECONOMIA CARD (TEXT REPLACEMENT)
+🔁 Replace description text with:
+Contratação personalizada com apoio de tecnologia para corrigir distorções do mercado, gerar previsibilidade e economia de até 40%. Auditoria gratuita, sem obrigação.
+LEI / MERCADO LIVRE PAGE — INTRO BLOCK
+🔁 Replace Paragraph 2 ONLY
+Current:
+Com a Lei nº 15.269/2025, milhões de empresas que antes não podiam escolher seu fornecedor de energia passarão a ter acesso ao mercado livre nos próximos anos.
+Replace with:
+Com a Lei nº 15.269/2025, milhões de empresas passam a ter acesso ao mercado livre — mas acesso não significa transparência. Sem comparação e estrutura, muitas continuarão pagando mais do que deveriam.
+LEI / MERCADO LIVRE PAGE — “POR QUE SE PREPARAR” SECTION
+🔁 Replace body copy with:
+Empresas que se preparam com antecedência evitam decisões apressadas, ganham poder de negociação e entram no mercado com contratos melhor estruturados. Nosso serviço de comparação é gratuito, mesmo que sua empresa ainda não esteja apta a migrar hoje.
+FAQ — ADD ONE NEW QUESTION (OPTIONAL BUT STRONG)
+➕ Insert new FAQ:
+Question:
+Por que tantas empresas economizam tanto no Mercado Livre?
+Answer:
+Porque a economia vem da correção de distorções do mercado: falta de visibilidade, contratos mal estruturados e pouca comparação entre fornecedores. Quando o mercado se torna transparente, a economia aparece.
+GLOBAL LANGUAGE RULE (IMPORTANT)
+In all pages:
+
+
+Keep “economize até 40%”
+Always pair savings with why savings exist
+Avoid implying savings are automatic or promotional
+Frame Ótima as structural fix, not a discount broker
+
+ONE-LINE POSITIONING (FOR INTERNAL USE)
+Ótima Energia resolve a opacidade do mercado livre para que empresas paguem o preço certo pela energia — com segurança e transparência.

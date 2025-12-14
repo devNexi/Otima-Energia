@@ -243,18 +243,18 @@ export default function ProposalTracker() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="font-medium">
-                            {(proposal.snapshotClientData as any)?.companyName || "-"}
+                            {proposal.clientName || "-"}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {formatCurrency(proposal.proposedCostAnnual)}
+                          {formatCurrency(proposal.proposedAnnualCost)}
                           <div className="text-xs text-gray-500">/ano</div>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-emerald-600 font-medium">
-                            {formatCurrency(proposal.savingsAnnual)}
+                            {formatCurrency(proposal.annualSavings)}
                           </span>
-                          <div className="text-xs text-gray-500">{proposal.savingsPercent}%</div>
+                          <div className="text-xs text-gray-500">{proposal.savingsPercentage}%</div>
                         </td>
                         <td className="px-4 py-3">
                           <Badge className={statusColors[proposal.status || "draft"]}>
