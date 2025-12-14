@@ -1,0 +1,1645 @@
+Automated Supplier Quote Request System
+Business Context
+Renan now has a great quote comparison system (Task 2), but he's still manually requesting quotes from suppliers via WhatsApp/Email. This is slow and inconsistent.
+
+Current Pain Points:
+
+Time-consuming: Renan spends 15-20 minutes per client crafting RFO emails
+
+Inconsistent format: Each supplier wants data in different formats
+
+No tracking: Hard to know which suppliers responded, which didn't
+
+Manual follow-up: Renan has to remember to chase suppliers
+
+Error-prone: Typos in consumption data lead to wrong quotes
+
+Goal: Build an "RFO Automático" system where Renan can:
+
+One-click send standardized RFOs to multiple suppliers
+
+Track responses automatically
+
+Auto-import supplier quotes into the system
+
+Send reminders to non-responsive suppliers
+
+Maintain professional consistency across all requests
+
+🏗️ ARCHITECTURE OVERVIEW
+Core Concept:
+text
+Client Data (from Task 1) 
+    → RFO Generator (Task 3) 
+    → Send to Suppliers (Email/API) 
+    → Track Responses 
+    → Auto-import into Quotes (Task 2)
+Three Send Methods:
+Email (MVP): Send structured RFO via email to supplier sales teams
+
+Supplier Portal (Future): Auto-fill supplier web forms
+
+API (Ideal Future): Direct integration with supplier systems
+
+🗂️ DATABASE SCHEMA
+1. Create rfo_requests table:
+sql
+CREATE TABLE rfo_requests (
+  id SERIAL PRIMARY KEY,
+  
+  -- Relationships
+  client_id INTEGER REFERENCES clients(id) NOT NULL,
+  bill_upload_id INTEGER REFERENCES bill_uploads(id), -- Specific bill analyzed
+  
+  -- RFO Metadata
+  rfo_number VARCHAR(50) UNIQUE NOT NULL, -- Format: RFO-2024-001
+  rfo_date TIMESTAMP DEFAULT NOW(),
+  status VARCHAR(20) DEFAULT 'draft', -- 'draft', 'sent', 'partial_response', 'complete', 'expired'
+  
+  -- Request Details
+  requested_suppliers TEXT[], -- Array of supplier IDs/names
+  response_deadline DATE NOT NULL,
+  priority VARCHAR(20) DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+  
+  -- Client Data Snapshot (frozen at time of RFO)
+  snapshot_consumption_kwh DECIMAL(10,2),
+  snapshot_demanda_kw DECIMAL(10,2),
+  snapshot_uc VARCHAR(50),
+  snapshot_distribuidora VARCHAR(100),
+  snapshot_contract_end DATE,
+  
+  -- Tracking
+  sent_count INTEGER DEFAULT 0, -- How many suppliers received it
+  response_count INTEGER DEFAULT 0, -- How many responded
+  last_sent_date TIMESTAMP,
+  
+  -- Attachments/Content
+  email_subject VARCHAR(200),
+  email_body TEXT,
+  attachments JSONB, -- Array of attachment metadata
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  -- Constraints
+  CONSTRAINT valid_deadline CHECK (response_deadline > CURRENT_DATE)
+);
+
+-- Indexes
+CREATE INDEX idx_rfo_requests_client_id ON rfo_requests(client_id);
+CREATE INDEX idx_rfo_requests_status ON rfo_requests(status);
+CREATE INDEX idx_rfo_requests_rfo_number ON rfo_requests(rfo_number);
+CREATE UNIQUE INDEX idx_rfo_requests_number_unique ON rfo_requests(rfo_number);
+2. Create rfo_supplier_tracking table:
+sql
+CREATE TABLE rfo_supplier_tracking (
+  id SERIAL PRIMARY KEY,
+  rfo_id INTEGER REFERENCES rfo_requests(id) NOT NULL,
+  supplier_id INTEGER REFERENCES suppliers(id) NOT NULL,
+  
+  -- Contact Info
+  contact_name VARCHAR(100),
+  contact_email VARCHAR(255) NOT NULL,
+  contact_phone VARCHAR(50),
+  
+  -- Send Status
+  sent_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'sent', 'failed', 'opened'
+  sent_date TIMESTAMP,
+  sent_method VARCHAR(20), -- 'email', 'portal', 'api'
+  
+  -- Response Tracking
+  response_status VARCHAR(20) DEFAULT 'waiting', -- 'waiting', 'responded', 'no_quote', 'expired'
+  response_date TIMESTAMP,
+  response_quote_id INTEGER REFERENCES supplier_quotes(id), -- Links to actual quote
+  
+  -- Communication Log
+  open_count INTEGER DEFAULT 0,
+  last_opened TIMESTAMP,
+  reminder_sent BOOLEAN DEFAULT FALSE,
+  reminder_date TIMESTAMP,
+  
+  -- Error Tracking
+  error_message TEXT,
+  retry_count INTEGER DEFAULT 0,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  -- Unique constraint
+  UNIQUE(rfo_id, supplier_id)
+);
+
+-- Indexes
+CREATE INDEX idx_rfo_tracking_rfo_id ON rfo_supplier_tracking(rfo_id);
+CREATE INDEX idx_rfo_tracking_supplier_id ON rfo_supplier_tracking(supplier_id);
+CREATE INDEX idx_rfo_tracking_sent_status ON rfo_supplier_tracking(sent_status);
+CREATE INDEX idx_rfo_tracking_response_status ON rfo_supplier_tracking(response_status);
+3. Create supplier_contacts table:
+sql
+CREATE TABLE supplier_contacts (
+  id SERIAL PRIMARY KEY,
+  supplier_id INTEGER REFERENCES suppliers(id) NOT NULL,
+  
+  -- Contact Details
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  role VARCHAR(100), -- 'comercial', 'vendas', 'orcamento'
+  department VARCHAR(100),
+  
+  -- Preferences
+  preferred_format VARCHAR(20) DEFAULT 'email', -- 'email', 'whatsapp', 'portal'
+  email_template VARCHAR(50), -- Which template they prefer
+  response_time_hours INTEGER DEFAULT 48, -- Their typical response time
+  
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  is_primary BOOLEAN DEFAULT FALSE,
+  notes TEXT,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  -- Unique constraint
+  UNIQUE(supplier_id, email)
+);
+
+-- Pre-populate with common supplier contacts (you'll update these)
+INSERT INTO supplier_contacts (supplier_id, name, email, role, is_primary) VALUES
+(1, 'Joana Silva', 'vendas@tyrenergia.com.br', 'Comercial', true),
+(2, 'Carlos Mendes', 'orcamento@2wenergia.com.br', 'Orçamentos', true),
+(3, 'Ana Paula', 'comercial@comercenergia.com.br', 'Comercial', true);
+4. Update supplier_quotes table:
+sql
+ALTER TABLE supplier_quotes 
+ADD COLUMN rfo_id INTEGER REFERENCES rfo_requests(id),
+ADD COLUMN rfo_tracking_id INTEGER REFERENCES rfo_supplier_tracking(id),
+ADD COLUMN received_via VARCHAR(20) DEFAULT 'manual'; -- 'rfo_email', 'rfo_portal', 'manual'
+🖥️ FRONTEND IMPLEMENTATION
+Component 1: RFOGenerator.jsx
+Location: Client Details Page, new button "📤 Solicitar Cotações" next to "Nova Cotação"
+
+jsx
+import React, { useState } from 'react';
+import './RFOGenerator.css';
+
+const RFOGenerator = ({ clientId, clientData, billData }) => {
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+  const [customEmail, setCustomEmail] = useState('');
+  const [deadlineDays, setDeadlineDays] = useState(3);
+  const [priority, setPriority] = useState('normal');
+  const [generating, setGenerating] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [sentRFO, setSentRFO] = useState(null);
+
+  // Fetch available suppliers with contacts
+  const [suppliers, setSuppliers] = useState([
+    { id: 1, name: 'TYR Energia', contacts: [{ email: 'vendas@tyrenergia.com.br', name: 'Joana Silva' }] },
+    { id: 2, name: '2W Energia', contacts: [{ email: 'orcamento@2wenergia.com.br', name: 'Carlos Mendes' }] },
+    { id: 3, name: 'Comerc Energia', contacts: [{ email: 'comercial@comercenergia.com.br', name: 'Ana Paula' }] },
+    // ... more from database
+  ]);
+
+  // Calculate deadline date
+  const deadlineDate = new Date();
+  deadlineDate.setDate(deadlineDate.getDate() + deadlineDays);
+  const formattedDeadline = deadlineDate.toLocaleDateString('pt-BR');
+
+  // Generate RFO number
+  const generateRFONumber = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `RFO-${year}${month}${day}-${random}`;
+  };
+
+  // Generate email preview
+  const generatePreview = () => {
+    if (selectedSuppliers.length === 0) {
+      alert('Selecione pelo menos um fornecedor.');
+      return;
+    }
+
+    const rfoNumber = generateRFONumber();
+    
+    // Build email content
+    const emailContent = {
+      subject: `RFO ${rfoNumber} - ${clientData.company_name} - ${clientData.avg_consumption_kwh?.toLocaleString('pt-BR') || '?'} MWh/ano`,
+      body: `Prezado(a) Fornecedor,
+
+Solicitamos proposta comercial para o cliente abaixo:
+
+**INFORMAÇÕES DO CLIENTE**
+- Cliente: ${clientData.company_name}
+- UC: ${billData?.uc_code || 'A informar'}
+- Consumo Anual: ${clientData.avg_consumption_kwh?.toLocaleString('pt-BR') || '?'} MWh
+- Demanda Contratada: ${billData?.demanda_kw?.toLocaleString('pt-BR') || '?'} kW
+- Distribuidora: ${billData?.distribuidora || 'A informar'}
+- Subgrupo: ${clientData.subgrupo || 'A4'}
+
+**SOLICITAÇÃO**
+- Prazo para resposta: ${formattedDeadline}
+- Tipo de Contrato: Aberto a sugestões (12-36 meses)
+- Início do Contrato: Próximo mês
+- Preferência: Spread sobre PLD ou Preço Fixo
+
+**ANEXOS**
+- Histórico de consumo (12 meses) - em anexo
+- Última fatura - em anexo
+
+**INSTRUÇÕES**
+1. Enviar proposta para: renan@otimaenergia.com.br
+2. Referenciar: ${rfoNumber}
+3. Incluir todos os custos (energia, demanda, encargos)
+4. Incluir comissão de R$ 5,00/MWh para Ótima Energia
+
+Agradecemos a atenção e aguardamos sua proposta.
+
+Atenciosamente,
+Renan - Ótima Energia
+renan@otimaenergia.com.br
++55 (11) 99999-9999
+`,
+      attachments: [
+        { name: 'consumo_12meses.csv', type: 'csv' },
+        { name: 'ultima_fatura.pdf', type: 'pdf' }
+      ]
+    };
+
+    setPreview({
+      rfoNumber,
+      emailContent,
+      selectedSuppliers: selectedSuppliers.map(id => 
+        suppliers.find(s => s.id === id)
+      ),
+      deadline: formattedDeadline,
+      priority
+    });
+  };
+
+  // Send RFO to suppliers
+  const sendRFO = async () => {
+    if (!preview) return;
+    
+    setGenerating(true);
+    
+    try {
+      const response = await fetch(`/api/clients/${clientId}/rfo/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rfoNumber: preview.rfoNumber,
+          suppliers: preview.selectedSuppliers,
+          emailContent: preview.emailContent,
+          deadline: deadlineDate.toISOString().split('T')[0],
+          priority,
+          customEmail
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSentRFO(result.rfo);
+        setPreview(null);
+        alert(`RFO ${preview.rfoNumber} enviado para ${result.sentCount} fornecedor(es)!`);
+      } else {
+        alert('Erro ao enviar RFO: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Send error:', error);
+      alert('Erro de conexão ao enviar RFO.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Quick select presets
+  const selectPreset = (preset) => {
+    switch(preset) {
+      case 'all':
+        setSelectedSuppliers(suppliers.map(s => s.id));
+        break;
+      case 'top3':
+        setSelectedSuppliers([1, 2, 3]); // TYR, 2W, Comerc
+        break;
+      case 'renewables':
+        setSelectedSuppliers(suppliers.filter(s => 
+          s.name.includes('Eco') || s.name.includes('Verde') || s.name.includes('Solar')
+        ).map(s => s.id));
+        break;
+      default:
+        setSelectedSuppliers([]);
+    }
+  };
+
+  return (
+    <div className="rfo-generator">
+      <h4>📤 Solicitar Cotações (RFO Automático)</h4>
+      
+      {/* STEP 1: SUPPLIER SELECTION */}
+      <div className="rfo-step">
+        <h5>1. Selecione os Fornecedores</h5>
+        
+        <div className="preset-buttons">
+          <button onClick={() => selectPreset('all')} className="btn-small">
+            Todos ({suppliers.length})
+          </button>
+          <button onClick={() => selectPreset('top3')} className="btn-small">
+            Top 3 (TYR, 2W, Comerc)
+          </button>
+          <button onClick={() => selectPreset('renewables')} className="btn-small">
+            Fornecedores Verdes
+          </button>
+          <button onClick={() => setSelectedSuppliers([])} className="btn-small">
+            Limpar
+          </button>
+        </div>
+        
+        <div className="suppliers-grid">
+          {suppliers.map(supplier => (
+            <div 
+              key={supplier.id}
+              className={`supplier-card ${selectedSuppliers.includes(supplier.id) ? 'selected' : ''}`}
+              onClick={() => {
+                if (selectedSuppliers.includes(supplier.id)) {
+                  setSelectedSuppliers(selectedSuppliers.filter(id => id !== supplier.id));
+                } else {
+                  setSelectedSuppliers([...selectedSuppliers, supplier.id]);
+                }
+              }}
+            >
+              <div className="supplier-checkbox">
+                {selectedSuppliers.includes(supplier.id) ? '✓' : ''}
+              </div>
+              <div className="supplier-name">{supplier.name}</div>
+              <div className="supplier-contact">
+                {supplier.contacts[0]?.email || 'Sem contato'}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="selection-summary">
+          Selecionados: <strong>{selectedSuppliers.length}</strong> fornecedor(es)
+        </div>
+      </div>
+
+      {/* STEP 2: RFO CONFIGURATION */}
+      <div className="rfo-step">
+        <h5>2. Configure o RFO</h5>
+        
+        <div className="config-grid">
+          <div className="config-item">
+            <label>Prazo para Resposta</label>
+            <div className="deadline-selector">
+              <button 
+                className={deadlineDays === 1 ? 'active' : ''}
+                onClick={() => setDeadlineDays(1)}
+              >
+                24h (Urgente)
+              </button>
+              <button 
+                className={deadlineDays === 3 ? 'active' : ''}
+                onClick={() => setDeadlineDays(3)}
+              >
+                3 dias (Normal)
+              </button>
+              <button 
+                className={deadlineDays === 7 ? 'active' : ''}
+                onClick={() => setDeadlineDays(7)}
+              >
+                7 dias (Planejado)
+              </button>
+              <div className="custom-deadline">
+                <span>ou</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="30"
+                  value={deadlineDays}
+                  onChange={(e) => setDeadlineDays(parseInt(e.target.value) || 3)}
+                />
+                <span>dias</span>
+              </div>
+            </div>
+            <small>Prazo final: {formattedDeadline}</small>
+          </div>
+          
+          <div className="config-item">
+            <label>Prioridade</label>
+            <div className="priority-selector">
+              {['baixa', 'normal', 'alta', 'urgente'].map(level => (
+                <button
+                  key={level}
+                  className={`priority-${level} ${priority === level ? 'active' : ''}`}
+                  onClick={() => setPriority(level)}
+                >
+                  {level.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="config-item">
+            <label>Email de Resposta (Opcional)</label>
+            <input
+              type="email"
+              value={customEmail}
+              onChange={(e) => setCustomEmail(e.target.value)}
+              placeholder="Deixe vazio para usar renan@otimaenergia.com.br"
+            />
+            <small>Para onde os fornecedores devem enviar as propostas</small>
+          </div>
+        </div>
+      </div>
+
+      {/* STEP 3: PREVIEW & SEND */}
+      <div className="rfo-step">
+        <h5>3. Revisar e Enviar</h5>
+        
+        {!preview ? (
+          <div className="preview-placeholder">
+            <p>Clique em "Gerar RFO" para visualizar o email que será enviado.</p>
+            <button 
+              onClick={generatePreview}
+              className="btn-generate"
+              disabled={selectedSuppliers.length === 0}
+            >
+              👁️ Gerar Visualização do RFO
+            </button>
+          </div>
+        ) : (
+          <div className="rfo-preview">
+            <div className="preview-header">
+              <div className="rfo-number">RFO: {preview.rfoNumber}</div>
+              <div className="preview-stats">
+                <span>📧 Para: {preview.selectedSuppliers.length} fornecedor(es)</span>
+                <span>📅 Prazo: {preview.deadline}</span>
+                <span>⚠️ Prioridade: {preview.priority}</span>
+              </div>
+            </div>
+            
+            <div className="email-preview">
+              <div className="email-subject">
+                <strong>Assunto:</strong> {preview.emailContent.subject}
+              </div>
+              <div className="email-body">
+                <pre>{preview.emailContent.body}</pre>
+              </div>
+              <div className="email-attachments">
+                <strong>Anexos:</strong>
+                <ul>
+                  {preview.emailContent.attachments.map((att, idx) => (
+                    <li key={idx}>📎 {att.name}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            
+            <div className="preview-actions">
+              <button onClick={() => setPreview(null)} className="btn-secondary">
+                ↻ Refazer
+              </button>
+              <button onClick={sendRFO} className="btn-primary" disabled={generating}>
+                {generating ? '🔄 Enviando...' : '📤 Enviar RFO Agora'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SENT RFO DISPLAY */}
+      {sentRFO && (
+        <div className="sent-confirmation">
+          <div className="confirmation-header">
+            <span className="success-icon">✅</span>
+            <h5>RFO Enviado com Sucesso!</h5>
+          </div>
+          <div className="confirmation-details">
+            <p><strong>Número:</strong> {sentRFO.rfo_number}</p>
+            <p><strong>Enviado para:</strong> {sentRFO.sent_count} fornecedor(es)</p>
+            <p><strong>Prazo:</strong> {new Date(sentRFO.response_deadline).toLocaleDateString('pt-BR')}</p>
+            <p><strong>Status:</strong> <span className="status-badge sent">ENVIADO</span></p>
+          </div>
+          <div className="confirmation-actions">
+            <button 
+              onClick={() => window.location.href = `/admin/rfo/${sentRFO.id}`}
+              className="btn-secondary"
+            >
+              📊 Ver Detalhes e Acompanhar
+            </button>
+            <button 
+              onClick={() => setSentRFO(null)}
+              className="btn-small"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+Component 2: RFOTrackerDashboard.jsx
+Location: New page /admin/rfo - Global RFO Tracking Dashboard
+
+jsx
+import React, { useState, useEffect } from 'react';
+import './RFOTrackerDashboard.css';
+
+const RFOTrackerDashboard = () => {
+  const [rfos, setRfos] = useState([]);
+  const [filter, setFilter] = useState('all'); // 'all', 'pending', 'responded', 'expired'
+  const [selectedRFO, setSelectedRFO] = useState(null);
+
+  useEffect(() => {
+    fetchRFOs();
+  }, [filter]);
+
+  const fetchRFOs = async () => {
+    const response = await fetch(`/api/rfos?filter=${filter}`);
+    const data = await response.json();
+    setRfos(data);
+  };
+
+  const calculateResponseRate = (rfo) => {
+    if (!rfo.sent_count) return 0;
+    return Math.round((rfo.response_count / rfo.sent_count) * 100);
+  };
+
+  const getDaysRemaining = (deadline) => {
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffTime = deadlineDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const sendReminder = async (rfoId, supplierId) => {
+    await fetch(`/api/rfos/${rfoId}/reminder/${supplierId}`, {
+      method: 'POST'
+    });
+    alert('Lembrete enviado!');
+    fetchRFOs();
+  };
+
+  const markAsResponded = async (trackingId, quoteData) => {
+    await fetch(`/api/rfo-tracking/${trackingId}/responded`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quoteData)
+    });
+    alert('Resposta registrada!');
+    fetchRFOs();
+  };
+
+  return (
+    <div className="rfo-tracker">
+      {/* HEADER */}
+      <div className="tracker-header">
+        <h3>📊 Acompanhamento de RFOs</h3>
+        <div className="tracker-stats">
+          <div className="tracker-stat">
+            <div className="stat-number">{rfos.length}</div>
+            <div className="stat-label">RFOs Ativos</div>
+          </div>
+          <div className="tracker-stat">
+            <div className="stat-number">
+              {rfos.reduce((sum, rfo) => sum + rfo.response_count, 0)}
+            </div>
+            <div className="stat-label">Respostas</div>
+          </div>
+          <div className="tracker-stat">
+            <div className="stat-number">
+              {rfos.filter(rfo => getDaysRemaining(rfo.response_deadline) < 0).length}
+            </div>
+            <div className="stat-label">Vencidos</div>
+          </div>
+          <div className="tracker-stat">
+            <div className="stat-number">
+              {rfos.filter(rfo => rfo.status === 'complete').length}
+            </div>
+            <div className="stat-label">Completos</div>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTERS */}
+      <div className="filter-bar">
+        <button 
+          className={filter === 'all' ? 'active' : ''}
+          onClick={() => setFilter('all')}
+        >
+          Todos
+        </button>
+        <button 
+          className={filter === 'pending' ? 'active' : ''}
+          onClick={() => setFilter('pending')}
+        >
+          Pendentes
+        </button>
+        <button 
+          className={filter === 'partial' ? 'active' : ''}
+          onClick={() => setFilter('partial')}
+        >
+          Parciais
+        </button>
+        <button 
+          className={filter === 'complete' ? 'active' : ''}
+          onClick={() => setFilter('complete')}
+        >
+          Completos
+        </button>
+        <button 
+          className={filter === 'expired' ? 'active' : ''}
+          onClick={() => setFilter('expired')}
+        >
+          Vencidos
+        </button>
+      </div>
+
+      {/* RFO LIST */}
+      <div className="rfo-list">
+        {rfos.map(rfo => {
+          const daysRemaining = getDaysRemaining(rfo.response_deadline);
+          const responseRate = calculateResponseRate(rfo);
+          
+          return (
+            <div 
+              key={rfo.id} 
+              className={`rfo-card ${rfo.status}`}
+              onClick={() => setSelectedRFO(rfo)}
+            >
+              <div className="rfo-card-header">
+                <div className="rfo-number">{rfo.rfo_number}</div>
+                <div className={`status-badge ${rfo.status}`}>
+                  {rfo.status.toUpperCase()}
+                </div>
+              </div>
+              
+              <div className="rfo-card-body">
+                <div className="rfo-client">
+                  <strong>Cliente:</strong> {rfo.client_name}
+                </div>
+                
+                <div className="rfo-progress">
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill"
+                      style={{ width: `${responseRate}%` }}
+                    ></div>
+                  </div>
+                  <div className="progress-text">
+                    {rfo.response_count}/{rfo.sent_count} respostas ({responseRate}%)
+                  </div>
+                </div>
+                
+                <div className="rfo-dates">
+                  <div className="date-item">
+                    <span>Enviado:</span>
+                    <span>{new Date(rfo.rfo_date).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  <div className="date-item">
+                    <span>Prazo:</span>
+                    <span className={daysRemaining < 0 ? 'expired' : daysRemaining <= 1 ? 'urgent' : ''}>
+                      {new Date(rfo.response_deadline).toLocaleDateString('pt-BR')}
+                      {daysRemaining >= 0 && ` (${daysRemaining}d)`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="rfo-card-footer">
+                <button 
+                  className="btn-small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedRFO(rfo);
+                  }}
+                >
+                  Detalhes
+                </button>
+                {daysRemaining <= 1 && daysRemaining >= 0 && (
+                  <button className="btn-warning btn-small">
+                    ⏰ Lembrar
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* DETAIL MODAL */}
+      {selectedRFO && (
+        <RFODetailModal
+          rfo={selectedRFO}
+          onClose={() => setSelectedRFO(null)}
+          onSendReminder={sendReminder}
+          onMarkResponded={markAsResponded}
+        />
+      )}
+    </div>
+  );
+};
+Component 3: RFODetailModal.jsx
+jsx
+const RFODetailModal = ({ rfo, onClose, onSendReminder, onMarkResponded }) => {
+  const [trackingDetails, setTrackingDetails] = useState([]);
+
+  useEffect(() => {
+    fetchTrackingDetails();
+  }, [rfo.id]);
+
+  const fetchTrackingDetails = async () => {
+    const response = await fetch(`/api/rfos/${rfo.id}/tracking`);
+    const data = await response.json();
+    setTrackingDetails(data);
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'sent': return '#0366d6';
+      case 'responded': return '#2ea44f';
+      case 'opened': return '#6f42c1';
+      case 'failed': return '#cf222e';
+      default: return '#6a737d';
+    }
+  };
+
+  const manuallyAddQuote = async (trackingId) => {
+    // Open quote form pre-filled with supplier info
+    window.open(`/admin/clients/${rfo.client_id}/quotes/new?supplier=${trackingId}`, '_blank');
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content rfo-detail-modal">
+        <div className="modal-header">
+          <h4>Detalhes do RFO: {rfo.rfo_number}</h4>
+          <button onClick={onClose} className="close-btn">×</button>
+        </div>
+
+        <div className="modal-body">
+          {/* RFO SUMMARY */}
+          <div className="rfo-summary">
+            <div className="summary-row">
+              <div className="summary-item">
+                <label>Cliente</label>
+                <span>{rfo.client_name}</span>
+              </div>
+              <div className="summary-item">
+                <label>Consumo</label>
+                <span>{rfo.snapshot_consumption_kwh?.toLocaleString('pt-BR')} MWh/ano</span>
+              </div>
+              <div className="summary-item">
+                <label>Prazo</label>
+                <span className={getDaysRemaining(rfo.response_deadline) < 0 ? 'expired' : ''}>
+                  {new Date(rfo.response_deadline).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* SUPPLIER TRACKING TABLE */}
+          <div className="tracking-table">
+            <h5>Acompanhamento por Fornecedor</h5>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fornecedor</th>
+                  <th>Contato</th>
+                  <th>Envio</th>
+                  <th>Resposta</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trackingDetails.map(tracking => (
+                  <tr key={tracking.id}>
+                    <td>
+                      <div className="supplier-cell">
+                        <strong>{tracking.supplier_name}</strong>
+                        {tracking.is_primary && <span className="primary-badge">PRINCIPAL</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="contact-cell">
+                        <div>{tracking.contact_name}</div>
+                        <div className="contact-email">{tracking.contact_email}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="status-cell">
+                        <div className="status-indicator" style={{ backgroundColor: getStatusColor(tracking.sent_status) }}>
+                          {tracking.sent_status}
+                        </div>
+                        <div className="status-date">
+                          {tracking.sent_date ? new Date(tracking.sent_date).toLocaleDateString('pt-BR') : '—'}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="response-cell">
+                        {tracking.response_status === 'responded' ? (
+                          <div className="response-received">
+                            <span className="success">✓ RECEBIDA</span>
+                            <div className="response-date">
+                              {new Date(tracking.response_date).toLocaleDateString('pt-BR')}
+                            </div>
+                            {tracking.response_quote_id && (
+                              <a 
+                                href={`/admin/clients/${rfo.client_id}/quotes/${tracking.response_quote_id}`}
+                                className="view-quote-link"
+                              >
+                                Ver cotação →
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="response-pending">
+                            <span className="waiting">⏳ AGUARDANDO</span>
+                            {tracking.response_status === 'no_quote' && (
+                              <span className="no-quote">(Sem proposta)</span>
+                            )}
+                            <button 
+                              className="btn-reminder"
+                              onClick={() => onSendReminder(rfo.id, tracking.supplier_id)}
+                            >
+                              ⏰ Lembrar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="action-cell">
+                        {tracking.response_status !== 'responded' && (
+                          <button 
+                            className="btn-manual"
+                            onClick={() => manuallyAddQuote(tracking.id)}
+                          >
+                            + Cotação Manual
+                          </button>
+                        )}
+                        <button 
+                          className="btn-log"
+                          onClick={() => {/* View email log */}}
+                        >
+                          📧 Log
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* EMAIL LOG */}
+          <div className="email-log">
+            <h5>Histórico de Email</h5>
+            <div className="log-entries">
+              {trackingDetails
+                .filter(t => t.sent_date)
+                .map(tracking => (
+                  <div key={tracking.id} className="log-entry">
+                    <div className="log-header">
+                      <span className="log-supplier">{tracking.supplier_name}</span>
+                      <span className="log-date">
+                        {new Date(tracking.sent_date).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <div className="log-body">
+                      <div className="log-subject">
+                        <strong>Assunto:</strong> {rfo.email_subject}
+                      </div>
+                      <div className="log-status">
+                        Status: {tracking.sent_status}
+                        {tracking.open_count > 0 && ` • Aberto ${tracking.open_count} vez(es)`}
+                        {tracking.last_opened && ` • Última abertura: ${new Date(tracking.last_opened).toLocaleDateString('pt-BR')}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn-secondary">
+            Fechar
+          </button>
+          <button 
+            className="btn-primary"
+            onClick={() => {
+              // Export RFO report
+              window.open(`/api/rfos/${rfo.id}/export`, '_blank');
+            }}
+          >
+            📄 Exportar Relatório
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+🎨 CSS STYLING: RFOGenerator.css
+css
+/* Main Container */
+.rfo-generator {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.rfo-generator h4 {
+  margin: 0 0 24px 0;
+  color: #24292e;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid #eaecef;
+  padding-bottom: 12px;
+}
+
+/* Steps */
+.rfo-step {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #eaecef;
+}
+
+.rfo-step:last-child {
+  border-bottom: none;
+}
+
+.rfo-step h5 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+/* Preset Buttons */
+.preset-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: #24292e;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+  background: #eaecef;
+}
+
+/* Supplier Selection Grid */
+.suppliers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.supplier-card {
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.supplier-card:hover {
+  border-color: #0366d6;
+  background: #f6f8fa;
+}
+
+.supplier-card.selected {
+  border-color: #2ea44f;
+  background: #f0fff4;
+}
+
+.supplier-checkbox {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.supplier-card.selected .supplier-checkbox {
+  background: #2ea44f;
+  color: white;
+  border-color: #2ea44f;
+}
+
+.supplier-name {
+  font-weight: 500;
+  color: #24292e;
+  margin-bottom: 4px;
+}
+
+.supplier-contact {
+  font-size: 11px;
+  color: #6a737d;
+}
+
+.selection-summary {
+  text-align: center;
+  padding: 8px;
+  background: #f6f8fa;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* Configuration Grid */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-item label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #24292e;
+  margin-bottom: 8px;
+}
+
+.deadline-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.deadline-selector button {
+  padding: 8px 12px;
+  border: 1px solid #e1e4e8;
+  background: #f6f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.deadline-selector button.active {
+  background: #0366d6;
+  color: white;
+  border-color: #0366d6;
+}
+
+.custom-deadline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-deadline input {
+  width: 50px;
+  padding: 4px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* Priority Selector */
+.priority-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.priority-selector button {
+  padding: 6px 12px;
+  border: 1px solid #e1e4e8;
+  background: #f6f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.priority-selector button.active {
+  color: white;
+}
+
+.priority-baixa.active { background: #6a737d; border-color: #6a737d; }
+.priority-normal.active { background: #0366d6; border-color: #0366d6; }
+.priority-alta.active { background: #dbab09; border-color: #dbab09; }
+.priority-urgente.active { background: #cf222e; border-color: #cf222e; }
+
+/* Preview */
+.preview-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f6f8fa;
+  border: 2px dashed #e1e4e8;
+  border-radius: 6px;
+}
+
+.btn-generate {
+  background: #6f42c1;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.btn-generate:hover {
+  background: #5a32a3;
+}
+
+.btn-generate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* RFO Preview */
+.rfo-preview {
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.preview-header {
+  background: #f6f8fa;
+  padding: 16px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.rfo-number {
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+  margin-bottom: 8px;
+}
+
+.preview-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #6a737d;
+}
+
+.email-preview {
+  padding: 16px;
+  background: white;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.email-subject {
+  padding: 12px;
+  background: #f6f8fa;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.email-body {
+  padding: 12px;
+  background: #fafbfc;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.email-body pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.email-attachments {
+  padding: 12px;
+  background: #fff8c5;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.email-attachments ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.preview-actions {
+  padding: 16px;
+  background: #f6f8fa;
+  border-top: 1px solid #e1e4e8;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Sent Confirmation */
+.sent-confirmation {
+  background: linear-gradient(135deg, #dafbe1 0%, #f0fff4 100%);
+  border: 1px solid #2ea44f;
+  border-radius: 6px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.success-icon {
+  font-size: 24px;
+}
+
+.confirmation-details {
+  background: white;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.confirmation-details p {
+  margin: 8px 0;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-badge.draft { background: #f6f8fa; color: #6a737d; }
+.status-badge.sent { background: #0366d6; color: white; }
+.status-badge.partial { background: #dbab09; color: #24292e; }
+.status-badge.complete { background: #2ea44f; color: white; }
+.status-badge.expired { background: #cf222e; color: white; }
+🔧 BACKEND IMPLEMENTATION
+1. Main RFO Send Endpoint: /api/clients/[id]/rfo/send
+javascript
+// POST /api/clients/:id/rfo/send
+router.post('/:id/rfo/send', async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    const { rfoNumber, suppliers, emailContent, deadline, priority, customEmail } = req.body;
+    
+    // Get client data
+    const client = await db.selectFrom('clients')
+      .select(['company_name', 'avg_consumption_kwh', 'subgrupo'])
+      .where('id', '=', clientId)
+      .executeTakeFirst();
+    
+    // Get latest bill data
+    const latestBill = await db.selectFrom('bill_uploads')
+      .select(['uc_code', 'demanda_kw', 'distribuidora'])
+      .where('client_id', '=', clientId)
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+    
+    // Create RFO record
+    const rfoRecord = await db.insertInto('rfo_requests').values({
+      client_id: clientId,
+      rfo_number: rfoNumber,
+      status: 'sent',
+      requested_suppliers: suppliers.map(s => s.name),
+      response_deadline: deadline,
+      priority: priority,
+      snapshot_consumption_kwh: client.avg_consumption_kwh,
+      snapshot_demanda_kw: latestBill?.demanda_kw,
+      snapshot_uc: latestBill?.uc_code,
+      snapshot_distribuidora: latestBill?.distribuidora,
+      email_subject: emailContent.subject,
+      email_body: emailContent.body,
+      sent_count: suppliers.length,
+      response_count: 0
+    }).returning('id').execute();
+    
+    const rfoId = rfoRecord[0].id;
+    
+    // Send to each supplier
+    let sentCount = 0;
+    const trackingRecords = [];
+    
+    for (const supplier of suppliers) {
+      try {
+        // Get primary contact for supplier
+        const contact = supplier.contacts.find(c => c.is_primary) || supplier.contacts[0];
+        
+        if (!contact?.email) continue;
+        
+        // Send email (using Nodemailer)
+        const emailResult = await sendRFOMail({
+          to: contact.email,
+          subject: emailContent.subject,
+          body: emailContent.body,
+          attachments: emailContent.attachments,
+          replyTo: customEmail || 'renan@otimaenergia.com.br'
+        });
+        
+        // Create tracking record
+        const tracking = await db.insertInto('rfo_supplier_tracking').values({
+          rfo_id: rfoId,
+          supplier_id: supplier.id,
+          contact_name: contact.name,
+          contact_email: contact.email,
+          sent_status: emailResult.success ? 'sent' : 'failed',
+          sent_date: new Date(),
+          sent_method: 'email',
+          error_message: emailResult.error || null
+        }).returning('id').execute();
+        
+        trackingRecords.push(tracking[0]);
+        sentCount++;
+        
+      } catch (supplierError) {
+        console.error(`Error sending to ${supplier.name}:`, supplierError);
+        
+        // Still create tracking record for failed attempts
+        await db.insertInto('rfo_supplier_tracking').values({
+          rfo_id: rfoId,
+          supplier_id: supplier.id,
+          sent_status: 'failed',
+          error_message: supplierError.message
+        }).execute();
+      }
+    }
+    
+    // Update RFO with actual sent count
+    await db.updateTable('rfo_requests')
+      .set({ sent_count: sentCount })
+      .where('id', '=', rfoId)
+      .execute();
+    
+    // Return success with tracking info
+    res.json({
+      success: true,
+      rfo: {
+        id: rfoId,
+        rfo_number: rfoNumber,
+        sent_count: sentCount,
+        response_deadline: deadline,
+        status: 'sent'
+      },
+      tracking: trackingRecords
+    });
+    
+  } catch (error) {
+    console.error('RFO send error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao enviar RFO. Por favor, envie manualmente.'
+    });
+  }
+});
+
+// Helper: Send email via Nodemailer
+async function sendRFOMail({ to, subject, body, attachments, replyTo }) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: true,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+  
+  const mailOptions = {
+    from: `"Ótima Energia" <${process.env.SMTP_FROM}>`,
+    to: to,
+    replyTo: replyTo,
+    subject: subject,
+    text: body,
+    html: convertToHTML(body), // Convert plain text to basic HTML
+    attachments: attachments.map(att => ({
+      filename: att.name,
+      path: `/attachments/${att.name}`, // Path to stored files
+      contentType: getContentType(att.type)
+    }))
+  };
+  
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    
+    // Track email opens (pixel tracking)
+    const trackingPixel = `<img src="${process.env.APP_URL}/api/track/open/${info.messageId}" width="1" height="1" />`;
+    
+    return {
+      success: true,
+      messageId: info.messageId
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+2. Email Tracking Endpoint: /api/track/open/[messageId]
+javascript
+// GET /api/track/open/:messageId
+router.get('/track/open/:messageId', async (req, res) => {
+  try {
+    // Update open count in database
+    await db.updateTable('rfo_supplier_tracking')
+      .set({
+        open_count: db.raw('open_count + 1'),
+        last_opened: new Date()
+      })
+      .where('email_message_id', '=', req.params.messageId)
+      .execute();
+    
+    // Return transparent pixel
+    res.set('Content-Type', 'image/gif');
+    res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+    
+  } catch (error) {
+    res.status(500).send();
+  }
+});
+3. Reminder Endpoint: /api/rfos/[id]/reminder/[supplierId]
+javascript
+// POST /api/rfos/:id/reminder/:supplierId
+router.post('/:id/reminder/:supplierId', async (req, res) => {
+  try {
+    const { id, supplierId } = req.params;
+    
+    // Get tracking record
+    const tracking = await db.selectFrom('rfo_supplier_tracking')
+      .select(['contact_email', 'contact_name', 'sent_date'])
+      .where('rfo_id', '=', id)
+      .where('supplier_id', '=', supplierId)
+      .executeTakeFirst();
+    
+    if (!tracking) {
+      return res.status(404).json({ error: 'Tracking not found' });
+    }
+    
+    // Get RFO details
+    const rfo = await db.selectFrom('rfo_requests')
+      .select(['rfo_number', 'response_deadline', 'client_id'])
+      .where('id', '=', id)
+      .executeTakeFirst();
+    
+    // Send reminder email
+    const reminderBody = `Prezado(a) ${tracking.contact_name},
+
+Este é um lembrete amigável sobre nossa solicitação de proposta RFO ${rfo.rfo_number}.
+
+A data limite para resposta é ${new Date(rfo.response_deadline).toLocaleDateString('pt-BR')}.
+
+Por favor, nos envue sua proposta comercial quando possível.
+
+Agradecemos a atenção.
+
+Atenciosamente,
+Renan - Ótima Energia`;
+    
+    await sendRFOMail({
+      to: tracking.contact_email,
+      subject: `[LEMBRETE] RFO ${rfo.rfo_number} - Resposta pendente`,
+      body: reminderBody,
+      replyTo: 'renan@otimaenergia.com.br'
+    });
+    
+    // Update tracking record
+    await db.updateTable('rfo_supplier_tracking')
+      .set({
+        reminder_sent: true,
+        reminder_date: new Date()
+      })
+      .where('rfo_id', '=', id)
+      .where('supplier_id', '=', supplierId)
+      .execute();
+    
+    res.json({ success: true, message: 'Lembrete enviado' });
+    
+  } catch (error) {
+    console.error('Reminder error:', error);
+    res.status(500).json({ error: 'Erro ao enviar lembrete' });
+  }
+});
+🚀 DEPLOYMENT CHECKLIST
+Install Dependencies:
+
+bash
+npm install nodemailer nodemailer-markdown juice
+Configure Email Settings in Replit Secrets:
+
+bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=renan@otimaenergia.com.br
+SMTP_PASS=your_app_password
+SMTP_FROM=renan@otimaenergia.com.br
+APP_URL=https://your-replit-app.replit.app
+Set Up Email Templates:
+
+Create Portuguese templates for RFOs
+
+Configure reply-to address
+
+Set up tracking pixel
+
+Test Email Flow:
+
+Send test RFO to your own email
+
+Verify tracking works
+
+Check spam folder
+
+🧪 TESTING PROCEDURE
+Test 1: RFO Generation
+Go to client page with bill data
+
+Click "📤 Solicitar Cotações"
+
+Select 2-3 suppliers
+
+Generate preview
+
+Verify email content looks professional
+
+Test 2: Email Sending
+Send test RFO to your email
+
+Verify email arrives with correct subject
+
+Check attachments (if any)
+
+Open email to trigger tracking
+
+Test 3: Tracking
+Check database: rfo_requests should have record
+
+Check rfo_supplier_tracking for each supplier
+
+Verify open tracking increments when email opened
+
+Test 4: Reminders
+Wait 24 hours
+
+Send reminder to non-responsive supplier
+
+Verify reminder email sent
+
+Test 5: Response Tracking
+Manually add quote from supplier response
+
+Link it to RFO tracking
+
+Verify response status updates
+
+📊 EXPECTED RESULTS
+Time saved per client: 15-20 minutes (manual RFO creation → 2 minutes)
+
+Professionalism: Consistent, branded RFOs to all suppliers
+
+Tracking: Know exactly who received, opened, and responded
+
+Response rate: Increase by 20-30% with reminders
+
+Error reduction: No more typos in consumption data
+

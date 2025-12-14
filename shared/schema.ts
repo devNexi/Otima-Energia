@@ -249,6 +249,11 @@ export const supplierQuotes = pgTable("supplier_quotes", {
   notes: text("notes"),
   attachmentUrl: text("attachment_url"),
   
+  // RFO Integration
+  rfoId: integer("rfo_id"),
+  rfoTrackingId: integer("rfo_tracking_id"),
+  receivedVia: text("received_via").default("manual"), // 'rfo_email', 'rfo_portal', 'manual'
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -261,6 +266,137 @@ export const insertSupplierQuoteSchema = createInsertSchema(supplierQuotes).omit
 
 export type InsertSupplierQuote = z.infer<typeof insertSupplierQuoteSchema>;
 export type SupplierQuote = typeof supplierQuotes.$inferSelect;
+
+// RFO Requests - Automated quote requests to suppliers
+export const rfoRequests = pgTable("rfo_requests", {
+  id: serial("id").primaryKey(),
+  
+  // Relationships
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  billUploadId: integer("bill_upload_id").references(() => billUploads.id),
+  
+  // RFO Metadata
+  rfoNumber: varchar("rfo_number", { length: 50 }).unique().notNull(),
+  rfoDate: timestamp("rfo_date").defaultNow(),
+  status: text("status").default("draft"), // 'draft', 'sent', 'partial_response', 'complete', 'expired'
+  
+  // Request Details
+  responseDeadline: date("response_deadline").notNull(),
+  priority: text("priority").default("normal"), // 'baixa', 'normal', 'alta', 'urgente'
+  
+  // Client Data Snapshot (frozen at time of RFO)
+  snapshotConsumptionKwh: decimal("snapshot_consumption_kwh", { precision: 10, scale: 2 }),
+  snapshotDemandaKw: decimal("snapshot_demanda_kw", { precision: 10, scale: 2 }),
+  snapshotUc: varchar("snapshot_uc", { length: 50 }),
+  snapshotDistribuidora: varchar("snapshot_distribuidora", { length: 100 }),
+  snapshotContractEnd: date("snapshot_contract_end"),
+  
+  // Tracking
+  sentCount: integer("sent_count").default(0),
+  responseCount: integer("response_count").default(0),
+  lastSentDate: timestamp("last_sent_date"),
+  
+  // Email Content
+  emailSubject: varchar("email_subject", { length: 200 }),
+  emailBody: text("email_body"),
+  attachments: jsonb("attachments"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRfoRequestSchema = createInsertSchema(rfoRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentCount: true,
+  responseCount: true,
+  lastSentDate: true,
+});
+
+export type InsertRfoRequest = z.infer<typeof insertRfoRequestSchema>;
+export type RfoRequest = typeof rfoRequests.$inferSelect;
+
+// RFO Supplier Tracking - Track individual supplier responses
+export const rfoSupplierTracking = pgTable("rfo_supplier_tracking", {
+  id: serial("id").primaryKey(),
+  rfoId: integer("rfo_id").references(() => rfoRequests.id).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Contact Info
+  contactName: varchar("contact_name", { length: 100 }),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  
+  // Send Status
+  sentStatus: text("sent_status").default("pending"), // 'pending', 'sent', 'failed', 'opened'
+  sentDate: timestamp("sent_date"),
+  sentMethod: text("sent_method"), // 'email', 'portal', 'api'
+  
+  // Response Tracking
+  responseStatus: text("response_status").default("waiting"), // 'waiting', 'responded', 'no_quote', 'expired'
+  responseDate: timestamp("response_date"),
+  responseQuoteId: integer("response_quote_id").references(() => supplierQuotes.id),
+  
+  // Communication Log
+  openCount: integer("open_count").default(0),
+  lastOpened: timestamp("last_opened"),
+  reminderSent: boolean("reminder_sent").default(false),
+  reminderDate: timestamp("reminder_date"),
+  
+  // Error Tracking
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRfoSupplierTrackingSchema = createInsertSchema(rfoSupplierTracking).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  openCount: true,
+  retryCount: true,
+});
+
+export type InsertRfoSupplierTracking = z.infer<typeof insertRfoSupplierTrackingSchema>;
+export type RfoSupplierTracking = typeof rfoSupplierTracking.$inferSelect;
+
+// Supplier Contacts - Multiple contacts per supplier
+export const supplierContacts = pgTable("supplier_contacts", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Contact Details
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  role: varchar("role", { length: 100 }), // 'comercial', 'vendas', 'orcamento'
+  department: varchar("department", { length: 100 }),
+  
+  // Preferences
+  preferredFormat: text("preferred_format").default("email"), // 'email', 'whatsapp', 'portal'
+  emailTemplate: varchar("email_template", { length: 50 }),
+  responseTimeHours: integer("response_time_hours").default(48),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  isPrimary: boolean("is_primary").default(false),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSupplierContactSchema = createInsertSchema(supplierContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSupplierContact = z.infer<typeof insertSupplierContactSchema>;
+export type SupplierContact = typeof supplierContacts.$inferSelect;
 
 // Relations
 export const leadsRelations = relations(leads, ({ one }) => ({
@@ -280,6 +416,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   quoteRequests: many(quoteRequests),
   billUploads: many(billUploads),
   supplierQuotes: many(supplierQuotes),
+  rfoRequests: many(rfoRequests),
 }));
 
 export const billUploadsRelations = relations(billUploads, ({ one }) => ({
@@ -332,5 +469,50 @@ export const supplierQuotesRelations = relations(supplierQuotes, ({ one }) => ({
   quoteRequest: one(quoteRequests, {
     fields: [supplierQuotes.rfqId],
     references: [quoteRequests.id],
+  }),
+  rfoRequest: one(rfoRequests, {
+    fields: [supplierQuotes.rfoId],
+    references: [rfoRequests.id],
+  }),
+}));
+
+// RFO Relations
+export const rfoRequestsRelations = relations(rfoRequests, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [rfoRequests.clientId],
+    references: [clients.id],
+  }),
+  billUpload: one(billUploads, {
+    fields: [rfoRequests.billUploadId],
+    references: [billUploads.id],
+  }),
+  supplierTracking: many(rfoSupplierTracking),
+  supplierQuotes: many(supplierQuotes),
+}));
+
+export const rfoSupplierTrackingRelations = relations(rfoSupplierTracking, ({ one }) => ({
+  rfoRequest: one(rfoRequests, {
+    fields: [rfoSupplierTracking.rfoId],
+    references: [rfoRequests.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [rfoSupplierTracking.supplierId],
+    references: [suppliers.id],
+  }),
+  responseQuote: one(supplierQuotes, {
+    fields: [rfoSupplierTracking.responseQuoteId],
+    references: [supplierQuotes.id],
+  }),
+}));
+
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  contacts: many(supplierContacts),
+  rfoTracking: many(rfoSupplierTracking),
+}));
+
+export const supplierContactsRelations = relations(supplierContacts, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierContacts.supplierId],
+    references: [suppliers.id],
   }),
 }));

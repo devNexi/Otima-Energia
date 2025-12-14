@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { BillUploadSection } from "@/components/BillUploadSection";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
+import { RFOGenerator } from "@/components/rfo/RFOGenerator";
 import { 
   Users, 
   Inbox, 
@@ -25,7 +26,8 @@ import {
   Loader2,
   Languages,
   Upload,
-  DollarSign
+  DollarSign,
+  Send
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -44,6 +46,7 @@ export default function Admin() {
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
+  const [rfoClient, setRfoClient] = useState<{ id: number; companyName: string; ucCode?: string | null; avgConsumptionKwh?: string | null; currentSupplier?: string | null } | null>(null);
   const [newClientForm, setNewClientForm] = useState({
     companyName: "",
     cnpj: "",
@@ -82,6 +85,14 @@ export default function Admin() {
     queryKey: ["/api/quote-requests"],
     queryFn: async () => {
       const res = await fetch("/api/quote-requests");
+      return res.json();
+    }
+  });
+
+  const { data: rfosData, isLoading: rfosLoading } = useQuery({
+    queryKey: ["/api/rfo"],
+    queryFn: async () => {
+      const res = await fetch("/api/rfo");
       return res.json();
     }
   });
@@ -419,6 +430,22 @@ export default function Admin() {
                             <Button 
                               size="sm" 
                               variant="default"
+                              className="bg-orange-500 hover:bg-orange-600"
+                              onClick={() => setRfoClient({
+                                id: client.id,
+                                companyName: client.companyName,
+                                ucCode: client.ucCode,
+                                avgConsumptionKwh: client.avgConsumptionKwh,
+                                currentSupplier: client.currentSupplier
+                              })}
+                              data-testid={`button-rfo-${client.id}`}
+                            >
+                              <Send className="w-4 h-4 mr-1" />
+                              {t("rfo.request_quotes")}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="default"
                               className="bg-violet-600 hover:bg-violet-700"
                               onClick={() => setBillUploadClient({ id: client.id, name: client.companyName })}
                               data-testid={`button-upload-bill-${client.id}`}
@@ -461,52 +488,114 @@ export default function Admin() {
                     />
                   </div>
                 )}
+
+                {rfoClient && (
+                  <RFOGenerator 
+                    client={rfoClient}
+                    onClose={() => setRfoClient(null)}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="rfqs">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("admin.rfqs.title")}</CardTitle>
-                <CardDescription>{t("admin.rfqs.description")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {rfqsLoading ? (
-                  <div className="flex justify-center p-4">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  </div>
-                ) : rfqs.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">{t("admin.rfqs.empty")}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {rfqs.map((rfq: any) => (
-                      <div 
-                        key={rfq.id} 
-                        className="border rounded-lg p-4"
-                        data-testid={`rfq-row-${rfq.id}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium">RFQ #{rfq.id}</h3>
-                            <Badge className={
-                              rfq.status === "quotes_ready" ? "bg-green-100 text-green-800" :
-                              rfq.status === "pending_quotes" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-gray-100 text-gray-800"
-                            }>
-                              {rfq.status}
-                            </Badge>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Send className="w-5 h-5 text-orange-500" />
+                    {t("rfo.tracker.title")}
+                  </CardTitle>
+                  <CardDescription>{t("rfo.tracker.active")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {rfosLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : !rfosData?.rfos || rfosData.rfos.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">{t("admin.rfqs.empty")}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {rfosData.rfos.map((rfo: any) => (
+                        <div 
+                          key={rfo.id} 
+                          className="border rounded-lg p-4 bg-orange-50/50"
+                          data-testid={`rfo-row-${rfo.id}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium">{rfo.rfoNumber}</h3>
+                                <Badge className={
+                                  rfo.status === "complete" ? "bg-green-100 text-green-800" :
+                                  rfo.status === "sent" ? "bg-blue-100 text-blue-800" :
+                                  rfo.status === "partial_response" ? "bg-yellow-100 text-yellow-800" :
+                                  rfo.status === "expired" ? "bg-red-100 text-red-800" :
+                                  "bg-gray-100 text-gray-800"
+                                }>
+                                  {t(`rfo.status.${rfo.status}` as const) || rfo.status}
+                                </Badge>
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {t("rfo.deadline_label")}: {rfo.responseDeadline} | 
+                                {t("rfo.tracker.responses")}: {rfo.responseCount || 0}/{rfo.sentCount || 0}
+                              </div>
+                            </div>
+                            <Button size="sm" variant="outline" data-testid={`button-rfo-details-${rfo.id}`}>
+                              {t("rfo.view_details")}
+                            </Button>
                           </div>
-                          <Button size="sm" variant="outline">
-                            {t("admin.rfqs.view_details")}
-                          </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("admin.rfqs.title")}</CardTitle>
+                  <CardDescription>{t("admin.rfqs.description")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {rfqsLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : rfqs.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">{t("admin.rfqs.empty")}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {rfqs.map((rfq: any) => (
+                        <div 
+                          key={rfq.id} 
+                          className="border rounded-lg p-4"
+                          data-testid={`rfq-row-${rfq.id}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">RFQ #{rfq.id}</h3>
+                              <Badge className={
+                                rfq.status === "quotes_ready" ? "bg-green-100 text-green-800" :
+                                rfq.status === "pending_quotes" ? "bg-yellow-100 text-yellow-800" :
+                                "bg-gray-100 text-gray-800"
+                              }>
+                                {rfq.status}
+                              </Badge>
+                            </div>
+                            <Button size="sm" variant="outline">
+                              {t("admin.rfqs.view_details")}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

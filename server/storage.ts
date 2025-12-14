@@ -9,9 +9,13 @@ import {
   type SupplierQuote, type InsertSupplierQuote,
   type BillUpload, type InsertBillUpload,
   type Supplier, type InsertSupplier,
-  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers
+  type RfoRequest, type InsertRfoRequest,
+  type RfoSupplierTracking, type InsertRfoSupplierTracking,
+  type SupplierContact, type InsertSupplierContact,
+  users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
+  rfoRequests, rfoSupplierTracking, supplierContacts
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 export interface IStorage {
@@ -73,6 +77,30 @@ export interface IStorage {
   getBillUploads(clientId: number): Promise<BillUpload[]>;
   getBillUpload(id: number): Promise<BillUpload | undefined>;
   updateBillUpload(id: number, data: Partial<InsertBillUpload>): Promise<BillUpload | undefined>;
+  
+  // RFO Requests
+  createRfoRequest(rfo: InsertRfoRequest): Promise<RfoRequest>;
+  getRfoRequests(): Promise<RfoRequest[]>;
+  getRfoRequestsForClient(clientId: number): Promise<RfoRequest[]>;
+  getRfoRequest(id: number): Promise<RfoRequest | undefined>;
+  getRfoRequestByNumber(rfoNumber: string): Promise<RfoRequest | undefined>;
+  updateRfoRequest(id: number, data: Partial<InsertRfoRequest>): Promise<RfoRequest | undefined>;
+  generateRfoNumber(): Promise<string>;
+  
+  // RFO Supplier Tracking
+  createRfoSupplierTracking(tracking: InsertRfoSupplierTracking): Promise<RfoSupplierTracking>;
+  getRfoSupplierTracking(rfoId: number): Promise<RfoSupplierTracking[]>;
+  getRfoSupplierTrackingById(id: number): Promise<RfoSupplierTracking | undefined>;
+  updateRfoSupplierTracking(id: number, data: Partial<InsertRfoSupplierTracking>): Promise<RfoSupplierTracking | undefined>;
+  markRfoSupplierResponded(trackingId: number, quoteId: number): Promise<void>;
+  
+  // Supplier Contacts
+  createSupplierContact(contact: InsertSupplierContact): Promise<SupplierContact>;
+  getSupplierContacts(supplierId: number): Promise<SupplierContact[]>;
+  getPrimarySupplierContact(supplierId: number): Promise<SupplierContact | undefined>;
+  getAllActiveSupplierContacts(): Promise<SupplierContact[]>;
+  updateSupplierContact(id: number, data: Partial<InsertSupplierContact>): Promise<SupplierContact | undefined>;
+  getSupplier(id: number): Promise<Supplier | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -307,6 +335,142 @@ export class Storage implements IStorage {
 
   async updateBillUpload(id: number, data: Partial<InsertBillUpload>): Promise<BillUpload | undefined> {
     const result = await db.update(billUploads).set({ ...data, updatedAt: new Date() }).where(eq(billUploads.id, id)).returning();
+    return result[0];
+  }
+
+  // RFO Requests
+  async createRfoRequest(rfo: InsertRfoRequest): Promise<RfoRequest> {
+    const result = await db.insert(rfoRequests).values(rfo).returning();
+    return result[0];
+  }
+
+  async getRfoRequests(): Promise<RfoRequest[]> {
+    return await db.select().from(rfoRequests).orderBy(desc(rfoRequests.createdAt));
+  }
+
+  async getRfoRequestsForClient(clientId: number): Promise<RfoRequest[]> {
+    return await db.select().from(rfoRequests).where(eq(rfoRequests.clientId, clientId)).orderBy(desc(rfoRequests.createdAt));
+  }
+
+  async getRfoRequest(id: number): Promise<RfoRequest | undefined> {
+    const result = await db.select().from(rfoRequests).where(eq(rfoRequests.id, id));
+    return result[0];
+  }
+
+  async getRfoRequestByNumber(rfoNumber: string): Promise<RfoRequest | undefined> {
+    const result = await db.select().from(rfoRequests).where(eq(rfoRequests.rfoNumber, rfoNumber));
+    return result[0];
+  }
+
+  async updateRfoRequest(id: number, data: Partial<InsertRfoRequest>): Promise<RfoRequest | undefined> {
+    const result = await db.update(rfoRequests).set({ ...data, updatedAt: new Date() }).where(eq(rfoRequests.id, id)).returning();
+    return result[0];
+  }
+
+  async generateRfoNumber(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const datePrefix = `RFO-${year}${month}${day}`;
+    
+    const existing = await db.select({ rfoNumber: rfoRequests.rfoNumber })
+      .from(rfoRequests)
+      .where(sql`${rfoRequests.rfoNumber} LIKE ${datePrefix + '%'}`)
+      .orderBy(desc(rfoRequests.rfoNumber))
+      .limit(1);
+    
+    let sequence = 1;
+    if (existing.length > 0) {
+      const lastNumber = existing[0].rfoNumber;
+      const lastSequence = parseInt(lastNumber.split('-').pop() || '0');
+      sequence = lastSequence + 1;
+    }
+    
+    return `${datePrefix}-${String(sequence).padStart(3, '0')}`;
+  }
+
+  // RFO Supplier Tracking
+  async createRfoSupplierTracking(tracking: InsertRfoSupplierTracking): Promise<RfoSupplierTracking> {
+    const result = await db.insert(rfoSupplierTracking).values(tracking).returning();
+    return result[0];
+  }
+
+  async getRfoSupplierTracking(rfoId: number): Promise<RfoSupplierTracking[]> {
+    return await db.select().from(rfoSupplierTracking).where(eq(rfoSupplierTracking.rfoId, rfoId));
+  }
+
+  async getRfoSupplierTrackingById(id: number): Promise<RfoSupplierTracking | undefined> {
+    const result = await db.select().from(rfoSupplierTracking).where(eq(rfoSupplierTracking.id, id));
+    return result[0];
+  }
+
+  async updateRfoSupplierTracking(id: number, data: Partial<InsertRfoSupplierTracking>): Promise<RfoSupplierTracking | undefined> {
+    const result = await db.update(rfoSupplierTracking).set({ ...data, updatedAt: new Date() }).where(eq(rfoSupplierTracking.id, id)).returning();
+    return result[0];
+  }
+
+  async markRfoSupplierResponded(trackingId: number, quoteId: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const tracking = await tx.select().from(rfoSupplierTracking).where(eq(rfoSupplierTracking.id, trackingId));
+      if (!tracking[0]) return;
+      
+      await tx.update(rfoSupplierTracking).set({
+        responseStatus: 'responded',
+        responseDate: new Date(),
+        responseQuoteId: quoteId,
+        updatedAt: new Date()
+      }).where(eq(rfoSupplierTracking.id, trackingId));
+      
+      const rfoId = tracking[0].rfoId;
+      await tx.update(rfoRequests).set({
+        responseCount: sql`${rfoRequests.responseCount} + 1`,
+        updatedAt: new Date()
+      }).where(eq(rfoRequests.id, rfoId));
+      
+      const allTracking = await tx.select().from(rfoSupplierTracking).where(eq(rfoSupplierTracking.rfoId, rfoId));
+      const allResponded = allTracking.every(t => t.responseStatus !== 'waiting');
+      
+      if (allResponded) {
+        await tx.update(rfoRequests).set({ status: 'complete', updatedAt: new Date() }).where(eq(rfoRequests.id, rfoId));
+      } else {
+        await tx.update(rfoRequests).set({ status: 'partial_response', updatedAt: new Date() }).where(eq(rfoRequests.id, rfoId));
+      }
+    });
+  }
+
+  // Supplier Contacts
+  async createSupplierContact(contact: InsertSupplierContact): Promise<SupplierContact> {
+    const result = await db.insert(supplierContacts).values(contact).returning();
+    return result[0];
+  }
+
+  async getSupplierContacts(supplierId: number): Promise<SupplierContact[]> {
+    return await db.select().from(supplierContacts).where(eq(supplierContacts.supplierId, supplierId));
+  }
+
+  async getPrimarySupplierContact(supplierId: number): Promise<SupplierContact | undefined> {
+    const result = await db.select().from(supplierContacts)
+      .where(and(eq(supplierContacts.supplierId, supplierId), eq(supplierContacts.isPrimary, true)));
+    if (result.length > 0) return result[0];
+    
+    const anyContact = await db.select().from(supplierContacts)
+      .where(and(eq(supplierContacts.supplierId, supplierId), eq(supplierContacts.isActive, true)))
+      .limit(1);
+    return anyContact[0];
+  }
+
+  async getAllActiveSupplierContacts(): Promise<SupplierContact[]> {
+    return await db.select().from(supplierContacts).where(eq(supplierContacts.isActive, true));
+  }
+
+  async updateSupplierContact(id: number, data: Partial<InsertSupplierContact>): Promise<SupplierContact | undefined> {
+    const result = await db.update(supplierContacts).set({ ...data, updatedAt: new Date() }).where(eq(supplierContacts.id, id)).returning();
+    return result[0];
+  }
+
+  async getSupplier(id: number): Promise<Supplier | undefined> {
+    const result = await db.select().from(suppliers).where(eq(suppliers.id, id));
     return result[0];
   }
 }

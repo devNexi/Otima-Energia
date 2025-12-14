@@ -6,7 +6,10 @@ import {
   insertClientSchema, 
   insertConsumptionProfileSchema,
   insertQuoteRequestSchema,
-  insertSupplierQuoteSchema
+  insertSupplierQuoteSchema,
+  insertRfoRequestSchema,
+  insertRfoSupplierTrackingSchema,
+  insertSupplierContactSchema
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -692,6 +695,312 @@ export async function registerRoutes(
       message: "Sync initiated (integration pending)",
       timestamp: new Date().toISOString()
     });
+  });
+
+  // ============== RFO (REQUEST FOR OFFER) ENDPOINTS ==============
+
+  // Create RFO for a client
+  app.post("/api/clients/:id/rfo", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+
+      // Generate RFO number
+      const rfoNumber = await storage.generateRfoNumber();
+      
+      // Calculate deadline based on days
+      const deadlineDays = req.body.deadlineDays || 3;
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + deadlineDays);
+
+      const replyEmail = req.body.replyEmail || 'contato@otimaenergia.com.br';
+      
+      const rfoData = {
+        clientId,
+        rfoNumber,
+        responseDeadline: deadline.toISOString().split('T')[0],
+        priority: req.body.priority || 'normal',
+        billUploadId: req.body.billUploadId || null,
+        snapshotConsumptionKwh: client.avgConsumptionKwh || null,
+        snapshotDemandaKw: req.body.demandaKw || null,
+        snapshotUc: client.ucCode || null,
+        snapshotDistribuidora: client.currentSupplier || null,
+        snapshotContractEnd: req.body.contractEnd || null,
+        emailSubject: req.body.emailSubject || null,
+        emailBody: req.body.emailBody ? `${req.body.emailBody}\n\nResponder para: ${replyEmail}` : null,
+        attachments: req.body.attachments || null
+      };
+
+      const validatedData = insertRfoRequestSchema.parse(rfoData);
+      const rfo = await storage.createRfoRequest(validatedData);
+      
+      res.json({ success: true, rfo });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating RFO:", error);
+        res.status(500).json({ success: false, error: "Failed to create RFO" });
+      }
+    }
+  });
+
+  // Get all RFOs
+  app.get("/api/rfo", async (req, res) => {
+    try {
+      const rfos = await storage.getRfoRequests();
+      res.json({ success: true, rfos });
+    } catch (error: any) {
+      console.error("Error fetching RFOs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch RFOs" });
+    }
+  });
+
+  // Get single RFO with tracking details
+  app.get("/api/rfo/:id", async (req, res) => {
+    try {
+      const rfoId = parseInt(req.params.id);
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (!rfo) {
+        return res.status(404).json({ success: false, error: "RFO not found" });
+      }
+      
+      const tracking = await storage.getRfoSupplierTracking(rfoId);
+      const client = await storage.getClient(rfo.clientId);
+      
+      res.json({ success: true, rfo, tracking, client });
+    } catch (error: any) {
+      console.error("Error fetching RFO:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch RFO" });
+    }
+  });
+
+  // Get RFOs for a specific client
+  app.get("/api/clients/:id/rfo", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const rfos = await storage.getRfoRequestsForClient(clientId);
+      res.json({ success: true, rfos });
+    } catch (error: any) {
+      console.error("Error fetching client RFOs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch RFOs" });
+    }
+  });
+
+  // Send RFO to selected suppliers
+  app.post("/api/rfo/:id/send", async (req, res) => {
+    try {
+      const rfoId = parseInt(req.params.id);
+      const { supplierIds } = req.body;
+      
+      if (!supplierIds || !Array.isArray(supplierIds) || supplierIds.length === 0) {
+        return res.status(400).json({ success: false, error: "No suppliers selected" });
+      }
+
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (!rfo) {
+        return res.status(404).json({ success: false, error: "RFO not found" });
+      }
+
+      const trackingRecords = [];
+      const errors = [];
+
+      for (const supplierId of supplierIds) {
+        try {
+          // Get primary contact for supplier
+          const contact = await storage.getPrimarySupplierContact(supplierId);
+          if (!contact) {
+            errors.push({ supplierId, error: "No primary contact found" });
+            continue;
+          }
+
+          // Create tracking record
+          const trackingData = {
+            rfoId,
+            supplierId,
+            contactName: contact.name,
+            contactEmail: contact.email,
+            contactPhone: contact.phone || null,
+            sentStatus: "sent" as const,
+            sentDate: new Date(),
+            sentMethod: "email" as const,
+            responseStatus: "waiting" as const,
+            reminderSent: false
+          };
+
+          const validatedTracking = insertRfoSupplierTrackingSchema.parse(trackingData);
+          const tracking = await storage.createRfoSupplierTracking(validatedTracking);
+          trackingRecords.push(tracking);
+
+          // TODO: Actually send email via SendGrid/Nodemailer
+          console.log(`[RFO ${rfo.rfoNumber}] Would send email to ${contact.email}`);
+        } catch (err: any) {
+          errors.push({ supplierId, error: err.message });
+        }
+      }
+
+      // Update RFO status and counts
+      await storage.updateRfoRequest(rfoId, {
+        status: "sent",
+        sentCount: trackingRecords.length,
+        lastSentDate: new Date()
+      });
+
+      res.json({ 
+        success: true, 
+        sent: trackingRecords.length,
+        failed: errors.length,
+        trackingRecords,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error sending RFO:", error);
+      res.status(500).json({ success: false, error: "Failed to send RFO" });
+    }
+  });
+
+  // Send reminders for non-responsive suppliers
+  app.post("/api/rfo/:id/remind", async (req, res) => {
+    try {
+      const rfoId = parseInt(req.params.id);
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (!rfo) {
+        return res.status(404).json({ success: false, error: "RFO not found" });
+      }
+
+      const tracking = await storage.getRfoSupplierTracking(rfoId);
+      const waitingSuppliers = tracking.filter(t => 
+        t.responseStatus === "waiting" && !t.reminderSent
+      );
+
+      let remindersSent = 0;
+      for (const supplier of waitingSuppliers) {
+        await storage.updateRfoSupplierTracking(supplier.id, {
+          reminderSent: true,
+          reminderDate: new Date()
+        });
+        // TODO: Actually send reminder email
+        console.log(`[RFO ${rfo.rfoNumber}] Would send reminder to ${supplier.contactEmail}`);
+        remindersSent++;
+      }
+
+      res.json({ 
+        success: true, 
+        remindersSent,
+        totalWaiting: waitingSuppliers.length
+      });
+    } catch (error: any) {
+      console.error("Error sending reminders:", error);
+      res.status(500).json({ success: false, error: "Failed to send reminders" });
+    }
+  });
+
+  // Record supplier response to RFO
+  app.post("/api/rfo/:id/respond/:trackingId", async (req, res) => {
+    try {
+      const rfoId = parseInt(req.params.id);
+      const trackingId = parseInt(req.params.trackingId);
+      const { quoteId, status } = req.body;
+
+      const tracking = await storage.getRfoSupplierTrackingById(trackingId);
+      if (!tracking || tracking.rfoId !== rfoId) {
+        return res.status(404).json({ success: false, error: "Tracking record not found" });
+      }
+
+      await storage.markRfoSupplierResponded(trackingId, {
+        responseStatus: status || "responded",
+        responseQuoteId: quoteId || null
+      });
+
+      // Update RFO response count
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (rfo) {
+        const allTracking = await storage.getRfoSupplierTracking(rfoId);
+        const respondedCount = allTracking.filter(t => 
+          t.responseStatus === "responded" || t.responseStatus === "no_quote"
+        ).length;
+        
+        const newStatus = respondedCount >= allTracking.length ? "complete" : "partial_response";
+        await storage.updateRfoRequest(rfoId, {
+          responseCount: respondedCount,
+          status: newStatus
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error recording response:", error);
+      res.status(500).json({ success: false, error: "Failed to record response" });
+    }
+  });
+
+  // ============== SUPPLIER CONTACTS ENDPOINTS ==============
+
+  // Get contacts for a supplier
+  app.get("/api/suppliers/:id/contacts", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const contacts = await storage.getSupplierContacts(supplierId);
+      res.json({ success: true, contacts });
+    } catch (error: any) {
+      console.error("Error fetching supplier contacts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch contacts" });
+    }
+  });
+
+  // Add contact to supplier
+  app.post("/api/suppliers/:id/contacts", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(404).json({ success: false, error: "Supplier not found" });
+      }
+
+      const contactData = { ...req.body, supplierId };
+      const validatedData = insertSupplierContactSchema.parse(contactData);
+      const contact = await storage.createSupplierContact(validatedData);
+      
+      res.json({ success: true, contact });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating supplier contact:", error);
+        res.status(500).json({ success: false, error: "Failed to create contact" });
+      }
+    }
+  });
+
+  // Update supplier contact
+  app.patch("/api/suppliers/:id/contacts/:contactId", async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId);
+      const contact = await storage.updateSupplierContact(contactId, req.body);
+      if (!contact) {
+        return res.status(404).json({ success: false, error: "Contact not found" });
+      }
+      res.json({ success: true, contact });
+    } catch (error: any) {
+      console.error("Error updating supplier contact:", error);
+      res.status(500).json({ success: false, error: "Failed to update contact" });
+    }
+  });
+
+  // Get all active supplier contacts (for RFO recipient selection)
+  app.get("/api/supplier-contacts/active", async (req, res) => {
+    try {
+      const contacts = await storage.getAllActiveSupplierContacts();
+      res.json({ success: true, contacts });
+    } catch (error: any) {
+      console.error("Error fetching active contacts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch contacts" });
+    }
   });
 
   return httpServer;
