@@ -283,9 +283,11 @@ export class Storage implements IStorage {
   }
 
   async markQuoteAsWon(id: number, clientId: number): Promise<void> {
-    await db.update(supplierQuotes).set({ status: "active" }).where(eq(supplierQuotes.clientId, clientId));
-    await db.update(supplierQuotes).set({ status: "won" }).where(eq(supplierQuotes.id, id));
-    await db.update(clients).set({ selectedQuoteId: id }).where(eq(clients.id, clientId));
+    await db.transaction(async (tx) => {
+      await tx.update(supplierQuotes).set({ status: "lost" }).where(eq(supplierQuotes.clientId, clientId));
+      await tx.update(supplierQuotes).set({ status: "won" }).where(eq(supplierQuotes.id, id));
+      await tx.update(clients).set({ selectedQuoteId: id, status: "active" }).where(eq(clients.id, clientId));
+    });
   }
 
   // Bill Uploads

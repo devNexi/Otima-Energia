@@ -102,6 +102,12 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
     commissionPaidBy: "supplier",
   });
 
+  const [clientCalcData, setClientCalcData] = useState({
+    avgConsumptionKwh: client.avgConsumptionKwh || "10000",
+    demandaKw: "50",
+    currentPriceRmwh: client.currentPriceRmwh || "0",
+  });
+
   const { data: suppliersData } = useQuery({
     queryKey: ["/api/suppliers"],
     queryFn: async () => {
@@ -195,9 +201,9 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
   const handleCalculate = () => {
     calculateMutation.mutate({
       client_data: {
-        avgConsumptionKwh: avgConsumptionKwh || 10000,
-        currentPriceRmwh: currentPriceRmwh,
-        demandaKw: 50,
+        avgConsumptionKwh: parseFloat(clientCalcData.avgConsumptionKwh) || 10000,
+        currentPriceRmwh: parseFloat(clientCalcData.currentPriceRmwh) || 0,
+        demandaKw: parseFloat(clientCalcData.demandaKw) || 50,
       },
       quote_data: {
         price_type: priceType,
