@@ -10,6 +10,13 @@ import {
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import multer from "multer";
+import { processBillFile } from "./ocrService";
+
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -364,6 +371,115 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error selecting supplier quote:", error);
       res.status(500).json({ success: false, error: "Failed to select supplier quote" });
+    }
+  });
+
+  // ============== BILL UPLOAD WITH OCR ==============
+
+  // Upload bill and process with OCR
+  app.post("/api/clients/:id/upload-bill", upload.single("bill"), async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Nenhum arquivo enviado." 
+        });
+      }
+      
+      const validTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+      if (!validTypes.includes(file.mimetype)) {
+        return res.status(400).json({
+          success: false,
+          error: "Tipo de arquivo inválido. Use PDF, JPG ou PNG."
+        });
+      }
+      
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+      
+      console.log(`Processing bill upload for client ${clientId}: ${file.originalname}`);
+      
+      const ocrResult = await processBillFile(file.buffer, file.mimetype);
+      
+      const billUpload = await storage.createBillUpload({
+        clientId,
+        fileName: file.originalname,
+        fileType: file.mimetype.split("/")[1],
+        fileSize: file.size,
+        ocrRawText: ocrResult.rawText,
+        ocrConfidence: ocrResult.confidence.toFixed(2),
+        ocrStatus: ocrResult.confidence >= 0.7 ? "success" : "failed",
+        ucCode: ocrResult.data.uc || null,
+        consumoKwh: ocrResult.data.consumo ? ocrResult.data.consumo.replace(/\./g, "").replace(",", ".") : null,
+        demandaKw: ocrResult.data.demanda ? ocrResult.data.demanda.replace(/\./g, "").replace(",", ".") : null,
+        valorTotal: ocrResult.data.valor ? ocrResult.data.valor.replace(/\./g, "").replace(",", ".") : null,
+        distribuidora: ocrResult.data.distribuidora || null,
+        mesReferencia: ocrResult.data.mes || null,
+        extractionMethod: "tesseract",
+        reviewedBy: "system"
+      });
+      
+      res.json({
+        success: true,
+        upload_id: billUpload.id,
+        data: ocrResult.data,
+        confidence: ocrResult.confidence,
+        needs_manual: ocrResult.needsManual,
+        message: ocrResult.confidence >= 0.7 
+          ? "Dados extraídos com sucesso! Verifique abaixo." 
+          : "OCR de baixa confiança. Por favor, verifique os dados.",
+        raw_text_preview: ocrResult.rawText.substring(0, 200) + "..."
+      });
+      
+    } catch (error: any) {
+      console.error("Error processing bill upload:", error);
+      res.status(500).json({ success: false, error: "Erro ao processar arquivo." });
+    }
+  });
+
+  // Save manually corrected bill data
+  app.post("/api/bill-uploads/:id/save-manual", async (req, res) => {
+    try {
+      const billId = parseInt(req.params.id);
+      const { uc, consumo, demanda, valor, distribuidora, mes } = req.body;
+      
+      const billUpload = await storage.updateBillUpload(billId, {
+        ucCode: uc,
+        consumoKwh: consumo ? consumo.replace(/\./g, "").replace(",", ".") : null,
+        demandaKw: demanda ? demanda.replace(/\./g, "").replace(",", ".") : null,
+        valorTotal: valor ? valor.replace(/\./g, "").replace(",", ".") : null,
+        distribuidora: distribuidora,
+        mesReferencia: mes,
+        ocrStatus: "manual",
+        extractionMethod: "manual",
+        reviewedBy: "admin"
+      });
+      
+      if (!billUpload) {
+        return res.status(404).json({ success: false, error: "Bill upload not found" });
+      }
+      
+      res.json({ success: true, billUpload });
+    } catch (error: any) {
+      console.error("Error saving manual bill data:", error);
+      res.status(500).json({ success: false, error: "Erro ao salvar dados." });
+    }
+  });
+
+  // Get bill uploads for client
+  app.get("/api/clients/:id/bill-uploads", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const bills = await storage.getBillUploads(clientId);
+      res.json({ success: true, bills });
+    } catch (error: any) {
+      console.error("Error fetching bill uploads:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch bill uploads" });
     }
   });
 
