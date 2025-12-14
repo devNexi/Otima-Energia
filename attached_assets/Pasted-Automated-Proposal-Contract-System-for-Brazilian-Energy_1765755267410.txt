@@ -1,0 +1,2143 @@
+Automated Proposal & Contract System for Brazilian Energy Deals
+The Problem:
+After Renan gets quotes from suppliers (Task 2) and selects the best option, he needs to:
+
+Create a professional proposal to show the client
+
+Generate a formal contract for the client to sign
+
+Calculate exact savings with transparent breakdown
+
+Include all Brazilian regulatory requirements
+
+Make it look like a professional energy consultancy (not a one-person WhatsApp broker)
+
+Current Pain Points:
+Renan spends 30-45 minutes creating proposals in Word/Google Docs
+
+Inconsistent formatting between clients
+
+Manual calculations can have errors
+
+No standardized contract templates for Brazil
+
+Hard to track which proposals were sent/rejected
+
+Goal: Build a "Generate Proposta" system that:
+Auto-generates beautiful, branded proposals in < 60 seconds
+
+Includes Brazilian energy-specific terms and calculations
+
+Creates ready-to-sign contracts with client/supplier details
+
+Tracks proposal status (sent, viewed, accepted, rejected)
+
+Stores all documents for compliance and audit
+
+🏗️ ARCHITECTURE OVERVIEW
+Document Flow:
+text
+Selected Quote (Task 2)
+    → Proposal Generator (Task 4)
+    → Creates: 
+        1. PDF Proposal (Proposta Comercial)
+        2. PDF Contract (Minuta de Contrato)
+        3. Savings Summary (Resumo de Economia)
+    → Sends to client (email/WhatsApp)
+    → Tracks engagement
+    → Updates deal status
+Key Brazilian Requirements:
+Portuguese language with proper energy terminology
+
+Regulatory mentions: ANEEL, CCEE, Lei 15.269/2025
+
+Standard clauses: Modulação, Sazonalidade, Flexibilidade
+
+Legal compliance: LGPD, consumer protection laws
+
+Professional branding: Ótima Energia logo, colors, contact info
+
+🗂️ DATABASE SCHEMA
+1. Create proposals table:
+sql
+CREATE TABLE proposals (
+  id SERIAL PRIMARY KEY,
+  
+  -- Relationships
+  client_id INTEGER REFERENCES clients(id) NOT NULL,
+  quote_id INTEGER REFERENCES supplier_quotes(id) NOT NULL,
+  rfo_id INTEGER REFERENCES rfo_requests(id),
+  
+  -- Proposal Info
+  proposal_number VARCHAR(50) UNIQUE NOT NULL, -- "PROP-2024-001"
+  proposal_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  valid_until DATE NOT NULL, -- Usually 30 days
+  
+  -- Document Paths
+  proposal_pdf_path VARCHAR(500), -- "/proposals/PROP-2024-001-proposta.pdf"
+  contract_pdf_path VARCHAR(500), -- "/proposals/PROP-2024-001-contrato.pdf"
+  summary_pdf_path VARCHAR(500), -- "/proposals/PROP-2024-001-resumo.pdf"
+  
+  -- Financial Details
+  current_annual_cost DECIMAL(12,2), -- Client's current cost (R$/ano)
+  proposed_annual_cost DECIMAL(12,2), -- New cost with selected quote
+  annual_savings DECIMAL(12,2), -- Calculated savings
+  savings_percentage DECIMAL(5,2), -- % savings
+  
+  -- Commission Details
+  our_commission_annual DECIMAL(10,2), -- Our yearly commission
+  commission_structure VARCHAR(100), -- "R$/MWh", "% savings", etc.
+  payment_terms VARCHAR(200), -- "Pagamento mensal", "À vista", etc.
+  
+  -- Status Tracking
+  status VARCHAR(20) DEFAULT 'draft', -- 'draft', 'sent', 'viewed', 'negotiating', 'accepted', 'rejected', 'expired'
+  sent_date TIMESTAMP,
+  viewed_date TIMESTAMP,
+  viewed_count INTEGER DEFAULT 0,
+  last_viewed TIMESTAMP,
+  
+  -- Client Response
+  response_date TIMESTAMP,
+  response_notes TEXT,
+  rejection_reason TEXT,
+  
+  -- Digital Signature (Future)
+  signature_token VARCHAR(100),
+  signed_date TIMESTAMP,
+  signed_pdf_path VARCHAR(500),
+  
+  -- Metadata
+  created_by VARCHAR(100) DEFAULT 'system',
+  ip_address VARCHAR(45), -- For tracking views
+  user_agent TEXT,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  -- Constraints
+  CONSTRAINT valid_dates CHECK (valid_until > proposal_date),
+  CONSTRAINT positive_savings CHECK (annual_savings >= 0)
+);
+
+-- Indexes
+CREATE INDEX idx_proposals_client_id ON proposals(client_id);
+CREATE INDEX idx_proposals_quote_id ON proposals(quote_id);
+CREATE INDEX idx_proposals_status ON proposals(status);
+CREATE INDEX idx_proposals_proposal_number ON proposals(proposal_number);
+CREATE INDEX idx_proposals_valid_until ON proposals(valid_until);
+2. Create proposal_templates table:
+sql
+CREATE TABLE proposal_templates (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL, -- "Proposta Padrão", "Contrato Básico"
+  template_type VARCHAR(30) NOT NULL, -- 'proposal', 'contract', 'summary'
+  language VARCHAR(10) DEFAULT 'pt-BR',
+  
+  -- Template Content (HTML with variables)
+  html_template TEXT NOT NULL,
+  css_styles TEXT,
+  variables JSONB NOT NULL, -- Available variables
+  
+  -- Document Settings
+  paper_size VARCHAR(20) DEFAULT 'A4',
+  orientation VARCHAR(10) DEFAULT 'portrait',
+  margin_top INTEGER DEFAULT 20, -- mm
+  margin_bottom INTEGER DEFAULT 20,
+  margin_left INTEGER DEFAULT 20,
+  margin_right INTEGER DEFAULT 20,
+  
+  -- Branding
+  include_header BOOLEAN DEFAULT TRUE,
+  include_footer BOOLEAN DEFAULT TRUE,
+  header_html TEXT,
+  footer_html TEXT,
+  
+  -- Legal Sections (Brazil specific)
+  sections JSONB, -- Pre-defined sections for energy contracts
+  
+  -- Status
+  is_default BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert default Brazilian energy proposal template
+INSERT INTO proposal_templates (name, template_type, html_template, variables, is_default) VALUES
+('Proposta Comercial - Energia', 'proposal',
+'<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposta Comercial - {client_name}</title>
+    <style>
+        /* CSS will be added separately */
+    </style>
+</head>
+<body>
+    {header}
+    
+    <div class="page">
+        <div class="header">
+            <div class="logo">
+                <img src="{logo_url}" alt="Ótima Energia" height="60">
+            </div>
+            <div class="proposal-info">
+                <h1>PROPOSTA COMERCIAL</h1>
+                <div class="proposal-number">{proposal_number}</div>
+                <div class="proposal-date">Data: {proposal_date}</div>
+                <div class="valid-until">Válida até: {valid_until}</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Client Information -->
+            <section class="section">
+                <h2>1. INFORMAÇÕES DO CLIENTE</h2>
+                <table class="client-info">
+                    <tr>
+                        <td><strong>Cliente:</strong></td>
+                        <td>{client_name}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CNPJ:</strong></td>
+                        <td>{client_cnpj}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UC:</strong></td>
+                        <td>{uc_code}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumo Anual:</strong></td>
+                        <td>{consumption_kwh} MWh/ano</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Demanda:</strong></td>
+                        <td>{demanda_kw} kW</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Distribuidora:</strong></td>
+                        <td>{distribuidora}</td>
+                    </tr>
+                </table>
+            </section>
+            
+            <!-- Current Situation -->
+            <section class="section">
+                <h2>2. SITUAÇÃO ATUAL</h2>
+                <div class="current-situation">
+                    <div class="metric">
+                        <div class="metric-label">Fornecedor Atual:</div>
+                        <div class="metric-value">{current_supplier}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Custo Anual Atual:</div>
+                        <div class="metric-value">R$ {current_annual_cost}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Preço Médio Atual:</div>
+                        <div class="metric-value">R$ {current_price_rmwh}/MWh</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Our Proposal -->
+            <section class="section highlight">
+                <h2>3. NOSSA PROPOSTA</h2>
+                <div class="proposal-details">
+                    <div class="supplier-card">
+                        <h3>{supplier_name}</h3>
+                        <div class="supplier-info">
+                            <div class="info-row">
+                                <span>Preço:</span>
+                                <strong>{price_structure}</strong>
+                            </div>
+                            <div class="info-row">
+                                <span>Duração:</span>
+                                <span>{contract_duration} meses</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Tipo de Contrato:</span>
+                                <span>{contract_type}</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Início:</span>
+                                <span>{contract_start}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="savings-summary">
+                        <h3>RESUMO DE ECONOMIA</h3>
+                        <div class="savings-grid">
+                            <div class="savings-item current">
+                                <div class="savings-label">Custo Atual</div>
+                                <div class="savings-value">R$ {current_annual_cost}</div>
+                            </div>
+                            <div class="savings-arrow">→</div>
+                            <div class="savings-item proposed">
+                                <div class="savings-label">Custo Proposto</div>
+                                <div class="savings-value">R$ {proposed_annual_cost}</div>
+                            </div>
+                            <div class="savings-item savings">
+                                <div class="savings-label">ECONOMIA ANUAL</div>
+                                <div class="savings-value highlight">R$ {annual_savings} ({savings_percentage}%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Commission Transparency -->
+            <section class="section">
+                <h2>4. TRANSPARÊNCIA DE COMISSÃO</h2>
+                <div class="commission-disclosure">
+                    <p>A Ótima Energia recebe uma comissão do fornecedor pelo serviço de consultoria e intermediação.</p>
+                    <div class="commission-details">
+                        <div class="commission-item">
+                            <span>Comissão Ótima Energia:</span>
+                            <strong>R$ {our_commission_annual}/ano</strong>
+                        </div>
+                        <div class="commission-item">
+                            <span>Estrutura:</span>
+                            <span>{commission_structure}</span>
+                        </div>
+                        <div class="commission-item">
+                            <span>Pago por:</span>
+                            <span>{commission_paid_by}</span>
+                        </div>
+                    </div>
+                    <p class="disclaimer"><em>Esta comissão não afeta o preço pago pelo cliente. É um custo do fornecedor pela aquisição do cliente.</em></p>
+                </div>
+            </section>
+            
+            <!-- Next Steps -->
+            <section class="section">
+                <h2>5. PRÓXIMOS PASSOS</h2>
+                <ol class="next-steps">
+                    <li><strong>Aceitar proposta:</strong> Assinar o contrato anexo</li>
+                    <li><strong>Documentação:</strong> Enviar documentos necessários</li>
+                    <li><strong>Migração:</strong> Processo de migração com a distribuidora</li>
+                    <li><strong>Início do fornecimento:</strong> {contract_start}</li>
+                </ol>
+            </section>
+        </div>
+        
+        <div class="footer">
+            <div class="contact-info">
+                <h4>Ótima Energia</h4>
+                <p>Consultoria em Mercado Livre de Energia</p>
+                <p>📧 renan@otimaenergia.com.br | 📱 +55 (11) 99999-9999</p>
+                <p>CNPJ: {otima_cnpj}</p>
+            </div>
+            <div class="legal">
+                <p><small>Proposta válida até {valid_until}. Preços sujeitos à alteração conforme variação do PLD e condições de mercado. Sujeito à aprovação de crédito pelo fornecedor.</small></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>',
+'["client_name", "client_cnpj", "uc_code", "consumption_kwh", "demanda_kw", "distribuidora", "current_supplier", "current_annual_cost", "current_price_rmwh", "supplier_name", "price_structure", "contract_duration", "contract_type", "contract_start", "proposed_annual_cost", "annual_savings", "savings_percentage", "our_commission_annual", "commission_structure", "commission_paid_by", "proposal_number", "proposal_date", "valid_until", "logo_url", "otima_cnpj"]',
+true);
+3. Create proposal_views table (for tracking):
+sql
+CREATE TABLE proposal_views (
+  id SERIAL PRIMARY KEY,
+  proposal_id INTEGER REFERENCES proposals(id) NOT NULL,
+  
+  -- View Information
+  view_date TIMESTAMP DEFAULT NOW(),
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  country VARCHAR(100),
+  city VARCHAR(100),
+  
+  -- Engagement
+  time_spent_seconds INTEGER,
+  pages_viewed INTEGER DEFAULT 1,
+  downloaded BOOLEAN DEFAULT FALSE,
+  download_date TIMESTAMP,
+  
+  -- Client Info (if known)
+  client_email VARCHAR(255),
+  client_name VARCHAR(255),
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for analytics
+CREATE INDEX idx_proposal_views_proposal_id ON proposal_views(proposal_id);
+CREATE INDEX idx_proposal_views_view_date ON proposal_views(view_date);
+4. Create contract_templates table:
+sql
+CREATE TABLE contract_templates (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL, -- "Contrato Fornecimento Energia"
+  template_type VARCHAR(50) NOT NULL, -- 'supply_contract', 'brokerage_agreement', 'service_contract'
+  
+  -- Legal Content
+  clauses JSONB NOT NULL, -- Array of contract clauses
+  variables JSONB NOT NULL, -- Placeholder variables
+  
+  -- Brazilian Legal Requirements
+  includes_aneel_clauses BOOLEAN DEFAULT TRUE,
+  includes_lgpd_clauses BOOLEAN DEFAULT TRUE,
+  includes_consumer_clauses BOOLEAN DEFAULT TRUE,
+  
+  -- Supplier Specific
+  supplier_id INTEGER REFERENCES suppliers(id), -- NULL = generic template
+  is_generic BOOLEAN DEFAULT TRUE,
+  
+  -- Status
+  is_active BOOLEAN DEFAULT TRUE,
+  last_reviewed DATE,
+  reviewed_by VARCHAR(100),
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert default Brazilian energy contract clauses
+INSERT INTO contract_templates (name, template_type, clauses, variables, includes_aneel_clauses) VALUES
+('Contrato de Fornecimento de Energia Elétrica', 'supply_contract',
+'[
+  {
+    "title": "DO OBJETO",
+    "content": "O presente contrato tem por objeto o fornecimento de energia elétrica no Ambiente de Contratação Livre (ACL), nos termos da Lei nº 15.269/2025 e regulamentação da ANEEL."
+  },
+  {
+    "title": "DA VIGÊNCIA",
+    "content": "Este contrato vigorará pelo prazo de {contract_duration} meses, iniciando-se em {contract_start}, podendo ser renovado mediante acordo das partes."
+  },
+  {
+    "title": "DO PREÇO",
+    "content": "O preço da energia será calculado com base na estrutura {price_structure}, conforme detalhado no Anexo I deste contrato."
+  },
+  {
+    "title": "DAS OBRIGAÇÕES DO FORNECEDOR",
+    "content": "O fornecedor se obriga a: a) Fornecer energia conforme contrato; b) Emitir faturas mensais; c) Manter compliance ANEEL/CCEE."
+  },
+  {
+    "title": "DAS OBRIGAÇÕES DO CLIENTE",
+    "content": "O cliente se obriga a: a) Pagar faturas em até {payment_days} dias; b) Informar alterações de consumo; c) Fornecer dados para migração."
+  },
+  {
+    "title": "DA MIGRAÇÃO",
+    "content": "O processo de migração será realizado conforme regras da distribuidora {distribuidora} e prazos da CCEE."
+  },
+  {
+    "title": "DA RESCISÃO",
+    "content": "Qualquer parte poderá rescindir este contrato mediante aviso prévio de {termination_notice} dias, sujeito às multas contratuais."
+  },
+  {
+    "title": "DO FORO",
+    "content": "Fica eleito o foro da comarca de {client_city} para dirimir quaisquer dúvidas oriundas deste contrato."
+  }
+]',
+'["client_name", "client_cnpj", "supplier_name", "supplier_cnpj", "contract_duration", "contract_start", "price_structure", "payment_days", "distribuidora", "termination_notice", "client_city"]',
+true);
+🖥️ FRONTEND IMPLEMENTATION
+Component 1: ProposalGenerator.jsx - Main Component
+Location: Client Details Page, new button "📄 Gerar Proposta" next to selected quote
+
+jsx
+import React, { useState, useEffect } from 'react';
+import './ProposalGenerator.css';
+
+const ProposalGenerator = ({ clientId, clientData, selectedQuote }) => {
+  const [proposalData, setProposalData] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [documents, setDocuments] = useState({
+    proposal: null,
+    contract: null,
+    summary: null
+  });
+
+  // Initialize with selected quote data
+  useEffect(() => {
+    if (selectedQuote && clientData) {
+      const data = prepareProposalData(clientData, selectedQuote);
+      setProposalData(data);
+    }
+  }, [selectedQuote, clientData]);
+
+  const prepareProposalData = (client, quote) => {
+    // Calculate savings
+    const currentAnnualCost = client.avg_consumption_kwh * (client.current_price_rmwh / 1000);
+    const proposedAnnualCost = quote.total_client_cost_annual;
+    const annualSavings = currentAnnualCost - proposedAnnualCost;
+    const savingsPercentage = currentAnnualCost > 0 ? (annualSavings / currentAnnualCost) * 100 : 0;
+
+    return {
+      // Client Info
+      client_name: client.company_name,
+      client_cnpj: client.cnpj,
+      uc_code: client.last_bill_upload?.uc_code,
+      consumption_kwh: client.avg_consumption_kwh?.toLocaleString('pt-BR'),
+      demanda_kw: client.avg_demanda_kw?.toLocaleString('pt-BR'),
+      distribuidora: client.last_bill_upload?.distribuidora,
+      client_city: client.city || 'São Paulo',
+      
+      // Current Situation
+      current_supplier: client.current_supplier || 'Fornecedor atual',
+      current_annual_cost: currentAnnualCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      current_price_rmwh: client.current_price_rmwh?.toLocaleString('pt-BR'),
+      
+      // Proposal Details
+      supplier_name: quote.supplier_name,
+      price_structure: quote.price_rmwh 
+        ? `R$ ${quote.price_rmwh}/MWh (Preço Fixo)`
+        : `PLD + R$ ${quote.pld_spread_rmwh}/MWh`,
+      contract_duration: quote.contract_duration,
+      contract_type: quote.contract_type,
+      contract_start: new Date(quote.contract_start || new Date().setMonth(new Date().getMonth() + 1)).toLocaleDateString('pt-BR'),
+      
+      // Financials
+      proposed_annual_cost: proposedAnnualCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      annual_savings: annualSavings.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      savings_percentage: savingsPercentage.toFixed(1),
+      
+      // Commission
+      our_commission_annual: quote.our_commission_annual?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+      commission_structure: quote.commission_structure || 'R$/MWh',
+      commission_paid_by: quote.commission_paid_by === 'supplier' ? 'Fornecedor' : 'Cliente',
+      
+      // Document Info
+      proposal_number: `PROP-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+      proposal_date: new Date().toLocaleDateString('pt-BR'),
+      valid_until: new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString('pt-BR'),
+      
+      // Company Info
+      logo_url: '/logo-otima.png',
+      otima_cnpj: '00.000.000/0001-00' // Will be from env/config
+    };
+  };
+
+  const generateProposal = async () => {
+    if (!proposalData) return;
+    
+    setGenerating(true);
+    
+    try {
+      // Generate PDFs
+      const response = await fetch('/api/proposals/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          quoteId: selectedQuote.id,
+          proposalData
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setDocuments({
+          proposal: result.documents.proposal,
+          contract: result.documents.contract,
+          summary: result.documents.summary
+        });
+        
+        // Show preview
+        setPreviewUrl(result.documents.proposal.preview_url);
+        
+        // Create proposal record
+        await createProposalRecord(result);
+        
+        alert('Proposta gerada com sucesso!');
+      }
+    } catch (error) {
+      console.error('Generation error:', error);
+      alert('Erro ao gerar proposta.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const createProposalRecord = async (result) => {
+    await fetch('/api/proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: clientId,
+        quote_id: selectedQuote.id,
+        proposal_number: proposalData.proposal_number,
+        proposal_data: proposalData,
+        document_paths: {
+          proposal: result.documents.proposal.path,
+          contract: result.documents.contract.path,
+          summary: result.documents.summary.path
+        }
+      })
+    });
+  };
+
+  const sendToClient = async (method) => {
+    // method: 'email', 'whatsapp', 'download'
+    
+    if (method === 'email') {
+      await sendProposalEmail();
+    } else if (method === 'whatsapp') {
+      await sendProposalWhatsApp();
+    } else {
+      // Download all PDFs as ZIP
+      window.open(`/api/proposals/${proposalData.proposal_number}/download`, '_blank');
+    }
+  };
+
+  const sendProposalEmail = async () => {
+    const response = await fetch('/api/proposals/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId,
+        proposalNumber: proposalData.proposal_number,
+        documents,
+        clientEmail: clientData.email
+      })
+    });
+    
+    if (response.ok) {
+      alert('Proposta enviada por email!');
+    }
+  };
+
+  const sendProposalWhatsApp = () => {
+    const message = `Olá ${clientData.contact_person}, tudo bem?
+
+Envio a proposta comercial da Ótima Energia para análise:
+
+📋 *Proposta:* ${proposalData.proposal_number}
+💰 *Economia Anual:* R$ ${proposalData.annual_savings} (${proposalData.savings_percentage}%)
+📅 *Válida até:* ${proposalData.valid_until}
+
+Documentos para download:
+🔗 ${documents.proposal?.download_url}
+🔗 ${documents.contract?.download_url}
+
+Podemos agendar uma reunião para discutir?
+
+Atenciosamente,
+Renan - Ótima Energia`;
+    
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${clientData.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  if (!selectedQuote) {
+    return (
+      <div className="no-quote-selected">
+        <p>Selecione uma cotação primeiro para gerar a proposta.</p>
+        <p>Vá para a aba "Cotações" e marque uma como selecionada.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="proposal-generator">
+      <h3>📄 Gerar Proposta Comercial</h3>
+      
+      {/* QUOTE SUMMARY */}
+      <div className="quote-summary">
+        <div className="summary-header">
+          <h4>Cotacao Selecionada</h4>
+          <span className="supplier-badge">{selectedQuote.supplier_name}</span>
+        </div>
+        
+        <div className="summary-grid">
+          <div className="summary-item">
+            <label>Preço</label>
+            <span className="value">
+              {selectedQuote.price_rmwh 
+                ? `R$ ${selectedQuote.price_rmwh}/MWh`
+                : `PLD + R$ ${selectedQuote.pld_spread_rmwh}/MWh`
+              }
+            </span>
+          </div>
+          
+          <div className="summary-item">
+            <label>Duração</label>
+            <span className="value">{selectedQuote.contract_duration} meses</span>
+          </div>
+          
+          <div className="summary-item">
+            <label>Economia Anual</label>
+            <span className="value savings">
+              R$ {proposalData?.annual_savings} ({proposalData?.savings_percentage}%)
+            </span>
+          </div>
+          
+          <div className="summary-item">
+            <label>Nossa Comissão</label>
+            <span className="value commission">
+              R$ {selectedQuote.our_commission_annual?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ano
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* GENERATE BUTTON */}
+      <div className="generate-section">
+        <button 
+          onClick={generateProposal}
+          disabled={generating || !proposalData}
+          className="btn-generate"
+        >
+          {generating ? '🔄 Gerando Documentos...' : '🧱 Gerar Proposta Completa'}
+        </button>
+        <p className="generate-note">
+          Serão gerados: Proposta Comercial + Contrato + Resumo Executivo
+        </p>
+      </div>
+
+      {/* DOCUMENTS PREVIEW */}
+      {documents.proposal && (
+        <div className="documents-section">
+          <h4>📑 Documentos Gerados</h4>
+          
+          <div className="documents-grid">
+            {/* PROPOSAL CARD */}
+            <div className="document-card">
+              <div className="document-icon">📋</div>
+              <div className="document-info">
+                <h5>Proposta Comercial</h5>
+                <p className="document-number">{proposalData.proposal_number}</p>
+                <p className="document-details">
+                  {proposalData.client_name} • {proposalData.supplier_name}
+                </p>
+              </div>
+              <div className="document-actions">
+                <button 
+                  onClick={() => window.open(documents.proposal.preview_url, '_blank')}
+                  className="btn-preview"
+                >
+                  👁️ Visualizar
+                </button>
+                <button 
+                  onClick={() => window.open(documents.proposal.download_url, '_blank')}
+                  className="btn-download"
+                >
+                  ⬇️ Download
+                </button>
+              </div>
+            </div>
+
+            {/* CONTRACT CARD */}
+            <div className="document-card">
+              <div className="document-icon">📝</div>
+              <div className="document-info">
+                <h5>Minuta de Contrato</h5>
+                <p className="document-details">
+                  {proposalData.contract_duration} meses • Início: {proposalData.contract_start}
+                </p>
+                <p className="document-legal">
+                  <small>Inclui cláusulas ANEEL e LGPD</small>
+                </p>
+              </div>
+              <div className="document-actions">
+                <button 
+                  onClick={() => window.open(documents.contract.preview_url, '_blank')}
+                  className="btn-preview"
+                >
+                  👁️ Visualizar
+                </button>
+                <button 
+                  onClick={() => window.open(documents.contract.download_url, '_blank')}
+                  className="btn-download"
+                >
+                  ⬇️ Download
+                </button>
+              </div>
+            </div>
+
+            {/* SUMMARY CARD */}
+            <div className="document-card">
+              <div className="document-icon">📊</div>
+              <div className="document-info">
+                <h5>Resumo Executivo</h5>
+                <p className="document-savings">
+                  Economia: R$ {proposalData.annual_savings}/ano
+                </p>
+                <p className="document-percentage">
+                  {proposalData.savings_percentage}% de redução
+                </p>
+              </div>
+              <div className="document-actions">
+                <button 
+                  onClick={() => window.open(documents.summary.preview_url, '_blank')}
+                  className="btn-preview"
+                >
+                  👁️ Visualizar
+                </button>
+                <button 
+                  onClick={() => window.open(documents.summary.download_url, '_blank')}
+                  className="btn-download"
+                >
+                  ⬇️ Download
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* SEND TO CLIENT */}
+          <div className="send-section">
+            <h5>Enviar para o Cliente</h5>
+            <div className="send-options">
+              <button 
+                onClick={() => sendToClient('email')}
+                className="btn-send-email"
+              >
+                📧 Enviar por Email
+              </button>
+              
+              <button 
+                onClick={() => sendToClient('whatsapp')}
+                className="btn-send-whatsapp"
+              >
+                📱 Enviar por WhatsApp
+              </button>
+              
+              <button 
+                onClick={() => sendToClient('download')}
+                className="btn-send-download"
+              >
+                📥 Download ZIP
+              </button>
+            </div>
+            
+            {/* TRACKING LINK */}
+            <div className="tracking-link">
+              <label>Link de Acompanhamento:</label>
+              <div className="link-box">
+                <code>{documents.proposal.tracking_url}</code>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(documents.proposal.tracking_url)}
+                  className="btn-copy-link"
+                >
+                  📋 Copiar
+                </button>
+              </div>
+              <small>O cliente pode visualizar e baixar os documentos por este link</small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW MODAL */}
+      {previewUrl && (
+        <div className="preview-modal">
+          <div className="preview-header">
+            <h4>Pré-visualização: {proposalData.proposal_number}</h4>
+            <button onClick={() => setPreviewUrl(null)} className="close-btn">×</button>
+          </div>
+          <div className="preview-content">
+            <iframe 
+              src={previewUrl}
+              title="Proposal Preview"
+              className="pdf-preview"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+Component 2: ProposalTracker.jsx - Tracking Dashboard
+Location: New page /admin/proposals - Track all sent proposals
+
+jsx
+const ProposalTracker = () => {
+  const [proposals, setProposals] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [selectedProposal, setSelectedProposal] = useState(null);
+
+  useEffect(() => {
+    fetchProposals();
+  }, [filter]);
+
+  const fetchProposals = async () => {
+    const response = await fetch(`/api/proposals?filter=${filter}`);
+    const data = await response.json();
+    setProposals(data);
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'draft': return '#6a737d';
+      case 'sent': return '#0366d6';
+      case 'viewed': return '#6f42c1';
+      case 'negotiating': return '#dbab09';
+      case 'accepted': return '#2ea44f';
+      case 'rejected': return '#cf222e';
+      case 'expired': return '#6a737d';
+      default: return '#6a737d';
+    }
+  };
+
+  const getDaysRemaining = (validUntil) => {
+    const today = new Date();
+    const validDate = new Date(validUntil);
+    const diffTime = validDate - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const sendReminder = async (proposalId) => {
+    await fetch(`/api/proposals/${proposalId}/reminder`, {
+      method: 'POST'
+    });
+    alert('Lembrete enviado!');
+    fetchProposals();
+  };
+
+  const updateStatus = async (proposalId, newStatus) => {
+    await fetch(`/api/proposals/${proposalId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    fetchProposals();
+  };
+
+  return (
+    <div className="proposal-tracker">
+      {/* HEADER */}
+      <div className="tracker-header">
+        <h3>📊 Acompanhamento de Propostas</h3>
+        <div className="tracker-stats">
+          <div className="stat-card">
+            <div className="stat-number">{proposals.length}</div>
+            <div className="stat-label">Propostas</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">
+              {proposals.filter(p => p.status === 'accepted').length}
+            </div>
+            <div className="stat-label">Aceitas</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">
+              R$ {proposals.reduce((sum, p) => sum + (p.our_commission_annual || 0), 0).toLocaleString('pt-BR')}
+            </div>
+            <div className="stat-label">Comissão Potencial</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">
+              {proposals.filter(p => p.viewed_count > 0).length}
+            </div>
+            <div className="stat-label">Visualizadas</div>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTERS */}
+      <div className="filter-bar">
+        <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
+          Todas
+        </button>
+        <button className={filter === 'sent' ? 'active' : ''} onClick={() => setFilter('sent')}>
+          Enviadas
+        </button>
+        <button className={filter === 'viewed' ? 'active' : ''} onClick={() => setFilter('viewed')}>
+          Visualizadas
+        </button>
+        <button className={filter === 'negotiating' ? 'active' : ''} onClick={() => setFilter('negotiating')}>
+          Em Negociação
+        </button>
+        <button className={filter === 'accepted' ? 'active' : ''} onClick={() => setFilter('accepted')}>
+          Aceitas
+        </button>
+        <button className={filter === 'expired' ? 'active' : ''} onClick={() => setFilter('expired')}>
+          Expiradas
+        </button>
+      </div>
+
+      {/* PROPOSALS TABLE */}
+      <div className="proposals-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Proposta</th>
+              <th>Cliente</th>
+              <th>Fornecedor</th>
+              <th>Economia</th>
+              <th>Comissão</th>
+              <th>Status</th>
+              <th>Válida até</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {proposals.map(proposal => {
+              const daysRemaining = getDaysRemaining(proposal.valid_until);
+              
+              return (
+                <tr key={proposal.id}>
+                  <td>
+                    <div className="proposal-number">
+                      <strong>{proposal.proposal_number}</strong>
+                      <div className="proposal-date">
+                        {new Date(proposal.proposal_date).toLocaleDateString('pt-BR')}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div className="client-cell">
+                      <div className="client-name">{proposal.client_name}</div>
+                      <div className="client-views">
+                        {proposal.viewed_count > 0 ? `👁️ ${proposal.viewed_count} visualizações` : 'Não visualizada'}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div className="supplier-cell">
+                      <span className="supplier-badge">{proposal.supplier_name}</span>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div className="savings-cell">
+                      <div className="savings-amount">R$ {proposal.annual_savings}</div>
+                      <div className="savings-percent">{proposal.savings_percentage}%</div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div className="commission-cell">
+                      <div className="commission-amount">
+                        R$ {proposal.our_commission_annual}
+                      </div>
+                      <div className="commission-period">/ano</div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div 
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusColor(proposal.status) }}
+                    >
+                      {proposal.status.toUpperCase()}
+                    </div>
+                    {proposal.status === 'sent' && proposal.sent_date && (
+                      <div className="sent-time">
+                        {new Date(proposal.sent_date).toLocaleDateString('pt-BR')}
+                      </div>
+                    )}
+                  </td>
+                  
+                  <td>
+                    <div className={`validity-cell ${daysRemaining <= 3 ? 'warning' : ''}`}>
+                      <div className="validity-date">
+                        {new Date(proposal.valid_until).toLocaleDateString('pt-BR')}
+                      </div>
+                      <div className="validity-days">
+                        {daysRemaining > 0 ? `${daysRemaining} dias` : 'Expirada'}
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        onClick={() => setSelectedProposal(proposal)}
+                        className="btn-view"
+                      >
+                        👁️
+                      </button>
+                      
+                      {proposal.status === 'sent' && daysRemaining > 0 && (
+                        <button 
+                          onClick={() => sendReminder(proposal.id)}
+                          className="btn-reminder"
+                        >
+                          ⏰
+                        </button>
+                      )}
+                      
+                      <select 
+                        value={proposal.status}
+                        onChange={(e) => updateStatus(proposal.id, e.target.value)}
+                        className="status-select"
+                      >
+                        <option value="sent">Enviada</option>
+                        <option value="viewed">Visualizada</option>
+                        <option value="negotiating">Negociação</option>
+                        <option value="accepted">Aceita</option>
+                        <option value="rejected">Rejeitada</option>
+                      </select>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* DETAIL MODAL */}
+      {selectedProposal && (
+        <ProposalDetailModal
+          proposal={selectedProposal}
+          onClose={() => setSelectedProposal(null)}
+          onStatusUpdate={(newStatus) => {
+            updateStatus(selectedProposal.id, newStatus);
+            setSelectedProposal(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+🎨 CSS STYLING: ProposalGenerator.css
+css
+/* Main Container */
+.proposal-generator {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Quote Summary */
+.quote-summary {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.summary-header h4 {
+  margin: 0;
+  color: #24292e;
+  font-size: 16px;
+}
+
+.supplier-badge {
+  background: #0366d6;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-item label {
+  font-size: 12px;
+  color: #6a737d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.summary-item .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.summary-item .value.savings {
+  color: #0a6c38;
+}
+
+.summary-item .value.commission {
+  color: #7d5c00;
+}
+
+/* Generate Button */
+.generate-section {
+  text-align: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #f6fff9 0%, #ffffff 100%);
+  border: 2px dashed #2ea44f;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.btn-generate {
+  background: #2ea44f;
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-generate:hover:not(:disabled) {
+  background: #2c974b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 151, 75, 0.2);
+}
+
+.btn-generate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.generate-note {
+  margin-top: 12px;
+  color: #6a737d;
+  font-size: 14px;
+}
+
+/* Documents Grid */
+.documents-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #eaecef;
+}
+
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.document-card {
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  background: white;
+  transition: all 0.2s;
+}
+
+.document-card:hover {
+  border-color: #0366d6;
+  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.1);
+}
+
+.document-icon {
+  font-size: 32px;
+  margin-right: 16px;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-info h5 {
+  margin: 0 0 8px 0;
+  color: #24292e;
+  font-size: 16px;
+}
+
+.document-number {
+  font-size: 12px;
+  color: #6a737d;
+  margin: 4px 0;
+}
+
+.document-details {
+  font-size: 13px;
+  color: #586069;
+  margin: 4px 0;
+}
+
+.document-legal {
+  font-size: 11px;
+  color: #6a737d;
+  margin: 4px 0;
+}
+
+.document-savings {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0a6c38;
+  margin: 4px 0;
+}
+
+.document-percentage {
+  font-size: 12px;
+  color: #6a737d;
+  margin: 4px 0;
+}
+
+.document-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-preview, .btn-download {
+  padding: 6px 12px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: #24292e;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-preview:hover {
+  background: #eaecef;
+}
+
+.btn-download {
+  background: #0366d6;
+  color: white;
+  border-color: #0366d6;
+}
+
+.btn-download:hover {
+  background: #005cc5;
+}
+
+/* Send Options */
+.send-section {
+  background: #f6f8fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 24px;
+}
+
+.send-section h5 {
+  margin: 0 0 16px 0;
+  color: #24292e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.send-options {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-send-email, .btn-send-whatsapp, .btn-send-download {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.btn-send-email {
+  background: #EA4335;
+  color: white;
+}
+
+.btn-send-email:hover {
+  background: #d62516;
+}
+
+.btn-send-whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.btn-send-whatsapp:hover {
+  background: #1da851;
+}
+
+.btn-send-download {
+  background: #6f42c1;
+  color: white;
+}
+
+.btn-send-download:hover {
+  background: #5a32a3;
+}
+
+/* Tracking Link */
+.tracking-link {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.tracking-link label {
+  display: block;
+  font-size: 12px;
+  color: #6a737d;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.link-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.link-box code {
+  flex: 1;
+  background: #f6f8fa;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e1e4e8;
+  font-size: 12px;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.btn-copy-link {
+  background: #6a737d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-copy-link:hover {
+  background: #586069;
+}
+
+.tracking-link small {
+  font-size: 11px;
+  color: #6a737d;
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  background: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.preview-header h4 {
+  margin: 0;
+  color: #24292e;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6a737d;
+}
+
+.close-btn:hover {
+  color: #24292e;
+}
+
+.preview-content {
+  flex: 1;
+  background: white;
+  margin: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Proposal Tracker */
+.proposal-tracker {
+  padding: 24px;
+}
+
+.tracker-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0366d6;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6a737d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-bar button {
+  padding: 8px 16px;
+  border: 1px solid #e1e4e8;
+  background: #f6f8fa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.filter-bar button.active {
+  background: #0366d6;
+  color: white;
+  border-color: #0366d6;
+}
+
+/* Proposals Table */
+.proposals-table {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.proposals-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.proposals-table th {
+  background: #f6f8fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6a737d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.proposals-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eaecef;
+  vertical-align: middle;
+}
+
+.proposals-table tr:hover {
+  background: #f6f8fa;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-view, .btn-reminder {
+  background: none;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-view:hover {
+  background: #f6f8fa;
+}
+
+.btn-reminder:hover {
+  background: #fff8c5;
+}
+
+.status-select {
+  padding: 4px 8px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  font-size: 11px;
+  background: white;
+}
+🔧 BACKEND IMPLEMENTATION
+1. PDF Generation Endpoint: /api/proposals/generate
+javascript
+// POST /api/proposals/generate
+const puppeteer = require('puppeteer');
+const path = require('path');
+
+router.post('/generate', async (req, res) => {
+  try {
+    const { clientId, quoteId, proposalData } = req.body;
+    
+    // Launch browser for PDF generation
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    
+    // Generate HTML from template
+    const htmlContent = await generateProposalHTML(proposalData);
+    
+    // Set content and generate PDF
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    // Generate PDFs
+    const pdfOptions = {
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20mm',
+        bottom: '20mm',
+        left: '20mm',
+        right: '20mm'
+      }
+    };
+    
+    // Generate proposal PDF
+    const proposalPdf = await page.pdf(pdfOptions);
+    const proposalPath = `/proposals/${proposalData.proposal_number}-proposta.pdf`;
+    await savePDF(proposalPath, proposalPdf);
+    
+    // Generate contract PDF
+    const contractHtml = await generateContractHTML(proposalData);
+    await page.setContent(contractHtml, { waitUntil: 'networkidle0' });
+    const contractPdf = await page.pdf(pdfOptions);
+    const contractPath = `/proposals/${proposalData.proposal_number}-contrato.pdf`;
+    await savePDF(contractPath, contractPdf);
+    
+    // Generate summary PDF
+    const summaryHtml = await generateSummaryHTML(proposalData);
+    await page.setContent(summaryHtml, { waitUntil: 'networkidle0' });
+    const summaryPdf = await page.pdf({
+      ...pdfOptions,
+      format: 'A4',
+      margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+    });
+    const summaryPath = `/proposals/${proposalData.proposal_number}-resumo.pdf`;
+    await savePDF(summaryPath, summaryPdf);
+    
+    await browser.close();
+    
+    // Create tracking URL
+    const trackingToken = generateToken();
+    const trackingUrl = `${process.env.APP_URL}/proposal/${trackingToken}`;
+    
+    // Save tracking in database
+    await db.insertInto('proposals').values({
+      client_id: clientId,
+      quote_id: quoteId,
+      proposal_number: proposalData.proposal_number,
+      proposal_pdf_path: proposalPath,
+      contract_pdf_path: contractPath,
+      summary_pdf_path: summaryPath,
+      current_annual_cost: parseFloat(proposalData.current_annual_cost.replace(/\./g, '').replace(',', '.')),
+      proposed_annual_cost: parseFloat(proposalData.proposed_annual_cost.replace(/\./g, '').replace(',', '.')),
+      annual_savings: parseFloat(proposalData.annual_savings.replace(/\./g, '').replace(',', '.')),
+      savings_percentage: parseFloat(proposalData.savings_percentage),
+      our_commission_annual: parseFloat(proposalData.our_commission_annual.replace(/\./g, '').replace(',', '.')),
+      commission_structure: proposalData.commission_structure,
+      valid_until: new Date(new Date().setDate(new Date().getDate() + 30)),
+      signature_token: trackingToken,
+      status: 'draft'
+    }).execute();
+    
+    res.json({
+      success: true,
+      documents: {
+        proposal: {
+          path: proposalPath,
+          download_url: `${process.env.APP_URL}/api/proposals/download/${proposalData.proposal_number}/proposta`,
+          preview_url: `${process.env.APP_URL}/api/proposals/preview/${proposalData.proposal_number}/proposta`,
+          tracking_url: trackingUrl
+        },
+        contract: {
+          path: contractPath,
+          download_url: `${process.env.APP_URL}/api/proposals/download/${proposalData.proposal_number}/contrato`,
+          preview_url: `${process.env.APP_URL}/api/proposals/preview/${proposalData.proposal_number}/contrato`
+        },
+        summary: {
+          path: summaryPath,
+          download_url: `${process.env.APP_URL}/api/proposals/download/${proposalData.proposal_number}/resumo`,
+          preview_url: `${process.env.APP_URL}/api/proposals/preview/${proposalData.proposal_number}/resumo`
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao gerar documentos PDF'
+    });
+  }
+});
+
+// Helper: Generate HTML from template
+async function generateProposalHTML(data) {
+  const template = await db.selectFrom('proposal_templates')
+    .select('html_template')
+    .where('template_type', '=', 'proposal')
+    .where('is_default', '=', true)
+    .executeTakeFirst();
+  
+  let html = template.html_template;
+  
+  // Replace all variables
+  Object.entries(data).forEach(([key, value]) => {
+    html = html.replace(new RegExp(`{${key}}`, 'g'), value || '');
+  });
+  
+  // Add CSS styles
+  const css = await getProposalCSS();
+  html = html.replace('</style>', `${css}</style>`);
+  
+  return html;
+}
+
+// Helper: Get CSS for proposal
+async function getProposalCSS() {
+  return `
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .page {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 20mm;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #2ea44f;
+    }
+    
+    .proposal-info h1 {
+      margin: 0;
+      color: #2ea44f;
+      font-size: 24px;
+    }
+    
+    .proposal-number {
+      font-size: 18px;
+      font-weight: bold;
+      color: #0366d6;
+      margin: 5px 0;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eaecef;
+    }
+    
+    .section h2 {
+      color: #2ea44f;
+      font-size: 18px;
+      margin-bottom: 15px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eaecef;
+    }
+    
+    .section.highlight {
+      background: #f6fff9;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #2ea44f;
+    }
+    
+    .client-info table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .client-info tr {
+      border-bottom: 1px solid #eaecef;
+    }
+    
+    .client-info td {
+      padding: 8px 0;
+    }
+    
+    .client-info td:first-child {
+      width: 40%;
+      font-weight: 500;
+    }
+    
+    .savings-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr 1fr;
+      gap: 15px;
+      align-items: center;
+      margin-top: 20px;
+    }
+    
+    .savings-item {
+      text-align: center;
+      padding: 15px;
+      border-radius: 6px;
+    }
+    
+    .savings-item.current {
+      background: #f6f8fa;
+      border: 1px solid #e1e4e8;
+    }
+    
+    .savings-item.proposed {
+      background: #f0fff4;
+      border: 1px solid #2ea44f;
+    }
+    
+    .savings-item.savings {
+      background: linear-gradient(135deg, #2ea44f, #2c974b);
+      color: white;
+    }
+    
+    .savings-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+    
+    .savings-value {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .savings-value.highlight {
+      font-size: 24px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #eaecef;
+      font-size: 12px;
+      color: #6a737d;
+    }
+    
+    .contact-info {
+      text-align: center;
+    }
+    
+    .contact-info h4 {
+      margin: 0 0 10px 0;
+      color: #2ea44f;
+    }
+    
+    .legal {
+      margin-top: 15px;
+      font-size: 10px;
+      text-align: center;
+    }
+  `;
+}
+2. Proposal Tracking Endpoint: /api/proposals/preview/[token]
+javascript
+// GET /api/proposals/preview/:token
+router.get('/preview/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Get proposal by token
+    const proposal = await db.selectFrom('proposals')
+      .select(['proposal_pdf_path', 'client_id', 'status'])
+      .where('signature_token', '=', token)
+      .executeTakeFirst();
+    
+    if (!proposal) {
+      return res.status(404).send('Proposta não encontrada');
+    }
+    
+    // Track view
+    await db.insertInto('proposal_views').values({
+      proposal_id: proposal.id,
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      view_date: new Date()
+    }).execute();
+    
+    // Update proposal viewed status
+    if (proposal.status === 'sent') {
+      await db.updateTable('proposals')
+        .set({
+          status: 'viewed',
+          viewed_date: new Date(),
+          viewed_count: db.raw('viewed_count + 1'),
+          last_viewed: new Date()
+        })
+        .where('signature_token', '=', token)
+        .execute();
+    } else {
+      await db.updateTable('proposals')
+        .set({
+          viewed_count: db.raw('viewed_count + 1'),
+          last_viewed: new Date()
+        })
+        .where('signature_token', '=', token)
+        .execute();
+    }
+    
+    // Serve PDF
+    const filePath = path.join(__dirname, '..', proposal.proposal_pdf_path);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="proposta-${token}.pdf"`);
+    res.sendFile(filePath);
+    
+  } catch (error) {
+    console.error('Preview error:', error);
+    res.status(500).send('Erro ao carregar proposta');
+  }
+});
+3. Email Sending Endpoint: /api/proposals/send-email
+javascript
+// POST /api/proposals/send-email
+router.post('/send-email', async (req, res) => {
+  try {
+    const { clientId, proposalNumber, documents, clientEmail } = req.body;
+    
+    // Get proposal details
+    const proposal = await db.selectFrom('proposals')
+      .select(['client_name', 'annual_savings', 'savings_percentage', 'valid_until'])
+      .where('proposal_number', '=', proposalNumber)
+      .executeTakeFirst();
+    
+    // Prepare email
+    const emailBody = `
+Prezado(a) Cliente,
+
+Enviamos a proposta comercial da Ótima Energia para sua análise.
+
+📋 **Detalhes da Proposta:**
+- Número: ${proposalNumber}
+- Economia Anual: R$ ${proposal.annual_savings} (${proposal.savings_percentage}%)
+- Validade: ${new Date(proposal.valid_until).toLocaleDateString('pt-BR')}
+
+📎 **Documentos em anexo:**
+1. Proposta Comercial (PDF)
+2. Minuta de Contrato (PDF)
+3. Resumo Executivo (PDF)
+
+🔗 **Link para visualização online:**
+${documents.proposal.tracking_url}
+
+Para aceitar a proposta, basta assinar o contrato anexo e nos enviar de volta.
+
+Qualquer dúvida, estamos à disposição.
+
+Atenciosamente,
+Renan - Ótima Energia
+renan@otimaenergia.com.br
++55 (11) 99999-9999
+`;
+    
+    // Send email with attachments
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+    
+    const mailOptions = {
+      from: `"Ótima Energia" <${process.env.SMTP_FROM}>`,
+      to: clientEmail,
+      subject: `Proposta Comercial ${proposalNumber} - Ótima Energia`,
+      text: emailBody,
+      html: convertToHTML(emailBody),
+      attachments: [
+        {
+          filename: `proposta-${proposalNumber}.pdf`,
+          path: path.join(__dirname, '..', documents.proposal.path)
+        },
+        {
+          filename: `contrato-${proposalNumber}.pdf`,
+          path: path.join(__dirname, '..', documents.contract.path)
+        },
+        {
+          filename: `resumo-${proposalNumber}.pdf`,
+          path: path.join(__dirname, '..', documents.summary.path)
+        }
+      ]
+    };
+    
+    await transporter.sendMail(mailOptions);
+    
+    // Update proposal status
+    await db.updateTable('proposals')
+      .set({
+        status: 'sent',
+        sent_date: new Date()
+      })
+      .where('proposal_number', '=', proposalNumber)
+      .execute();
+    
+    res.json({ success: true, message: 'Proposta enviada por email' });
+    
+  } catch (error) {
+    console.error('Email send error:', error);
+    res.status(500).json({ error: 'Erro ao enviar email' });
+  }
+});
+🚀 DEPLOYMENT CHECKLIST
+Install Dependencies:
+
+bash
+npm install puppeteer html-pdf-node nodemailer
+Configure Puppeteer for Replit:
+
+javascript
+// In Replit, you might need special args
+const browser = await puppeteer.launch({
+  headless: 'new',
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
+});
+Set Up File Storage:
+
+Create /proposals directory
+
+Configure proper permissions
+
+Set up cleanup job for old proposals
+
+Configure Email:
+
+bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=renan@otimaenergia.com.br
+SMTP_PASS=your_app_password
+SMTP_FROM=renan@otimaenergia.com.br
+APP_URL=https://your-replit-app.replit.app
+Add Brazilian Legal Templates:
+
+Update contract clauses with Brazilian law
+
+Add ANEEL compliance statements
+
+Include LGPD data protection clauses
+
+🧪 TESTING PROCEDURE
+Test 1: PDF Generation
+Select a quote for a client
+
+Click "📄 Gerar Proposta"
+
+Verify all 3 PDFs are generated
+
+Check PDF formatting and calculations
+
+Test 2: Email Sending
+Generate a proposal
+
+Click "📧 Enviar por Email"
+
+Check email arrives with 3 attachments
+
+Verify tracking link works
+
+Test 3: WhatsApp Sending
+Generate a proposal
+
+Click "📱 Enviar por WhatsApp"
+
+Verify WhatsApp opens with pre-filled message
+
+Check message includes tracking link
+
+Test 4: Tracking
+Open tracking link
+
+Verify view is counted in dashboard
+
+Check proposal status updates to "viewed"
+
+Test multiple views are tracked
+
+Test 5: Status Management
+Send proposal
+
+Update status to "negotiating"
+
+Update status to "accepted"
+
+Verify commission tracking works
+
+📊 EXPECTED RESULTS
+Time saved: 30-45 minutes → 2 minutes per proposal
+
+Professionalism: Consistent, branded proposals
+
+Tracking: Know when clients view proposals
+
+Conversion rate: Increase with professional presentation
+
+Compliance: Brazilian legal requirements met

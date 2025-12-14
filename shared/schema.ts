@@ -605,3 +605,234 @@ export const supplierPortalsRelations = relations(supplierPortals, ({ one }) => 
     references: [suppliers.id],
   }),
 }));
+
+// ============================================
+// PROPOSAL SYSTEM
+// ============================================
+
+// Proposals - Generated commercial proposals from selected quotes
+export const proposals = pgTable("proposals", {
+  id: serial("id").primaryKey(),
+  
+  // Relationships
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  quoteId: integer("quote_id").references(() => supplierQuotes.id).notNull(),
+  rfoId: integer("rfo_id").references(() => rfoRequests.id),
+  
+  // Proposal Info
+  proposalNumber: varchar("proposal_number", { length: 50 }).unique().notNull(),
+  proposalDate: date("proposal_date").defaultNow().notNull(),
+  validUntil: date("valid_until").notNull(),
+  
+  // Document Paths (stored in object storage)
+  proposalPdfPath: varchar("proposal_pdf_path", { length: 500 }),
+  contractPdfPath: varchar("contract_pdf_path", { length: 500 }),
+  summaryPdfPath: varchar("summary_pdf_path", { length: 500 }),
+  
+  // Client Snapshot (frozen at time of proposal)
+  clientName: varchar("client_name", { length: 255 }).notNull(),
+  clientCnpj: varchar("client_cnpj", { length: 50 }),
+  ucCode: varchar("uc_code", { length: 50 }),
+  consumptionMwh: decimal("consumption_mwh", { precision: 12, scale: 2 }),
+  demandaKw: decimal("demanda_kw", { precision: 10, scale: 2 }),
+  distribuidora: varchar("distribuidora", { length: 100 }),
+  
+  // Quote Snapshot
+  supplierName: varchar("supplier_name", { length: 255 }).notNull(),
+  priceStructure: varchar("price_structure", { length: 200 }),
+  contractDuration: integer("contract_duration"),
+  contractStart: date("contract_start"),
+  contractType: varchar("contract_type", { length: 50 }),
+  
+  // Financial Details (calculated at creation time)
+  currentAnnualCost: decimal("current_annual_cost", { precision: 12, scale: 2 }),
+  proposedAnnualCost: decimal("proposed_annual_cost", { precision: 12, scale: 2 }),
+  annualSavings: decimal("annual_savings", { precision: 12, scale: 2 }),
+  savingsPercentage: decimal("savings_percentage", { precision: 5, scale: 2 }),
+  
+  // Commission Details
+  ourCommissionAnnual: decimal("our_commission_annual", { precision: 10, scale: 2 }),
+  commissionStructure: varchar("commission_structure", { length: 100 }),
+  commissionPaidBy: varchar("commission_paid_by", { length: 50 }).default("supplier"),
+  paymentTerms: varchar("payment_terms", { length: 200 }),
+  
+  // Status Tracking
+  status: text("status").default("draft"), // 'draft', 'sent', 'viewed', 'negotiating', 'accepted', 'rejected', 'expired'
+  sentDate: timestamp("sent_date"),
+  viewedDate: timestamp("viewed_date"),
+  viewedCount: integer("viewed_count").default(0),
+  lastViewed: timestamp("last_viewed"),
+  
+  // Client Response
+  responseDate: timestamp("response_date"),
+  responseNotes: text("response_notes"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Tracking Token (for client portal view)
+  trackingToken: varchar("tracking_token", { length: 100 }).unique(),
+  
+  // Metadata
+  createdBy: varchar("created_by", { length: 100 }).default("system"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertProposalSchema = createInsertSchema(proposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewedCount: true,
+  viewedDate: true,
+  lastViewed: true,
+});
+
+export type InsertProposal = z.infer<typeof insertProposalSchema>;
+export type Proposal = typeof proposals.$inferSelect;
+
+// Proposal Templates - HTML templates with variables
+export const proposalTemplates = pgTable("proposal_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  templateType: varchar("template_type", { length: 30 }).notNull(), // 'proposal', 'contract', 'summary'
+  language: varchar("language", { length: 10 }).default("pt-BR"),
+  
+  // Template Content
+  htmlTemplate: text("html_template").notNull(),
+  cssStyles: text("css_styles"),
+  variables: jsonb("variables").notNull(), // Available placeholder variables
+  
+  // Document Settings
+  paperSize: varchar("paper_size", { length: 20 }).default("A4"),
+  orientation: varchar("orientation", { length: 10 }).default("portrait"),
+  marginTop: integer("margin_top").default(20),
+  marginBottom: integer("margin_bottom").default(20),
+  marginLeft: integer("margin_left").default(20),
+  marginRight: integer("margin_right").default(20),
+  
+  // Branding
+  includeHeader: boolean("include_header").default(true),
+  includeFooter: boolean("include_footer").default(true),
+  headerHtml: text("header_html"),
+  footerHtml: text("footer_html"),
+  
+  // Legal Sections
+  sections: jsonb("sections"),
+  
+  // Status
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertProposalTemplateSchema = createInsertSchema(proposalTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertProposalTemplate = z.infer<typeof insertProposalTemplateSchema>;
+export type ProposalTemplate = typeof proposalTemplates.$inferSelect;
+
+// Proposal Views - Track client engagement
+export const proposalViews = pgTable("proposal_views", {
+  id: serial("id").primaryKey(),
+  proposalId: integer("proposal_id").references(() => proposals.id).notNull(),
+  
+  // View Information
+  viewDate: timestamp("view_date").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  country: varchar("country", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  
+  // Engagement
+  timeSpentSeconds: integer("time_spent_seconds"),
+  pagesViewed: integer("pages_viewed").default(1),
+  downloaded: boolean("downloaded").default(false),
+  downloadDate: timestamp("download_date"),
+  
+  // Client Info (if known)
+  clientEmail: varchar("client_email", { length: 255 }),
+  clientName: varchar("client_name", { length: 255 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProposalViewSchema = createInsertSchema(proposalViews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertProposalView = z.infer<typeof insertProposalViewSchema>;
+export type ProposalView = typeof proposalViews.$inferSelect;
+
+// Contract Templates - Brazilian energy contract clauses
+export const contractTemplates = pgTable("contract_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  templateType: varchar("template_type", { length: 50 }).notNull(), // 'supply_contract', 'brokerage_agreement', 'service_contract'
+  
+  // Legal Content
+  clauses: jsonb("clauses").notNull(), // Array of contract clauses
+  variables: jsonb("variables").notNull(), // Placeholder variables
+  
+  // Brazilian Legal Requirements
+  includesAneelClauses: boolean("includes_aneel_clauses").default(true),
+  includesLgpdClauses: boolean("includes_lgpd_clauses").default(true),
+  includesConsumerClauses: boolean("includes_consumer_clauses").default(true),
+  
+  // Supplier Specific
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  isGeneric: boolean("is_generic").default(true),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  lastReviewed: date("last_reviewed"),
+  reviewedBy: varchar("reviewed_by", { length: 100 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertContractTemplateSchema = createInsertSchema(contractTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContractTemplate = z.infer<typeof insertContractTemplateSchema>;
+export type ContractTemplate = typeof contractTemplates.$inferSelect;
+
+// Proposal Relations
+export const proposalsRelations = relations(proposals, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [proposals.clientId],
+    references: [clients.id],
+  }),
+  quote: one(supplierQuotes, {
+    fields: [proposals.quoteId],
+    references: [supplierQuotes.id],
+  }),
+  rfoRequest: one(rfoRequests, {
+    fields: [proposals.rfoId],
+    references: [rfoRequests.id],
+  }),
+  views: many(proposalViews),
+}));
+
+export const proposalViewsRelations = relations(proposalViews, ({ one }) => ({
+  proposal: one(proposals, {
+    fields: [proposalViews.proposalId],
+    references: [proposals.id],
+  }),
+}));
+
+export const contractTemplatesRelations = relations(contractTemplates, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [contractTemplates.supplierId],
+    references: [suppliers.id],
+  }),
+}));
