@@ -9,7 +9,7 @@ import {
   type SupplierQuote, type InsertSupplierQuote,
   type BillUpload, type InsertBillUpload,
   type Supplier, type InsertSupplier,
-  type RfoRequest, type InsertRfoRequest,
+  type RfoRequest, type InsertRfoRequest, type UpdateRfoRequest,
   type RfoSupplierTracking, type InsertRfoSupplierTracking,
   type SupplierContact, type InsertSupplierContact,
   type SupplierPortal, type InsertSupplierPortal,
@@ -86,7 +86,7 @@ export interface IStorage {
   getRfoRequestsForClient(clientId: number): Promise<RfoRequest[]>;
   getRfoRequest(id: number): Promise<RfoRequest | undefined>;
   getRfoRequestByNumber(rfoNumber: string): Promise<RfoRequest | undefined>;
-  updateRfoRequest(id: number, data: Partial<InsertRfoRequest>): Promise<RfoRequest | undefined>;
+  updateRfoRequest(id: number, data: UpdateRfoRequest): Promise<RfoRequest | undefined>;
   generateRfoNumber(): Promise<string>;
   
   // RFO Supplier Tracking
@@ -380,7 +380,7 @@ export class Storage implements IStorage {
     return result[0];
   }
 
-  async updateRfoRequest(id: number, data: Partial<InsertRfoRequest>): Promise<RfoRequest | undefined> {
+  async updateRfoRequest(id: number, data: UpdateRfoRequest): Promise<RfoRequest | undefined> {
     const result = await db.update(rfoRequests).set({ ...data, updatedAt: new Date() }).where(eq(rfoRequests.id, id)).returning();
     return result[0];
   }

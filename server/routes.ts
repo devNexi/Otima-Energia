@@ -911,10 +911,7 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Tracking record not found" });
       }
 
-      await storage.markRfoSupplierResponded(trackingId, {
-        responseStatus: status || "responded",
-        responseQuoteId: quoteId || null
-      });
+      await storage.markRfoSupplierResponded(trackingId, quoteId || null);
 
       // Update RFO response count
       const rfo = await storage.getRfoRequest(rfoId);
@@ -1000,6 +997,147 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching active contacts:", error);
       res.status(500).json({ success: false, error: "Failed to fetch contacts" });
+    }
+  });
+
+  // Delete supplier contact
+  app.delete("/api/suppliers/:id/contacts/:contactId", async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.contactId);
+      await storage.deleteSupplierContact(contactId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting supplier contact:", error);
+      res.status(500).json({ success: false, error: "Failed to delete contact" });
+    }
+  });
+
+  // Get all suppliers with their contacts
+  app.get("/api/suppliers-with-contacts", async (req, res) => {
+    try {
+      const suppliersWithContacts = await storage.getSuppliersWithContacts();
+      res.json({ success: true, suppliers: suppliersWithContacts });
+    } catch (error: any) {
+      console.error("Error fetching suppliers with contacts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch suppliers" });
+    }
+  });
+
+  // ============== SUPPLIER PORTALS ENDPOINTS ==============
+
+  // Get portals for a supplier
+  app.get("/api/suppliers/:id/portals", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const portals = await storage.getSupplierPortals(supplierId);
+      res.json({ success: true, portals });
+    } catch (error: any) {
+      console.error("Error fetching supplier portals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch portals" });
+    }
+  });
+
+  // Create supplier portal
+  app.post("/api/suppliers/:id/portals", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const portalData = { ...req.body, supplierId };
+      const portal = await storage.createSupplierPortal(portalData);
+      res.json({ success: true, portal });
+    } catch (error: any) {
+      console.error("Error creating supplier portal:", error);
+      res.status(500).json({ success: false, error: "Failed to create portal" });
+    }
+  });
+
+  // Update supplier portal
+  app.patch("/api/suppliers/:id/portals/:portalId", async (req, res) => {
+    try {
+      const portalId = parseInt(req.params.portalId);
+      const portal = await storage.updateSupplierPortal(portalId, req.body);
+      if (!portal) {
+        return res.status(404).json({ success: false, error: "Portal not found" });
+      }
+      res.json({ success: true, portal });
+    } catch (error: any) {
+      console.error("Error updating supplier portal:", error);
+      res.status(500).json({ success: false, error: "Failed to update portal" });
+    }
+  });
+
+  // Delete supplier portal
+  app.delete("/api/suppliers/:id/portals/:portalId", async (req, res) => {
+    try {
+      const portalId = parseInt(req.params.portalId);
+      await storage.deleteSupplierPortal(portalId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting supplier portal:", error);
+      res.status(500).json({ success: false, error: "Failed to delete portal" });
+    }
+  });
+
+  // ============== RFO TEMPLATES ENDPOINTS ==============
+
+  // Get all RFO templates
+  app.get("/api/rfo-templates", async (req, res) => {
+    try {
+      const templates = await storage.getRfoTemplates();
+      res.json({ success: true, templates });
+    } catch (error: any) {
+      console.error("Error fetching RFO templates:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch templates" });
+    }
+  });
+
+  // Get active RFO templates
+  app.get("/api/rfo-templates/active", async (req, res) => {
+    try {
+      const templates = await storage.getActiveRfoTemplates();
+      res.json({ success: true, templates });
+    } catch (error: any) {
+      console.error("Error fetching active RFO templates:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch templates" });
+    }
+  });
+
+  // Get RFO template by format type
+  app.get("/api/rfo-templates/format/:formatType", async (req, res) => {
+    try {
+      const template = await storage.getRfoTemplateByFormat(req.params.formatType);
+      if (!template) {
+        return res.status(404).json({ success: false, error: "Template not found" });
+      }
+      res.json({ success: true, template });
+    } catch (error: any) {
+      console.error("Error fetching RFO template:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch template" });
+    }
+  });
+
+  // Create RFO template
+  app.post("/api/rfo-templates", async (req, res) => {
+    try {
+      const template = await storage.createRfoTemplate(req.body);
+      res.json({ success: true, template });
+    } catch (error: any) {
+      console.error("Error creating RFO template:", error);
+      res.status(500).json({ success: false, error: "Failed to create template" });
+    }
+  });
+
+  // Update RFO template
+  app.patch("/api/rfo-templates/:id", async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const template = await storage.updateRfoTemplate(templateId, req.body);
+      if (!template) {
+        return res.status(404).json({ success: false, error: "Template not found" });
+      }
+      res.json({ success: true, template });
+    } catch (error: any) {
+      console.error("Error updating RFO template:", error);
+      res.status(500).json({ success: false, error: "Failed to update template" });
     }
   });
 

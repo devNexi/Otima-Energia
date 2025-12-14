@@ -314,7 +314,15 @@ export const insertRfoRequestSchema = createInsertSchema(rfoRequests).omit({
   lastSentDate: true,
 });
 
+// Update schema includes tracking fields
+export const updateRfoRequestSchema = createInsertSchema(rfoRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export type InsertRfoRequest = z.infer<typeof insertRfoRequestSchema>;
+export type UpdateRfoRequest = z.infer<typeof updateRfoRequestSchema>;
 export type RfoRequest = typeof rfoRequests.$inferSelect;
 
 // RFO Supplier Tracking - Track individual supplier responses
