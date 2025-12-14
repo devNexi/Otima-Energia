@@ -12,8 +12,10 @@ import {
   type RfoRequest, type InsertRfoRequest,
   type RfoSupplierTracking, type InsertRfoSupplierTracking,
   type SupplierContact, type InsertSupplierContact,
+  type SupplierPortal, type InsertSupplierPortal,
+  type RfoTemplate, type InsertRfoTemplate,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
-  rfoRequests, rfoSupplierTracking, supplierContacts
+  rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates
 } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -100,7 +102,23 @@ export interface IStorage {
   getPrimarySupplierContact(supplierId: number): Promise<SupplierContact | undefined>;
   getAllActiveSupplierContacts(): Promise<SupplierContact[]>;
   updateSupplierContact(id: number, data: Partial<InsertSupplierContact>): Promise<SupplierContact | undefined>;
+  deleteSupplierContact(id: number): Promise<void>;
+  markContactContacted(id: number): Promise<void>;
   getSupplier(id: number): Promise<Supplier | undefined>;
+  getSuppliersWithContacts(): Promise<(Supplier & { contacts: SupplierContact[] })[]>;
+  
+  // Supplier Portals
+  createSupplierPortal(portal: InsertSupplierPortal): Promise<SupplierPortal>;
+  getSupplierPortals(supplierId: number): Promise<SupplierPortal[]>;
+  updateSupplierPortal(id: number, data: Partial<InsertSupplierPortal>): Promise<SupplierPortal | undefined>;
+  deleteSupplierPortal(id: number): Promise<void>;
+  
+  // RFO Templates
+  getRfoTemplates(): Promise<RfoTemplate[]>;
+  getActiveRfoTemplates(): Promise<RfoTemplate[]>;
+  getRfoTemplateByFormat(formatType: string): Promise<RfoTemplate | undefined>;
+  createRfoTemplate(template: InsertRfoTemplate): Promise<RfoTemplate>;
+  updateRfoTemplate(id: number, data: Partial<InsertRfoTemplate>): Promise<RfoTemplate | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -471,6 +489,72 @@ export class Storage implements IStorage {
 
   async getSupplier(id: number): Promise<Supplier | undefined> {
     const result = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    return result[0];
+  }
+
+  async deleteSupplierContact(id: number): Promise<void> {
+    await db.delete(supplierContacts).where(eq(supplierContacts.id, id));
+  }
+
+  async markContactContacted(id: number): Promise<void> {
+    await db.update(supplierContacts).set({ 
+      lastContacted: new Date(),
+      updatedAt: new Date()
+    }).where(eq(supplierContacts.id, id));
+  }
+
+  async getSuppliersWithContacts(): Promise<(Supplier & { contacts: SupplierContact[] })[]> {
+    const allSuppliers = await db.select().from(suppliers).where(eq(suppliers.isActive, true)).orderBy(suppliers.name);
+    const allContacts = await db.select().from(supplierContacts).where(eq(supplierContacts.isActive, true));
+    
+    return allSuppliers.map(supplier => ({
+      ...supplier,
+      contacts: allContacts.filter(c => c.supplierId === supplier.id)
+    }));
+  }
+
+  // Supplier Portals
+  async createSupplierPortal(portal: InsertSupplierPortal): Promise<SupplierPortal> {
+    const result = await db.insert(supplierPortals).values(portal).returning();
+    return result[0];
+  }
+
+  async getSupplierPortals(supplierId: number): Promise<SupplierPortal[]> {
+    return await db.select().from(supplierPortals).where(eq(supplierPortals.supplierId, supplierId));
+  }
+
+  async updateSupplierPortal(id: number, data: Partial<InsertSupplierPortal>): Promise<SupplierPortal | undefined> {
+    const result = await db.update(supplierPortals).set(data).where(eq(supplierPortals.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSupplierPortal(id: number): Promise<void> {
+    await db.delete(supplierPortals).where(eq(supplierPortals.id, id));
+  }
+
+  // RFO Templates
+  async getRfoTemplates(): Promise<RfoTemplate[]> {
+    return await db.select().from(rfoTemplates).orderBy(rfoTemplates.name);
+  }
+
+  async getActiveRfoTemplates(): Promise<RfoTemplate[]> {
+    return await db.select().from(rfoTemplates).where(eq(rfoTemplates.isActive, true)).orderBy(rfoTemplates.name);
+  }
+
+  async getRfoTemplateByFormat(formatType: string): Promise<RfoTemplate | undefined> {
+    const result = await db.select().from(rfoTemplates)
+      .where(and(eq(rfoTemplates.formatType, formatType), eq(rfoTemplates.isActive, true)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createRfoTemplate(template: InsertRfoTemplate): Promise<RfoTemplate> {
+    const result = await db.insert(rfoTemplates).values(template).returning();
+    return result[0];
+  }
+
+  async updateRfoTemplate(id: number, data: Partial<InsertRfoTemplate>): Promise<RfoTemplate | undefined> {
+    const result = await db.update(rfoTemplates).set(data).where(eq(rfoTemplates.id, id)).returning();
     return result[0];
   }
 }
