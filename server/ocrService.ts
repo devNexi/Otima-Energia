@@ -2,6 +2,10 @@ import Tesseract from "tesseract.js";
 import sharp from "sharp";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 export interface ExtractedBillData {
   uc: string;
@@ -162,24 +166,29 @@ export async function processImageOcr(imagePath: string): Promise<{ text: string
   };
 }
 
-export async function processPdfToPng(buffer: Buffer, tempDir: string): Promise<string[]> {
-  const images: string[] = [];
-  
+export async function processPdfToText(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
-    const imagePath = path.join(tempDir, `page_${Date.now()}.png`);
-    await sharp(buffer, { density: 200 })
-      .resize(2000, null, { withoutEnlargement: true })
-      .png()
-      .toFile(imagePath);
-    images.push(imagePath);
+    const pdfData = await pdfParse(buffer);
+    const text = pdfData.text;
+    
+    if (!text || text.trim().length < 50) {
+      return {
+        text: "[PDF contains insufficient text - may be scanned image]",
+        confidence: 0.1
+      };
+    }
+    
+    return {
+      text: text,
+      confidence: 0.85
+    };
   } catch (error) {
-    console.log("Could not process PDF directly, saving buffer as temp file");
-    const tempPdfPath = path.join(tempDir, `temp_${Date.now()}.pdf`);
-    await fs.writeFile(tempPdfPath, buffer);
-    images.push(tempPdfPath);
+    console.error("PDF parsing error:", error);
+    return {
+      text: "[PDF parsing failed - please enter data manually]",
+      confidence: 0
+    };
   }
-  
-  return images;
 }
 
 export async function processImage(buffer: Buffer, tempDir: string): Promise<string> {
@@ -202,36 +211,29 @@ export async function processBillFile(
   const tempDir = "/tmp/ocr_uploads";
   await fs.mkdir(tempDir, { recursive: true });
 
-  let imagesForOcr: string[] = [];
   let ocrText = "";
   let avgConfidence = 0;
 
   try {
     if (mimeType === "application/pdf") {
-      imagesForOcr = await processPdfToPng(fileBuffer, tempDir);
+      const pdfResult = await processPdfToText(fileBuffer);
+      ocrText = pdfResult.text;
+      avgConfidence = pdfResult.confidence;
     } else {
       const imagePath = await processImage(fileBuffer, tempDir);
-      imagesForOcr = [imagePath];
-    }
-
-    const confidences: number[] = [];
-    
-    for (const imagePath of imagesForOcr) {
+      
       try {
         const result = await processImageOcr(imagePath);
-        ocrText += result.text + "\n\n";
-        confidences.push(result.confidence);
+        ocrText = result.text;
+        avgConfidence = result.confidence;
       } catch (error) {
         console.error("OCR error for image:", error);
-        ocrText += "[OCR Error on this page]\n\n";
+        ocrText = "[OCR Error - please enter data manually]";
+        avgConfidence = 0;
       }
 
       await fs.unlink(imagePath).catch(() => {});
     }
-
-    avgConfidence = confidences.length > 0
-      ? confidences.reduce((a, b) => a + b, 0) / confidences.length
-      : 0;
 
   } catch (error) {
     console.error("Error processing bill file:", error);
