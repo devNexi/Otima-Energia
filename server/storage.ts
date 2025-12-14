@@ -14,8 +14,12 @@ import {
   type SupplierContact, type InsertSupplierContact,
   type SupplierPortal, type InsertSupplierPortal,
   type RfoTemplate, type InsertRfoTemplate,
+  type Proposal, type InsertProposal,
+  type ProposalTemplate, type InsertProposalTemplate,
+  type ProposalView, type InsertProposalView,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
-  rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates
+  rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
+  proposals, proposalTemplates, proposalViews
 } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -119,6 +123,26 @@ export interface IStorage {
   getRfoTemplateByFormat(formatType: string): Promise<RfoTemplate | undefined>;
   createRfoTemplate(template: InsertRfoTemplate): Promise<RfoTemplate>;
   updateRfoTemplate(id: number, data: Partial<InsertRfoTemplate>): Promise<RfoTemplate | undefined>;
+  
+  // Proposals
+  createProposal(proposal: InsertProposal): Promise<Proposal>;
+  getProposals(): Promise<Proposal[]>;
+  getProposal(id: number): Promise<Proposal | undefined>;
+  getProposalByToken(token: string): Promise<Proposal | undefined>;
+  getProposalByNumber(proposalNumber: string): Promise<Proposal | undefined>;
+  getProposalsForClient(clientId: number): Promise<Proposal[]>;
+  updateProposal(id: number, data: Partial<InsertProposal>): Promise<Proposal | undefined>;
+  updateProposalStatus(id: number, status: string): Promise<Proposal | undefined>;
+  generateProposalNumber(): Promise<string>;
+  incrementProposalViews(id: number): Promise<void>;
+  
+  // Proposal Views
+  recordProposalView(view: InsertProposalView): Promise<ProposalView>;
+  getProposalViews(proposalId: number): Promise<ProposalView[]>;
+  
+  // Proposal Templates
+  getProposalTemplates(): Promise<ProposalTemplate[]>;
+  getDefaultProposalTemplate(templateType: string): Promise<ProposalTemplate | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -555,6 +579,95 @@ export class Storage implements IStorage {
 
   async updateRfoTemplate(id: number, data: Partial<InsertRfoTemplate>): Promise<RfoTemplate | undefined> {
     const result = await db.update(rfoTemplates).set(data).where(eq(rfoTemplates.id, id)).returning();
+    return result[0];
+  }
+
+  // Proposals
+  async createProposal(proposal: InsertProposal): Promise<Proposal> {
+    const result = await db.insert(proposals).values(proposal).returning();
+    return result[0];
+  }
+
+  async getProposals(): Promise<Proposal[]> {
+    return await db.select().from(proposals).orderBy(desc(proposals.createdAt));
+  }
+
+  async getProposal(id: number): Promise<Proposal | undefined> {
+    const result = await db.select().from(proposals).where(eq(proposals.id, id));
+    return result[0];
+  }
+
+  async getProposalByToken(token: string): Promise<Proposal | undefined> {
+    const result = await db.select().from(proposals).where(eq(proposals.trackingToken, token));
+    return result[0];
+  }
+
+  async getProposalByNumber(proposalNumber: string): Promise<Proposal | undefined> {
+    const result = await db.select().from(proposals).where(eq(proposals.proposalNumber, proposalNumber));
+    return result[0];
+  }
+
+  async getProposalsForClient(clientId: number): Promise<Proposal[]> {
+    return await db.select().from(proposals).where(eq(proposals.clientId, clientId)).orderBy(desc(proposals.createdAt));
+  }
+
+  async updateProposal(id: number, data: Partial<InsertProposal>): Promise<Proposal | undefined> {
+    const result = await db.update(proposals).set({ ...data, updatedAt: new Date() }).where(eq(proposals.id, id)).returning();
+    return result[0];
+  }
+
+  async updateProposalStatus(id: number, status: string): Promise<Proposal | undefined> {
+    const updateData: Record<string, unknown> = { status, updatedAt: new Date() };
+    if (status === 'sent') updateData.sentDate = new Date();
+    if (status === 'accepted' || status === 'rejected') updateData.responseDate = new Date();
+    
+    const result = await db.update(proposals).set(updateData).where(eq(proposals.id, id)).returning();
+    return result[0];
+  }
+
+  async generateProposalNumber(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    const countResult = await db.select({ count: sql<number>`count(*)` })
+      .from(proposals)
+      .where(sql`to_char(created_at, 'YYYY-MM') = ${`${year}-${month}`}`);
+    
+    const count = (countResult[0]?.count || 0) + 1;
+    return `PROP-${year}${month}-${String(count).padStart(3, '0')}`;
+  }
+
+  async incrementProposalViews(id: number): Promise<void> {
+    await db.update(proposals).set({
+      viewedCount: sql`COALESCE(viewed_count, 0) + 1`,
+      lastViewed: new Date(),
+      viewedDate: sql`COALESCE(viewed_date, NOW())`,
+      status: sql`CASE WHEN status = 'sent' THEN 'viewed' ELSE status END`,
+      updatedAt: new Date()
+    }).where(eq(proposals.id, id));
+  }
+
+  // Proposal Views
+  async recordProposalView(view: InsertProposalView): Promise<ProposalView> {
+    const result = await db.insert(proposalViews).values(view).returning();
+    await this.incrementProposalViews(view.proposalId);
+    return result[0];
+  }
+
+  async getProposalViews(proposalId: number): Promise<ProposalView[]> {
+    return await db.select().from(proposalViews).where(eq(proposalViews.proposalId, proposalId)).orderBy(desc(proposalViews.viewDate));
+  }
+
+  // Proposal Templates
+  async getProposalTemplates(): Promise<ProposalTemplate[]> {
+    return await db.select().from(proposalTemplates).where(eq(proposalTemplates.isActive, true)).orderBy(proposalTemplates.name);
+  }
+
+  async getDefaultProposalTemplate(templateType: string): Promise<ProposalTemplate | undefined> {
+    const result = await db.select().from(proposalTemplates)
+      .where(and(eq(proposalTemplates.templateType, templateType), eq(proposalTemplates.isDefault, true), eq(proposalTemplates.isActive, true)))
+      .limit(1);
     return result[0];
   }
 }
