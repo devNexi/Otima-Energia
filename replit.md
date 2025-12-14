@@ -37,6 +37,9 @@ Preferred communication style: Simple, everyday language.
 - **Consumption Profiles**: Energy usage data extracted from bills
 - **Quote Requests (RFQs)**: Client requests for supplier quotes
 - **Supplier Quotes**: Responses from energy suppliers
+- **RFO Requests**: Automated quote requests sent to multiple suppliers
+- **RFO Supplier Tracking**: Per-supplier tracking for RFO responses
+- **Supplier Contacts**: Multiple contacts per supplier for RFO distribution
 
 ### Portal System
 The application implements a unique token-based portal system where:
@@ -113,6 +116,21 @@ The application implements a unique token-based portal system where:
 - `POST /api/webhooks/bill-uploaded` - Webhook for bill upload notifications
 - `POST /api/webhooks/zoho-sync` - Zoho webhook (placeholder)
 - `POST /api/admin/sync-to-zoho` - Manual Zoho sync (placeholder)
+
+### RFO API Endpoints
+- `POST /api/clients/:id/rfo` - Create new RFO for client
+- `GET /api/clients/:id/rfo` - Get RFOs for specific client
+- `GET /api/rfo` - List all RFOs
+- `GET /api/rfo/:id` - Get RFO details with tracking
+- `POST /api/rfo/:id/send` - Send RFO to selected suppliers
+- `POST /api/rfo/:id/remind` - Send reminders to non-responsive suppliers
+- `POST /api/rfo/:id/respond/:trackingId` - Record supplier response
+
+### Supplier Contacts API
+- `GET /api/suppliers/:id/contacts` - Get contacts for supplier
+- `POST /api/suppliers/:id/contacts` - Add contact to supplier
+- `PATCH /api/suppliers/:id/contacts/:contactId` - Update supplier contact
+- `GET /api/supplier-contacts/active` - Get all active contacts
 
 ## Zoho CRM Integration (Future)
 
