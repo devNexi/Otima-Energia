@@ -293,19 +293,20 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="supplierName">Fornecedor *</Label>
-                  <Select
+                  <Input
+                    id="supplierName"
+                    list="suppliers-list"
                     value={formData.supplierName}
-                    onValueChange={(v) => setFormData({ ...formData, supplierName: v })}
-                  >
-                    <SelectTrigger data-testid="select-supplier">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
+                    placeholder="Selecione ou digite o nome..."
+                    data-testid="input-supplier-name"
+                  />
+                  <datalist id="suppliers-list">
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.name} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-gray-400 mt-1">Digite para adicionar um novo fornecedor</p>
                 </div>
 
                 <div>
