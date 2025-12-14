@@ -21,6 +21,7 @@ import ClientPortal from "@/pages/ClientPortal";
 import LeiMercadoLivre from "@/pages/LeiMercadoLivre";
 import Insights from "@/pages/Insights";
 import SupplierManager from "@/pages/SupplierManager";
+import ProposalTracker from "@/pages/ProposalTracker";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/suppliers" component={SupplierManager} />
+      <Route path="/admin/proposals" component={ProposalTracker} />
       <Route component={NotFound} />
     </Switch>
   );

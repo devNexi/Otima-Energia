@@ -9,7 +9,8 @@ import {
   insertSupplierQuoteSchema,
   insertRfoRequestSchema,
   insertRfoSupplierTrackingSchema,
-  insertSupplierContactSchema
+  insertSupplierContactSchema,
+  insertProposalSchema
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -1138,6 +1139,159 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error updating RFO template:", error);
       res.status(500).json({ success: false, error: "Failed to update template" });
+    }
+  });
+
+  // ============== PROPOSAL ENDPOINTS ==============
+
+  // Create proposal from client + quote data
+  app.post("/api/proposals", async (req, res) => {
+    try {
+      const proposalNumber = await storage.generateProposalNumber();
+      const trackingToken = require("crypto").randomBytes(32).toString("hex");
+      
+      const proposalData = {
+        ...req.body,
+        proposalNumber,
+        trackingToken,
+      };
+      
+      const validatedData = insertProposalSchema.parse(proposalData);
+      const proposal = await storage.createProposal(validatedData);
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating proposal:", error);
+        res.status(500).json({ success: false, error: "Failed to create proposal" });
+      }
+    }
+  });
+
+  // Get all proposals
+  app.get("/api/proposals", async (req, res) => {
+    try {
+      const proposals = await storage.getProposals();
+      res.json({ success: true, proposals });
+    } catch (error: any) {
+      console.error("Error fetching proposals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch proposals" });
+    }
+  });
+
+  // Get single proposal
+  app.get("/api/proposals/:id", async (req, res) => {
+    try {
+      const proposal = await storage.getProposal(parseInt(req.params.id));
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      console.error("Error fetching proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch proposal" });
+    }
+  });
+
+  // Update proposal status
+  app.patch("/api/proposals/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const proposal = await storage.updateProposalStatus(parseInt(req.params.id), status);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      console.error("Error updating proposal status:", error);
+      res.status(500).json({ success: false, error: "Failed to update proposal status" });
+    }
+  });
+
+  // Update proposal (general)
+  app.patch("/api/proposals/:id", async (req, res) => {
+    try {
+      const proposal = await storage.updateProposal(parseInt(req.params.id), req.body);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      console.error("Error updating proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to update proposal" });
+    }
+  });
+
+  // Get proposals for specific client
+  app.get("/api/clients/:id/proposals", async (req, res) => {
+    try {
+      const proposals = await storage.getProposalsForClient(parseInt(req.params.id));
+      res.json({ success: true, proposals });
+    } catch (error: any) {
+      console.error("Error fetching client proposals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch proposals" });
+    }
+  });
+
+  // Client view proposal (tracks views, returns proposal data)
+  app.get("/api/proposal/view/:token", async (req, res) => {
+    try {
+      const proposal = await storage.getProposalByToken(req.params.token);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      // Track view
+      await storage.incrementProposalViews(proposal.id);
+      await storage.recordProposalView({
+        proposalId: proposal.id,
+        ipAddress: req.ip || "unknown",
+        userAgent: req.headers["user-agent"] || "unknown",
+      });
+      
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      console.error("Error viewing proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to load proposal" });
+    }
+  });
+
+  // Get proposal templates
+  app.get("/api/proposal-templates", async (req, res) => {
+    try {
+      const templates = await storage.getProposalTemplates();
+      res.json({ success: true, templates });
+    } catch (error: any) {
+      console.error("Error fetching proposal templates:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch templates" });
+    }
+  });
+
+  // Get default proposal template
+  app.get("/api/proposal-templates/default", async (req, res) => {
+    try {
+      const templateType = (req.query.type as string) || "proposal";
+      const template = await storage.getDefaultProposalTemplate(templateType);
+      if (!template) {
+        return res.status(404).json({ success: false, error: "No default template found" });
+      }
+      res.json({ success: true, template });
+    } catch (error: any) {
+      console.error("Error fetching default template:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch template" });
+    }
+  });
+
+  // Get proposal views
+  app.get("/api/proposals/:id/views", async (req, res) => {
+    try {
+      const views = await storage.getProposalViews(parseInt(req.params.id));
+      res.json({ success: true, views });
+    } catch (error: any) {
+      console.error("Error fetching proposal views:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch views" });
     }
   });
 
