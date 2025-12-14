@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { BillUploadSection } from "@/components/BillUploadSection";
 import { 
   Users, 
   Inbox, 
@@ -21,7 +22,8 @@ import {
   Mail,
   Phone,
   Loader2,
-  Languages
+  Languages,
+  Upload
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -38,6 +40,7 @@ export default function Admin() {
   const { t, language, setLanguage } = useI18n();
   const queryClient = useQueryClient();
   const [newClientOpen, setNewClientOpen] = useState(false);
+  const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [newClientForm, setNewClientForm] = useState({
     companyName: "",
     cnpj: "",
@@ -397,6 +400,16 @@ export default function Admin() {
                           <div className="flex items-center gap-2">
                             <Button 
                               size="sm" 
+                              variant="default"
+                              className="bg-violet-600 hover:bg-violet-700"
+                              onClick={() => setBillUploadClient({ id: client.id, name: client.companyName })}
+                              data-testid={`button-upload-bill-${client.id}`}
+                            >
+                              <Upload className="w-4 h-4 mr-1" />
+                              Upload Fatura
+                            </Button>
+                            <Button 
+                              size="sm" 
                               variant="outline"
                               onClick={() => generateUploadLinkMutation.mutate(client.id)}
                               disabled={generateUploadLinkMutation.isPending}
@@ -409,6 +422,16 @@ export default function Admin() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {billUploadClient && (
+                  <div className="mt-6">
+                    <BillUploadSection 
+                      clientId={billUploadClient.id}
+                      clientName={billUploadClient.name}
+                      onClose={() => setBillUploadClient(null)}
+                    />
                   </div>
                 )}
               </CardContent>
