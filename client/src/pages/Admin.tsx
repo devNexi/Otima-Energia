@@ -317,10 +317,12 @@ export default function Admin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login attempt:', { username: loginForm.username, passwordLength: loginForm.password.length });
     setLoginError('');
     setLoginPending(true);
     
     const result = await login(loginForm.username, loginForm.password);
+    console.log('Login result:', result);
     setLoginPending(false);
     
     if (!result.success) {
