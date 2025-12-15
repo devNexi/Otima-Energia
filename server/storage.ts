@@ -17,11 +17,21 @@ import {
   type Proposal, type InsertProposal,
   type ProposalTemplate, type InsertProposalTemplate,
   type ProposalView, type InsertProposalView,
+  type ClientContract, type InsertClientContract,
+  type MarketPriceBenchmark, type InsertMarketPriceBenchmark,
+  type EcosSettings, type InsertEcosSettings,
+  type EcosDecisionLog, type InsertEcosDecisionLog,
+  type QuarterlyReport, type InsertQuarterlyReport,
+  type AdminAuditLog, type InsertAdminAuditLog,
+  type AdminSession, type InsertAdminSession,
+  type PortalAccessLog, type InsertPortalAccessLog,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
-  proposals, proposalTemplates, proposalViews
+  proposals, proposalTemplates, proposalViews,
+  clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
+  adminAuditLog, adminSessions, portalAccessLogs
 } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 export interface IStorage {
@@ -143,6 +153,57 @@ export interface IStorage {
   // Proposal Templates
   getProposalTemplates(): Promise<ProposalTemplate[]>;
   getDefaultProposalTemplate(templateType: string): Promise<ProposalTemplate | undefined>;
+  
+  // ECOS - Client Contracts
+  createClientContract(contract: InsertClientContract): Promise<ClientContract>;
+  getClientContracts(clientId: number): Promise<ClientContract[]>;
+  getActiveClientContract(clientId: number): Promise<ClientContract | undefined>;
+  getClientContract(id: number): Promise<ClientContract | undefined>;
+  updateClientContract(id: number, data: Partial<InsertClientContract>): Promise<ClientContract | undefined>;
+  getExpiringContracts(withinDays: number): Promise<ClientContract[]>;
+  
+  // ECOS - Market Price Benchmarks
+  createBenchmark(benchmark: InsertMarketPriceBenchmark): Promise<MarketPriceBenchmark>;
+  getBenchmarks(): Promise<MarketPriceBenchmark[]>;
+  getActiveBenchmarks(): Promise<MarketPriceBenchmark[]>;
+  getBenchmark(id: number): Promise<MarketPriceBenchmark | undefined>;
+  getBenchmarkForClient(segment: string, region: string, contractMonths: number): Promise<MarketPriceBenchmark | undefined>;
+  updateBenchmark(id: number, data: Partial<InsertMarketPriceBenchmark>): Promise<MarketPriceBenchmark | undefined>;
+  
+  // ECOS - Settings
+  getEcosSettings(segment: string): Promise<EcosSettings | undefined>;
+  getAllEcosSettings(): Promise<EcosSettings[]>;
+  upsertEcosSettings(settings: InsertEcosSettings): Promise<EcosSettings>;
+  
+  // ECOS - Decision Logs
+  createDecisionLog(log: InsertEcosDecisionLog): Promise<EcosDecisionLog>;
+  getDecisionLogs(clientId: number): Promise<EcosDecisionLog[]>;
+  getDecisionLog(id: number): Promise<EcosDecisionLog | undefined>;
+  getLatestDecisionLog(clientId: number): Promise<EcosDecisionLog | undefined>;
+  updateDecisionLog(id: number, data: Partial<InsertEcosDecisionLog>): Promise<EcosDecisionLog | undefined>;
+  getDecisionLogsByStatus(status: string): Promise<EcosDecisionLog[]>;
+  
+  // ECOS - Quarterly Reports
+  createQuarterlyReport(report: InsertQuarterlyReport): Promise<QuarterlyReport>;
+  getQuarterlyReports(clientId: number): Promise<QuarterlyReport[]>;
+  getQuarterlyReport(id: number): Promise<QuarterlyReport | undefined>;
+  updateQuarterlyReport(id: number, data: Partial<InsertQuarterlyReport>): Promise<QuarterlyReport | undefined>;
+  getPendingApprovalReports(): Promise<QuarterlyReport[]>;
+  approveReport(id: number, approvedBy: string): Promise<QuarterlyReport | undefined>;
+  
+  // ECOS - Admin Audit Log
+  logAdminAction(log: InsertAdminAuditLog): Promise<AdminAuditLog>;
+  getAdminAuditLogs(limit?: number): Promise<AdminAuditLog[]>;
+  
+  // ECOS - Admin Sessions  
+  createAdminSession(session: InsertAdminSession): Promise<AdminSession>;
+  getAdminSession(id: string): Promise<AdminSession | undefined>;
+  deleteAdminSession(id: string): Promise<void>;
+  deleteExpiredSessions(): Promise<void>;
+  
+  // ECOS - Portal Access Logs
+  logPortalAccess(log: InsertPortalAccessLog): Promise<PortalAccessLog>;
+  getPortalAccessLogs(clientId: number): Promise<PortalAccessLog[]>;
 }
 
 export class Storage implements IStorage {
@@ -669,6 +730,246 @@ export class Storage implements IStorage {
       .where(and(eq(proposalTemplates.templateType, templateType), eq(proposalTemplates.isDefault, true), eq(proposalTemplates.isActive, true)))
       .limit(1);
     return result[0];
+  }
+
+  // ============================================
+  // ECOS - Energy Contract Operating System
+  // ============================================
+
+  // Client Contracts
+  async createClientContract(contract: InsertClientContract): Promise<ClientContract> {
+    const result = await db.insert(clientContracts).values(contract).returning();
+    return result[0];
+  }
+
+  async getClientContracts(clientId: number): Promise<ClientContract[]> {
+    return await db.select().from(clientContracts)
+      .where(eq(clientContracts.clientId, clientId))
+      .orderBy(desc(clientContracts.createdAt));
+  }
+
+  async getActiveClientContract(clientId: number): Promise<ClientContract | undefined> {
+    const result = await db.select().from(clientContracts)
+      .where(and(eq(clientContracts.clientId, clientId), eq(clientContracts.status, 'active')))
+      .orderBy(desc(clientContracts.contractEnd))
+      .limit(1);
+    return result[0];
+  }
+
+  async getClientContract(id: number): Promise<ClientContract | undefined> {
+    const result = await db.select().from(clientContracts).where(eq(clientContracts.id, id));
+    return result[0];
+  }
+
+  async updateClientContract(id: number, data: Partial<InsertClientContract>): Promise<ClientContract | undefined> {
+    const result = await db.update(clientContracts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(clientContracts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getExpiringContracts(withinDays: number): Promise<ClientContract[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + withinDays);
+    return await db.select().from(clientContracts)
+      .where(and(
+        eq(clientContracts.status, 'active'),
+        lte(clientContracts.contractEnd, futureDate.toISOString().split('T')[0])
+      ))
+      .orderBy(clientContracts.contractEnd);
+  }
+
+  // Market Price Benchmarks
+  async createBenchmark(benchmark: InsertMarketPriceBenchmark): Promise<MarketPriceBenchmark> {
+    const result = await db.insert(marketPriceBenchmarks).values(benchmark).returning();
+    return result[0];
+  }
+
+  async getBenchmarks(): Promise<MarketPriceBenchmark[]> {
+    return await db.select().from(marketPriceBenchmarks).orderBy(desc(marketPriceBenchmarks.effectiveDate));
+  }
+
+  async getActiveBenchmarks(): Promise<MarketPriceBenchmark[]> {
+    const today = new Date().toISOString().split('T')[0];
+    return await db.select().from(marketPriceBenchmarks)
+      .where(and(
+        lte(marketPriceBenchmarks.effectiveDate, today),
+        sql`(${marketPriceBenchmarks.expiresAt} IS NULL OR ${marketPriceBenchmarks.expiresAt} >= ${today})`
+      ))
+      .orderBy(desc(marketPriceBenchmarks.effectiveDate));
+  }
+
+  async getBenchmark(id: number): Promise<MarketPriceBenchmark | undefined> {
+    const result = await db.select().from(marketPriceBenchmarks).where(eq(marketPriceBenchmarks.id, id));
+    return result[0];
+  }
+
+  async getBenchmarkForClient(segment: string, region: string, contractMonths: number): Promise<MarketPriceBenchmark | undefined> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.select().from(marketPriceBenchmarks)
+      .where(and(
+        eq(marketPriceBenchmarks.segment, segment),
+        eq(marketPriceBenchmarks.region, region),
+        eq(marketPriceBenchmarks.contractLengthMonths, contractMonths),
+        lte(marketPriceBenchmarks.effectiveDate, today),
+        sql`(${marketPriceBenchmarks.expiresAt} IS NULL OR ${marketPriceBenchmarks.expiresAt} >= ${today})`
+      ))
+      .orderBy(desc(marketPriceBenchmarks.effectiveDate))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateBenchmark(id: number, data: Partial<InsertMarketPriceBenchmark>): Promise<MarketPriceBenchmark | undefined> {
+    const result = await db.update(marketPriceBenchmarks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketPriceBenchmarks.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // ECOS Settings
+  async getEcosSettings(segment: string): Promise<EcosSettings | undefined> {
+    const result = await db.select().from(ecosSettings).where(eq(ecosSettings.segment, segment));
+    return result[0];
+  }
+
+  async getAllEcosSettings(): Promise<EcosSettings[]> {
+    return await db.select().from(ecosSettings);
+  }
+
+  async upsertEcosSettings(settings: InsertEcosSettings): Promise<EcosSettings> {
+    const existing = await this.getEcosSettings(settings.segment);
+    if (existing) {
+      const result = await db.update(ecosSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(ecosSettings.segment, settings.segment))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(ecosSettings).values(settings).returning();
+    return result[0];
+  }
+
+  // Decision Logs
+  async createDecisionLog(log: InsertEcosDecisionLog): Promise<EcosDecisionLog> {
+    const result = await db.insert(ecosDecisionLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getDecisionLogs(clientId: number): Promise<EcosDecisionLog[]> {
+    return await db.select().from(ecosDecisionLogs)
+      .where(eq(ecosDecisionLogs.clientId, clientId))
+      .orderBy(desc(ecosDecisionLogs.decisionDate));
+  }
+
+  async getDecisionLog(id: number): Promise<EcosDecisionLog | undefined> {
+    const result = await db.select().from(ecosDecisionLogs).where(eq(ecosDecisionLogs.id, id));
+    return result[0];
+  }
+
+  async getLatestDecisionLog(clientId: number): Promise<EcosDecisionLog | undefined> {
+    const result = await db.select().from(ecosDecisionLogs)
+      .where(eq(ecosDecisionLogs.clientId, clientId))
+      .orderBy(desc(ecosDecisionLogs.decisionDate))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateDecisionLog(id: number, data: Partial<InsertEcosDecisionLog>): Promise<EcosDecisionLog | undefined> {
+    const result = await db.update(ecosDecisionLogs)
+      .set(data)
+      .where(eq(ecosDecisionLogs.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getDecisionLogsByStatus(status: string): Promise<EcosDecisionLog[]> {
+    return await db.select().from(ecosDecisionLogs)
+      .where(eq(ecosDecisionLogs.statusResult, status))
+      .orderBy(desc(ecosDecisionLogs.decisionDate));
+  }
+
+  // Quarterly Reports
+  async createQuarterlyReport(report: InsertQuarterlyReport): Promise<QuarterlyReport> {
+    const result = await db.insert(quarterlyReports).values(report).returning();
+    return result[0];
+  }
+
+  async getQuarterlyReports(clientId: number): Promise<QuarterlyReport[]> {
+    return await db.select().from(quarterlyReports)
+      .where(eq(quarterlyReports.clientId, clientId))
+      .orderBy(desc(quarterlyReports.periodEnd));
+  }
+
+  async getQuarterlyReport(id: number): Promise<QuarterlyReport | undefined> {
+    const result = await db.select().from(quarterlyReports).where(eq(quarterlyReports.id, id));
+    return result[0];
+  }
+
+  async updateQuarterlyReport(id: number, data: Partial<InsertQuarterlyReport>): Promise<QuarterlyReport | undefined> {
+    const result = await db.update(quarterlyReports)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(quarterlyReports.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getPendingApprovalReports(): Promise<QuarterlyReport[]> {
+    return await db.select().from(quarterlyReports)
+      .where(eq(quarterlyReports.approved, false))
+      .orderBy(quarterlyReports.periodEnd);
+  }
+
+  async approveReport(id: number, approvedBy: string): Promise<QuarterlyReport | undefined> {
+    const result = await db.update(quarterlyReports)
+      .set({ approved: true, approvedBy, approvedAt: new Date(), updatedAt: new Date() })
+      .where(eq(quarterlyReports.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Admin Audit Log
+  async logAdminAction(log: InsertAdminAuditLog): Promise<AdminAuditLog> {
+    const result = await db.insert(adminAuditLog).values(log).returning();
+    return result[0];
+  }
+
+  async getAdminAuditLogs(limit: number = 100): Promise<AdminAuditLog[]> {
+    return await db.select().from(adminAuditLog)
+      .orderBy(desc(adminAuditLog.timestamp))
+      .limit(limit);
+  }
+
+  // Admin Sessions
+  async createAdminSession(session: InsertAdminSession): Promise<AdminSession> {
+    const result = await db.insert(adminSessions).values(session).returning();
+    return result[0];
+  }
+
+  async getAdminSession(id: string): Promise<AdminSession | undefined> {
+    const result = await db.select().from(adminSessions).where(eq(adminSessions.id, id));
+    return result[0];
+  }
+
+  async deleteAdminSession(id: string): Promise<void> {
+    await db.delete(adminSessions).where(eq(adminSessions.id, id));
+  }
+
+  async deleteExpiredSessions(): Promise<void> {
+    await db.delete(adminSessions).where(lte(adminSessions.expiresAt, new Date()));
+  }
+
+  // Portal Access Logs
+  async logPortalAccess(log: InsertPortalAccessLog): Promise<PortalAccessLog> {
+    const result = await db.insert(portalAccessLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getPortalAccessLogs(clientId: number): Promise<PortalAccessLog[]> {
+    return await db.select().from(portalAccessLogs)
+      .where(eq(portalAccessLogs.clientId, clientId))
+      .orderBy(desc(portalAccessLogs.timestamp));
   }
 }
 

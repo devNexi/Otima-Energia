@@ -836,3 +836,318 @@ export const contractTemplatesRelations = relations(contractTemplates, ({ one })
     references: [suppliers.id],
   }),
 }));
+
+// ============================================
+// ECOS - Energy Contract Operating System
+// ============================================
+
+// Client Contracts - Active energy contracts per client
+export const clientContracts = pgTable("client_contracts", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  
+  // Contract Details
+  contractStart: date("contract_start").notNull(),
+  contractEnd: date("contract_end").notNull(),
+  priceRmwh: decimal("price_rmwh", { precision: 10, scale: 2 }).notNull(),
+  volumeMwhMonth: decimal("volume_mwh_month", { precision: 10, scale: 2 }),
+  supplierName: text("supplier_name").notNull(),
+  
+  // Flexibility
+  flexibilityNotes: text("flexibility_notes"),
+  flexibilityPercent: decimal("flexibility_percent", { precision: 5, scale: 2 }),
+  
+  // Commission
+  commissionType: text("commission_type").default("supplier_paid"), // 'supplier_paid', 'client_paid', 'hybrid'
+  commissionRmwh: decimal("commission_rmwh", { precision: 10, scale: 2 }),
+  
+  // Status
+  status: text("status").default("active"), // 'active', 'expiring', 'expired', 'renewed'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertClientContractSchema = createInsertSchema(clientContracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClientContract = z.infer<typeof insertClientContractSchema>;
+export type ClientContract = typeof clientContracts.$inferSelect;
+
+// Market Price Benchmarks - Manual price band inputs
+export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
+  id: serial("id").primaryKey(),
+  
+  // Segment Info
+  segment: text("segment").notNull(), // 'SME', 'Industrial'
+  region: text("region").notNull(), // 'Sudeste', 'Sul', 'Nordeste', 'Norte', 'Centro-Oeste'
+  contractLengthMonths: integer("contract_length_months").notNull(), // 12, 24, 36
+  
+  // Price Band (R$/MWh)
+  lowerBoundRmwh: decimal("lower_bound_rmwh", { precision: 10, scale: 2 }).notNull(),
+  upperBoundRmwh: decimal("upper_bound_rmwh", { precision: 10, scale: 2 }).notNull(),
+  
+  // Metadata
+  effectiveDate: date("effective_date").notNull(),
+  expiresAt: date("expires_at"),
+  notes: text("notes"),
+  updatedBy: text("updated_by").default("admin"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertMarketPriceBenchmarkSchema = createInsertSchema(marketPriceBenchmarks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMarketPriceBenchmark = z.infer<typeof insertMarketPriceBenchmarkSchema>;
+export type MarketPriceBenchmark = typeof marketPriceBenchmarks.$inferSelect;
+
+// ECOS Settings - Band calculation settings
+export const ecosSettings = pgTable("ecos_settings", {
+  id: serial("id").primaryKey(),
+  segment: text("segment").notNull().unique(), // 'SME', 'Industrial'
+  
+  // Band Calculation
+  bandWidthPercent: decimal("band_width_percent", { precision: 5, scale: 2 }).default("10.00"),
+  frictionBufferRmwh: decimal("friction_buffer_rmwh", { precision: 10, scale: 2 }).default("5.00"),
+  
+  // Action Thresholds
+  priceGapThresholdPercent: decimal("price_gap_threshold_percent", { precision: 5, scale: 2 }).default("15.00"),
+  minAnnualSavingsR: decimal("min_annual_savings_r", { precision: 12, scale: 2 }).default("10000.00"),
+  minRemainingMonths: integer("min_remaining_months").default(6),
+  renewalWindowMonths: integer("renewal_window_months").default(6),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEcosSettingsSchema = createInsertSchema(ecosSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEcosSettings = z.infer<typeof insertEcosSettingsSchema>;
+export type EcosSettings = typeof ecosSettings.$inferSelect;
+
+// ECOS Decision Logs - Every decision is logged
+export const ecosDecisionLogs = pgTable("ecos_decision_logs", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  contractId: integer("contract_id").references(() => clientContracts.id),
+  
+  // Decision Context
+  decisionDate: timestamp("decision_date").defaultNow().notNull(),
+  triggerType: text("trigger_type").notNull(), // 'bill_upload', 'benchmark_update', 'quarterly_check', 'manual'
+  
+  // Market Data Used
+  benchmarkId: integer("benchmark_id").references(() => marketPriceBenchmarks.id),
+  benchmarkLowerRmwh: decimal("benchmark_lower_rmwh", { precision: 10, scale: 2 }),
+  benchmarkUpperRmwh: decimal("benchmark_upper_rmwh", { precision: 10, scale: 2 }),
+  
+  // Client Data
+  clientPriceRmwh: decimal("client_price_rmwh", { precision: 10, scale: 2 }).notNull(),
+  clientConsumptionMwh: decimal("client_consumption_mwh", { precision: 10, scale: 2 }),
+  contractRemainingMonths: integer("contract_remaining_months"),
+  
+  // ECOS Output
+  statusResult: text("status_result").notNull(), // 'within_band', 'at_risk', 'above_band'
+  recommendation: text("recommendation").notNull(), // 'hold', 'monitor', 'prepare_renegotiation', 'renegotiate_now'
+  explanationPt: text("explanation_pt").notNull(), // Portuguese explanation
+  potentialSavingsR: decimal("potential_savings_r", { precision: 12, scale: 2 }),
+  
+  // Human Actions
+  actionTaken: text("action_taken"), // Manual field: what was actually done
+  actionDate: timestamp("action_date"),
+  actionBy: text("action_by"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertEcosDecisionLogSchema = createInsertSchema(ecosDecisionLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEcosDecisionLog = z.infer<typeof insertEcosDecisionLogSchema>;
+export type EcosDecisionLog = typeof ecosDecisionLogs.$inferSelect;
+
+// Quarterly Reports - Auto-generated client reports
+export const quarterlyReports = pgTable("quarterly_reports", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  contractId: integer("contract_id").references(() => clientContracts.id),
+  decisionLogId: integer("decision_log_id").references(() => ecosDecisionLogs.id),
+  
+  // Report Period
+  periodLabel: text("period_label").notNull(), // 'Q1 2025', 'Q2 2025'
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  
+  // Report Content
+  marketSummaryPt: text("market_summary_pt"), // Generic market summary in Portuguese
+  clientPositionPt: text("client_position_pt"), // Client-specific position analysis
+  healthScore: integer("health_score"), // 0-100
+  
+  // Status
+  statusClassification: text("status_classification").notNull(), // 'within_band', 'at_risk', 'above_band'
+  recommendation: text("recommendation").notNull(),
+  explanationPt: text("explanation_pt").notNull(),
+  
+  // Financial Summary
+  currentPriceRmwh: decimal("current_price_rmwh", { precision: 10, scale: 2 }),
+  benchmarkMedianRmwh: decimal("benchmark_median_rmwh", { precision: 10, scale: 2 }),
+  optimisedReferencePriceRmwh: decimal("optimised_reference_price_rmwh", { precision: 10, scale: 2 }),
+  estimatedAnnualSavingsR: decimal("estimated_annual_savings_r", { precision: 12, scale: 2 }),
+  
+  // Next Review
+  nextReviewDate: date("next_review_date"),
+  
+  // Approval Workflow
+  approved: boolean("approved").default(false),
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  
+  // Delivery
+  sentToClient: boolean("sent_to_client").default(false),
+  sentAt: timestamp("sent_at"),
+  viewedByClient: boolean("viewed_by_client").default(false),
+  viewedAt: timestamp("viewed_at"),
+  
+  // PDF Storage
+  pdfPath: text("pdf_path"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertQuarterlyReportSchema = createInsertSchema(quarterlyReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQuarterlyReport = z.infer<typeof insertQuarterlyReportSchema>;
+export type QuarterlyReport = typeof quarterlyReports.$inferSelect;
+
+// Admin Audit Log - Track all admin actions
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: serial("id").primaryKey(),
+  
+  // Actor
+  actor: text("actor").notNull(), // Username or 'system'
+  actorIp: text("actor_ip"),
+  
+  // Action
+  action: text("action").notNull(), // 'login', 'create_client', 'approve_report', 'update_benchmark', etc.
+  entityType: text("entity_type"), // 'client', 'contract', 'benchmark', 'report', etc.
+  entityId: integer("entity_id"),
+  
+  // Details
+  detailsJson: jsonb("details_json"), // Additional context
+  
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
+
+// Admin Sessions - For session-based auth
+export const adminSessions = pgTable("admin_sessions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  
+  expiresAt: timestamp("expires_at").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAdminSessionSchema = createInsertSchema(adminSessions).omit({
+  createdAt: true,
+});
+
+export type InsertAdminSession = z.infer<typeof insertAdminSessionSchema>;
+export type AdminSession = typeof adminSessions.$inferSelect;
+
+// Portal Access Logs - Track client portal access
+export const portalAccessLogs = pgTable("portal_access_logs", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id),
+  sessionToken: text("session_token"),
+  
+  action: text("action").notNull(), // 'login', 'view_report', 'view_status', etc.
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertPortalAccessLogSchema = createInsertSchema(portalAccessLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertPortalAccessLog = z.infer<typeof insertPortalAccessLogSchema>;
+export type PortalAccessLog = typeof portalAccessLogs.$inferSelect;
+
+// ECOS Relations
+export const clientContractsRelations = relations(clientContracts, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [clientContracts.clientId],
+    references: [clients.id],
+  }),
+  decisionLogs: many(ecosDecisionLogs),
+  quarterlyReports: many(quarterlyReports),
+}));
+
+export const ecosDecisionLogsRelations = relations(ecosDecisionLogs, ({ one }) => ({
+  client: one(clients, {
+    fields: [ecosDecisionLogs.clientId],
+    references: [clients.id],
+  }),
+  contract: one(clientContracts, {
+    fields: [ecosDecisionLogs.contractId],
+    references: [clientContracts.id],
+  }),
+  benchmark: one(marketPriceBenchmarks, {
+    fields: [ecosDecisionLogs.benchmarkId],
+    references: [marketPriceBenchmarks.id],
+  }),
+}));
+
+export const quarterlyReportsRelations = relations(quarterlyReports, ({ one }) => ({
+  client: one(clients, {
+    fields: [quarterlyReports.clientId],
+    references: [clients.id],
+  }),
+  contract: one(clientContracts, {
+    fields: [quarterlyReports.contractId],
+    references: [clientContracts.id],
+  }),
+  decisionLog: one(ecosDecisionLogs, {
+    fields: [quarterlyReports.decisionLogId],
+    references: [ecosDecisionLogs.id],
+  }),
+}));
+
+export const adminSessionsRelations = relations(adminSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [adminSessions.userId],
+    references: [users.id],
+  }),
+}));

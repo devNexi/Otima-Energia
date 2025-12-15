@@ -1,0 +1,409 @@
+PART 1 — ECOS MVP
+Build Checklist for Replit (Locked Scope)
+
+This is the cheapest viable version that still gives you massive leverage, protects margins, and scales Renan.
+
+You are not building a trading system.
+You are building a decision + monitoring system.
+
+1. ECOS OVERVIEW (FOR REPLIT CONTEXT)
+
+Name:
+Energy Contract Operating System (ECOS)
+
+Purpose:
+Provide continuous, automated monitoring and optimisation recommendations for client energy contracts, with human oversight, using bill data + market benchmarks.
+
+Primary Users:
+
+Internal: Renan (admin portal)
+
+External: Clients (client portal, read-only reports)
+
+Core Principle:
+
+Software makes decisions. Humans explain and execute.
+
+2. ECOS MVP — CORE FEATURES (MUST BUILD)
+2.1 Client Energy Profile (Admin + Client)
+
+Data Inputs
+
+Uploaded energy bills (already exists)
+
+OCR-extracted data (already exists)
+
+Manually editable fields (admin):
+
+Contract start date
+
+Contract end date
+
+Price (R$/MWh)
+
+Volume (MWh/month)
+
+Modulation / flexibility notes
+
+Supplier name
+
+System Outputs
+
+Monthly consumption history
+
+Average price paid
+
+Consumption volatility score (low / medium / high)
+
+Contract expiry countdown
+
+📌 Replit note:
+This lives as a new tab inside /admin/clients/:id
+
+2.2 Market Benchmark Engine (Simple, Manual First)
+
+MVP Constraint (important):
+
+No real-time feeds yet
+
+Benchmarks are manually entered by admin (Renan or you)
+
+Benchmark Inputs (Admin-only)
+
+Market price range per segment:
+
+Segment (SME / Industrial)
+
+Region
+
+Contract length (12 / 24 / 36 months)
+
+Price band:
+
+Lower bound
+
+Upper bound
+
+Timestamp of last update
+
+Benchmark Storage
+
+Table: market_price_benchmarks
+
+📌 This avoids API complexity now but unlocks automation logic immediately.
+
+2.3 Price Band Evaluation Engine (AUTOMATED)
+
+For each client, ECOS automatically evaluates:
+
+Inputs
+
+Client price
+
+Applicable benchmark band
+
+Consumption volatility
+
+Time remaining on contract
+
+Outputs
+
+Status:
+
+🟢 Within band
+
+🟡 At risk
+
+🔴 Above band
+
+Recommended action:
+
+Hold
+
+Monitor
+
+Prepare renegotiation
+
+Renegotiate now
+
+Explanation (plain Portuguese)
+
+📌 This logic runs:
+
+On bill upload
+
+On benchmark update
+
+On scheduled quarterly check
+
+2.4 Quarterly Optimisation Report (AUTO-GENERATED)
+
+For each client, every quarter ECOS generates:
+
+Sections
+
+Market Summary (generic, templated)
+
+Client Position vs Market
+
+Contract Health Score
+
+Recommendation
+
+Explanation
+
+Next review date
+
+Delivery
+
+Stored in client record
+
+Visible in client portal
+
+Downloadable PDF later (not MVP-critical)
+
+📌 This is the core value delivery.
+
+2.5 Decision Log (CRITICAL — DO NOT SKIP)
+
+Every ECOS decision is logged:
+
+Fields
+
+Client ID
+
+Date
+
+Market band used
+
+Client price
+
+Status result
+
+Recommendation
+
+Action taken (manual field)
+
+Notes (optional)
+
+This protects:
+
+you legally
+
+supplier relationships
+
+internal learning
+
+future AI training
+
+2.6 Admin Dashboard — ECOS View
+
+New ECOS dashboard showing:
+
+Clients by status (🟢🟡🔴)
+
+Contracts expiring in next 6 months
+
+Clients requiring action now
+
+Clients monitored only
+
+Renan should be able to run his entire day from this screen.
+
+2.7 Client Portal (Minimal but Powerful)
+
+Clients see:
+
+Their contract summary
+
+Last optimisation report
+
+Status indicator (🟢🟡🔴)
+
+Explanation text
+
+“Next review date”
+
+❌ No live prices
+❌ No renegotiation buttons
+❌ No noise
+
+This reinforces trust and professionalism.
+
+3. SECURITY REQUIREMENTS (NON-NEGOTIABLE)
+
+Replit must implement:
+
+Admin Portal
+
+Email + password login
+
+Password hashing
+
+Session-based auth
+
+Role: admin
+
+Audit logging for ECOS actions
+
+Client Portal
+
+Token expiration (e.g. 14 days)
+
+Rate limiting
+
+Read-only access
+
+Access logging
+
+4. WHAT IS EXPLICITLY OUT OF SCOPE (FOR NOW)
+
+Tell Replit not to build:
+
+Real-time market APIs
+
+Supplier integrations
+
+Automated renegotiation
+
+Messaging / email agents
+
+Forecasting models
+
+Those come after traction.
+
+PART 2 — PRICE BAND PHILOSOPHY (THIS SOLVES YOUR COMMISSION FEAR)
+
+This is crucial. Read carefully.
+
+The Core Rule
+
+ECOS never optimises to the lowest possible price.
+It optimises to the optimal price band.
+
+That distinction saves your business.
+
+1. What a Price Band Is
+
+A price band represents:
+
+Competitive market pricing
+
+Sustainable supplier economics
+
+Stable broker commissions
+
+Reduced churn
+
+It is not the market floor.
+
+2. How Price Bands Are Defined
+
+For each segment, define:
+
+Lower Bound
+Price below which:
+
+Supplier quality drops
+
+Contract risk increases
+
+Commission becomes unsustainable
+
+Upper Bound
+Price above which:
+
+Client is objectively overpaying
+
+Renegotiation is justified
+
+Anything inside the band = acceptable.
+
+3. How ECOS Uses the Band
+Scenario A — Client inside band
+
+Status: 🟢
+
+Recommendation: Hold
+
+Messaging:
+
+“Your contract is competitive given current market conditions.”
+
+➡️ No margin erosion
+➡️ No unnecessary renegotiation
+
+Scenario B — Client slightly above band
+
+Status: 🟡
+
+Recommendation: Monitor
+
+Messaging:
+
+“We are monitoring the market for a better entry point.”
+
+➡️ Buys time
+➡️ Manages expectations
+
+Scenario C — Client materially above band
+
+Status: 🔴
+
+Recommendation: Renegotiate
+
+Messaging:
+
+“Current pricing is no longer aligned with the market.”
+
+➡️ Action is justified
+➡️ Supplier conversation is clean
+
+4. Why This Protects Your Commission
+
+Because:
+
+You are not promising “cheapest”
+
+You are promising “correct”
+
+You act only when value is real
+
+You don’t train clients to chase noise
+
+This aligns:
+
+you
+
+client
+
+supplier
+
+5. How You Explain This to Clients (Simple)
+
+“We don’t chase the lowest price every month.
+We make sure you’re always paying a fair, competitive price — and we only move when it truly makes sense.”
+
+That sentence alone is gold.
+
+Final Strategic Note (Important)
+
+What you are building is not brokerage software.
+
+It is:
+
+a trust engine
+
+a decision engine
+
+a scaling engine
+
+Most brokers die because:
+
+humans decide
+
+emotions intervene
+
+margins collapse
+
+ECOS fixes that.
