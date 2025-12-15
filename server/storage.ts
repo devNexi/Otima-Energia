@@ -170,6 +170,7 @@ export interface IStorage {
   getBenchmark(id: number): Promise<MarketPriceBenchmark | undefined>;
   getBenchmarkForClient(segment: string, region: string, contractMonths: number): Promise<MarketPriceBenchmark | undefined>;
   updateBenchmark(id: number, data: Partial<InsertMarketPriceBenchmark>): Promise<MarketPriceBenchmark | undefined>;
+  deleteBenchmark(id: number): Promise<boolean>;
   
   // ECOS - Settings
   getEcosSettings(segment: string): Promise<EcosSettings | undefined>;
@@ -832,6 +833,13 @@ export class Storage implements IStorage {
       .where(eq(marketPriceBenchmarks.id, id))
       .returning();
     return result[0];
+  }
+
+  async deleteBenchmark(id: number): Promise<boolean> {
+    const result = await db.delete(marketPriceBenchmarks)
+      .where(eq(marketPriceBenchmarks.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   // ECOS Settings

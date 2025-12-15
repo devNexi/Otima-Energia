@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,8 @@ import {
   Languages,
   Upload,
   DollarSign,
-  Send
+  Send,
+  TrendingUp
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -177,6 +179,17 @@ export default function Admin() {
             <p className="text-violet-200 text-sm">{t("admin.subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/admin/benchmarks">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-white hover:bg-violet-800"
+                data-testid="button-benchmarks"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                {t("benchmarks.title")}
+              </Button>
+            </Link>
             <Button 
               variant="ghost" 
               size="sm"

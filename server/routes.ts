@@ -1618,6 +1618,20 @@ export async function registerRoutes(
     }
   });
 
+  // Delete benchmark
+  app.delete("/api/ecos/benchmarks/:id", async (req, res) => {
+    try {
+      const result = await storage.deleteBenchmark(parseInt(req.params.id));
+      if (!result) {
+        return res.status(404).json({ success: false, error: "Benchmark not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting benchmark:", error);
+      res.status(500).json({ success: false, error: "Failed to delete benchmark" });
+    }
+  });
+
   // --- ECOS Settings ---
 
   // Get all ECOS settings
