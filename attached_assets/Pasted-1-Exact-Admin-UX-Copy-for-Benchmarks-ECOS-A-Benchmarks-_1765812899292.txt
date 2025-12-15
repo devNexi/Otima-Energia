@@ -1,0 +1,194 @@
+1️⃣ Exact Admin UX Copy for Benchmarks (ECOS)
+A. Benchmarks List Page (Admin)
+
+Page title
+Reference Ranges (Benchmarks)
+
+Subtitle
+“These reference ranges are used by ECOS to evaluate client and lead contracts. Each range must be sourced, reviewed, and auditable.”
+
+Benchmarks Table Columns
+
+Segment
+Small / Medium Business / Commercial / Industrial
+
+Region
+State or macro-region
+
+Contract Term
+12m / 24m / 36m
+
+Reference Range
+R$ XXX – R$ YYY / MWh
+
+Confidence
+Low / Medium / High
+(helper tooltip):
+“Confidence reflects how reliable and recent the inputs are.”
+
+Source
+Short label
+(e.g. “Supplier quote”, “Internal deal”, “Broker intel”)
+
+Next Review
+Date
+(helper tooltip):
+“Benchmarks must be reviewed on or before this date.”
+
+Status (badge)
+
+✅ Active
+
+⚠️ Review Due
+
+🔴 Overdue
+
+Actions
+View · Edit · Mark Reviewed
+
+Empty State Copy (no benchmarks yet)
+
+Title
+“No reference ranges yet”
+
+Body
+“ECOS requires at least one reference range per segment to evaluate contracts.
+Start by adding a benchmark using supplier quotes, broker intelligence, or internal deal data.”
+
+CTA
+➕ Add First Reference Range
+
+B. Benchmark Create / Edit Form (Exact Copy)
+Section 1: Scope
+
+Segment
+Select the client segment this range applies to.
+
+Region
+State or macro-region where this benchmark is valid.
+
+Contract Term
+Length of the energy contract.
+
+Helper text (below all three):
+“These parameters define when ECOS will apply this reference range.”
+
+Section 2: Reference Range
+
+Lower Bound (R$/MWh)
+Input the lower limit of the healthy reference range.
+
+Upper Bound (R$/MWh)
+Input the upper limit of the healthy reference range.
+
+Helper text (important):
+“A reference range is not a ‘best price’.
+It defines where contracts are considered healthy, acceptable, or misaligned.”
+
+Inline warning (if upper < lower):
+“Upper bound must be greater than lower bound.”
+
+Section 3: Source & Confidence
+
+Source Type (dropdown)
+Supplier Quote
+Internal Deal
+Broker Intelligence
+Public Signal
+Other
+
+Source Details
+Short description of where this range comes from.
+Example: “Supplier X quote for SP SMEs, Nov 2025.”
+
+Source Link (optional)
+Link to email, document, spreadsheet, or PDF.
+
+Confidence Level
+Low / Medium / High
+
+Helper text under Confidence:
+“Use High only when the data is recent and well-supported.
+Low confidence ranges will still work but should be reviewed more frequently.”
+
+Section 4: Review Cadence
+
+Review Frequency
+Monthly / Quarterly
+
+Next Review Date
+Auto-filled based on frequency, but editable.
+
+Helper text:
+“ECOS will flag this benchmark for review when this date is reached.”
+
+Section 5: Notes (Optional)
+
+Internal Notes
+Context, assumptions, or reasoning behind this range.
+
+Helper text:
+“These notes are internal and help explain why the range exists.”
+
+Save Button Copy
+
+Primary CTA
+Save Reference Range
+
+Secondary
+Cancel
+
+C. Benchmark Detail View (Read-Only)
+
+Header
+Reference Range — [Segment] · [Region] · [Term]
+
+Summary Card
+Reference Range: R$ XXX – R$ YYY / MWh
+Confidence: Medium
+Source: Supplier Quote
+Last Reviewed: 12 Nov 2025
+Next Review: 12 Dec 2025
+
+Usage Section
+
+Title
+“Used in ECOS Decisions”
+
+If none yet:
+“No decisions have used this reference range yet.”
+
+If present:
+Table with:
+
+Client / Lead name
+
+Date
+
+Result (Above / Within / At Risk)
+
+Link to decision
+
+Actions
+
+✏️ Edit Reference Range
+
+✅ Mark as Reviewed
+
+Mark as Reviewed Modal (Copy)
+
+Title
+Confirm benchmark review
+
+Body
+“This confirms that the reference range is still valid based on current information.”
+
+Buttons
+Confirm Review
+Cancel
+
+On confirm:
+
+updates lastReviewedAt
+
+sets nextReviewDate = now + cadence

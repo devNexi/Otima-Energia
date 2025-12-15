@@ -1051,6 +1051,52 @@ export const insertQuarterlyReportSchema = createInsertSchema(quarterlyReports).
 export type InsertQuarterlyReport = z.infer<typeof insertQuarterlyReportSchema>;
 export type QuarterlyReport = typeof quarterlyReports.$inferSelect;
 
+// Lead ECOS Snapshots - Point-in-time ECOS analysis for leads
+export const leadEcosSnapshots = pgTable("lead_ecos_snapshots", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  
+  // Benchmark Used
+  benchmarkIdUsed: integer("benchmark_id_used").references(() => marketPriceBenchmarks.id),
+  benchmarkLowerRmwh: decimal("benchmark_lower_rmwh", { precision: 10, scale: 2 }),
+  benchmarkUpperRmwh: decimal("benchmark_upper_rmwh", { precision: 10, scale: 2 }),
+  benchmarkSegment: text("benchmark_segment"),
+  benchmarkRegion: text("benchmark_region"),
+  
+  // Lead Data Snapshot
+  estimatedConsumptionKwh: decimal("estimated_consumption_kwh", { precision: 12, scale: 2 }),
+  estimatedPriceRmwh: decimal("estimated_price_rmwh", { precision: 10, scale: 2 }),
+  segment: text("segment"), // 'SME', 'Industrial'
+  region: text("region"), // 'Sudeste', 'Sul', etc.
+  
+  // ECOS Analysis Result
+  bandResult: text("band_result").notNull(), // 'within_band', 'at_risk', 'above_band', 'no_data'
+  summaryText: text("summary_text").notNull(), // Portuguese summary for lead
+  potentialSavingsR: decimal("potential_savings_r", { precision: 12, scale: 2 }),
+  
+  // Generation Metadata
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  generatedBy: text("generated_by").notNull(), // Username who generated
+  
+  // PDF & Lock
+  pdfUrl: text("pdf_url"),
+  locked: boolean("locked").default(false),
+  lockedAt: timestamp("locked_at"),
+  lockedBy: text("locked_by"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLeadEcosSnapshotSchema = createInsertSchema(leadEcosSnapshots).omit({
+  id: true,
+  createdAt: true,
+  lockedAt: true,
+  lockedBy: true,
+});
+
+export type InsertLeadEcosSnapshot = z.infer<typeof insertLeadEcosSnapshotSchema>;
+export type LeadEcosSnapshot = typeof leadEcosSnapshots.$inferSelect;
+
 // Admin Audit Log - Track all admin actions
 export const adminAuditLog = pgTable("admin_audit_log", {
   id: serial("id").primaryKey(),
@@ -1162,5 +1208,16 @@ export const adminSessionsRelations = relations(adminSessions, ({ one }) => ({
   user: one(users, {
     fields: [adminSessions.userId],
     references: [users.id],
+  }),
+}));
+
+export const leadEcosSnapshotsRelations = relations(leadEcosSnapshots, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadEcosSnapshots.leadId],
+    references: [leads.id],
+  }),
+  benchmark: one(marketPriceBenchmarks, {
+    fields: [leadEcosSnapshots.benchmarkIdUsed],
+    references: [marketPriceBenchmarks.id],
   }),
 }));

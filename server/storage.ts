@@ -25,11 +25,12 @@ import {
   type AdminAuditLog, type InsertAdminAuditLog,
   type AdminSession, type InsertAdminSession,
   type PortalAccessLog, type InsertPortalAccessLog,
+  type LeadEcosSnapshot, type InsertLeadEcosSnapshot,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
   proposals, proposalTemplates, proposalViews,
   clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
-  adminAuditLog, adminSessions, portalAccessLogs
+  adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -206,6 +207,13 @@ export interface IStorage {
   // ECOS - Portal Access Logs
   logPortalAccess(log: InsertPortalAccessLog): Promise<PortalAccessLog>;
   getPortalAccessLogs(clientId: number): Promise<PortalAccessLog[]>;
+  
+  // ECOS - Lead Snapshots
+  createLeadEcosSnapshot(snapshot: InsertLeadEcosSnapshot): Promise<LeadEcosSnapshot>;
+  getLeadEcosSnapshots(leadId: number): Promise<LeadEcosSnapshot[]>;
+  getLeadEcosSnapshot(id: number): Promise<LeadEcosSnapshot | undefined>;
+  updateLeadEcosSnapshot(id: number, data: Partial<InsertLeadEcosSnapshot>): Promise<LeadEcosSnapshot | undefined>;
+  lockLeadEcosSnapshot(id: number, lockedBy: string): Promise<LeadEcosSnapshot | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -987,6 +995,39 @@ export class Storage implements IStorage {
     return await db.select().from(portalAccessLogs)
       .where(eq(portalAccessLogs.clientId, clientId))
       .orderBy(desc(portalAccessLogs.timestamp));
+  }
+
+  // Lead ECOS Snapshots
+  async createLeadEcosSnapshot(snapshot: InsertLeadEcosSnapshot): Promise<LeadEcosSnapshot> {
+    const result = await db.insert(leadEcosSnapshots).values(snapshot).returning();
+    return result[0];
+  }
+
+  async getLeadEcosSnapshots(leadId: number): Promise<LeadEcosSnapshot[]> {
+    return await db.select().from(leadEcosSnapshots)
+      .where(eq(leadEcosSnapshots.leadId, leadId))
+      .orderBy(desc(leadEcosSnapshots.generatedAt));
+  }
+
+  async getLeadEcosSnapshot(id: number): Promise<LeadEcosSnapshot | undefined> {
+    const result = await db.select().from(leadEcosSnapshots).where(eq(leadEcosSnapshots.id, id));
+    return result[0];
+  }
+
+  async updateLeadEcosSnapshot(id: number, data: Partial<InsertLeadEcosSnapshot>): Promise<LeadEcosSnapshot | undefined> {
+    const result = await db.update(leadEcosSnapshots)
+      .set(data)
+      .where(eq(leadEcosSnapshots.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async lockLeadEcosSnapshot(id: number, lockedBy: string): Promise<LeadEcosSnapshot | undefined> {
+    const result = await db.update(leadEcosSnapshots)
+      .set({ locked: true, lockedAt: new Date(), lockedBy })
+      .where(eq(leadEcosSnapshots.id, id))
+      .returning();
+    return result[0];
   }
 }
 
