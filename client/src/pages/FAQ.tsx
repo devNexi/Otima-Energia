@@ -50,6 +50,10 @@ const faqs: FAQItem[] = [
   {
     question: "Por que tantas empresas economizam tanto no Mercado Livre?",
     answer: "Porque a economia vem da correção de distorções do mercado: falta de visibilidade, contratos mal estruturados e pouca comparação entre fornecedores. Quando o mercado se torna transparente, a economia aparece."
+  },
+  {
+    question: "Quando devo começar a pensar em migrar para o Mercado Livre?",
+    answer: "O ideal é começar assim que possível. Mesmo que sua empresa ainda não esteja apta a migrar, iniciar o diagnóstico com antecedência permite planejamento, melhor negociação e menos riscos no futuro."
   }
 ];
 

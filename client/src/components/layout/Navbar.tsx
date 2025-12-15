@@ -10,6 +10,7 @@ export function Navbar() {
   const navLinks = [
     { name: "SOLUÇÕES", href: "/solucoes", isPage: true },
     { name: "MERCADO LIVRE", href: "/lei-mercado-livre", isPage: true },
+    { name: "RENOVAÇÃO", href: "/renovacao-contrato", isPage: true },
     { name: "SOBRE", href: "/sobre", isPage: true },
     { name: "FAQ", href: "/faq", isPage: true },
     { name: "PORTAL", href: "/portal-cliente", isPage: true },

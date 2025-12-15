@@ -1,0 +1,154 @@
+Replit Brief — Education on Renovation & Migration (Clean Version)
+
+Instructions (English for Replit):
+Add clear, conversion-focused education across the website so business owners understand:
+
+• Migration timing depends on their current contract and planning, not on waiting
+• Businesses can start the process today, even if not eligible yet
+• Early preparation increases negotiating power and savings
+• Ótima Energia supports companies before, during, and after eligibility
+
+All copy below must be in Brazilian Portuguese.
+
+1) New Educational Page (Recommended)
+Page Route
+
+/renovacao-contrato
+
+Menu Label
+
+Renovação e Migração
+
+Page Title (H1)
+
+Quando minha empresa pode migrar para o Mercado Livre de Energia?
+
+Hero Subheading
+
+O momento certo depende do seu contrato — e de um bom planejamento.
+
+Section A — Simple explanation (above the fold)
+
+Heading:
+A regra prática: sua empresa pode se preparar agora.
+
+Copy:
+No Mercado Livre de Energia, o momento da migração depende do contrato atual da sua empresa, das cláusulas de saída e do planejamento do processo.
+Por isso, mesmo que sua empresa ainda não possa migrar hoje, já é possível iniciar o diagnóstico e se preparar com antecedência.
+
+Section B — How it works (3 cards)
+
+Card 1
+Title: Empresas que já estão no Mercado Livre
+Body:
+Empresas que já operam no Mercado Livre costumam analisar e negociar novas condições com antecedência. Quanto antes o planejamento começa, maior é o poder de negociação e a chance de garantir contratos mais flexíveis e econômicos.
+
+Card 2
+Title: Empresas ainda no mercado regulado
+Body:
+Mesmo antes da migração ser permitida, sua empresa já pode iniciar o diagnóstico, entender seu perfil de consumo e se posicionar melhor para quando a abertura do mercado acontecer.
+
+Card 3
+Title: O que realmente define o momento da migração
+Body:
+O fator decisivo não é “esperar uma data”. O que define o momento ideal são as condições do seu contrato atual, o prazo de migração com a distribuidora e o planejamento correto para evitar riscos e perdas financeiras.
+
+Section C — Practical scenarios table
+
+Title: Cenários comuns na prática
+
+Situação da Empresa	O que faz sentido
+Contrato com prazo fixo	Planejar com antecedência e estruturar a migração no momento correto
+Contrato com possibilidade de renegociação	Avaliar o mercado e negociar melhores condições
+Contrato rígido	Evitar penalidades e preparar a empresa para o vencimento
+Empresa ainda fora do Mercado Livre	Iniciar diagnóstico e planejamento desde já
+Section D — Why prepare early (conversion)
+
+Heading:
+Por que começar antes gera vantagem competitiva
+
+Bullets:
+• Evita decisões apressadas
+• Aumenta o poder de negociação
+• Reduz riscos contratuais
+• Permite estruturar economia de forma planejada
+
+Section E — CTA
+
+Heading:
+Quer entender o melhor caminho para sua empresa?
+
+Copy:
+Solicite um diagnóstico gratuito. Analisamos sua conta, avaliamos sua elegibilidade e indicamos o melhor momento para migrar — agora ou quando sua empresa estiver apta.
+
+Button:
+Solicitar Diagnóstico Gratuito
+
+2) Surgical Updates Across Existing Pages
+A) HOME — “Como Funciona” (Step 01)
+
+Replace description with:
+
+Envie sua conta de luz para um diagnóstico gratuito. Nossa tecnologia analisa seu perfil e verifica se sua empresa já pode migrar — ou quando poderá. Mesmo que ainda não esteja apta, você já pode iniciar o planejamento.
+
+B) HOME — Eligibility Note
+
+Replace with:
+
+Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.
+
+C) SOLUÇÕES — Add short block near top
+
+Heading:
+Renovação e migração com planejamento
+
+Copy:
+No Mercado Livre de Energia, a economia começa antes da migração. Por isso, realizamos um diagnóstico gratuito para orientar sua empresa com clareza — inclusive se você ainda não puder migrar hoje.
+
+Link:
+Saiba mais sobre renovação e migração →
+
+D) MERCADO LIVRE DE ENERGIA page (former “Nova Lei”)
+
+Add paragraph:
+
+Você não precisa esperar para começar. Empresas que se preparam com antecedência ganham vantagem competitiva, mais opções de negociação e evitam decisões no escuro quando chega o momento da migração.
+
+E) FAQ — Add new question
+
+Pergunta:
+Quando devo começar a pensar em migrar para o Mercado Livre?
+
+Resposta:
+O ideal é começar assim que possível. Mesmo que sua empresa ainda não esteja apta a migrar, iniciar o diagnóstico com antecedência permite planejamento, melhor negociação e menos riscos no futuro.
+
+3) Optional Mini Diagnostic Tool (High conversion)
+
+Add on /seja-cliente and /renovacao-contrato
+
+Title:
+Descubra o melhor momento para sua empresa
+
+Helper text:
+Mesmo que sua empresa ainda não esteja apta, enviar seus dados agora permite iniciar o planejamento com antecedência.
+
+(Use existing form fields; no new logic required.)
+
+4) Navigation & Internal Links
+
+• Add Renovação e Migração under “Mercado Livre de Energia”
+• Footer quick links:
+
+Renovação e Migração
+
+Mercado Livre de Energia
+
+Diagnóstico Gratuito
+
+5) Tone Rules (Important)
+
+• Never mention foreign markets
+• Never mention fixed time windows
+• Always reinforce: “você pode começar agora”
+• Always say: “nosso serviço de comparação é gratuito”
+• Keep language simple, reassuring, and action-oriented

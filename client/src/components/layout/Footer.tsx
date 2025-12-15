@@ -59,6 +59,7 @@ export function Footer() {
             <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Recursos</p>
             <ul className="space-y-3">
               <li><Link href="/lei-mercado-livre" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Mercado Livre de Energia</Link></li>
+              <li><Link href="/renovacao-contrato" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Renovação e Migração</Link></li>
               <li><Link href="/faq" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Perguntas Frequentes</Link></li>
               <li><Link href="/insights" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Insights</Link></li>
               <li><Link href="/seja-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Diagnóstico Gratuito</Link></li>

@@ -66,8 +66,11 @@ export default function LeiMercadoLivre() {
           <p className="text-lg text-[#736d77] max-w-3xl mb-4">
             Mesmo que sua empresa ainda não possa migrar hoje, já é possível iniciar o diagnóstico e se preparar. A Ótima Energia acompanha todo o processo desde o início.
           </p>
-          <p className="text-lg text-[#736d77] max-w-3xl">
+          <p className="text-lg text-[#736d77] max-w-3xl mb-4">
             Empresas que começam esse processo com antecedência ganham vantagem competitiva, mais poder de negociação e melhores condições quando chega o momento da migração.
+          </p>
+          <p className="text-lg text-[#736d77] max-w-3xl">
+            Você não precisa esperar para começar. Empresas que se preparam com antecedência ganham vantagem competitiva, mais opções de negociação e evitam decisões no escuro quando chega o momento da migração.
           </p>
         </div>
       </section>

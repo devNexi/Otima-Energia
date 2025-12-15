@@ -19,6 +19,7 @@ import Terms from "@/pages/Terms";
 import Cookies from "@/pages/Cookies";
 import ClientPortal from "@/pages/ClientPortal";
 import LeiMercadoLivre from "@/pages/LeiMercadoLivre";
+import RenovacaoContrato from "@/pages/RenovacaoContrato";
 import Insights from "@/pages/Insights";
 import SupplierManager from "@/pages/SupplierManager";
 import ProposalTracker from "@/pages/ProposalTracker";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/cookies" component={Cookies} />
       <Route path="/portal-cliente" component={ClientPortal} />
       <Route path="/lei-mercado-livre" component={LeiMercadoLivre} />
+      <Route path="/renovacao-contrato" component={RenovacaoContrato} />
       <Route path="/insights" component={Insights} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />

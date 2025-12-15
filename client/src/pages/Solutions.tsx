@@ -42,12 +42,30 @@ export default function Solutions() {
         </div>
       </section>
 
+      {/* Renovation & Migration Block */}
+      <section className="bg-white py-16 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
+            Renovação e migração com planejamento
+          </h2>
+          <p className="text-lg text-[#736d77] leading-relaxed mb-6 max-w-3xl">
+            No Mercado Livre de Energia, a economia começa antes da migração. Por isso, realizamos um diagnóstico gratuito para orientar sua empresa com clareza — inclusive se você ainda não puder migrar hoje.
+          </p>
+          <Link 
+            href="/renovacao-contrato"
+            className="text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
+          >
+            Saiba mais sobre renovação e migração →
+          </Link>
+        </div>
+      </section>
+
       {/* Eligibility Banner */}
       <section className="bg-[#9e3ffd] py-8">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white text-lg">
-              <strong>Elegibilidade:</strong> Hoje, atendemos principalmente empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW. Esse limite está sendo reduzido com a nova lei, e já é possível iniciar o diagnóstico e planejamento antes da migração
+              <strong>Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.
             </p>
             <Link 
               href="/lei-mercado-livre"
