@@ -23,6 +23,7 @@ import multer from "multer";
 import { processBillFile } from "./ocrService";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
+import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -1748,6 +1749,55 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error updating decision log:", error);
       res.status(500).json({ success: false, error: "Failed to update decision log" });
+    }
+  });
+
+  // --- ECOS Evaluation Engine ---
+
+  // Evaluate a single client
+  app.post("/api/ecos/evaluate/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+      const triggerType = req.body.triggerType || "manual";
+      const result = await evaluateClient(clientId, triggerType);
+      res.json({ success: true, result });
+    } catch (error: any) {
+      console.error("Error evaluating client:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to evaluate client" });
+    }
+  });
+
+  // Evaluate all active clients
+  app.post("/api/ecos/evaluate-all", async (req, res) => {
+    try {
+      const triggerType = req.body.triggerType || "quarterly_check";
+      const results = await evaluateAllClients(triggerType);
+      res.json({ 
+        success: true, 
+        evaluated: results.length,
+        results 
+      });
+    } catch (error: any) {
+      console.error("Error evaluating all clients:", error);
+      res.status(500).json({ success: false, error: "Failed to evaluate clients" });
+    }
+  });
+
+  // Get client's current ECOS status (latest decision log)
+  app.get("/api/ecos/status/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+      const status = await getClientEcosStatus(clientId);
+      res.json({ success: true, status });
+    } catch (error: any) {
+      console.error("Error getting client status:", error);
+      res.status(500).json({ success: false, error: "Failed to get client status" });
     }
   });
 

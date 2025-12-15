@@ -61,6 +61,8 @@ export const clients = pgTable("clients", {
   currentPriceRmwh: decimal("current_price_rmwh", { precision: 10, scale: 2 }), // Current price for savings comparison
   avgConsumptionKwh: decimal("avg_consumption_kwh", { precision: 12, scale: 2 }), // Average monthly consumption
   selectedQuoteId: integer("selected_quote_id"), // References supplier_quotes(id) - added later to avoid circular ref
+  segment: text("segment"), // 'SME', 'Industrial' - for ECOS benchmark matching
+  region: text("region"), // 'Sudeste', 'Sul', 'Nordeste', 'Norte', 'Centro-Oeste' - for ECOS benchmark matching
   zohoId: text("zoho_id"), // Zoho CRM Contact ID for future sync
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
