@@ -1884,6 +1884,21 @@ export async function registerRoutes(
     }
   });
 
+  // Get snapshots that used a specific benchmark
+  app.get("/api/ecos/benchmarks/:id/usages", async (req, res) => {
+    try {
+      const benchmarkId = parseInt(req.params.id);
+      if (isNaN(benchmarkId)) {
+        return res.status(400).json({ success: false, error: "Invalid benchmark ID" });
+      }
+      const snapshots = await storage.getSnapshotsByBenchmark(benchmarkId);
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching benchmark usages:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch benchmark usages" });
+    }
+  });
+
   // Mark benchmark as reviewed
   app.post("/api/ecos/benchmarks/:id/mark-reviewed", async (req, res) => {
     try {

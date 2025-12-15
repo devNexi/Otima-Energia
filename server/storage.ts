@@ -1070,6 +1070,12 @@ export class Storage implements IStorage {
       .returning();
     return result[0];
   }
+
+  async getSnapshotsByBenchmark(benchmarkId: number): Promise<LeadEcosSnapshot[]> {
+    return await db.select().from(leadEcosSnapshots)
+      .where(eq(leadEcosSnapshots.benchmarkIdUsed, benchmarkId))
+      .orderBy(desc(leadEcosSnapshots.generatedAt));
+  }
 }
 
 export const storage = new Storage();
