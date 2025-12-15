@@ -23,8 +23,11 @@ export default function Solutions() {
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 Atuamos como seu parceiro completo no Mercado Livre de Energia: analisamos, migramos, contratamos e acompanhamos, sempre com foco em economia contínua.
               </p>
-              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 A economia no mercado livre não vem de promoções, mas de estrutura, visibilidade e contratos bem desenhados. É isso que entregamos de forma contínua para nossos clientes.
+              </p>
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
+                Todas as nossas soluções são operadas sobre o <strong className="text-[#9e3ffd]">ECOS™</strong>, o sistema de inteligência da Ótima Energia que combina IA, automação e dados de mercado para proteger sua empresa de contratos mal posicionados e decisões sem visibilidade.
               </p>
               <Link 
                 href="/seja-cliente"
@@ -190,7 +193,7 @@ export default function Solutions() {
             </div>
 
             {/* Monitoramento Inteligente */}
-            <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300 md:col-span-2">
+            <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-7 h-7 text-[#9e3ffd]" />
               </div>
@@ -212,6 +215,33 @@ export default function Solutions() {
                 <li className="flex items-start gap-2">
                   <span className="text-[#9e3ffd] mt-1">•</span>
                   Acompanhamento de resultados
+                </li>
+              </ul>
+            </div>
+
+            {/* ECOS - Otimização Contínua */}
+            <div className="bg-[#16163f] border border-[#16163f] rounded-lg p-8 lg:p-10 hover:shadow-lg transition-all duration-300">
+              <div className="w-14 h-14 bg-[#9e3ffd] rounded-lg flex items-center justify-center mb-6">
+                <Zap className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-medium text-white mb-4">
+                ECOS™ — Otimização Contínua de Contratos
+              </h3>
+              <p className="text-gray-300 leading-relaxed mb-6">
+                Monitoramos seu contrato ao longo do tempo, avaliando riscos, oportunidades e posicionamento de preço. O ECOS só recomenda mudanças quando há ganho real — sem ruído, sem promessas vazias.
+              </p>
+              <ul className="space-y-3 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  Revisões periódicas automatizadas
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  Avaliação por bandas de referência
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  Transparência total nas recomendações
                 </li>
               </ul>
             </div>

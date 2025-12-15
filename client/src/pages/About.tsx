@@ -67,7 +67,13 @@ export default function About() {
                 Acreditamos que <span className="font-medium text-[#9e3ffd]">tecnologia e dados</span> podem nivelar esse campo. Nossa plataforma analisa consumo, compara ofertas e negocia condições que empresas individuais nunca conseguiriam sozinhas.
               </p>
               <p>
-                Não somos apenas corretores. Somos a <span className="font-medium text-[#9e3ffd]">camada de infraestrutura</span> que conecta toda a cadeia de valor do setor elétrico brasileiro.
+                Não somos apenas uma corretora.
+              </p>
+              <p>
+                A Ótima Energia opera como uma parceira de migração, conformidade e otimização, apoiada pelo <span className="font-medium text-[#9e3ffd]">ECOS™</span> — um sistema proprietário desenvolvido para lidar com a complexidade real do mercado livre brasileiro.
+              </p>
+              <p>
+                Enquanto o mercado permanece opaco e manual, usamos inteligência, dados e automação para proteger empresas e garantir decisões melhores ao longo do tempo.
               </p>
             </div>
           </div>

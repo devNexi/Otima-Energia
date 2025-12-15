@@ -1,0 +1,174 @@
+ECOS WEBSITE COPY UPDATE
+Objective
+
+Position ECOS™ (Energy Contract Optimisation System) as a proprietary, AI-powered intelligence layer that elevates Ótima Energia beyond a traditional brokerage — without adding new pages or revealing implementation details.
+
+ECOS should feel:
+
+Advanced
+
+Proprietary
+
+Data-driven
+
+Always-on
+
+Impossible to replicate
+
+But explained simply.
+
+Core Messaging Principles (Do Not Deviate)
+
+Lead with savings and protection
+
+Emphasise AI + market data + automation
+
+Never explain how ECOS works technically
+
+Never mention suppliers, benchmarks sources, or mechanics
+
+Position ECOS as something only Ótima has
+
+Avoid the word “software” — use system, intelligence, platform
+
+Naming & Language Rules
+
+Keep the name ECOS™
+
+First mention:
+“ECOS™ — nosso sistema proprietário de inteligência e otimização de contratos de energia.”
+
+After first mention, just use ECOS
+
+Do not translate ECOS into Portuguese
+
+🔹 WHERE ECOS APPEARS ON THE SITE (NO NEW PAGES)
+
+You are not adding an ECOS menu item.
+
+ECOS is woven into existing pages.
+
+1️⃣ HOME PAGE — Add ECOS as the “how” behind the savings
+Insert a new section after “Como Funciona”
+Section Title
+
+Como garantimos economia contínua — não apenas no primeiro contrato
+
+Copy
+
+A economia no Mercado Livre não termina na assinatura do contrato.
+Preços mudam. Perfis de consumo variam. O mercado oscila.
+
+Por isso, a Ótima Energia opera com o ECOS™ — nosso sistema proprietário de inteligência e otimização de contratos de energia, desenvolvido com IA, automação e dados de mercado.
+
+O ECOS acompanha continuamente o desempenho do seu contrato, compara sua posição com referências de mercado e indica ações apenas quando fazem sentido financeiro.
+
+Em muitos casos, a melhor decisão é não mudar — e o ECOS deixa isso claro.
+
+Bullet highlights
+
+Monitoramento contínuo de contratos
+
+Relatórios periódicos de posicionamento
+
+Proteção contra decisões precipitadas
+
+Economia sustentável no longo prazo
+
+2️⃣ SOLUÇÕES PAGE — Add ECOS as the backbone
+Modify the intro paragraph (add 1 paragraph)
+
+Todas as nossas soluções são operadas sobre o ECOS™, o sistema de inteligência da Ótima Energia que combina IA, automação e dados de mercado para proteger sua empresa de contratos mal posicionados e decisões sem visibilidade.
+
+Add a new service card (last position)
+
+Title: ECOS™ — Otimização Contínua de Contratos
+Copy:
+
+Monitoramos seu contrato ao longo do tempo, avaliando riscos, oportunidades e posicionamento de preço. O ECOS só recomenda mudanças quando há ganho real — sem ruído, sem promessas vazias.
+
+Bullets:
+
+Revisões periódicas automatizadas
+
+Avaliação por bandas de referência
+
+Transparência total nas recomendações
+
+3️⃣ SOBRE PAGE — Strengthen positioning (no technical detail)
+Replace the last philosophy paragraph with:
+
+Não somos apenas uma corretora.
+
+A Ótima Energia opera como uma parceira de migração, conformidade e otimização, apoiada pelo ECOS™ — um sistema proprietário desenvolvido para lidar com a complexidade real do mercado livre brasileiro.
+
+Enquanto o mercado permanece opaco e manual, usamos inteligência, dados e automação para proteger empresas e garantir decisões melhores ao longo do tempo.
+
+4️⃣ LEI / MERCADO LIVRE PAGE — Connect ECOS to preparation
+Add a section before the final CTA
+Title
+
+Por que empresas inteligentes começam antes
+
+Copy
+
+A abertura do Mercado Livre cria oportunidade — mas também risco para quem chega despreparado.
+
+O ECOS™ permite que empresas se preparem com antecedência, entendendo seu perfil, riscos e posicionamento antes mesmo da migração ser possível.
+
+Quem chega com dados, chega negociando melhor.
+
+5️⃣ CLIENT PORTAL — Light ECOS reference only
+Modify the portal description text
+
+Aqui você acompanha sua jornada com a Ótima Energia, envia documentos e acessa análises geradas pelo ECOS™, nosso sistema de inteligência energética.
+
+(No dashboards explained. No promises.)
+
+6️⃣ FAQ — Add ONE ECOS question only
+
+Pergunta:
+O que é o ECOS?
+
+Resposta:
+O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro — com total transparência.
+
+❌ Explicitly Do NOT Add
+
+❌ Nova página ECOS
+
+❌ Detalhes técnicos
+
+❌ Fontes de dados
+
+❌ “Como funciona” técnico
+
+❌ Screenshots
+
+❌ Termos como API, benchmarks, feeds, scraping
+
+Tone Checklist (Replit QA)
+
+ECOS must feel:
+
+Premium ✅
+
+Proprietary ✅
+
+Always-on ✅
+
+Trustworthy ✅
+
+Simple to understand ✅
+
+If any sentence feels:
+
+“copiable” → remove
+
+“technical” → simplify
+
+“software-y” → rewrite
+
+Final Positioning Sentence (Internal Anchor)
+
+ECOS™ é o motivo pelo qual a economia da Ótima não depende de sorte, timing ou promessas — mas de inteligência contínua.

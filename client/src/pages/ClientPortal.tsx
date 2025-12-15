@@ -29,7 +29,7 @@ export default function ClientPortal() {
                 Portal do Cliente
               </h1>
               <p className="text-lg lg:text-xl text-gray-300 leading-relaxed">
-                Acesse sua área exclusiva para enviar contas de energia e acompanhar sua jornada conosco. Nosso serviço de comparação é gratuito e focado em ajudar sua empresa a economizar com total transparência.
+                Aqui você acompanha sua jornada com a Ótima Energia, envia documentos e acessa análises geradas pelo <span className="text-white font-medium">ECOS™</span>, nosso sistema de inteligência energética.
               </p>
             </div>
 

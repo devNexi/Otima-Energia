@@ -181,6 +181,28 @@ export default function LeiMercadoLivre() {
         </div>
       </section>
 
+      {/* ECOS Preparation Section */}
+      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="max-w-4xl">
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-8">
+              Por que empresas inteligentes começam antes
+            </h2>
+            <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
+              <p>
+                A abertura do Mercado Livre cria oportunidade — mas também risco para quem chega despreparado.
+              </p>
+              <p>
+                O <span className="font-medium text-[#9e3ffd]">ECOS™</span> permite que empresas se preparem com antecedência, entendendo seu perfil, riscos e posicionamento antes mesmo da migração ser possível.
+              </p>
+              <p className="font-medium text-[#16163f]">
+                Quem chega com dados, chega negociando melhor.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="bg-[#16163f] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">

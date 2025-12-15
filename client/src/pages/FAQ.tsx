@@ -54,6 +54,10 @@ const faqs: FAQItem[] = [
   {
     question: "Quando devo começar a pensar em migrar para o Mercado Livre?",
     answer: "O ideal é começar assim que possível. Mesmo que sua empresa ainda não esteja apta a migrar, iniciar o diagnóstico com antecedência permite planejamento, melhor negociação e menos riscos no futuro."
+  },
+  {
+    question: "O que é o ECOS?",
+    answer: "O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro — com total transparência."
   }
 ];
 
