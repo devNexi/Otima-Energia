@@ -14,6 +14,7 @@ import { BillUploadSection } from "@/components/BillUploadSection";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
 import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
+import { EcosDashboard } from "@/components/ecos/EcosDashboard";
 import { 
   Users, 
   Inbox, 
@@ -31,7 +32,8 @@ import {
   DollarSign,
   Send,
   TrendingUp,
-  Zap
+  Zap,
+  LayoutDashboard
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -245,8 +247,12 @@ export default function Admin() {
           </Card>
         </div>
 
-        <Tabs defaultValue="leads" className="space-y-4">
+        <Tabs defaultValue="ecos-dashboard" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
+              <LayoutDashboard className="w-4 h-4" />
+              {language === "pt" ? "Painel ECOS" : "ECOS Dashboard"}
+            </TabsTrigger>
             <TabsTrigger value="leads" className="flex items-center gap-2" data-testid="tab-leads">
               <Inbox className="w-4 h-4" />
               {t("admin.tab.leads")}
@@ -260,6 +266,23 @@ export default function Admin() {
               {t("admin.tab.rfqs")}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="ecos-dashboard">
+            <EcosDashboard 
+              onViewClient={(clientId) => {
+                const client = clients.find((c: any) => c.id === clientId);
+                if (client) {
+                  setEnergyProfileClient({
+                    id: client.id,
+                    companyName: client.companyName,
+                    segment: client.segment,
+                    region: client.region,
+                    avgConsumptionKwh: client.avgConsumptionKwh
+                  });
+                }
+              }}
+            />
+          </TabsContent>
 
           <TabsContent value="leads">
             <Card>
