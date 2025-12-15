@@ -1897,6 +1897,126 @@ export async function registerRoutes(
     }
   });
 
+  // Generate quarterly report for client
+  app.post("/api/ecos/reports/generate/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+
+      // Get latest ECOS evaluation
+      const latestDecision = await storage.getLatestDecisionLog(clientId);
+      if (!latestDecision) {
+        return res.status(400).json({ success: false, error: "No ECOS evaluation found. Run evaluation first." });
+      }
+
+      // Get active contract
+      const contract = await storage.getActiveClientContract(clientId);
+
+      // Calculate quarter period
+      const now = new Date();
+      const quarter = Math.ceil((now.getMonth() + 1) / 3);
+      const year = now.getFullYear();
+      const periodLabel = `Q${quarter} ${year}`;
+      
+      const quarterStartMonth = (quarter - 1) * 3;
+      const periodStart = new Date(year, quarterStartMonth, 1).toISOString().split('T')[0];
+      const periodEnd = new Date(year, quarterStartMonth + 3, 0).toISOString().split('T')[0];
+
+      // Calculate health score (0-100)
+      let healthScore = 100;
+      if (latestDecision.statusResult === "above_band") {
+        healthScore = 30;
+      } else if (latestDecision.statusResult === "at_risk") {
+        healthScore = 60;
+      } else if (latestDecision.statusResult === "within_band") {
+        healthScore = 90;
+      }
+
+      // Adjust for contract expiration
+      if (latestDecision.contractRemainingMonths !== null) {
+        if (latestDecision.contractRemainingMonths <= 3) {
+          healthScore = Math.max(20, healthScore - 30);
+        } else if (latestDecision.contractRemainingMonths <= 6) {
+          healthScore = Math.max(40, healthScore - 15);
+        }
+      }
+
+      // Generate market summary based on segment
+      const segment = client.segment || "SME";
+      const region = client.region || "Sudeste";
+      const marketSummaryPt = `O mercado livre de energia na região ${region} manteve-se estável neste trimestre. ` +
+        `Para o segmento ${segment}, os preços médios oscilaram entre R$${latestDecision.benchmarkLowerRmwh || "180"} ` +
+        `e R$${latestDecision.benchmarkUpperRmwh || "250"}/MWh. ` +
+        `A tendência de curto prazo indica manutenção dos níveis atuais.`;
+
+      // Generate client position analysis
+      const clientPriceR = latestDecision.clientPriceRmwh ? parseFloat(latestDecision.clientPriceRmwh) : null;
+      let clientPositionPt = "";
+      
+      if (latestDecision.statusResult === "within_band") {
+        clientPositionPt = `A ${client.companyName} encontra-se em posição favorável no mercado. ` +
+          `O contrato atual com preço de R$${clientPriceR?.toFixed(2) || "-"}/MWh está dentro da faixa ótima de mercado. ` +
+          `Recomendamos manter o contrato atual e monitorar oportunidades de renovação antecipada.`;
+      } else if (latestDecision.statusResult === "at_risk") {
+        clientPositionPt = `A ${client.companyName} encontra-se em posição de atenção no mercado. ` +
+          `O contrato atual com preço de R$${clientPriceR?.toFixed(2) || "-"}/MWh está na parte superior da faixa de mercado. ` +
+          `Recomendamos iniciar discussões sobre renovação para garantir melhores condições.`;
+      } else if (latestDecision.statusResult === "above_band") {
+        clientPositionPt = `A ${client.companyName} encontra-se pagando acima do mercado. ` +
+          `O contrato atual com preço de R$${clientPriceR?.toFixed(2) || "-"}/MWh está ${latestDecision.potentialSavingsR ? 
+            `R$${parseFloat(latestDecision.potentialSavingsR).toLocaleString('pt-BR')}/ano acima do ótimo` : 
+            "significativamente acima da faixa de mercado"}. ` +
+          `Recomendamos ação imediata de renegociação.`;
+      } else {
+        clientPositionPt = `Aguardando dados para análise completa da posição de ${client.companyName} no mercado.`;
+      }
+
+      // Calculate next review date (3 months from now)
+      const nextReview = new Date(now);
+      nextReview.setMonth(nextReview.getMonth() + 3);
+      const nextReviewDate = nextReview.toISOString().split('T')[0];
+
+      // Get benchmark median
+      const benchmarkLower = latestDecision.benchmarkLowerRmwh ? parseFloat(latestDecision.benchmarkLowerRmwh) : null;
+      const benchmarkUpper = latestDecision.benchmarkUpperRmwh ? parseFloat(latestDecision.benchmarkUpperRmwh) : null;
+      const benchmarkMedian = benchmarkLower && benchmarkUpper ? ((benchmarkLower + benchmarkUpper) / 2).toString() : null;
+
+      const reportData = {
+        clientId,
+        contractId: contract?.id || null,
+        decisionLogId: latestDecision.id,
+        periodLabel,
+        periodStart,
+        periodEnd,
+        marketSummaryPt,
+        clientPositionPt,
+        healthScore,
+        statusClassification: latestDecision.statusResult,
+        recommendation: latestDecision.recommendation,
+        explanationPt: latestDecision.explanationPt,
+        currentPriceRmwh: latestDecision.clientPriceRmwh,
+        benchmarkMedianRmwh: benchmarkMedian,
+        optimisedReferencePriceRmwh: latestDecision.benchmarkLowerRmwh,
+        estimatedAnnualSavingsR: latestDecision.potentialSavingsR,
+        nextReviewDate,
+        approved: false
+      };
+
+      const report = await storage.createQuarterlyReport(reportData);
+      res.json({ success: true, report });
+    } catch (error: any) {
+      console.error("Error generating quarterly report:", error);
+      res.status(500).json({ success: false, error: "Failed to generate quarterly report" });
+    }
+  });
+
   // --- ECOS Dashboard ---
 
   // Get ECOS dashboard stats

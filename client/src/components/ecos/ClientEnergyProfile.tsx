@@ -25,7 +25,10 @@ import {
   Plus,
   Loader2,
   Clock,
-  History
+  History,
+  BarChart3,
+  Send,
+  Check
 } from "lucide-react";
 
 interface ClientEnergyProfileProps {
@@ -115,6 +118,32 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
     }
   });
 
+  const { data: reportsData, isLoading: reportsLoading } = useQuery({
+    queryKey: [`/api/ecos/reports/client/${client.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/ecos/reports/client/${client.id}`);
+      return res.json();
+    }
+  });
+
+  const generateReportMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/ecos/reports/generate/${client.id}`, { method: "POST" });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Failed to generate report");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/ecos/reports/client/${client.id}`] });
+      toast({ title: language === "pt" ? "Relatório gerado!" : "Report generated!" });
+    },
+    onError: (error: Error) => {
+      toast({ title: language === "pt" ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   const createContractMutation = useMutation({
     mutationFn: async (data: typeof newContractForm) => {
       const res = await fetch("/api/ecos/contracts", {
@@ -184,6 +213,7 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
   const bills = billsData?.bills || [];
   const ecosStatus = ecosStatusData?.success ? ecosStatusData.status : null;
   const decisions = decisionsData?.decisions || [];
+  const reports = reportsData?.reports || [];
 
   const activeContract = contracts.find((c: any) => c.status === "active");
   const StatusIcon = ecosStatus ? statusIcons[ecosStatus.statusResult] || Clock : Clock;
@@ -323,6 +353,10 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
               <TabsTrigger value="decisions" className="flex items-center gap-2" data-testid="tab-decisions">
                 <History className="w-4 h-4" />
                 {language === "pt" ? "Histórico ECOS" : "ECOS History"}
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-2" data-testid="tab-reports">
+                <BarChart3 className="w-4 h-4" />
+                {language === "pt" ? "Relatórios" : "Reports"}
               </TabsTrigger>
             </TabsList>
 
@@ -656,6 +690,134 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>{language === "pt" ? "Relatórios Trimestrais" : "Quarterly Reports"}</CardTitle>
+                    <CardDescription>
+                      {language === "pt" ? "Relatórios de acompanhamento ECOS" : "ECOS monitoring reports"}
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    onClick={() => generateReportMutation.mutate()}
+                    disabled={generateReportMutation.isPending}
+                    data-testid="button-generate-report"
+                  >
+                    {generateReportMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-1" />
+                    )}
+                    {language === "pt" ? "Gerar Relatório" : "Generate Report"}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {reportsLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : reports.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">
+                      {language === "pt" ? "Nenhum relatório gerado" : "No reports generated"}
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {reports.map((report: any) => (
+                        <div 
+                          key={report.id} 
+                          className={`border rounded-lg p-4 ${report.approved ? "border-green-300 bg-green-50" : "border-yellow-300 bg-yellow-50"}`}
+                          data-testid={`report-row-${report.id}`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <BarChart3 className="w-5 h-5 text-violet-600" />
+                              <span className="font-bold text-lg">{report.periodLabel}</span>
+                              <Badge variant={report.approved ? "default" : "secondary"}>
+                                {report.approved 
+                                  ? (language === "pt" ? "Aprovado" : "Approved")
+                                  : (language === "pt" ? "Pendente" : "Pending")}
+                              </Badge>
+                              {report.sentToClient && (
+                                <Badge variant="outline" className="text-green-700">
+                                  <Send className="w-3 h-3 mr-1" />
+                                  {language === "pt" ? "Enviado" : "Sent"}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Calendar className="w-4 h-4" />
+                              {formatDate(report.periodStart)} - {formatDate(report.periodEnd)}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="bg-white rounded p-3 border">
+                              <div className="text-xs text-gray-500 mb-1">
+                                {language === "pt" ? "Health Score" : "Health Score"}
+                              </div>
+                              <div className={`text-2xl font-bold ${
+                                report.healthScore >= 70 ? "text-green-600" : 
+                                report.healthScore >= 40 ? "text-yellow-600" : "text-red-600"
+                              }`}>
+                                {report.healthScore || "-"}/100
+                              </div>
+                            </div>
+                            <div className="bg-white rounded p-3 border">
+                              <div className="text-xs text-gray-500 mb-1">
+                                {language === "pt" ? "Preço Atual" : "Current Price"}
+                              </div>
+                              <div className="text-lg font-semibold">
+                                {report.currentPriceRmwh ? `${formatCurrency(report.currentPriceRmwh)}/MWh` : "-"}
+                              </div>
+                            </div>
+                            <div className="bg-white rounded p-3 border">
+                              <div className="text-xs text-gray-500 mb-1">
+                                {language === "pt" ? "Economia Estimada" : "Estimated Savings"}
+                              </div>
+                              <div className="text-lg font-semibold text-green-700">
+                                {report.estimatedAnnualSavingsR && parseFloat(report.estimatedAnnualSavingsR) > 0 
+                                  ? `${formatCurrency(report.estimatedAnnualSavingsR)}/ano` 
+                                  : "-"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {report.marketSummaryPt && (
+                            <div className="mb-3">
+                              <div className="text-xs font-medium text-gray-600 mb-1">
+                                {language === "pt" ? "Resumo de Mercado" : "Market Summary"}
+                              </div>
+                              <p className="text-sm text-gray-700">{report.marketSummaryPt}</p>
+                            </div>
+                          )}
+
+                          {report.clientPositionPt && (
+                            <div className="mb-3">
+                              <div className="text-xs font-medium text-gray-600 mb-1">
+                                {language === "pt" ? "Posição do Cliente" : "Client Position"}
+                              </div>
+                              <p className="text-sm text-gray-700">{report.clientPositionPt}</p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+                            <span>
+                              {language === "pt" ? "Próxima revisão:" : "Next review:"} {formatDate(report.nextReviewDate)}
+                            </span>
+                            <span>
+                              {language === "pt" ? "Criado em:" : "Created:"} {formatDate(report.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
