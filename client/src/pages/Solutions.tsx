@@ -20,8 +20,11 @@ export default function Solutions() {
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 A Ótima Energia existe para ajudar sua empresa a pagar menos pela energia elétrica, com segurança, clareza e zero complicação.
               </p>
-              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 Atuamos como seu parceiro completo no Mercado Livre de Energia: analisamos, migramos, contratamos e acompanhamos, sempre com foco em economia contínua.
+              </p>
+              <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
+                A economia no mercado livre não vem de promoções, mas de estrutura, visibilidade e contratos bem desenhados. É isso que entregamos de forma contínua para nossos clientes.
               </p>
               <Link 
                 href="/seja-cliente"
@@ -69,7 +72,7 @@ export default function Solutions() {
                 Economia
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
-                Contratação personalizada com apoio de IA para gerar previsibilidade e economia de até 40%. Auditoria gratuita e sem obrigação.
+                Contratação personalizada com apoio de tecnologia para corrigir distorções do mercado, gerar previsibilidade e economia de até 40%. Auditoria gratuita, sem obrigação.
               </p>
               <ul className="space-y-3 text-[#736d77]">
                 <li className="flex items-start gap-2">

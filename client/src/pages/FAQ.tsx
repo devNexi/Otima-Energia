@@ -46,6 +46,10 @@ const faqs: FAQItem[] = [
   {
     question: "Preciso fazer algum investimento inicial?",
     answer: "Na maioria dos casos, não é necessário investimento inicial. A migração para o mercado livre não requer instalação de equipamentos especiais para a maioria das empresas."
+  },
+  {
+    question: "Por que tantas empresas economizam tanto no Mercado Livre?",
+    answer: "Porque a economia vem da correção de distorções do mercado: falta de visibilidade, contratos mal estruturados e pouca comparação entre fornecedores. Quando o mercado se torna transparente, a economia aparece."
   }
 ];
 

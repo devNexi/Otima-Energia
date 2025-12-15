@@ -14,14 +14,11 @@ export function Process() {
       <section className="bg-[#eee7f1] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
-            Ajudamos empresas brasileiras a reduzir custos de energia usando o Mercado Livre de Energia de forma{" "}
-            <span className="text-highlight">segura e inteligente</span>.
-          </p>
-          <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-4">
-            Nosso serviço de comparação é gratuito: analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis.
+            A maioria das empresas brasileiras paga mais do que deveria pela energia elétrica — não porque os preços são altos, mas porque o mercado é{" "}
+            <span className="text-highlight">opaco, fragmentado e difícil de comparar</span>.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            Cuidamos de todo o processo, da análise inicial à migração e gestão do contrato, enquanto nossa comissão é paga diretamente pelos fornecedores, nunca pelo empresário.
+            Nosso serviço de comparação é gratuito. Analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis. Nossa remuneração vem exclusivamente dos fornecedores — nunca do empresário.
           </p>
           <div className="flex gap-16 max-w-4xl">
             <div>
@@ -29,8 +26,8 @@ export function Process() {
               <p className="text-[#736d77] mt-2">Economia de até</p>
             </div>
             <div>
-              <p className="text-4xl font-light text-[#9e3ffd]">90%+</p>
-              <p className="text-[#736d77] mt-2">Empresas fora do Mercado Livre</p>
+              <p className="text-4xl font-light text-[#9e3ffd]">80%+</p>
+              <p className="text-[#736d77] mt-2">Das empresas não estão no Mercado Livre hoje</p>
             </div>
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">80M</p>
@@ -70,7 +67,7 @@ export function Process() {
                 Comparamos o mercado e negociamos as melhores condições
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Buscamos preços transparentes e contratos flexíveis para gerar economia real, sem viés e sem custo para você.
+                Tornamos visível um mercado que normalmente é fechado e fragmentado, comparando ofertas e negociando contratos estruturados para gerar economia real — sem viés e sem custo para você.
               </p>
             </div>
 
