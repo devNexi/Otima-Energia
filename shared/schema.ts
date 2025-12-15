@@ -9,11 +9,13 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").default("admin"), // 'admin', 'sales', 'ops'
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -866,6 +868,14 @@ export const clientContracts = pgTable("client_contracts", {
   // Status
   status: text("status").default("active"), // 'active', 'expiring', 'expired', 'renewed'
   
+  // ECOS Renewal Tracking
+  renewalStatus: text("renewal_status").default("hold"), // 'hold', 'review', 'renegotiate'
+  alertLevel: text("alert_level"), // '180_days', '120_days', '90_days', 'critical'
+  lastEcosReviewAt: timestamp("last_ecos_review_at"),
+  lastEcosReviewBy: text("last_ecos_review_by"),
+  renewalNotes: text("renewal_notes"),
+  linkedBenchmarkId: integer("linked_benchmark_id").references(() => marketPriceBenchmarks.id),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1064,12 +1074,26 @@ export const leadEcosSnapshots = pgTable("lead_ecos_snapshots", {
   benchmarkUpperRmwh: decimal("benchmark_upper_rmwh", { precision: 10, scale: 2 }),
   benchmarkSegment: text("benchmark_segment"),
   benchmarkRegion: text("benchmark_region"),
+  benchmarkConfidence: text("benchmark_confidence"), // 'Low', 'Medium', 'High' - frozen at snapshot time
+  benchmarkLastReviewedAt: timestamp("benchmark_last_reviewed_at"), // frozen at snapshot time
   
   // Lead Data Snapshot
   estimatedConsumptionKwh: decimal("estimated_consumption_kwh", { precision: 12, scale: 2 }),
   estimatedPriceRmwh: decimal("estimated_price_rmwh", { precision: 10, scale: 2 }),
   segment: text("segment"), // 'SME', 'Industrial'
   region: text("region"), // 'Sudeste', 'Sul', etc.
+  voltageLevel: text("voltage_level"), // 'AT', 'MT', 'BT'
+  contractStatus: text("contract_status"), // 'ACL', 'ACR', 'Unknown'
+  monthlySpendR: decimal("monthly_spend_r", { precision: 12, scale: 2 }),
+  
+  // Risk Flags
+  volatilityExposure: text("volatility_exposure"), // 'low', 'medium', 'high'
+  contractRigidity: text("contract_rigidity"), // 'low', 'medium', 'high'
+  timingRisk: text("timing_risk"), // 'low', 'medium', 'high'
+  
+  // Eligibility
+  eligibilityStatus: text("eligibility_status"), // 'eligible_now', 'eligible_future', 'not_eligible'
+  eligibilityWindow: text("eligibility_window"), // e.g., 'Q2 2026', 'H1 2027'
   
   // ECOS Analysis Result
   bandResult: text("band_result").notNull(), // 'within_band', 'at_risk', 'above_band', 'no_data'
@@ -1079,6 +1103,10 @@ export const leadEcosSnapshots = pgTable("lead_ecos_snapshots", {
   // Generation Metadata
   generatedAt: timestamp("generated_at").defaultNow().notNull(),
   generatedBy: text("generated_by").notNull(), // Username who generated
+  
+  // Watermark & Restrictions
+  isSnapshot: boolean("is_snapshot").default(true), // Always true - indicates limited analysis
+  watermarkText: text("watermark_text").default("ECOS Snapshot — Not a Full Analysis"),
   
   // PDF & Lock
   pdfUrl: text("pdf_url"),

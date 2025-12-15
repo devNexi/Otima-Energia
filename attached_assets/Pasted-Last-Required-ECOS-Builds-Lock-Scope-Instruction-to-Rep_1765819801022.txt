@@ -1,0 +1,198 @@
+Last Required ECOS Builds (Lock Scope)”
+
+Instruction to Replit:
+These are the final ECOS MVP additions before production usage. No new architecture. Extend existing admin, lead, and client flows only.
+
+1️⃣ Lead ECOS Snapshot (Critical – Revenue Enabler)
+Objective
+
+Allow ECOS to be used before a lead becomes a client, without giving away full value.
+
+Where
+
+Admin → Leads tab
+
+New button: “Generate ECOS Snapshot”
+
+Inputs
+
+Manual entry OR bill OCR:
+
+Monthly spend (R$)
+
+Voltage level (if known)
+
+Region
+
+Contract status (ACL / ACR / Unknown)
+
+Output (Topline Only)
+
+Eligibility status:
+
+Eligible now
+
+Eligible in future (estimate window)
+
+High-level positioning:
+
+“Likely above reference range”
+
+“Likely within reference range”
+
+“Insufficient data”
+
+Risk flags:
+
+Volatility exposure
+
+Contract rigidity
+
+Timing risk
+
+Restrictions
+
+Watermark: “ECOS Snapshot — Not a Full Analysis”
+
+Locked sections with tooltip:
+
+“Full ECOS optimisation available after onboarding”
+
+No supplier names
+
+No exact price ranges shown
+
+Purpose
+
+Sales enablement
+
+Credibility
+
+Funnel conversion
+
+2️⃣ Contract Renewal Tracker & Alert System (Ops Critical)
+Objective
+
+Ensure no client contract ever expires or becomes misaligned without ECOS awareness.
+
+Features
+
+Contract fields:
+
+Start date
+
+End date
+
+Volume
+
+Supplier
+
+Benchmark linked
+
+Alert rules:
+
+180 / 120 / 90 days before expiry
+
+Benchmark drift alert (outside reference range)
+
+Admin dashboard widget:
+
+“Contracts Requiring Action”
+
+Outputs
+
+ECOS recommendation status:
+
+Hold
+
+Review
+
+Renegotiate
+
+Logged decision with timestamp + benchmark ID
+
+3️⃣ Benchmark Review Reminder Engine
+Objective
+
+Enforce benchmark discipline automatically.
+
+Features
+
+Review cadence:
+
+Monthly / Quarterly / Ad-hoc
+
+Dashboard alerts:
+
+“Benchmarks due for review”
+
+Status labels:
+
+Active
+
+Needs Review
+
+Archived
+
+Required Fields (already added — just enforce usage)
+
+Source
+
+Confidence
+
+Next review date
+
+Last reviewed by
+
+4️⃣ Audit Trail Visibility (Client + Admin)
+Objective
+
+Make ECOS defensible, explainable, and regulator-proof.
+
+Features
+
+Every ECOS recommendation shows:
+
+Benchmark ID
+
+Reference range used
+
+Confidence level
+
+Date last reviewed
+
+Admin view:
+
+“Decisions linked to this benchmark”
+
+5️⃣ Security Finalisation (Non-Negotiable)
+Admin Portal
+
+Login + password
+
+Role-based access:
+
+Admin
+
+Sales
+
+Ops
+
+Audit logging for:
+
+Benchmark changes
+
+Contract updates
+
+ECOS recommendations
+
+Client Portal
+
+Token expiration
+
+Rate limiting
+
+Read-only ECOS outputs
+
+Acceptance criteria:
+ECOS must work fully without any external data feeds and support sales, optimisation, and audit flows using internal benchmarks.

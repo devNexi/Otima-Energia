@@ -124,7 +124,8 @@ export async function registerRoutes(
       }
       
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-      const user = await storage.createUser({ username, password: hashedPassword });
+      const role = req.body.role || 'admin';
+      const user = await storage.createUser({ username, password: hashedPassword, role });
       
       await storage.logAdminAction({
         actor: username,
@@ -135,7 +136,7 @@ export async function registerRoutes(
         detailsJson: { username }
       });
       
-      res.json({ success: true, user: { id: user.id, username: user.username } });
+      res.json({ success: true, user: { id: user.id, username: user.username, role: user.role || 'admin' } });
     } catch (error: any) {
       console.error("Error registering user:", error);
       res.status(500).json({ success: false, error: "Failed to register user" });
@@ -187,7 +188,7 @@ export async function registerRoutes(
         success: true, 
         sessionId,
         expiresAt: expiresAt.toISOString(),
-        user: { id: user.id, username: user.username }
+        user: { id: user.id, username: user.username, role: user.role || 'admin' }
       });
     } catch (error: any) {
       console.error("Error logging in:", error);
@@ -249,7 +250,7 @@ export async function registerRoutes(
       
       res.json({
         success: true,
-        user: { id: user.id, username: user.username },
+        user: { id: user.id, username: user.username, role: user.role || 'admin' },
         session: { id: session.id, expiresAt: session.expiresAt }
       });
     } catch (error: any) {
@@ -2340,6 +2341,134 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ success: false, error: "Failed to fetch audit logs" });
+    }
+  });
+
+  // --- ECOS Contract Renewal Alerts ---
+
+  // Get contracts requiring action (with computed alert levels)
+  app.get("/api/ecos/contracts-requiring-action", async (req, res) => {
+    try {
+      const contracts = await storage.getContractsRequiringAction();
+      const clients = await storage.getClients();
+      const clientsMap = new Map(clients.map(c => [c.id, c]));
+      
+      const enrichedContracts = contracts.map(contract => ({
+        ...contract,
+        clientName: clientsMap.get(contract.clientId)?.companyName || `Client #${contract.clientId}`
+      }));
+      
+      res.json({ success: true, contracts: enrichedContracts });
+    } catch (error: any) {
+      console.error("Error fetching contracts requiring action:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch contracts" });
+    }
+  });
+
+  // Update contract renewal status
+  app.patch("/api/ecos/contracts/:id/renewal-status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { renewalStatus, notes, reviewedBy } = req.body;
+      
+      if (!renewalStatus || !['hold', 'review', 'renegotiate'].includes(renewalStatus)) {
+        return res.status(400).json({ success: false, error: "Invalid renewal status" });
+      }
+      
+      const contract = await storage.updateContractRenewalStatus(id, renewalStatus, notes, reviewedBy);
+      if (!contract) {
+        return res.status(404).json({ success: false, error: "Contract not found" });
+      }
+      
+      await storage.logAdminAction({
+        actor: reviewedBy || 'admin',
+        action: 'update_renewal_status',
+        entityType: 'contract',
+        entityId: id,
+        detailsJson: { renewalStatus, notes }
+      });
+      
+      res.json({ success: true, contract });
+    } catch (error: any) {
+      console.error("Error updating contract renewal status:", error);
+      res.status(500).json({ success: false, error: "Failed to update contract" });
+    }
+  });
+
+  // --- ECOS Benchmark Review Reminders ---
+
+  // Get benchmarks requiring review
+  app.get("/api/ecos/benchmarks-requiring-review", async (req, res) => {
+    try {
+      const benchmarks = await storage.getBenchmarksRequiringReview();
+      res.json({ success: true, benchmarks });
+    } catch (error: any) {
+      console.error("Error fetching benchmarks requiring review:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch benchmarks" });
+    }
+  });
+
+  // --- ECOS Audit Trail ---
+
+  // Get audit trail for a client
+  app.get("/api/ecos/audit-trail/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const trail = await storage.getAuditTrailForClient(clientId);
+      res.json({ success: true, trail });
+    } catch (error: any) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch audit trail" });
+    }
+  });
+
+  // --- ECOS Enhanced Dashboard ---
+
+  // Get full ECOS dashboard with alerts
+  app.get("/api/ecos/dashboard-enhanced", async (req, res) => {
+    try {
+      const [
+        clients,
+        contractsRequiringAction,
+        benchmarksRequiringReview,
+        aboveBandDecisions,
+        atRiskDecisions,
+        pendingReports
+      ] = await Promise.all([
+        storage.getClients(),
+        storage.getContractsRequiringAction(),
+        storage.getBenchmarksRequiringReview(),
+        storage.getDecisionLogsByStatus("above_band"),
+        storage.getDecisionLogsByStatus("at_risk"),
+        storage.getPendingApprovalReports()
+      ]);
+
+      const clientsMap = new Map(clients.map(c => [c.id, c]));
+      
+      const enrichedContracts = contractsRequiringAction.map(contract => ({
+        ...contract,
+        clientName: clientsMap.get(contract.clientId)?.companyName || `Client #${contract.clientId}`
+      }));
+
+      res.json({
+        success: true,
+        dashboard: {
+          totalClients: clients.length,
+          contractsRequiringAction: enrichedContracts,
+          contractsRequiringActionCount: enrichedContracts.length,
+          benchmarksRequiringReview,
+          benchmarksRequiringReviewCount: benchmarksRequiringReview.length,
+          aboveBandCount: aboveBandDecisions.length,
+          atRiskCount: atRiskDecisions.length,
+          pendingReportsCount: pendingReports.length,
+          aboveBandDecisions,
+          atRiskDecisions,
+          pendingReports
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching enhanced dashboard:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dashboard" });
     }
   });
 

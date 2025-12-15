@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { BillUploadSection } from "@/components/BillUploadSection";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
@@ -40,7 +41,9 @@ import {
   CheckCircle,
   AlertTriangle,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  LogOut,
+  User
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -56,7 +59,11 @@ const statusColors: Record<string, string> = {
 export default function Admin() {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
+  const { user, isAuthenticated, isLoading: authLoading, login, logout, canAccess } = useAuth();
   const queryClient = useQueryClient();
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [loginPending, setLoginPending] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
@@ -308,6 +315,99 @@ export default function Admin() {
     setLanguage(language === "pt" ? "en" : "pt");
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginPending(true);
+    
+    const result = await login(loginForm.username, loginForm.password);
+    setLoginPending(false);
+    
+    if (!result.success) {
+      setLoginError(result.error || (language === 'pt' ? 'Falha no login' : 'Login failed'));
+    }
+  };
+
+  const roleLabels: Record<string, { pt: string; en: string }> = {
+    admin: { pt: 'Administrador', en: 'Administrator' },
+    ops: { pt: 'Operações', en: 'Operations' },
+    sales: { pt: 'Vendas', en: 'Sales' }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" data-testid="admin-loading">
+        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" data-testid="admin-login">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-violet-600" />
+            </div>
+            <CardTitle>{language === 'pt' ? 'Área Administrativa' : 'Admin Area'}</CardTitle>
+            <CardDescription>
+              {language === 'pt' ? 'Entre com suas credenciais' : 'Enter your credentials'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">{language === 'pt' ? 'Usuário' : 'Username'}</Label>
+                <Input
+                  id="username"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder={language === 'pt' ? 'Digite seu usuário' : 'Enter your username'}
+                  data-testid="input-login-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">{language === 'pt' ? 'Senha' : 'Password'}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder={language === 'pt' ? 'Digite sua senha' : 'Enter your password'}
+                  data-testid="input-login-password"
+                />
+              </div>
+              {loginError && (
+                <p className="text-red-600 text-sm" data-testid="text-login-error">{loginError}</p>
+              )}
+              <Button 
+                type="submit" 
+                className="w-full bg-violet-600 hover:bg-violet-700"
+                disabled={loginPending}
+                data-testid="button-login-submit"
+              >
+                {loginPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                {language === 'pt' ? 'Entrar' : 'Login'}
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={toggleLanguage}
+                data-testid="button-login-toggle-language"
+              >
+                <Languages className="w-4 h-4 mr-2" />
+                {t("language.toggle")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50" data-testid="admin-page">
       <header className="bg-violet-900 text-white p-4">
@@ -317,17 +417,26 @@ export default function Admin() {
             <p className="text-violet-200 text-sm">{t("admin.subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/admin/benchmarks">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-white hover:bg-violet-800"
-                data-testid="button-benchmarks"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                {t("benchmarks.title")}
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2 bg-violet-800 rounded-full px-3 py-1.5">
+              <User className="w-4 h-4" />
+              <span className="text-sm font-medium">{user?.username}</span>
+              <Badge variant="secondary" className="text-xs">
+                {roleLabels[user?.role || 'admin']?.[language] || user?.role}
+              </Badge>
+            </div>
+            {canAccess('benchmarks') && (
+              <Link href="/admin/benchmarks">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-white hover:bg-violet-800"
+                  data-testid="button-benchmarks"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  {t("benchmarks.title")}
+                </Button>
+              </Link>
+            )}
             <Button 
               variant="ghost" 
               size="sm"
@@ -347,6 +456,15 @@ export default function Admin() {
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncToZohoMutation.isPending ? 'animate-spin' : ''}`} />
               {t("admin.sync_zoho")}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-white hover:bg-violet-800"
+              onClick={() => logout()}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>

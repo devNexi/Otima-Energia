@@ -216,6 +216,16 @@ export interface IStorage {
   getLeadEcosSnapshot(id: number): Promise<LeadEcosSnapshot | undefined>;
   updateLeadEcosSnapshot(id: number, data: Partial<InsertLeadEcosSnapshot>): Promise<LeadEcosSnapshot | undefined>;
   lockLeadEcosSnapshot(id: number, lockedBy: string): Promise<LeadEcosSnapshot | undefined>;
+  
+  // ECOS - Contract Renewal Alerts (computed)
+  getContractsRequiringAction(): Promise<(ClientContract & { daysUntilExpiry: number; computedAlertLevel: string })[]>;
+  updateContractRenewalStatus(id: number, renewalStatus: string, notes?: string, reviewedBy?: string): Promise<ClientContract | undefined>;
+  
+  // ECOS - Benchmark Review Status (computed)
+  getBenchmarksRequiringReview(): Promise<(MarketPriceBenchmark & { reviewStatus: string; daysOverdue: number })[]>;
+  
+  // ECOS - Audit Trail
+  getAuditTrailForClient(clientId: number): Promise<any[]>;
 }
 
 export class Storage implements IStorage {
@@ -1075,6 +1085,125 @@ export class Storage implements IStorage {
     return await db.select().from(leadEcosSnapshots)
       .where(eq(leadEcosSnapshots.benchmarkIdUsed, benchmarkId))
       .orderBy(desc(leadEcosSnapshots.generatedAt));
+  }
+
+  // ECOS - Contract Renewal Alerts (computed)
+  async getContractsRequiringAction(): Promise<(ClientContract & { daysUntilExpiry: number; computedAlertLevel: string })[]> {
+    const today = new Date();
+    const contracts = await db.select().from(clientContracts)
+      .where(eq(clientContracts.status, 'active'))
+      .orderBy(clientContracts.contractEnd);
+    
+    return contracts.map(contract => {
+      const contractEnd = new Date(contract.contractEnd);
+      const daysUntilExpiry = Math.ceil((contractEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let computedAlertLevel = 'ok';
+      if (daysUntilExpiry <= 90) {
+        computedAlertLevel = 'critical';
+      } else if (daysUntilExpiry <= 120) {
+        computedAlertLevel = '120_days';
+      } else if (daysUntilExpiry <= 180) {
+        computedAlertLevel = '180_days';
+      }
+      
+      return {
+        ...contract,
+        daysUntilExpiry,
+        computedAlertLevel
+      };
+    }).filter(c => c.computedAlertLevel !== 'ok');
+  }
+
+  async updateContractRenewalStatus(
+    id: number, 
+    renewalStatus: string, 
+    notes?: string, 
+    reviewedBy?: string
+  ): Promise<ClientContract | undefined> {
+    const updateData: Record<string, unknown> = {
+      renewalStatus,
+      lastEcosReviewAt: new Date(),
+      updatedAt: new Date()
+    };
+    if (notes) updateData.renewalNotes = notes;
+    if (reviewedBy) updateData.lastEcosReviewBy = reviewedBy;
+    
+    const result = await db.update(clientContracts)
+      .set(updateData)
+      .where(eq(clientContracts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // ECOS - Benchmark Review Status (computed)
+  async getBenchmarksRequiringReview(): Promise<(MarketPriceBenchmark & { reviewStatus: string; daysOverdue: number })[]> {
+    const today = new Date();
+    const benchmarks = await this.getActiveBenchmarks();
+    
+    return benchmarks.map(benchmark => {
+      let reviewStatus = 'Active';
+      let daysOverdue = 0;
+      
+      if (benchmark.nextReviewDate) {
+        const nextReview = new Date(benchmark.nextReviewDate);
+        daysOverdue = Math.ceil((today.getTime() - nextReview.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysOverdue > 30) {
+          reviewStatus = 'Archived';
+        } else if (daysOverdue > 0) {
+          reviewStatus = 'Needs Review';
+        }
+      }
+      
+      return {
+        ...benchmark,
+        reviewStatus,
+        daysOverdue
+      };
+    }).filter(b => b.reviewStatus !== 'Active');
+  }
+
+  // ECOS - Audit Trail
+  async getAuditTrailForClient(clientId: number): Promise<any[]> {
+    const decisionLogs = await this.getDecisionLogs(clientId);
+    const reports = await this.getQuarterlyReports(clientId);
+    
+    const trail: any[] = [];
+    
+    for (const log of decisionLogs) {
+      const benchmark = log.benchmarkId ? await this.getBenchmark(log.benchmarkId) : null;
+      trail.push({
+        type: 'decision',
+        id: log.id,
+        date: log.decisionDate,
+        clientId: log.clientId,
+        statusResult: log.statusResult,
+        recommendation: log.recommendation,
+        benchmarkId: log.benchmarkId,
+        benchmarkRange: benchmark ? `R$ ${benchmark.lowerBoundRmwh}-${benchmark.upperBoundRmwh}/MWh` : null,
+        benchmarkConfidence: log.snapshotConfidence,
+        benchmarkReviewedAt: benchmark?.lastReviewedAt,
+        clientPrice: log.clientPriceRmwh,
+        potentialSavings: log.potentialSavingsR
+      });
+    }
+    
+    for (const report of reports) {
+      trail.push({
+        type: 'report',
+        id: report.id,
+        date: report.createdAt,
+        periodLabel: report.periodLabel,
+        statusClassification: report.statusClassification,
+        recommendation: report.recommendation,
+        approved: report.approved,
+        approvedBy: report.approvedBy,
+        approvedAt: report.approvedAt
+      });
+    }
+    
+    return trail.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 }
 

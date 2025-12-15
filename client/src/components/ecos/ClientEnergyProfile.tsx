@@ -129,6 +129,14 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
     }
   });
 
+  const { data: auditTrailData, isLoading: auditTrailLoading } = useQuery({
+    queryKey: [`/api/ecos/clients/${client.id}/audit-trail`],
+    queryFn: async () => {
+      const res = await fetch(`/api/ecos/clients/${client.id}/audit-trail`);
+      return res.json();
+    }
+  });
+
   const generateReportMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/ecos/reports/generate/${client.id}`, { method: "POST" });
@@ -217,6 +225,7 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
   const ecosStatus = ecosStatusData?.success ? ecosStatusData.status : null;
   const decisions = decisionsData?.decisions || [];
   const reports = reportsData?.reports || [];
+  const auditTrail = auditTrailData?.trail || [];
 
   const activeContract = contracts.find((c: any) => c.status === "active");
   const StatusIcon = ecosStatus ? statusIcons[ecosStatus.statusResult] || Clock : Clock;
@@ -355,6 +364,10 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
               </TabsTrigger>
               <TabsTrigger value="decisions" className="flex items-center gap-2" data-testid="tab-decisions">
                 <History className="w-4 h-4" />
+                {language === "pt" ? "Decisões" : "Decisions"}
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="flex items-center gap-2" data-testid="tab-audit">
+                <Shield className="w-4 h-4" />
                 {language === "pt" ? "Histórico ECOS" : "ECOS History"}
               </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center gap-2" data-testid="tab-reports">
@@ -735,6 +748,133 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="audit">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-violet-600" />
+                    {language === "pt" ? "Trilha de Auditoria ECOS" : "ECOS Audit Trail"}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === "pt" 
+                      ? "Histórico completo de decisões com referências de benchmark" 
+                      : "Complete decision history with benchmark references"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {auditTrailLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : auditTrail.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">
+                      {language === "pt" ? "Nenhum registro de auditoria" : "No audit records"}
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {auditTrail.map((entry: any, index: number) => (
+                        <div 
+                          key={`${entry.type}-${entry.id}`}
+                          className={`border rounded-lg p-4 ${
+                            entry.type === 'decision' ? 'border-violet-200 bg-violet-50' : 'border-blue-200 bg-blue-50'
+                          }`}
+                          data-testid={`audit-entry-${index}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {entry.type === 'decision' ? (
+                                <History className="w-5 h-5 text-violet-600" />
+                              ) : (
+                                <FileText className="w-5 h-5 text-blue-600" />
+                              )}
+                              <span className="font-medium">
+                                {entry.type === 'decision' 
+                                  ? (language === "pt" ? "Decisão ECOS" : "ECOS Decision")
+                                  : (language === "pt" ? "Relatório" : "Report")}
+                              </span>
+                              <Badge className={statusColors[entry.statusResult || entry.statusClassification] || 'bg-gray-100'}>
+                                {statusLabels[language][entry.statusResult || entry.statusClassification] || entry.statusResult || entry.statusClassification}
+                              </Badge>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(entry.date)}
+                            </span>
+                          </div>
+                          
+                          {entry.type === 'decision' && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
+                              <div className="bg-white rounded p-2 border">
+                                <div className="text-xs text-gray-500">{language === "pt" ? "Benchmark ID" : "Benchmark ID"}</div>
+                                <div className="font-medium">
+                                  {entry.benchmarkId ? `#${entry.benchmarkId}` : '-'}
+                                </div>
+                              </div>
+                              <div className="bg-white rounded p-2 border">
+                                <div className="text-xs text-gray-500">{language === "pt" ? "Faixa de Referência" : "Reference Range"}</div>
+                                <div className="font-medium">
+                                  {entry.benchmarkRange || '-'}
+                                </div>
+                              </div>
+                              <div className="bg-white rounded p-2 border">
+                                <div className="text-xs text-gray-500">{language === "pt" ? "Confiança" : "Confidence"}</div>
+                                <div className="font-medium">
+                                  <Badge variant={
+                                    entry.benchmarkConfidence === 'High' ? 'default' :
+                                    entry.benchmarkConfidence === 'Medium' ? 'secondary' : 'outline'
+                                  }>
+                                    {entry.benchmarkConfidence || '-'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="bg-white rounded p-2 border">
+                                <div className="text-xs text-gray-500">{language === "pt" ? "Última Revisão" : "Last Reviewed"}</div>
+                                <div className="font-medium">
+                                  {entry.benchmarkReviewedAt ? formatDate(entry.benchmarkReviewedAt) : '-'}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {entry.type === 'decision' && (
+                            <div className="mt-3 flex items-center justify-between text-sm">
+                              <div>
+                                <span className="text-gray-500">{language === "pt" ? "Preço Cliente:" : "Client Price:"}</span>
+                                <span className="ml-1 font-medium">R$ {entry.clientPrice}/MWh</span>
+                              </div>
+                              {entry.potentialSavings && parseFloat(entry.potentialSavings) > 0 && (
+                                <div className="text-green-700">
+                                  <span>{language === "pt" ? "Economia Potencial:" : "Potential Savings:"}</span>
+                                  <span className="ml-1 font-medium">{formatCurrency(entry.potentialSavings)}/ano</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {entry.type === 'report' && (
+                            <div className="mt-2 flex items-center gap-4 text-sm">
+                              <span>
+                                <strong>{entry.periodLabel}</strong>
+                              </span>
+                              {entry.approved && (
+                                <Badge variant="default">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  {language === "pt" ? "Aprovado" : "Approved"} {entry.approvedBy && `(${entry.approvedBy})`}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="mt-2 text-sm text-gray-600">
+                            <strong>{language === "pt" ? "Recomendação:" : "Recommendation:"}</strong> {entry.recommendation}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>

@@ -13,7 +13,10 @@ import {
   TrendingDown,
   Clock,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  RefreshCcw,
+  BookOpen,
+  Bell
 } from "lucide-react";
 
 interface EcosDashboardProps {
@@ -25,9 +28,9 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
   const { toast } = useToast();
 
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
-    queryKey: ["/api/ecos/dashboard"],
+    queryKey: ["/api/ecos/dashboard-enhanced"],
     queryFn: async () => {
-      const res = await fetch("/api/ecos/dashboard");
+      const res = await fetch("/api/ecos/dashboard-enhanced");
       return res.json();
     }
   });
@@ -72,6 +75,44 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
     if (days <= 30) return <Badge className="bg-red-100 text-red-800 border-red-300">{days}d</Badge>;
     if (days <= 60) return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">{days}d</Badge>;
     return <Badge className="bg-green-100 text-green-800 border-green-300">{days}d</Badge>;
+  };
+
+  const getAlertLevelBadge = (alertLevel: string) => {
+    switch (alertLevel) {
+      case 'critical':
+        return <Badge className="bg-red-100 text-red-800 border-red-300">{language === "pt" ? "Crítico" : "Critical"}</Badge>;
+      case '90_days':
+        return <Badge className="bg-red-100 text-red-800 border-red-300">90d</Badge>;
+      case '120_days':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-300">120d</Badge>;
+      case '180_days':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">180d</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const getRenewalStatusBadge = (status: string) => {
+    switch (status) {
+      case 'hold':
+        return <Badge className="bg-gray-100 text-gray-700">{language === "pt" ? "Aguardar" : "Hold"}</Badge>;
+      case 'review':
+        return <Badge className="bg-blue-100 text-blue-800">{language === "pt" ? "Revisar" : "Review"}</Badge>;
+      case 'renegotiate':
+        return <Badge className="bg-green-100 text-green-800">{language === "pt" ? "Renegociar" : "Renegotiate"}</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const getBenchmarkReviewBadge = (status: string, daysOverdue: number) => {
+    if (status === 'Needs Review') {
+      return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">{daysOverdue}d {language === "pt" ? "atrasado" : "overdue"}</Badge>;
+    }
+    if (status === 'Archived') {
+      return <Badge className="bg-gray-100 text-gray-600">{language === "pt" ? "Arquivado" : "Archived"}</Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-800">{language === "pt" ? "Ativo" : "Active"}</Badge>;
   };
 
   const handleViewClient = (clientId: number) => {
@@ -125,16 +166,16 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
         <Card className="border-l-4 border-l-orange-500">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              {language === "pt" ? "Contratos Expirando" : "Expiring Contracts"}
+              <Bell className="w-4 h-4" />
+              {language === "pt" ? "Contratos - Ação Necessária" : "Contracts - Action Required"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600" data-testid="stat-expiring">
-              {dashboard.expiringContractsCount}
+            <div className="text-3xl font-bold text-orange-600" data-testid="stat-contracts-action">
+              {dashboard.contractsRequiringActionCount || 0}
             </div>
             <p className="text-xs text-gray-500">
-              {language === "pt" ? "Próximos 90 dias" : "Next 90 days"}
+              {language === "pt" ? "Próximos 180 dias" : "Next 180 days"}
             </p>
           </CardContent>
         </Card>
@@ -172,46 +213,71 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
             </p>
           </CardContent>
         </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              {language === "pt" ? "Benchmarks - Revisão" : "Benchmarks - Review"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-600" data-testid="stat-benchmarks-review">
+              {dashboard.benchmarksRequiringReviewCount || 0}
+            </div>
+            <p className="text-xs text-gray-500">
+              {language === "pt" ? "Necessitam revisão" : "Need review"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-700">
-              <Calendar className="w-5 h-5" />
-              {language === "pt" ? "Contratos Expirando" : "Expiring Contracts"}
+              <Bell className="w-5 h-5" />
+              {language === "pt" ? "Contratos - Ação Necessária" : "Contracts Requiring Action"}
             </CardTitle>
             <CardDescription>
-              {language === "pt" ? "Contratos que vencem nos próximos 90 dias" : "Contracts expiring in the next 90 days"}
+              {language === "pt" ? "Contratos expirando em 180 dias com níveis de alerta" : "Contracts expiring within 180 days with alert levels"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {dashboard.expiringContracts.length === 0 ? (
+            {(!dashboard.contractsRequiringAction || dashboard.contractsRequiringAction.length === 0) ? (
               <p className="text-center text-gray-500 py-4">
-                {language === "pt" ? "Nenhum contrato expirando" : "No expiring contracts"}
+                {language === "pt" ? "Nenhum contrato requer ação" : "No contracts require action"}
               </p>
             ) : (
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {dashboard.expiringContracts.map((contract: any) => (
+                {dashboard.contractsRequiringAction.map((contract: any) => (
                   <div 
                     key={contract.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200"
-                    data-testid={`expiring-contract-${contract.id}`}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      contract.computedAlertLevel === 'critical' ? 'bg-red-50 border-red-200' :
+                      contract.computedAlertLevel === '120_days' ? 'bg-orange-50 border-orange-200' :
+                      'bg-yellow-50 border-yellow-200'
+                    }`}
+                    data-testid={`contract-action-${contract.id}`}
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{getClientName(contract.clientId)}</p>
+                      <p className="font-medium text-gray-900">{contract.clientName || getClientName(contract.clientId)}</p>
                       <p className="text-sm text-gray-600">
                         {contract.supplierName} • {language === "pt" ? "Expira:" : "Expires:"} {formatDate(contract.contractEnd)}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getRenewalStatusBadge(contract.renewalStatus || 'hold')}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getDaysUntilBadge(getDaysUntil(contract.contractEnd))}
+                      {getAlertLevelBadge(contract.computedAlertLevel)}
+                      <span className="text-sm text-gray-500">{contract.daysUntilExpiry}d</span>
                       {onViewClient && (
                         <Button 
                           size="sm" 
                           variant="ghost"
                           onClick={() => handleViewClient(contract.clientId)}
-                          data-testid={`view-expiring-${contract.id}`}
+                          data-testid={`view-contract-action-${contract.id}`}
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Button>
@@ -376,6 +442,61 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-700">
+              <BookOpen className="w-5 h-5" />
+              {language === "pt" ? "Benchmarks - Revisão Pendente" : "Benchmarks Requiring Review"}
+            </CardTitle>
+            <CardDescription>
+              {language === "pt" ? "Benchmarks que precisam de atualização" : "Benchmarks that need updating"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(!dashboard.benchmarksRequiringReview || dashboard.benchmarksRequiringReview.length === 0) ? (
+              <p className="text-center text-gray-500 py-4">
+                {language === "pt" ? "Todos os benchmarks estão atualizados" : "All benchmarks are up to date"}
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {dashboard.benchmarksRequiringReview.map((benchmark: any) => (
+                  <div 
+                    key={benchmark.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      benchmark.reviewStatus === 'Archived' ? 'bg-gray-50 border-gray-200' : 'bg-purple-50 border-purple-200'
+                    }`}
+                    data-testid={`benchmark-review-${benchmark.id}`}
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {benchmark.segment} • {benchmark.region}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {benchmark.contractLengthMonths}{language === "pt" ? " meses" : " months"} • 
+                        R$ {benchmark.lowerBoundRmwh}-{benchmark.upperBoundRmwh}/MWh
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {language === "pt" ? "Próxima revisão:" : "Next review:"} {formatDate(benchmark.nextReviewDate)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getBenchmarkReviewBadge(benchmark.reviewStatus, benchmark.daysOverdue)}
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => window.location.href = '/admin?tab=benchmarks'}
+                        data-testid={`review-benchmark-${benchmark.id}`}
+                      >
+                        <RefreshCcw className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
