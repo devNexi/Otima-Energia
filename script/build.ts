@@ -69,13 +69,6 @@ async function buildAll() {
     minify: false,
     external: externals,
     logLevel: "info",
-    // Handle dynamic imports for native modules
-    banner: {
-      js: `
-        const __require = require;
-        const __createRequire = (url) => require;
-      `,
-    },
   });
 }
 
