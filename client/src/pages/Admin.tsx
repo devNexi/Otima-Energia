@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { BillUploadSection } from "@/components/BillUploadSection";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
+import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { 
   Users, 
   Inbox, 
@@ -29,7 +30,8 @@ import {
   Upload,
   DollarSign,
   Send,
-  TrendingUp
+  TrendingUp,
+  Zap
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -49,6 +51,7 @@ export default function Admin() {
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [rfoClient, setRfoClient] = useState<{ id: number; companyName: string; ucCode?: string | null; avgConsumptionKwh?: string | null; currentSupplier?: string | null } | null>(null);
+  const [energyProfileClient, setEnergyProfileClient] = useState<{ id: number; companyName: string; segment?: string | null; region?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [newClientForm, setNewClientForm] = useState({
     companyName: "",
     cnpj: "",
@@ -428,6 +431,22 @@ export default function Admin() {
                             <Button 
                               size="sm" 
                               variant="default"
+                              className="bg-emerald-600 hover:bg-emerald-700"
+                              onClick={() => setEnergyProfileClient({
+                                id: client.id,
+                                companyName: client.companyName,
+                                segment: client.segment,
+                                region: client.region,
+                                avgConsumptionKwh: client.avgConsumptionKwh
+                              })}
+                              data-testid={`button-energy-profile-${client.id}`}
+                            >
+                              <Zap className="w-4 h-4 mr-1" />
+                              ECOS
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="default"
                               className="bg-green-600 hover:bg-green-700"
                               onClick={() => setQuotesClient({ 
                                 id: client.id, 
@@ -506,6 +525,13 @@ export default function Admin() {
                   <RFOGenerator 
                     client={rfoClient}
                     onClose={() => setRfoClient(null)}
+                  />
+                )}
+
+                {energyProfileClient && (
+                  <ClientEnergyProfile 
+                    client={energyProfileClient}
+                    onClose={() => setEnergyProfileClient(null)}
                   />
                 )}
               </CardContent>

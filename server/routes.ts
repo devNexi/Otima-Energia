@@ -377,6 +377,17 @@ export async function registerRoutes(
     }
   });
 
+  // Get client bill uploads
+  app.get("/api/clients/:id/bills", async (req, res) => {
+    try {
+      const bills = await storage.getBillUploads(parseInt(req.params.id));
+      res.json({ success: true, bills });
+    } catch (error: any) {
+      console.error("Error fetching client bills:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch bills" });
+    }
+  });
+
   // ============== PORTAL ENDPOINTS ==============
 
   // Validate portal token (for lead-based portal access)
