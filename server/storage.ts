@@ -39,6 +39,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  hasAnyUsers(): Promise<boolean>;
   
   // Leads
   createLead(lead: InsertLead): Promise<Lead>;
@@ -221,6 +222,11 @@ export class Storage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await db.insert(users).values(insertUser).returning();
     return result[0];
+  }
+
+  async hasAnyUsers(): Promise<boolean> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+    return (result[0]?.count || 0) > 0;
   }
 
   // Leads

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -21,6 +21,8 @@ import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
 import { processBillFile } from "./ocrService";
+import bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -32,6 +34,187 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // ============== AUTHENTICATION ENDPOINTS ==============
+  
+  const SALT_ROUNDS = 12;
+  const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  // Register new admin user (first user setup only - protected after)
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ success: false, error: "Username and password required" });
+      }
+      
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, error: "Password must be at least 8 characters" });
+      }
+      
+      const existingUsers = await storage.hasAnyUsers();
+      if (existingUsers) {
+        const sessionId = req.headers["x-session-id"] as string;
+        if (!sessionId) {
+          return res.status(403).json({ success: false, error: "Registration is disabled. Contact an admin." });
+        }
+        const session = await storage.getAdminSession(sessionId);
+        if (!session || new Date(session.expiresAt) < new Date()) {
+          return res.status(403).json({ success: false, error: "Registration is disabled. Contact an admin." });
+        }
+      }
+      
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(409).json({ success: false, error: "Username already exists" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      const user = await storage.createUser({ username, password: hashedPassword });
+      
+      await storage.logAdminAction({
+        actor: username,
+        actorIp: req.ip || null,
+        action: "register",
+        entityType: "user",
+        entityId: null,
+        detailsJson: { username }
+      });
+      
+      res.json({ success: true, user: { id: user.id, username: user.username } });
+    } catch (error: any) {
+      console.error("Error registering user:", error);
+      res.status(500).json({ success: false, error: "Failed to register user" });
+    }
+  });
+
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ success: false, error: "Username and password required" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ success: false, error: "Invalid credentials" });
+      }
+      
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ success: false, error: "Invalid credentials" });
+      }
+      
+      await storage.deleteExpiredSessions();
+      
+      const sessionId = randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+      
+      await storage.createAdminSession({
+        id: sessionId,
+        userId: user.id,
+        expiresAt,
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      });
+      
+      await storage.logAdminAction({
+        actor: user.username,
+        actorIp: req.ip || null,
+        action: "login",
+        entityType: "session",
+        entityId: null,
+        detailsJson: { sessionId }
+      });
+      
+      res.json({ 
+        success: true, 
+        sessionId,
+        expiresAt: expiresAt.toISOString(),
+        user: { id: user.id, username: user.username }
+      });
+    } catch (error: any) {
+      console.error("Error logging in:", error);
+      res.status(500).json({ success: false, error: "Failed to login" });
+    }
+  });
+
+  // Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      const sessionId = req.headers["x-session-id"] as string;
+      
+      if (sessionId) {
+        const session = await storage.getAdminSession(sessionId);
+        if (session) {
+          const user = await storage.getUser(session.userId);
+          await storage.logAdminAction({
+            actor: user?.username || "unknown",
+            actorIp: req.ip || null,
+            action: "logout",
+            entityType: "session",
+            entityId: null,
+            detailsJson: { sessionId }
+          });
+          await storage.deleteAdminSession(sessionId);
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error logging out:", error);
+      res.status(500).json({ success: false, error: "Failed to logout" });
+    }
+  });
+
+  // Get current session/user
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const sessionId = req.headers["x-session-id"] as string;
+      
+      if (!sessionId) {
+        return res.status(401).json({ success: false, error: "Not authenticated" });
+      }
+      
+      const session = await storage.getAdminSession(sessionId);
+      if (!session) {
+        return res.status(401).json({ success: false, error: "Session not found" });
+      }
+      
+      if (new Date(session.expiresAt) < new Date()) {
+        await storage.deleteAdminSession(sessionId);
+        return res.status(401).json({ success: false, error: "Session expired" });
+      }
+      
+      const user = await storage.getUser(session.userId);
+      if (!user) {
+        return res.status(401).json({ success: false, error: "User not found" });
+      }
+      
+      res.json({
+        success: true,
+        user: { id: user.id, username: user.username },
+        session: { id: session.id, expiresAt: session.expiresAt }
+      });
+    } catch (error: any) {
+      console.error("Error getting session:", error);
+      res.status(500).json({ success: false, error: "Failed to get session" });
+    }
+  });
+
+  // Check if any admin users exist (for first-time setup)
+  app.get("/api/auth/setup-required", async (req, res) => {
+    try {
+      const hasUsers = await storage.hasAnyUsers();
+      res.json({ success: true, setupRequired: !hasUsers });
+    } catch (error: any) {
+      console.error("Error checking setup:", error);
+      res.status(500).json({ success: false, error: "Failed to check setup status" });
+    }
+  });
+
   // ============== LEAD ENDPOINTS ==============
   
   // Submit lead from website contact form
