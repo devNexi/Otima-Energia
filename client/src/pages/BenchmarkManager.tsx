@@ -22,13 +22,21 @@ import {
   Calendar,
   MapPin,
   Building2,
-  Clock
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Shield,
+  Link as LinkIcon,
+  RefreshCw
 } from "lucide-react";
 import type { MarketPriceBenchmark } from "@shared/schema";
 
 const SEGMENTS = ["SME", "Industrial"];
 const REGIONS = ["Sudeste", "Sul", "Nordeste", "Norte", "Centro-Oeste"];
 const CONTRACT_LENGTHS = [12, 24, 36];
+const SOURCE_TYPES = ["SupplierQuote", "BrokerIntel", "PublicSignal", "InternalDeal", "Other"];
+const CONFIDENCE_LEVELS = ["Low", "Medium", "High"];
+const REVIEW_CADENCES = ["Monthly", "Quarterly"];
 
 interface BenchmarkFormData {
   segment: string;
@@ -40,6 +48,12 @@ interface BenchmarkFormData {
   expiresAt: string;
   source: string;
   notes: string;
+  sourceType: string;
+  sourceDetails: string;
+  sourceUrl: string;
+  confidence: string;
+  reviewCadence: string;
+  nextReviewDate: string;
 }
 
 const defaultFormData: BenchmarkFormData = {
@@ -51,7 +65,13 @@ const defaultFormData: BenchmarkFormData = {
   effectiveDate: new Date().toISOString().split("T")[0],
   expiresAt: "",
   source: "",
-  notes: ""
+  notes: "",
+  sourceType: "",
+  sourceDetails: "",
+  sourceUrl: "",
+  confidence: "Medium",
+  reviewCadence: "Quarterly",
+  nextReviewDate: ""
 };
 
 export default function BenchmarkManager() {
@@ -79,7 +99,13 @@ export default function BenchmarkManager() {
       const payload = {
         ...data,
         contractLengthMonths: Number(data.contractLengthMonths),
-        expiresAt: data.expiresAt || null
+        expiresAt: data.expiresAt || null,
+        sourceType: data.sourceType || null,
+        sourceDetails: data.sourceDetails || null,
+        sourceUrl: data.sourceUrl || null,
+        confidence: data.confidence || "Medium",
+        reviewCadence: data.reviewCadence || "Quarterly",
+        nextReviewDate: data.nextReviewDate || null
       };
       const res = await fetch("/api/ecos/benchmarks", {
         method: "POST",
@@ -105,7 +131,13 @@ export default function BenchmarkManager() {
       const payload = {
         ...data,
         contractLengthMonths: data.contractLengthMonths ? Number(data.contractLengthMonths) : undefined,
-        expiresAt: data.expiresAt || null
+        expiresAt: data.expiresAt || null,
+        sourceType: data.sourceType || null,
+        sourceDetails: data.sourceDetails || null,
+        sourceUrl: data.sourceUrl || null,
+        confidence: data.confidence || "Medium",
+        reviewCadence: data.reviewCadence || "Quarterly",
+        nextReviewDate: data.nextReviewDate || null
       };
       const res = await fetch(`/api/ecos/benchmarks/${id}`, {
         method: "PATCH",
@@ -173,7 +205,13 @@ export default function BenchmarkManager() {
       effectiveDate: benchmark.effectiveDate,
       expiresAt: benchmark.expiresAt || "",
       source: benchmark.source || "",
-      notes: benchmark.notes || ""
+      notes: benchmark.notes || "",
+      sourceType: benchmark.sourceType || "",
+      sourceDetails: benchmark.sourceDetails || "",
+      sourceUrl: benchmark.sourceUrl || "",
+      confidence: benchmark.confidence || "Medium",
+      reviewCadence: benchmark.reviewCadence || "Quarterly",
+      nextReviewDate: benchmark.nextReviewDate || ""
     });
     setDialogOpen(true);
   };
@@ -353,14 +391,87 @@ export default function BenchmarkManager() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>{t("benchmarks.source_type")}</Label>
+                    <Select
+                      value={formData.sourceType}
+                      onValueChange={(v) => setFormData({ ...formData, sourceType: v })}
+                    >
+                      <SelectTrigger data-testid="select-source-type">
+                        <SelectValue placeholder="Select type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SOURCE_TYPES.map((st) => (
+                          <SelectItem key={st} value={st}>{t(`benchmarks.source_type.${st}` as any)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>{t("benchmarks.confidence")}</Label>
+                    <Select
+                      value={formData.confidence}
+                      onValueChange={(v) => setFormData({ ...formData, confidence: v })}
+                    >
+                      <SelectTrigger data-testid="select-confidence">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONFIDENCE_LEVELS.map((cl) => (
+                          <SelectItem key={cl} value={cl}>{t(`benchmarks.confidence.${cl}` as any)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div>
-                  <Label>{t("benchmarks.source")}</Label>
+                  <Label>{t("benchmarks.source_details")}</Label>
                   <Input
-                    value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                    placeholder={t("benchmarks.source_placeholder")}
-                    data-testid="input-source"
+                    value={formData.sourceDetails}
+                    onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
+                    placeholder={t("benchmarks.source_details_placeholder")}
+                    data-testid="input-source-details"
                   />
+                </div>
+
+                <div>
+                  <Label>{t("benchmarks.source_url")}</Label>
+                  <Input
+                    value={formData.sourceUrl}
+                    onChange={(e) => setFormData({ ...formData, sourceUrl: e.target.value })}
+                    placeholder={t("benchmarks.source_url_placeholder")}
+                    data-testid="input-source-url"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>{t("benchmarks.review_cadence")}</Label>
+                    <Select
+                      value={formData.reviewCadence}
+                      onValueChange={(v) => setFormData({ ...formData, reviewCadence: v })}
+                    >
+                      <SelectTrigger data-testid="select-review-cadence">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REVIEW_CADENCES.map((rc) => (
+                          <SelectItem key={rc} value={rc}>{t(`benchmarks.review_cadence.${rc}` as any)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>{t("benchmarks.next_review")}</Label>
+                    <Input
+                      type="date"
+                      value={formData.nextReviewDate}
+                      onChange={(e) => setFormData({ ...formData, nextReviewDate: e.target.value })}
+                      data-testid="input-next-review"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -491,6 +602,44 @@ export default function BenchmarkManager() {
                           <p className="text-xs text-center text-gray-400 mt-2">MWh</p>
                         </div>
 
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {benchmark.sourceType && (
+                            <Badge variant="outline" className="text-xs">
+                              {t(`benchmarks.source_type.${benchmark.sourceType}` as any)}
+                            </Badge>
+                          )}
+                          {benchmark.confidence && (
+                            <Badge 
+                              className={`text-xs ${
+                                benchmark.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                benchmark.confidence === 'Low' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              <Shield className="w-3 h-3 mr-1" />
+                              {t(`benchmarks.confidence.${benchmark.confidence}` as any)}
+                            </Badge>
+                          )}
+                          {benchmark.nextReviewDate && (() => {
+                            const reviewDate = new Date(benchmark.nextReviewDate);
+                            const today = new Date();
+                            const isOverdue = reviewDate < today;
+                            const isDueSoon = !isOverdue && reviewDate <= new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+                            return (
+                              <Badge 
+                                className={`text-xs ${
+                                  isOverdue ? 'bg-red-100 text-red-800' :
+                                  isDueSoon ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                {isOverdue ? t("benchmarks.overdue") : isDueSoon ? t("benchmarks.due_soon") : reviewDate.toLocaleDateString("pt-BR")}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+
                         <div className="text-xs text-gray-500 space-y-1">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -500,6 +649,19 @@ export default function BenchmarkManager() {
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {t("benchmarks.expires")}: {new Date(benchmark.expiresAt).toLocaleDateString("pt-BR")}
+                            </div>
+                          )}
+                          {benchmark.sourceUrl && (
+                            <div className="flex items-center gap-1">
+                              <LinkIcon className="w-3 h-3" />
+                              <a 
+                                href={benchmark.sourceUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-violet-600 hover:underline truncate"
+                              >
+                                {t("benchmarks.source_url")}
+                              </a>
                             </div>
                           )}
                         </div>

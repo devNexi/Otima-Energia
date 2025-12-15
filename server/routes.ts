@@ -75,11 +75,11 @@ async function checkPortalRateLimit(req: Request, res: Response, next: NextFunct
 // Cleanup old rate limit entries periodically
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of portalRateLimits.entries()) {
+  Array.from(portalRateLimits.entries()).forEach(([key, entry]) => {
     if (entry.resetAt < now) {
       portalRateLimits.delete(key);
     }
-  }
+  });
 }, 60000);
 
 export async function registerRoutes(

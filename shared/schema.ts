@@ -895,9 +895,19 @@ export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
   // Metadata
   effectiveDate: date("effective_date").notNull(),
   expiresAt: date("expires_at"),
-  source: text("source"), // e.g., 'Internal analysis', 'Supplier quote avg', 'Market report XYZ'
+  source: text("source"), // Legacy field - use sourceType + sourceDetails instead
   notes: text("notes"),
   updatedBy: text("updated_by").default("admin"),
+  
+  // Governance Fields
+  sourceType: text("source_type"), // 'SupplierQuote', 'BrokerIntel', 'PublicSignal', 'InternalDeal', 'Other'
+  sourceDetails: text("source_details"), // Free text for additional context
+  sourceUrl: text("source_url"), // Optional link to source document
+  confidence: text("confidence").default("Medium"), // 'Low', 'Medium', 'High'
+  reviewCadence: text("review_cadence").default("Quarterly"), // 'Monthly', 'Quarterly'
+  nextReviewDate: date("next_review_date"),
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  lastReviewedBy: text("last_reviewed_by"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

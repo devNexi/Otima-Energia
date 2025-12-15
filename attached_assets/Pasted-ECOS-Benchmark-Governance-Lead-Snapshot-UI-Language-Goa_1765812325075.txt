@@ -1,0 +1,290 @@
+ECOS Benchmark Governance + Lead Snapshot + UI Language
+Goal
+
+Strengthen ECOS credibility and usability by:
+
+making benchmark inputs auditable and explainable
+
+removing “market price” language everywhere
+
+adding a lightweight Lead ECOS Snapshot for sales conversion
+
+adding benchmark review reminders
+
+making the audit trail obvious: which benchmark triggered which recommendation
+
+1) Benchmarks: Add Source + Confidence
+Backend
+
+Update benchmark schema (shared/schema.ts + Drizzle migration + server routes):
+Add fields to the marketBenchmarks table (or whatever benchmark table name is used):
+
+sourceType (enum/string)
+Examples: SupplierQuote, BrokerIntel, PublicSignal, InternalDeal, Other
+
+sourceDetails (string, optional)
+Example: “Quote set from Supplier X via email”, “PLD trend + broker call”, “Internal renewal offer”
+
+sourceUrl (string, optional)
+For linking to a doc, spreadsheet, PDF, or internal note
+
+confidence (enum/string)
+Values: Low, Medium, High
+
+reviewCadence (enum/string)
+Values: Monthly, Quarterly
+
+nextReviewDate (date)
+
+lastReviewedAt (date)
+
+lastReviewedBy (string/user id if auth exists)
+
+(optional) notes (text)
+
+Acceptance criteria
+
+Benchmarks can be created/edited with these fields in the admin UI.
+
+Benchmarks list view shows Source + Confidence + Next Review Date.
+
+DB migration runs cleanly and existing benchmarks default sensibly:
+
+confidence = Medium
+
+reviewCadence = Monthly
+
+nextReviewDate = today + 30 days
+
+2) Rename all UI text: “Market price” → “Reference range”
+Frontend
+
+Search all frontend strings/components and replace wording:
+
+“Market price” → “Reference range”
+
+“Above market rate” → “Above reference range”
+
+“Below market rate” → “Below reference range”
+
+“Market benchmarks” page label can stay as “Benchmarks”, but inside copy should read “Reference ranges”.
+
+Also adjust helper text:
+
+Use: “Reference range based on benchmark inputs and market conditions”
+
+Avoid: “Live market pricing”
+
+Acceptance criteria
+
+No visible occurrence of “market price” / “market rate” in UI.
+
+Dashboard cards and tables read cleanly:
+
+“Above Range”
+
+“At Risk (near upper limit)”
+
+“Within Range”
+
+3) Add “Lead ECOS Snapshot” (Sales Conversion Tool)
+Concept
+
+Renan should be able to turn a lead into a topline ECOS snapshot without onboarding them fully as a client.
+
+Data model
+
+Add a lightweight entity:
+
+leadConsumptionProfile or reuse existing consumptionProfiles but allow linking to leadId
+
+Store minimal fields needed for band evaluation:
+
+company name
+
+region/state
+
+segment (SME/commercial/industrial categories you already use)
+
+estimated monthly spend (optional)
+
+uploaded bills (reuse existing upload flow if possible)
+
+calculated metrics (if OCR already exists: kWh, demand kW, tariff flags)
+
+Add leadEcosSnapshot table:
+
+leadId
+
+benchmarkIdUsed
+
+bandResult (Above / Within / At Risk / Unknown)
+
+summaryText (short)
+
+generatedAt
+
+generatedBy
+
+pdfUrl or file reference (optional)
+
+locked boolean (true by default)
+
+UI requirements
+
+In /admin → Leads:
+Add a new button per lead:
+
+“Generate ECOS Snapshot”
+
+Snapshot view should show:
+
+Reference range used (lower/upper + term/segment/region)
+
+Lead’s estimated position (if enough data)
+
+3 bullet insights
+
+CTA for next step: “To unlock full ECOS optimisation, become a client”
+
+Limited report + watermark/locked sections
+
+Lead snapshot must be clearly limited:
+
+Watermark: “Prévia ECOS • Uso Comercial • Informações resumidas”
+
+Locked section blocks with blurred/disabled UI:
+
+“Quarterly optimisation plan”
+
+“Contract restructuring recommendations”
+
+“Supplier strategy”
+
+“Full consumption diagnostics”
+Text on locked blocks: “Disponível para clientes Ótima Energia”
+
+Acceptance criteria
+
+Renan can generate a snapshot in <60 seconds with minimal inputs.
+
+Snapshot references a benchmark + stores benchmarkIdUsed.
+
+Snapshot can be exported as PDF OR copied into an email (either is fine for MVP).
+
+Locked/watermarked view is obvious and professional.
+
+4) Benchmark Review Reminders (Monthly/Quarterly)
+Backend
+
+Create a scheduled job (simple cron):
+Daily at e.g. 08:00 BRT:
+
+Find benchmarks where nextReviewDate <= today
+
+Create admin notifications (table adminNotifications) OR show badge counts on dashboard.
+
+If no notification system exists, MVP can be:
+
+Dashboard widget “Benchmarks Due for Review”
+
+Filterable list on Benchmarks page: “Due”, “Overdue”
+
+Frontend
+
+Admin dashboard additions:
+
+New card: “Benchmarks Due”
+
+New list: “Due / Overdue Benchmarks”
+
+Quick action: “Mark reviewed” which sets:
+
+lastReviewedAt = now
+
+nextReviewDate = now + cadence interval
+
+lastReviewedBy = logged in user
+
+Acceptance criteria
+
+Overdue benchmarks appear visibly on admin landing dashboard.
+
+Mark reviewed updates dates and clears the due state.
+
+5) Audit Trail: “Which benchmark triggered which recommendation”
+Backend
+
+Ensure every evaluation / decision log stores:
+
+benchmarkIdUsed
+
+benchmarkVersion (optional but recommended)
+
+benchmarkLower and benchmarkUpper stored at time of decision (snapshot values)
+
+evaluationResult (Above/Within/At Risk)
+
+createdBy
+
+createdAt
+
+notes
+
+If you already have decisionLogging, extend it so it always links to the benchmark record.
+
+Frontend
+
+In client/lead detail:
+
+“Recommendations / Decisions” list shows:
+
+Result
+
+Date
+
+Benchmark used (clickable)
+
+Source + confidence (from benchmark record)
+
+In benchmark detail:
+
+Add “Used In Recommendations” section listing:
+
+client/lead
+
+decision date
+
+result
+
+Acceptance criteria
+
+From any recommendation, I can click to the benchmark that drove it.
+
+From a benchmark, I can see every decision it affected.
+
+6) Security dependency note (important)
+
+This work assumes admin authentication exists (or is being implemented). If not, do not ship without it.
+
+Minimum required for this release:
+
+/admin behind login
+
+session cookie
+
+password hashing
+
+basic role = admin
+
+Output request
+
+When done, please provide:
+
+a short walkthrough video or written steps
+
+list of schema changes + migrations
+
+list of routes added/changed
+
+list of key UI components changed
