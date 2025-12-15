@@ -10,7 +10,12 @@ import {
   insertRfoRequestSchema,
   insertRfoSupplierTrackingSchema,
   insertSupplierContactSchema,
-  insertProposalSchema
+  insertProposalSchema,
+  insertClientContractSchema,
+  insertMarketPriceBenchmarkSchema,
+  insertEcosSettingsSchema,
+  insertEcosDecisionLogSchema,
+  insertQuarterlyReportSchema
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -1292,6 +1297,398 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching proposal views:", error);
       res.status(500).json({ success: false, error: "Failed to fetch views" });
+    }
+  });
+
+  // ============== ECOS ENDPOINTS ==============
+
+  // --- Client Contracts ---
+  
+  // Create client contract
+  app.post("/api/ecos/contracts", async (req, res) => {
+    try {
+      const validatedData = insertClientContractSchema.parse(req.body);
+      const contract = await storage.createClientContract(validatedData);
+      res.json({ success: true, contract });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating contract:", error);
+        res.status(500).json({ success: false, error: "Failed to create contract" });
+      }
+    }
+  });
+
+  // Get contracts for client
+  app.get("/api/ecos/contracts/:clientId", async (req, res) => {
+    try {
+      const contracts = await storage.getClientContracts(parseInt(req.params.clientId));
+      res.json({ success: true, contracts });
+    } catch (error: any) {
+      console.error("Error fetching contracts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch contracts" });
+    }
+  });
+
+  // Get active contract for client
+  app.get("/api/ecos/contracts/:clientId/active", async (req, res) => {
+    try {
+      const contract = await storage.getActiveClientContract(parseInt(req.params.clientId));
+      res.json({ success: true, contract });
+    } catch (error: any) {
+      console.error("Error fetching active contract:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch active contract" });
+    }
+  });
+
+  // Update contract
+  app.patch("/api/ecos/contracts/:id", async (req, res) => {
+    try {
+      const contract = await storage.updateClientContract(parseInt(req.params.id), req.body);
+      if (!contract) {
+        return res.status(404).json({ success: false, error: "Contract not found" });
+      }
+      res.json({ success: true, contract });
+    } catch (error: any) {
+      console.error("Error updating contract:", error);
+      res.status(500).json({ success: false, error: "Failed to update contract" });
+    }
+  });
+
+  // Get expiring contracts
+  app.get("/api/ecos/contracts-expiring", async (req, res) => {
+    try {
+      const days = parseInt(req.query.days as string) || 90;
+      const contracts = await storage.getExpiringContracts(days);
+      res.json({ success: true, contracts });
+    } catch (error: any) {
+      console.error("Error fetching expiring contracts:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch expiring contracts" });
+    }
+  });
+
+  // --- Market Price Benchmarks ---
+
+  // Create benchmark
+  app.post("/api/ecos/benchmarks", async (req, res) => {
+    try {
+      const validatedData = insertMarketPriceBenchmarkSchema.parse(req.body);
+      const benchmark = await storage.createBenchmark(validatedData);
+      res.json({ success: true, benchmark });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating benchmark:", error);
+        res.status(500).json({ success: false, error: "Failed to create benchmark" });
+      }
+    }
+  });
+
+  // Get all benchmarks
+  app.get("/api/ecos/benchmarks", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === "true";
+      const benchmarks = activeOnly 
+        ? await storage.getActiveBenchmarks()
+        : await storage.getBenchmarks();
+      res.json({ success: true, benchmarks });
+    } catch (error: any) {
+      console.error("Error fetching benchmarks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch benchmarks" });
+    }
+  });
+
+  // Get benchmark for specific client profile
+  app.get("/api/ecos/benchmarks/match", async (req, res) => {
+    try {
+      const { segment, region, contractMonths } = req.query;
+      if (!segment || !region || !contractMonths) {
+        return res.status(400).json({ success: false, error: "Missing required parameters: segment, region, contractMonths" });
+      }
+      const benchmark = await storage.getBenchmarkForClient(
+        segment as string,
+        region as string,
+        parseInt(contractMonths as string)
+      );
+      res.json({ success: true, benchmark });
+    } catch (error: any) {
+      console.error("Error matching benchmark:", error);
+      res.status(500).json({ success: false, error: "Failed to match benchmark" });
+    }
+  });
+
+  // Update benchmark
+  app.patch("/api/ecos/benchmarks/:id", async (req, res) => {
+    try {
+      const benchmark = await storage.updateBenchmark(parseInt(req.params.id), req.body);
+      if (!benchmark) {
+        return res.status(404).json({ success: false, error: "Benchmark not found" });
+      }
+      res.json({ success: true, benchmark });
+    } catch (error: any) {
+      console.error("Error updating benchmark:", error);
+      res.status(500).json({ success: false, error: "Failed to update benchmark" });
+    }
+  });
+
+  // --- ECOS Settings ---
+
+  // Get all ECOS settings
+  app.get("/api/ecos/settings", async (req, res) => {
+    try {
+      const settings = await storage.getAllEcosSettings();
+      res.json({ success: true, settings });
+    } catch (error: any) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch settings" });
+    }
+  });
+
+  // Get settings for segment
+  app.get("/api/ecos/settings/:segment", async (req, res) => {
+    try {
+      const settings = await storage.getEcosSettings(req.params.segment);
+      res.json({ success: true, settings });
+    } catch (error: any) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch settings" });
+    }
+  });
+
+  // Upsert settings
+  app.post("/api/ecos/settings", async (req, res) => {
+    try {
+      const validatedData = insertEcosSettingsSchema.parse(req.body);
+      const settings = await storage.upsertEcosSettings(validatedData);
+      res.json({ success: true, settings });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error upserting settings:", error);
+        res.status(500).json({ success: false, error: "Failed to save settings" });
+      }
+    }
+  });
+
+  // --- ECOS Decision Logs ---
+
+  // Create decision log
+  app.post("/api/ecos/decisions", async (req, res) => {
+    try {
+      const validatedData = insertEcosDecisionLogSchema.parse(req.body);
+      const log = await storage.createDecisionLog(validatedData);
+      res.json({ success: true, log });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating decision log:", error);
+        res.status(500).json({ success: false, error: "Failed to create decision log" });
+      }
+    }
+  });
+
+  // Get decision logs for client
+  app.get("/api/ecos/decisions/client/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+      const logs = await storage.getDecisionLogs(clientId);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching decision logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch decision logs" });
+    }
+  });
+
+  // Get latest decision for client
+  app.get("/api/ecos/decisions/client/:clientId/latest", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+      const log = await storage.getLatestDecisionLog(clientId);
+      res.json({ success: true, log });
+    } catch (error: any) {
+      console.error("Error fetching latest decision:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch latest decision" });
+    }
+  });
+
+  // Get decisions by status
+  app.get("/api/ecos/decisions-by-status/:status", async (req, res) => {
+    try {
+      const logs = await storage.getDecisionLogsByStatus(req.params.status);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching decisions by status:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch decisions" });
+    }
+  });
+
+  // Update decision log
+  app.patch("/api/ecos/decisions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, error: "Invalid decision ID" });
+      }
+      const log = await storage.updateDecisionLog(id, req.body);
+      if (!log) {
+        return res.status(404).json({ success: false, error: "Decision log not found" });
+      }
+      res.json({ success: true, log });
+    } catch (error: any) {
+      console.error("Error updating decision log:", error);
+      res.status(500).json({ success: false, error: "Failed to update decision log" });
+    }
+  });
+
+  // --- Quarterly Reports ---
+
+  // Create quarterly report
+  app.post("/api/ecos/reports", async (req, res) => {
+    try {
+      const validatedData = insertQuarterlyReportSchema.parse(req.body);
+      const report = await storage.createQuarterlyReport(validatedData);
+      res.json({ success: true, report });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating report:", error);
+        res.status(500).json({ success: false, error: "Failed to create report" });
+      }
+    }
+  });
+
+  // Get reports for client
+  app.get("/api/ecos/reports/client/:clientId", async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.clientId);
+      if (isNaN(clientId)) {
+        return res.status(400).json({ success: false, error: "Invalid client ID" });
+      }
+      const reports = await storage.getQuarterlyReports(clientId);
+      res.json({ success: true, reports });
+    } catch (error: any) {
+      console.error("Error fetching reports:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch reports" });
+    }
+  });
+
+  // Get reports pending approval
+  app.get("/api/ecos/reports-pending", async (req, res) => {
+    try {
+      const reports = await storage.getPendingApprovalReports();
+      res.json({ success: true, reports });
+    } catch (error: any) {
+      console.error("Error fetching pending reports:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch pending reports" });
+    }
+  });
+
+  // Approve report
+  app.post("/api/ecos/reports/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, error: "Invalid report ID" });
+      }
+      const { approvedBy } = req.body;
+      if (!approvedBy || typeof approvedBy !== "string") {
+        return res.status(400).json({ success: false, error: "approvedBy is required and must be a string" });
+      }
+      const report = await storage.approveReport(id, approvedBy);
+      if (!report) {
+        return res.status(404).json({ success: false, error: "Report not found" });
+      }
+      res.json({ success: true, report });
+    } catch (error: any) {
+      console.error("Error approving report:", error);
+      res.status(500).json({ success: false, error: "Failed to approve report" });
+    }
+  });
+
+  // Update report
+  app.patch("/api/ecos/reports/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, error: "Invalid report ID" });
+      }
+      const report = await storage.updateQuarterlyReport(id, req.body);
+      if (!report) {
+        return res.status(404).json({ success: false, error: "Report not found" });
+      }
+      res.json({ success: true, report });
+    } catch (error: any) {
+      console.error("Error updating report:", error);
+      res.status(500).json({ success: false, error: "Failed to update report" });
+    }
+  });
+
+  // --- ECOS Dashboard ---
+
+  // Get ECOS dashboard stats
+  app.get("/api/ecos/dashboard", async (req, res) => {
+    try {
+      const [
+        clients,
+        expiringContracts,
+        aboveBandDecisions,
+        atRiskDecisions,
+        pendingReports
+      ] = await Promise.all([
+        storage.getClients(),
+        storage.getExpiringContracts(90),
+        storage.getDecisionLogsByStatus("above_band"),
+        storage.getDecisionLogsByStatus("at_risk"),
+        storage.getPendingApprovalReports()
+      ]);
+
+      res.json({
+        success: true,
+        dashboard: {
+          totalClients: clients.length,
+          expiringContractsCount: expiringContracts.length,
+          aboveBandCount: aboveBandDecisions.length,
+          atRiskCount: atRiskDecisions.length,
+          pendingReportsCount: pendingReports.length,
+          expiringContracts,
+          aboveBandDecisions,
+          atRiskDecisions,
+          pendingReports
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dashboard" });
+    }
+  });
+
+  // --- Admin Audit Log ---
+
+  // Get audit logs
+  app.get("/api/ecos/audit-log", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logs = await storage.getAdminAuditLogs(limit);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch audit logs" });
     }
   });
 
