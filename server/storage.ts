@@ -323,11 +323,14 @@ export class Storage implements IStorage {
     const token = randomBytes(32).toString("hex");
     const accessCode = Math.random().toString().slice(2, 8);
     
+    // 14-day expiration for portal upload links
+    const PORTAL_TOKEN_EXPIRATION_DAYS = 14;
+    
     await this.createUploadSession({
       clientId,
       token,
       accessCode,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + PORTAL_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60 * 1000)
     });
     
     return { token, accessCode };

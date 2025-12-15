@@ -30,6 +30,58 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
+// Simple in-memory rate limiter for portal endpoints
+const portalRateLimits = new Map<string, { count: number; resetAt: number }>();
+const PORTAL_RATE_LIMIT = 30; // max requests per window
+const PORTAL_RATE_WINDOW_MS = 60 * 1000; // 1 minute
+
+function getPortalRateLimitKey(req: Request): string {
+  const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  return `portal:${ip}`;
+}
+
+async function checkPortalRateLimit(req: Request, res: Response, next: NextFunction) {
+  const key = getPortalRateLimitKey(req);
+  const now = Date.now();
+  
+  let entry = portalRateLimits.get(key);
+  
+  if (!entry || entry.resetAt < now) {
+    entry = { count: 1, resetAt: now + PORTAL_RATE_WINDOW_MS };
+    portalRateLimits.set(key, entry);
+    return next();
+  }
+  
+  if (entry.count >= PORTAL_RATE_LIMIT) {
+    // Log rate limit rejection (fire-and-forget)
+    storage.logPortalAccess({
+      clientId: null,
+      sessionToken: req.params.token || null,
+      action: "rate_limited",
+      ipAddress: req.ip || null,
+      userAgent: req.get("User-Agent") || null
+    }).catch(err => console.error("Error logging rate limit:", err));
+    
+    return res.status(429).json({ 
+      success: false, 
+      error: "Muitas requisições. Por favor, aguarde e tente novamente." 
+    });
+  }
+  
+  entry.count++;
+  return next();
+}
+
+// Cleanup old rate limit entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of portalRateLimits.entries()) {
+    if (entry.resetAt < now) {
+      portalRateLimits.delete(key);
+    }
+  }
+}, 60000);
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -389,55 +441,146 @@ export async function registerRoutes(
   });
 
   // ============== PORTAL ENDPOINTS ==============
+  // All portal endpoints include rate limiting and access logging
 
   // Validate portal token (for lead-based portal access)
-  app.get("/api/portal/validate/:token", async (req, res) => {
+  app.get("/api/portal/validate/:token", checkPortalRateLimit, async (req, res) => {
     try {
       const lead = await storage.getLeadByPortalToken(req.params.token);
       if (!lead) {
+        // Log invalid lead token attempt (fire-and-forget)
+        storage.logPortalAccess({
+          clientId: null,
+          sessionToken: req.params.token,
+          action: "validate_lead_invalid",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
         return res.status(404).json({ success: false, error: "Invalid or expired portal link" });
       }
+      
+      // Log successful lead portal access (fire-and-forget)
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: req.params.token,
+        action: "validate_lead_success",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+      
       res.json({ success: true, lead: { id: lead.id, name: lead.name, email: lead.email, companyName: lead.companyName } });
     } catch (error: any) {
+      // Log server error (fire-and-forget)
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: req.params.token,
+        action: "validate_lead_error",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(() => {});
       console.error("Error validating portal token:", error);
       res.status(500).json({ success: false, error: "Failed to validate portal token" });
     }
   });
 
   // Validate upload session token
-  app.get("/api/portal/upload/validate/:token", async (req, res) => {
+  app.get("/api/portal/upload/validate/:token", checkPortalRateLimit, async (req, res) => {
     try {
       const session = await storage.getUploadSessionByToken(req.params.token);
       if (!session) {
+        // Log invalid token attempt (fire-and-forget)
+        storage.logPortalAccess({
+          clientId: null,
+          sessionToken: req.params.token,
+          action: "validate_session_invalid",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
         return res.status(404).json({ success: false, error: "Invalid upload link" });
       }
       if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+        // Log expired token attempt (fire-and-forget)
+        storage.logPortalAccess({
+          clientId: session.clientId || null,
+          sessionToken: req.params.token,
+          action: "validate_session_expired",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
         return res.status(410).json({ success: false, error: "Upload link has expired" });
       }
       const client = session.clientId ? await storage.getClient(session.clientId) : null;
+      
+      // Log successful portal access (fire-and-forget)
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: req.params.token,
+        action: "validate_session_success",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+      
       res.json({ 
         success: true, 
         session: { id: session.id, requiresCode: !!session.accessCode },
         client: client ? { id: client.id, companyName: client.companyName } : null
       });
     } catch (error: any) {
+      // Log server error (fire-and-forget)
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: req.params.token,
+        action: "validate_session_error",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(() => {});
       console.error("Error validating upload session:", error);
       res.status(500).json({ success: false, error: "Failed to validate upload session" });
     }
   });
 
   // Verify access code
-  app.post("/api/portal/upload/verify/:token", async (req, res) => {
+  app.post("/api/portal/upload/verify/:token", checkPortalRateLimit, async (req, res) => {
     try {
       const session = await storage.getUploadSessionByToken(req.params.token);
       if (!session) {
         return res.status(404).json({ success: false, error: "Invalid upload link" });
       }
       if (session.accessCode && session.accessCode !== req.body.accessCode) {
+        // Log failed verification attempt (fire-and-forget)
+        if (session.clientId) {
+          storage.logPortalAccess({
+            clientId: session.clientId,
+            sessionToken: req.params.token,
+            action: "verify_code_failed",
+            ipAddress: req.ip || null,
+            userAgent: req.get("User-Agent") || null
+          }).catch(err => console.error("Error logging portal access:", err));
+        }
         return res.status(401).json({ success: false, error: "Invalid access code" });
       }
+      
+      // Log successful verification (fire-and-forget, before response)
+      if (session.clientId) {
+        storage.logPortalAccess({
+          clientId: session.clientId,
+          sessionToken: req.params.token,
+          action: "verify_code_success",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
+      }
+      
       res.json({ success: true });
     } catch (error: any) {
+      // Log server error (fire-and-forget)
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: req.params.token,
+        action: "verify_code_error",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(() => {});
       console.error("Error verifying access code:", error);
       res.status(500).json({ success: false, error: "Failed to verify access code" });
     }
