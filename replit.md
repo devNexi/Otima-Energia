@@ -133,6 +133,63 @@ The application implements a unique token-based portal system where:
 - `PATCH /api/suppliers/:id/contacts/:contactId` - Update supplier contact
 - `GET /api/supplier-contacts/active` - Get all active contacts
 
+## ECOS™ System (MVP Complete)
+
+ECOS™ (Energy Contract Optimization System) is the proprietary AI-driven platform for contract analysis and optimization.
+
+### ECOS Features
+1. **Lead ECOS Snapshots**: Pre-conversion analysis with market benchmarking
+   - Risk flags: volatilityExposure, contractRigidity, timingRisk
+   - Preview mode with watermarks for non-converted leads
+   - Band analysis (within_band, above_band, at_risk)
+
+2. **Contract Renewal Tracker**: Proactive contract management
+   - Alert thresholds: 180 days (info), 120 days (warning), 90 days (urgent)
+   - Dashboard widget showing contracts requiring action
+   - renewalStatus, alertStatus, nextActionDate tracking
+
+3. **Benchmark Review Engine**: Market rate validation
+   - Status classification: Active, Needs Review, Archived
+   - 90-day review cycle with overdue detection
+   - Dashboard widget showing benchmarks needing attention
+
+4. **Audit Trail**: Decision history with benchmark references
+   - Tracks benchmark ID, reference range, confidence score
+   - Links decisions to benchmark data for transparency
+   - ECOS History tab in Client Energy Profile
+
+5. **Client Energy Profile**: Comprehensive client analytics
+   - Quarterly reports with health scores
+   - ECOS decisions with recommendations
+   - Contract and consumption analytics
+
+### ECOS API Endpoints
+- `GET /api/ecos/contract-alerts` - Get contracts requiring attention
+- `GET /api/ecos/benchmark-review-status` - Get benchmarks needing review
+- `GET /api/ecos/clients/:id/audit-trail` - Get audit trail for client
+- `GET /api/clients/:id/energy-profile` - Get ECOS energy profile
+
+## Authentication & Authorization
+
+### Role-Based Access Control
+Users have roles that determine feature access:
+- **admin**: Full access to all features including admin settings
+- **ops**: Access to ECOS, clients, leads, RFO, benchmarks (no admin settings)
+- **sales**: Access to clients, leads, RFO only
+
+### Auth Flow
+- Session-based authentication stored in localStorage
+- Login required for /admin routes
+- User info displayed in header with role badge
+- AuthContext provides: login, logout, hasRole(), canAccess()
+
+### Auth API Endpoints
+- `POST /api/auth/register` - Create new user (with optional role)
+- `POST /api/auth/login` - Authenticate and create session
+- `POST /api/auth/logout` - End current session
+- `GET /api/auth/me` - Get current user and session info
+- `GET /api/auth/setup-required` - Check if initial setup needed
+
 ## Zoho CRM Integration (Future)
 
 All client-facing tables include `zoho_id` fields for future bidirectional sync:
