@@ -1,0 +1,267 @@
+Brief: Ótima Energia “Energy Contract Operating System (ECOS) MVP”
+0) Overview
+
+The goal is to integrate a high-level Energy Contract Operating System (ECOS) into the Admin Portal of Ótima Energia's current infrastructure to facilitate ongoing contract optimisation and real-time client management. The system should be AI-assisted, allowing for automated quarterly reports, price band tracking, and task management for clients, all while ensuring security and scalability. This should be built into your existing infrastructure (with Replit), keeping costs low and prioritising functionality first.
+
+1) Key Functional Requirements
+
+Client Energy Profile (Admin View)
+
+Store and view client identity, business details, energy unit info, eligibility status, and uploaded bills.
+
+Contract Register (Admin View)
+
+Record contract terms per client (start date, end date, price R$/MWh, flexibility, supplier, commission model).
+
+Market Benchmark Inputs (Admin View)
+
+Admin will manually input or upload benchmarks (price ranges) by region and segment (SME/Large).
+
+Optimised Reference Band Engine (Admin View)
+
+Calculate the client's position relative to market benchmarks and display whether the client is within, above, or below the optimal price band.
+
+Client Classification System (Admin View)
+
+Classify each client as “Within Band”, “Monitor”, or “Action Recommended” based on market price vs. benchmark.
+
+Quarterly Report Generator (Admin View)
+
+Generate automated reports for clients showing current status, consumption, price band, and recommendation.
+
+Task and Workflow Management (Admin View)
+
+Automatically generate tasks for clients requiring action (e.g., RFQ, renegotiation).
+
+Client Portal Enhancements (Client View)
+
+Clients can view their status, see quarterly reports, and track ongoing optimisation without deep technical details.
+
+2) New Features and Enhancements
+2.1) Client Energy Profile (Admin)
+
+Fields: client name, company, energy unit (UC) codes, distributor, uploaded bills.
+
+Usage: Collect client data from uploaded bills, store historical data, and track consumption.
+
+2.2) Contract Register (Admin)
+
+Fields: contract start/end dates, price (R$/MWh), supplier name, flexibility notes, commission model.
+
+Usage: Track contract details, provide structured data for ongoing optimisation, flag renewals.
+
+2.3) Market Benchmark Inputs (Admin)
+
+Manual Input Form: Region, benchmark price (low, median, high) for SMEs and Large businesses.
+
+CSV Upload Option: Allows bulk import of benchmarks.
+
+Monthly / Quarterly Update: Admin manually updates market benchmarks.
+
+2.4) Optimised Reference Band Engine (Admin)
+
+Inputs: Benchmarks, price gaps, and contract data.
+
+Output: Calculate "Optimal Price Band" based on benchmark data.
+
+Low, Median, High (adjustable)
+
+Friction Buffer (adds overhead for commission)
+
+2.5) Client Classification System (Admin)
+
+Categories:
+
+Within Band: Client’s price is within the market target range.
+
+Monitor: Client’s price is slightly above target but savings are not significant.
+
+Action Recommended: Client’s price is significantly above target, and savings exceed threshold.
+
+Action Trigger: When the client falls outside the optimal band, tasks are created (e.g., RFQs, renegotiation).
+
+2.6) Quarterly Report Generator (Admin + Client Portal)
+
+Reports: Auto-generate reports for each client per quarter based on their energy usage and position in the market.
+
+Actionable Insights: Provide clients with a clear status (Monitor or Action) and relevant next steps (renegotiate, stay put).
+
+Approval Process: Admin can edit, approve, and send reports to clients (client portal integration).
+
+2.7) Task and Workflow Management (Admin)
+
+Tasks: Automatically created when clients require actions, such as RFQs or contract renewal.
+
+Task Types:
+
+Review reports
+
+Request updated bills
+
+Renegotiation
+
+Supplier outreach
+
+Status: Open/In progress/Completed
+
+Due Dates: Tasks have clear deadlines.
+
+3) Client Portal Updates
+3.1) Client Dashboard (Client View)
+
+Sections:
+
+“Minha Situação”: Client’s status: Within Band / Monitor / Action Required
+
+Energy Profile: Last 3 months of energy consumption and billing.
+
+Quarterly Reports: Show a list of previous reports (PDF) with status.
+
+Next Review Date: Display the next quarterly review date.
+
+3.2) Simple Notifications
+
+Alerts when new reports are available or tasks are triggered.
+
+4) Security Features
+Admin Portal Security
+
+Username/Password Authentication: Implement secure login using bcrypt password hashing.
+
+Session Management: Use encrypted cookies (httpOnly, secure).
+
+Role-based Access Control (RBAC):
+
+Admin: Full access
+
+Operations: Limited access (e.g., review reports, create tasks).
+
+Rate Limiting: Protect login and sensitive actions from brute force attacks.
+
+Audit Logs: Keep a log of actions performed in the Admin Portal, e.g., client creation, report approval, task completion.
+
+Client Portal Security
+
+Token Expiry: Tokens for accessing upload portal should expire after 14 days.
+
+Rate Limiting: Limit number of verification attempts for access codes (e.g., 5 attempts per 30 minutes).
+
+Code Storage: Store access codes securely (hashed, not plain text).
+
+5) Administrative UI and Functionality Updates (for Admin Portal)
+5.1) New Routes and Sections
+
+/admin: Main dashboard with ECOS data visualisation and client status.
+
+/admin/market-benchmarks: Input and edit market benchmark prices.
+
+/admin/reports: View all client reports and manage report approval.
+
+/admin/tasks: Manage tasks and monitor completion.
+
+/admin/settings: Manage ECOS thresholds, band width, friction buffer.
+
+/admin/audit-log: View admin activity logs for compliance.
+
+5.2) ECOS Dashboard
+
+Cards to show:
+
+Clients within band
+
+Clients monitoring
+
+Clients with action needed
+
+Overdue tasks
+
+5.3) Reports Generation
+
+Simple UI to:
+
+Generate reports for clients
+
+Manually review AI-generated text summaries before sending
+
+5.4) Market Benchmarks Management
+
+Upload or enter quarterly benchmark data (R$/MWh) for each region and business segment.
+
+6) Data Model and Database Tables
+
+Create the following database tables (or equivalent ORM models):
+
+clients
+
+id, name, company, email, phone, region, segment, eligibility_status, created_at
+
+contracts
+
+id, client_id, start_date, end_date, price_r_per_mwh, region, segment, flexibility_notes, supplier_name, commission_type, commission_value, status
+
+market_benchmarks
+
+id, date, region, segment, term_bucket, low_r_per_mwh, median_r_per_mwh, high_r_per_mwh
+
+ecos_settings
+
+id, segment, band_width, friction_buffer, price_gap_threshold_pct, min_annual_savings_r, min_remaining_months, renewal_window_months
+
+reports
+
+id, client_id, period_label, status_classification, current_price_r_per_mwh, benchmark_median, optimised_reference_price, estimated_annual_savings_r, narrative_pt, approved, sent_at, created_at
+
+tasks
+
+id, client_id, report_id, type, owner, due_date, status, notes, created_at
+
+audit_log
+
+id, actor, action, entity_type, entity_id, timestamp, details_json
+
+7) Admin UI Recommendations
+
+Add the following sections and elements to the admin portal:
+
+ECOS Dashboard: Key client metrics and status overview.
+
+Reports: View, approve, and send quarterly client reports.
+
+Tasks: Track actions triggered by client price status (Monitor / Action Recommended).
+
+Market Benchmarks: Manage market price inputs and allow CSV imports.
+
+8) What to Implement First (MVP)
+
+Implement basic functionality for client classification (Within Band, Monitor, Action Recommended) and simple quarterly report generation.
+
+Admin UI with report approval, task creation, and market benchmark management.
+
+Security measures: login, session management, and encryption.
+
+Client Portal: Minimal view for status and reports.
+
+Data: For benchmarks and reports, use manually entered data for now (no real-time API integration).
+
+9) Next Steps (Post-MVP)
+
+Automated data imports for real-time market prices and benchmarks.
+
+Refined UI/UX with more visual charts and detailed tracking.
+
+Full AI agent for email notifications and client outreach.
+
+Automated commission model application based on contract details.
+
+10) Access and Deployment
+Admin Portal Access
+
+You can access the Admin Portal at /admin.
+
+Security measures must be implemented for authentication immediately.
+
+Client Portal Access
+
+Clients will use the Client Portal at /portal/upload/:token to upload bills.
+
+Clients will see their report status and energy profile after admin approval.

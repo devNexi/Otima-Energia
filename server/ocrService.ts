@@ -1,10 +1,5 @@
-import Tesseract from "tesseract.js";
-import sharp from "sharp";
 import * as fs from "fs/promises";
 import * as path from "path";
-import * as pdfParseModule from "pdf-parse";
-
-const pdfParse = (pdfParseModule as any).default || pdfParseModule;
 
 export interface ExtractedBillData {
   uc: string;
@@ -150,23 +145,34 @@ function calculateConfidence(data: ExtractedBillData): number {
   return total > 0 ? score / total : 0;
 }
 
-export async function processImageOcr(imagePath: string): Promise<{ text: string; confidence: number }> {
-  const result = await Tesseract.recognize(imagePath, "por", {
-    logger: (info) => {
-      if (info.status === "recognizing text") {
-        console.log(`OCR progress: ${Math.round(info.progress * 100)}%`);
+async function processImageOcr(imagePath: string): Promise<{ text: string; confidence: number }> {
+  try {
+    const Tesseract = await import("tesseract.js");
+    const result = await Tesseract.default.recognize(imagePath, "por", {
+      logger: (info: any) => {
+        if (info.status === "recognizing text") {
+          console.log(`OCR progress: ${Math.round(info.progress * 100)}%`);
+        }
       }
-    }
-  });
+    });
 
-  return {
-    text: result.data.text,
-    confidence: result.data.confidence / 100
-  };
+    return {
+      text: result.data.text,
+      confidence: result.data.confidence / 100
+    };
+  } catch (error) {
+    console.error("Tesseract OCR error:", error);
+    return {
+      text: "[OCR unavailable - please enter data manually]",
+      confidence: 0
+    };
+  }
 }
 
-export async function processPdfToText(buffer: Buffer): Promise<{ text: string; confidence: number }> {
+async function processPdfToText(buffer: Buffer): Promise<{ text: string; confidence: number }> {
   try {
+    const pdfParseModule = await import("pdf-parse");
+    const pdfParse = (pdfParseModule as any).default || pdfParseModule;
     const pdfData = await pdfParse(buffer);
     const text = pdfData.text;
     
@@ -184,23 +190,29 @@ export async function processPdfToText(buffer: Buffer): Promise<{ text: string; 
   } catch (error) {
     console.error("PDF parsing error:", error);
     return {
-      text: "[PDF parsing failed - please enter data manually]",
+      text: "[PDF parsing unavailable - please enter data manually]",
       confidence: 0
     };
   }
 }
 
-export async function processImage(buffer: Buffer, tempDir: string): Promise<string> {
-  const imagePath = path.join(tempDir, `image_${Date.now()}.png`);
-  
-  await sharp(buffer)
-    .resize(2000, null, { withoutEnlargement: true })
-    .sharpen()
-    .normalize()
-    .png()
-    .toFile(imagePath);
-  
-  return imagePath;
+async function processImage(buffer: Buffer, tempDir: string): Promise<string> {
+  try {
+    const sharp = (await import("sharp")).default;
+    const imagePath = path.join(tempDir, `image_${Date.now()}.png`);
+    
+    await sharp(buffer)
+      .resize(2000, null, { withoutEnlargement: true })
+      .sharpen()
+      .normalize()
+      .png()
+      .toFile(imagePath);
+    
+    return imagePath;
+  } catch (error) {
+    console.error("Sharp image processing error:", error);
+    throw error;
+  }
 }
 
 export async function processBillFile(
@@ -219,24 +231,31 @@ export async function processBillFile(
       ocrText = pdfResult.text;
       avgConfidence = pdfResult.confidence;
     } else {
-      const imagePath = await processImage(fileBuffer, tempDir);
-      
       try {
-        const result = await processImageOcr(imagePath);
-        ocrText = result.text;
-        avgConfidence = result.confidence;
+        const imagePath = await processImage(fileBuffer, tempDir);
+        
+        try {
+          const result = await processImageOcr(imagePath);
+          ocrText = result.text;
+          avgConfidence = result.confidence;
+        } catch (error) {
+          console.error("OCR error for image:", error);
+          ocrText = "[OCR Error - please enter data manually]";
+          avgConfidence = 0;
+        }
+
+        await fs.unlink(imagePath).catch(() => {});
       } catch (error) {
-        console.error("OCR error for image:", error);
-        ocrText = "[OCR Error - please enter data manually]";
+        console.error("Image processing error:", error);
+        ocrText = "[Image processing unavailable - please enter data manually]";
         avgConfidence = 0;
       }
-
-      await fs.unlink(imagePath).catch(() => {});
     }
 
   } catch (error) {
     console.error("Error processing bill file:", error);
-    throw error;
+    ocrText = "[Processing error - please enter data manually]";
+    avgConfidence = 0;
   }
 
   const extractedData = parseBrazilianBill(ocrText);

@@ -32,6 +32,7 @@ const allowlist = [
   "zod-validation-error",
 ];
 
+// These packages have native bindings or dynamic requires that break bundling
 const forceExternal = [
   "@google-cloud/storage",
   "sharp",
@@ -68,6 +69,13 @@ async function buildAll() {
     minify: false,
     external: externals,
     logLevel: "info",
+    // Handle dynamic imports for native modules
+    banner: {
+      js: `
+        const __require = require;
+        const __createRequire = (url) => require;
+      `,
+    },
   });
 }
 
