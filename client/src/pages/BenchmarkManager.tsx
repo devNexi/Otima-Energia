@@ -176,6 +176,25 @@ export default function BenchmarkManager() {
     }
   });
 
+  const markReviewedMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/ecos/benchmarks/${id}/mark-reviewed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewedBy: "admin" })
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/ecos/benchmarks"] });
+        toast({ title: t("benchmarks.toast.reviewed") });
+      } else {
+        toast({ title: t("benchmarks.toast.error"), description: data.error, variant: "destructive" });
+      }
+    }
+  });
+
   const resetForm = () => {
     setFormData(defaultFormData);
     setEditingBenchmark(null);
@@ -254,6 +273,14 @@ export default function BenchmarkManager() {
     const soon = new Date();
     soon.setDate(soon.getDate() + 30);
     return exp <= soon && exp >= new Date();
+  };
+
+  const needsReview = (b: MarketPriceBenchmark) => {
+    if (!b.nextReviewDate) return false;
+    const reviewDate = new Date(b.nextReviewDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return reviewDate < today;
   };
 
   return (
@@ -672,7 +699,20 @@ export default function BenchmarkManager() {
                           </p>
                         )}
 
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 flex-wrap">
+                          {needsReview(benchmark) && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+                              onClick={() => markReviewedMutation.mutate(benchmark.id)}
+                              disabled={markReviewedMutation.isPending}
+                              data-testid={`button-mark-reviewed-${benchmark.id}`}
+                            >
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              {t("benchmarks.mark_reviewed")}
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             variant="outline"

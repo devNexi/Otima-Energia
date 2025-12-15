@@ -172,6 +172,8 @@ export interface IStorage {
   getBenchmarkForClient(segment: string, region: string, contractMonths: number): Promise<MarketPriceBenchmark | undefined>;
   updateBenchmark(id: number, data: Partial<InsertMarketPriceBenchmark>): Promise<MarketPriceBenchmark | undefined>;
   deleteBenchmark(id: number): Promise<boolean>;
+  getOverdueBenchmarks(): Promise<MarketPriceBenchmark[]>;
+  markBenchmarkReviewed(id: number, reviewedBy: string): Promise<MarketPriceBenchmark | undefined>;
   
   // ECOS - Settings
   getEcosSettings(segment: string): Promise<EcosSettings | undefined>;
@@ -851,6 +853,45 @@ export class Storage implements IStorage {
       .where(eq(marketPriceBenchmarks.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  async getOverdueBenchmarks(): Promise<MarketPriceBenchmark[]> {
+    const today = new Date().toISOString().split('T')[0];
+    return await db.select().from(marketPriceBenchmarks)
+      .where(and(
+        sql`${marketPriceBenchmarks.nextReviewDate} IS NOT NULL`,
+        lte(marketPriceBenchmarks.nextReviewDate, today)
+      ))
+      .orderBy(marketPriceBenchmarks.nextReviewDate);
+  }
+
+  async markBenchmarkReviewed(id: number, reviewedBy: string): Promise<MarketPriceBenchmark | undefined> {
+    const benchmark = await this.getBenchmark(id);
+    if (!benchmark) return undefined;
+
+    const now = new Date();
+    let nextReviewDate: string | null = null;
+
+    if (benchmark.reviewCadence) {
+      const nextDate = new Date(now);
+      if (benchmark.reviewCadence === 'Monthly') {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      } else if (benchmark.reviewCadence === 'Quarterly') {
+        nextDate.setMonth(nextDate.getMonth() + 3);
+      }
+      nextReviewDate = nextDate.toISOString().split('T')[0];
+    }
+
+    const result = await db.update(marketPriceBenchmarks)
+      .set({
+        lastReviewedAt: now,
+        lastReviewedBy: reviewedBy,
+        nextReviewDate: nextReviewDate,
+        updatedAt: now
+      })
+      .where(eq(marketPriceBenchmarks.id, id))
+      .returning();
+    return result[0];
   }
 
   // ECOS Settings

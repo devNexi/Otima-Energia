@@ -1873,6 +1873,35 @@ export async function registerRoutes(
     }
   });
 
+  // Get overdue benchmarks (for review reminders)
+  app.get("/api/ecos/benchmarks/overdue", async (req, res) => {
+    try {
+      const benchmarks = await storage.getOverdueBenchmarks();
+      res.json({ success: true, benchmarks });
+    } catch (error: any) {
+      console.error("Error fetching overdue benchmarks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch overdue benchmarks" });
+    }
+  });
+
+  // Mark benchmark as reviewed
+  app.post("/api/ecos/benchmarks/:id/mark-reviewed", async (req, res) => {
+    try {
+      const { reviewedBy } = req.body;
+      if (!reviewedBy) {
+        return res.status(400).json({ success: false, error: "reviewedBy is required" });
+      }
+      const benchmark = await storage.markBenchmarkReviewed(parseInt(req.params.id), reviewedBy);
+      if (!benchmark) {
+        return res.status(404).json({ success: false, error: "Benchmark not found" });
+      }
+      res.json({ success: true, benchmark });
+    } catch (error: any) {
+      console.error("Error marking benchmark as reviewed:", error);
+      res.status(500).json({ success: false, error: "Failed to mark benchmark as reviewed" });
+    }
+  });
+
   // --- ECOS Settings ---
 
   // Get all ECOS settings
