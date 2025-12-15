@@ -15,7 +15,8 @@ import {
   insertMarketPriceBenchmarkSchema,
   insertEcosSettingsSchema,
   insertEcosDecisionLogSchema,
-  insertQuarterlyReportSchema
+  insertQuarterlyReportSchema,
+  insertLeadEcosSnapshotSchema
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -345,6 +346,91 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error generating portal link:", error);
       res.status(500).json({ success: false, error: "Failed to generate portal link" });
+    }
+  });
+
+  // ============== LEAD ECOS SNAPSHOTS ==============
+
+  // Generate ECOS snapshot for a lead
+  app.post("/api/leads/:id/snapshot", async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const lead = await storage.getLead(leadId);
+      if (!lead) {
+        return res.status(404).json({ success: false, error: "Lead not found" });
+      }
+
+      const validatedData = insertLeadEcosSnapshotSchema.parse({
+        ...req.body,
+        leadId,
+        generatedAt: new Date()
+      });
+
+      const snapshot = await storage.createLeadEcosSnapshot(validatedData);
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating lead snapshot:", error);
+        res.status(500).json({ success: false, error: "Failed to create snapshot" });
+      }
+    }
+  });
+
+  // Get snapshots for a lead
+  app.get("/api/leads/:id/snapshots", async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const snapshots = await storage.getLeadEcosSnapshots(leadId);
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching lead snapshots:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch snapshots" });
+    }
+  });
+
+  // Get a single snapshot
+  app.get("/api/snapshots/:id", async (req, res) => {
+    try {
+      const snapshot = await storage.getLeadEcosSnapshot(parseInt(req.params.id));
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "Snapshot not found" });
+      }
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      console.error("Error fetching snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch snapshot" });
+    }
+  });
+
+  // Lock a snapshot
+  app.post("/api/snapshots/:id/lock", async (req, res) => {
+    try {
+      const { lockedBy } = req.body;
+      if (!lockedBy) {
+        return res.status(400).json({ success: false, error: "lockedBy is required" });
+      }
+      const snapshot = await storage.lockLeadEcosSnapshot(parseInt(req.params.id), lockedBy);
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "Snapshot not found" });
+      }
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      console.error("Error locking snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to lock snapshot" });
+    }
+  });
+
+  // Get active benchmarks for snapshot generation
+  app.get("/api/benchmarks/active", async (req, res) => {
+    try {
+      const benchmarks = await storage.getActiveBenchmarks();
+      res.json({ success: true, benchmarks });
+    } catch (error: any) {
+      console.error("Error fetching active benchmarks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch benchmarks" });
     }
   });
 

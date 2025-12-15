@@ -33,8 +33,16 @@ import {
   Send,
   TrendingUp,
   Zap,
-  LayoutDashboard
+  LayoutDashboard,
+  LineChart,
+  Lock,
+  Eye,
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  HelpCircle
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -61,6 +69,14 @@ export default function Admin() {
     phone: "",
     contactPerson: "",
     ucCode: ""
+  });
+  const [snapshotLead, setSnapshotLead] = useState<{ id: number; name: string } | null>(null);
+  const [snapshotViewMode, setSnapshotViewMode] = useState<"create" | "view">("create");
+  const [snapshotForm, setSnapshotForm] = useState({
+    estimatedConsumptionKwh: "",
+    estimatedPriceRmwh: "",
+    segment: "",
+    region: ""
   });
 
   const statusLabels: Record<string, string> = {
@@ -102,6 +118,24 @@ export default function Admin() {
       const res = await fetch("/api/rfo");
       return res.json();
     }
+  });
+
+  const { data: benchmarksData } = useQuery({
+    queryKey: ["/api/benchmarks/active"],
+    queryFn: async () => {
+      const res = await fetch("/api/benchmarks/active");
+      return res.json();
+    }
+  });
+
+  const { data: snapshotsData, isLoading: snapshotsLoading } = useQuery({
+    queryKey: ["/api/leads", snapshotLead?.id, "snapshots"],
+    queryFn: async () => {
+      if (!snapshotLead) return { snapshots: [] };
+      const res = await fetch(`/api/leads/${snapshotLead.id}/snapshots`);
+      return res.json();
+    },
+    enabled: !!snapshotLead
   });
 
   const createClientMutation = useMutation({
@@ -166,6 +200,105 @@ export default function Admin() {
       });
     }
   });
+
+  const generateSnapshotMutation = useMutation({
+    mutationFn: async ({ leadId, data }: { leadId: number; data: typeof snapshotForm }) => {
+      const benchmarks = benchmarksData?.benchmarks || [];
+      const matchingBenchmark = benchmarks.find((b: any) => 
+        b.segment === data.segment && b.region === data.region
+      );
+      
+      const estimatedPrice = parseFloat(data.estimatedPriceRmwh);
+      const estimatedConsumption = parseFloat(data.estimatedConsumptionKwh);
+      
+      let bandResult = "no_data";
+      let summaryText = "Não foi possível encontrar uma faixa de referência para este segmento/região.";
+      let potentialSavingsR = null;
+      
+      if (matchingBenchmark) {
+        const lower = parseFloat(matchingBenchmark.lowerBoundRmwh);
+        const upper = parseFloat(matchingBenchmark.upperBoundRmwh);
+        
+        if (estimatedPrice <= upper && estimatedPrice >= lower) {
+          bandResult = "within_band";
+          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está dentro da faixa de referência (R$ ${lower.toFixed(2)} - R$ ${upper.toFixed(2)}/MWh).`;
+        } else if (estimatedPrice > upper) {
+          bandResult = "above_band";
+          const savings = ((estimatedPrice - upper) * estimatedConsumption * 12) / 1000;
+          potentialSavingsR = savings;
+          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está ACIMA da faixa de referência. Economia potencial de até R$ ${savings.toFixed(2)}/ano ao migrar para o mercado livre.`;
+        } else {
+          bandResult = "at_risk";
+          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está abaixo da faixa de referência - verifique os dados.`;
+        }
+      }
+      
+      const res = await fetch(`/api/leads/${leadId}/snapshot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          benchmarkIdUsed: matchingBenchmark?.id || null,
+          benchmarkLowerRmwh: matchingBenchmark?.lowerBoundRmwh || null,
+          benchmarkUpperRmwh: matchingBenchmark?.upperBoundRmwh || null,
+          benchmarkSegment: data.segment,
+          benchmarkRegion: data.region,
+          estimatedConsumptionKwh: data.estimatedConsumptionKwh,
+          estimatedPriceRmwh: data.estimatedPriceRmwh,
+          segment: data.segment,
+          region: data.region,
+          bandResult,
+          summaryText,
+          potentialSavingsR: potentialSavingsR?.toString() || null,
+          generatedBy: "admin"
+        })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", snapshotLead?.id, "snapshots"] });
+      setSnapshotViewMode("view");
+      setSnapshotForm({ estimatedConsumptionKwh: "", estimatedPriceRmwh: "", segment: "", region: "" });
+      toast({ title: t("snapshot.toast.created") });
+    },
+    onError: () => {
+      toast({ title: t("snapshot.toast.error"), variant: "destructive" });
+    }
+  });
+
+  const lockSnapshotMutation = useMutation({
+    mutationFn: async (snapshotId: number) => {
+      const res = await fetch(`/api/snapshots/${snapshotId}/lock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lockedBy: "admin" })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", snapshotLead?.id, "snapshots"] });
+      toast({ title: t("snapshot.toast.locked") });
+    }
+  });
+
+  const snapshots = snapshotsData?.snapshots || [];
+
+  const getBandIcon = (bandResult: string) => {
+    switch (bandResult) {
+      case "within_band": return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case "above_band": return <AlertTriangle className="w-4 h-4 text-amber-600" />;
+      case "at_risk": return <AlertCircle className="w-4 h-4 text-red-600" />;
+      default: return <HelpCircle className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getBandColor = (bandResult: string) => {
+    switch (bandResult) {
+      case "within_band": return "bg-green-100 text-green-800";
+      case "above_band": return "bg-amber-100 text-amber-800";
+      case "at_risk": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-600";
+    }
+  };
 
   const leads = leadsData?.leads || [];
   const clients = clientsData?.clients || [];
@@ -316,21 +449,198 @@ export default function Admin() {
                             <p className="text-sm text-gray-600 mt-2 italic">"{lead.message}"</p>
                           )}
                         </div>
-                        <Button 
-                          size="sm" 
-                          onClick={() => convertLeadMutation.mutate(lead.id)}
-                          disabled={convertLeadMutation.isPending}
-                          data-testid={`button-convert-lead-${lead.id}`}
-                        >
-                          <ArrowRight className="w-4 h-4 mr-1" />
-                          {t("admin.leads.convert")}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSnapshotLead({ id: lead.id, name: lead.name })}
+                            data-testid={`button-snapshot-lead-${lead.id}`}
+                          >
+                            <LineChart className="w-4 h-4 mr-1" />
+                            {t("snapshot.generate")}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => convertLeadMutation.mutate(lead.id)}
+                            disabled={convertLeadMutation.isPending}
+                            data-testid={`button-convert-lead-${lead.id}`}
+                          >
+                            <ArrowRight className="w-4 h-4 mr-1" />
+                            {t("admin.leads.convert")}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
+
+            <Dialog open={!!snapshotLead} onOpenChange={(open) => { if (!open) { setSnapshotLead(null); setSnapshotViewMode("create"); } }}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{t("snapshot.dialog.title")}</DialogTitle>
+                  <DialogDescription>
+                    {snapshotLead?.name}
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="flex gap-2 mb-4">
+                  <Button 
+                    variant={snapshotViewMode === "view" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setSnapshotViewMode("view")}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    {t("snapshot.view")} ({snapshots.length})
+                  </Button>
+                  <Button 
+                    variant={snapshotViewMode === "create" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setSnapshotViewMode("create")}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    {t("snapshot.generate")}
+                  </Button>
+                </div>
+
+                {snapshotViewMode === "view" ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {snapshotsLoading ? (
+                      <div className="flex justify-center p-4">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : snapshots.length === 0 ? (
+                      <p className="text-center text-gray-500 py-4">{language === "pt" ? "Nenhuma análise gerada" : "No analyses generated"}</p>
+                    ) : (
+                      snapshots.map((snapshot: any) => (
+                        <div 
+                          key={snapshot.id} 
+                          className={`relative border rounded-lg p-4 ${snapshot.isLocked ? 'bg-gray-50' : ''}`}
+                          data-testid={`snapshot-card-${snapshot.id}`}
+                        >
+                          {snapshot.isLocked && (
+                            <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none flex items-center justify-center opacity-10">
+                              <span className="text-4xl font-bold text-gray-800 rotate-[-20deg]">LOCKED</span>
+                            </div>
+                          )}
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getBandIcon(snapshot.bandResult)}
+                                <Badge className={getBandColor(snapshot.bandResult)}>
+                                  {t(`snapshot.${snapshot.bandResult}`)}
+                                </Badge>
+                                {snapshot.isLocked && (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Lock className="w-3 h-3" />
+                                    {t("snapshot.locked")}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-700 mb-2">{snapshot.summaryText}</p>
+                              <div className="text-xs text-gray-500 space-y-1">
+                                <p>{t("snapshot.consumption")}: {snapshot.estimatedConsumptionKwh} kWh/mês</p>
+                                <p>{t("snapshot.price")}: R$ {snapshot.estimatedPriceRmwh}/MWh</p>
+                                {snapshot.potentialSavingsR && (
+                                  <p className="text-green-600 font-medium">{t("snapshot.potential_savings")}: R$ {parseFloat(snapshot.potentialSavingsR).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                                )}
+                                <p className="text-gray-400">{t("snapshot.generated_at")}: {new Date(snapshot.generatedAt).toLocaleDateString("pt-BR")}</p>
+                              </div>
+                            </div>
+                            {!snapshot.isLocked && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => lockSnapshotMutation.mutate(snapshot.id)}
+                                disabled={lockSnapshotMutation.isPending}
+                                data-testid={`button-lock-snapshot-${snapshot.id}`}
+                              >
+                                <Lock className="w-4 h-4 mr-1" />
+                                {t("snapshot.lock")}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="consumption">{t("snapshot.consumption")}</Label>
+                      <Input
+                        id="consumption"
+                        type="number"
+                        value={snapshotForm.estimatedConsumptionKwh}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, estimatedConsumptionKwh: e.target.value })}
+                        placeholder="50000"
+                        data-testid="input-snapshot-consumption"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="price">{t("snapshot.price")}</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        value={snapshotForm.estimatedPriceRmwh}
+                        onChange={(e) => setSnapshotForm({ ...snapshotForm, estimatedPriceRmwh: e.target.value })}
+                        placeholder="350"
+                        data-testid="input-snapshot-price"
+                      />
+                    </div>
+                    <div>
+                      <Label>{t("snapshot.segment")}</Label>
+                      <Select 
+                        value={snapshotForm.segment} 
+                        onValueChange={(val) => setSnapshotForm({ ...snapshotForm, segment: val })}
+                      >
+                        <SelectTrigger data-testid="select-snapshot-segment">
+                          <SelectValue placeholder={t("snapshot.select_segment")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SME">SME</SelectItem>
+                          <SelectItem value="Industrial">Industrial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>{t("snapshot.region")}</Label>
+                      <Select 
+                        value={snapshotForm.region} 
+                        onValueChange={(val) => setSnapshotForm({ ...snapshotForm, region: val })}
+                      >
+                        <SelectTrigger data-testid="select-snapshot-region">
+                          <SelectValue placeholder={t("snapshot.select_region")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Sudeste">Sudeste</SelectItem>
+                          <SelectItem value="Sul">Sul</SelectItem>
+                          <SelectItem value="Nordeste">Nordeste</SelectItem>
+                          <SelectItem value="Norte">Norte</SelectItem>
+                          <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      className="w-full"
+                      onClick={() => snapshotLead && generateSnapshotMutation.mutate({ leadId: snapshotLead.id, data: snapshotForm })}
+                      disabled={!snapshotForm.estimatedConsumptionKwh || !snapshotForm.estimatedPriceRmwh || !snapshotForm.segment || !snapshotForm.region || generateSnapshotMutation.isPending}
+                      data-testid="button-generate-snapshot"
+                    >
+                      {generateSnapshotMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {t("snapshot.generating")}
+                        </>
+                      ) : (
+                        t("snapshot.generate_btn")
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="clients">
