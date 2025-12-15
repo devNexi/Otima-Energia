@@ -2,10 +2,9 @@ import Tesseract from "tesseract.js";
 import sharp from "sharp";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { createRequire } from "module";
+import * as pdfParseModule from "pdf-parse";
 
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+const pdfParse = (pdfParseModule as any).default || pdfParseModule;
 
 export interface ExtractedBillData {
   uc: string;

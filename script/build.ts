@@ -32,6 +32,13 @@ const allowlist = [
   "zod-validation-error",
 ];
 
+const forceExternal = [
+  "@google-cloud/storage",
+  "sharp",
+  "tesseract.js",
+  "pdf-parse",
+];
+
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
@@ -44,7 +51,10 @@ async function buildAll() {
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
   ];
-  const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  const externals = [
+    ...allDeps.filter((dep) => !allowlist.includes(dep)),
+    ...forceExternal,
+  ];
 
   await esbuild({
     entryPoints: ["server/index.ts"],
