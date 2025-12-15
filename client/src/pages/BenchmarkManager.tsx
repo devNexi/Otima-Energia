@@ -38,6 +38,7 @@ interface BenchmarkFormData {
   upperBoundRmwh: string;
   effectiveDate: string;
   expiresAt: string;
+  source: string;
   notes: string;
 }
 
@@ -49,6 +50,7 @@ const defaultFormData: BenchmarkFormData = {
   upperBoundRmwh: "",
   effectiveDate: new Date().toISOString().split("T")[0],
   expiresAt: "",
+  source: "",
   notes: ""
 };
 
@@ -170,6 +172,7 @@ export default function BenchmarkManager() {
       upperBoundRmwh: benchmark.upperBoundRmwh,
       effectiveDate: benchmark.effectiveDate,
       expiresAt: benchmark.expiresAt || "",
+      source: benchmark.source || "",
       notes: benchmark.notes || ""
     });
     setDialogOpen(true);
@@ -348,6 +351,16 @@ export default function BenchmarkManager() {
                       data-testid="input-expires-at"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label>{t("benchmarks.source")}</Label>
+                  <Input
+                    value={formData.source}
+                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                    placeholder={t("benchmarks.source_placeholder")}
+                    data-testid="input-source"
+                  />
                 </div>
 
                 <div>

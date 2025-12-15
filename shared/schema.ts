@@ -895,6 +895,7 @@ export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
   // Metadata
   effectiveDate: date("effective_date").notNull(),
   expiresAt: date("expires_at"),
+  source: text("source"), // e.g., 'Internal analysis', 'Supplier quote avg', 'Market report XYZ'
   notes: text("notes"),
   updatedBy: text("updated_by").default("admin"),
   
