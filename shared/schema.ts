@@ -960,10 +960,12 @@ export const ecosDecisionLogs = pgTable("ecos_decision_logs", {
   decisionDate: timestamp("decision_date").defaultNow().notNull(),
   triggerType: text("trigger_type").notNull(), // 'bill_upload', 'benchmark_update', 'quarterly_check', 'manual'
   
-  // Market Data Used
+  // Market Data Used (snapshot for audit trail)
   benchmarkId: integer("benchmark_id").references(() => marketPriceBenchmarks.id),
   benchmarkLowerRmwh: decimal("benchmark_lower_rmwh", { precision: 10, scale: 2 }),
   benchmarkUpperRmwh: decimal("benchmark_upper_rmwh", { precision: 10, scale: 2 }),
+  snapshotConfidence: text("snapshot_confidence"), // 'high', 'medium', 'low' - frozen at decision time
+  snapshotSourceType: text("snapshot_source_type"), // 'market_survey', 'internal_deals', etc - frozen at decision time
   
   // Client Data
   clientPriceRmwh: decimal("client_price_rmwh", { precision: 10, scale: 2 }).notNull(),

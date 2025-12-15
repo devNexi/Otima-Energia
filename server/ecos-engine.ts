@@ -161,6 +161,8 @@ export async function evaluateClient(
     benchmarkId: benchmark.id,
     benchmarkLowerRmwh: lowerBound.toString(),
     benchmarkUpperRmwh: upperBound.toString(),
+    snapshotConfidence: benchmark.confidence || null,
+    snapshotSourceType: benchmark.sourceType || null,
     clientPriceRmwh: clientPrice.toString(),
     clientConsumptionMwh: avgConsumptionMwh.toString(),
     contractRemainingMonths: remainingMonths,

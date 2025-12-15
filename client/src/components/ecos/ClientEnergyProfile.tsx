@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   X, 
   FileText, 
@@ -28,7 +29,9 @@ import {
   History,
   BarChart3,
   Send,
-  Check
+  Check,
+  Info,
+  Shield
 } from "lucide-react";
 
 interface ClientEnergyProfileProps {
@@ -670,9 +673,51 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                                     </span>
                                   )}
                                   {decision.benchmarkLowerRmwh && decision.benchmarkUpperRmwh && (
-                                    <span>
-                                      {language === "pt" ? "Faixa:" : "Band:"} {formatCurrency(decision.benchmarkLowerRmwh)} - {formatCurrency(decision.benchmarkUpperRmwh)}/MWh
-                                    </span>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="flex items-center gap-1 cursor-help underline decoration-dotted">
+                                            <Shield className="w-3 h-3" />
+                                            {language === "pt" ? "Faixa:" : "Band:"} {formatCurrency(decision.benchmarkLowerRmwh)} - {formatCurrency(decision.benchmarkUpperRmwh)}/MWh
+                                            <Info className="w-3 h-3 text-blue-500" />
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                          <div className="space-y-1">
+                                            <p className="font-medium">{language === "pt" ? "Dados do Benchmark" : "Benchmark Data"}</p>
+                                            {decision.snapshotSourceType && (
+                                              <p className="text-xs">
+                                                <span className="text-gray-500">{language === "pt" ? "Fonte:" : "Source:"}</span>{" "}
+                                                {decision.snapshotSourceType === "market_survey" ? (language === "pt" ? "Pesquisa de Mercado" : "Market Survey") :
+                                                 decision.snapshotSourceType === "internal_deals" ? (language === "pt" ? "Negócios Internos" : "Internal Deals") :
+                                                 decision.snapshotSourceType === "ccee_data" ? "CCEE" :
+                                                 decision.snapshotSourceType === "pld_derived" ? (language === "pt" ? "Derivado do PLD" : "PLD Derived") :
+                                                 decision.snapshotSourceType}
+                                              </p>
+                                            )}
+                                            {decision.snapshotConfidence && (
+                                              <p className="text-xs">
+                                                <span className="text-gray-500">{language === "pt" ? "Confiança:" : "Confidence:"}</span>{" "}
+                                                <Badge variant="outline" className={`text-xs ${
+                                                  decision.snapshotConfidence === "high" ? "bg-green-100 text-green-800" :
+                                                  decision.snapshotConfidence === "medium" ? "bg-yellow-100 text-yellow-800" :
+                                                  "bg-red-100 text-red-800"
+                                                }`}>
+                                                  {decision.snapshotConfidence === "high" ? (language === "pt" ? "Alta" : "High") :
+                                                   decision.snapshotConfidence === "medium" ? (language === "pt" ? "Média" : "Medium") :
+                                                   (language === "pt" ? "Baixa" : "Low")}
+                                                </Badge>
+                                              </p>
+                                            )}
+                                            {decision.benchmarkId && (
+                                              <p className="text-xs text-gray-400">
+                                                {language === "pt" ? "Benchmark ID:" : "Benchmark ID:"} #{decision.benchmarkId}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
                                   {decision.potentialSavingsR && parseFloat(decision.potentialSavingsR) > 0 && (
                                     <span className="text-green-700">
