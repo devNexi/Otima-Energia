@@ -93,6 +93,55 @@ export async function registerRoutes(
   const SALT_ROUNDS = 12;
   const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+  // Bootstrap endpoint for initial production setup (use ADMIN_BOOTSTRAP_TOKEN env var)
+  app.post("/api/auth/bootstrap", async (req, res) => {
+    try {
+      const bootstrapToken = process.env.ADMIN_BOOTSTRAP_TOKEN;
+      const providedToken = req.headers["x-bootstrap-token"] as string;
+      
+      if (!bootstrapToken) {
+        return res.status(404).json({ success: false, error: "Bootstrap not available" });
+      }
+      
+      if (!providedToken || providedToken !== bootstrapToken) {
+        return res.status(403).json({ success: false, error: "Invalid bootstrap token" });
+      }
+      
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ success: false, error: "Username and password required" });
+      }
+      
+      if (password.length < 8) {
+        return res.status(400).json({ success: false, error: "Password must be at least 8 characters" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        await storage.updateUserPassword(existing.id, hashedPassword);
+        res.json({ success: true, message: "Admin password updated", user: { id: existing.id, username: existing.username } });
+      } else {
+        const user = await storage.createUser({ username, password: hashedPassword, role: 'admin' });
+        res.json({ success: true, message: "Admin user created", user: { id: user.id, username: user.username } });
+      }
+      
+      await storage.logAdminAction({
+        actor: "bootstrap",
+        actorIp: req.ip || null,
+        action: "bootstrap_admin",
+        entityType: "user",
+        entityId: null,
+        detailsJson: { username }
+      });
+    } catch (error: any) {
+      console.error("Error in bootstrap:", error);
+      res.status(500).json({ success: false, error: "Bootstrap failed" });
+    }
+  });
+
   // Register new admin user (first user setup only - protected after)
   app.post("/api/auth/register", async (req, res) => {
     try {
