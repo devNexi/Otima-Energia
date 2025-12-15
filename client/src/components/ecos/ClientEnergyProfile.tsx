@@ -24,7 +24,8 @@ import {
   RefreshCw,
   Plus,
   Loader2,
-  Clock
+  Clock,
+  History
 } from "lucide-react";
 
 interface ClientEnergyProfileProps {
@@ -106,6 +107,14 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
     }
   });
 
+  const { data: decisionsData, isLoading: decisionsLoading } = useQuery({
+    queryKey: [`/api/ecos/decisions/client/${client.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/ecos/decisions/client/${client.id}`);
+      return res.json();
+    }
+  });
+
   const createContractMutation = useMutation({
     mutationFn: async (data: typeof newContractForm) => {
       const res = await fetch("/api/ecos/contracts", {
@@ -174,6 +183,7 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
   const contracts = contractsData?.contracts || [];
   const bills = billsData?.bills || [];
   const ecosStatus = ecosStatusData?.success ? ecosStatusData.status : null;
+  const decisions = decisionsData?.decisions || [];
 
   const activeContract = contracts.find((c: any) => c.status === "active");
   const StatusIcon = ecosStatus ? statusIcons[ecosStatus.statusResult] || Clock : Clock;
@@ -309,6 +319,10 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
               <TabsTrigger value="consumption" className="flex items-center gap-2" data-testid="tab-consumption">
                 <TrendingUp className="w-4 h-4" />
                 {language === "pt" ? "Consumo" : "Consumption"}
+              </TabsTrigger>
+              <TabsTrigger value="decisions" className="flex items-center gap-2" data-testid="tab-decisions">
+                <History className="w-4 h-4" />
+                {language === "pt" ? "Histórico ECOS" : "ECOS History"}
               </TabsTrigger>
             </TabsList>
 
@@ -553,6 +567,95 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="decisions">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{language === "pt" ? "Histórico de Decisões ECOS" : "ECOS Decision History"}</CardTitle>
+                  <CardDescription>
+                    {language === "pt" ? "Avaliações e recomendações do sistema ECOS" : "ECOS system evaluations and recommendations"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {decisionsLoading ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : decisions.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">
+                      {language === "pt" ? "Nenhuma avaliação registrada" : "No evaluations recorded"}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {decisions.map((decision: any) => {
+                        const DecisionIcon = statusIcons[decision.statusResult] || Clock;
+                        return (
+                          <div 
+                            key={decision.id} 
+                            className={`border rounded-lg p-4 ${statusColors[decision.statusResult] || statusColors.no_data}`}
+                            data-testid={`decision-row-${decision.id}`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <DecisionIcon className="w-4 h-4" />
+                                  <span className="font-medium">
+                                    {statusLabels[language][decision.statusResult] || decision.statusResult}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {decision.triggerType === "manual" 
+                                      ? (language === "pt" ? "Manual" : "Manual")
+                                      : decision.triggerType === "quarterly_check"
+                                      ? (language === "pt" ? "Trimestral" : "Quarterly")
+                                      : decision.triggerType === "contract_change"
+                                      ? (language === "pt" ? "Alteração Contrato" : "Contract Change")
+                                      : decision.triggerType}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(decision.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-sm mb-2" data-testid={`decision-recommendation-${decision.id}`}>
+                                  {decision.recommendation}
+                                </p>
+                                {decision.explanationPt && (
+                                  <p className="text-xs text-gray-600 mb-2">
+                                    {decision.explanationPt}
+                                  </p>
+                                )}
+                                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                                  {decision.clientPriceRmwh && (
+                                    <span className="flex items-center gap-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      {language === "pt" ? "Preço:" : "Price:"} {formatCurrency(decision.clientPriceRmwh)}/MWh
+                                    </span>
+                                  )}
+                                  {decision.benchmarkLowerRmwh && decision.benchmarkUpperRmwh && (
+                                    <span>
+                                      {language === "pt" ? "Faixa:" : "Band:"} {formatCurrency(decision.benchmarkLowerRmwh)} - {formatCurrency(decision.benchmarkUpperRmwh)}/MWh
+                                    </span>
+                                  )}
+                                  {decision.potentialSavingsR && parseFloat(decision.potentialSavingsR) > 0 && (
+                                    <span className="text-green-700">
+                                      {language === "pt" ? "Economia:" : "Savings:"} {formatCurrency(decision.potentialSavingsR)}/ano
+                                    </span>
+                                  )}
+                                  {decision.contractRemainingMonths !== null && (
+                                    <span>
+                                      {decision.contractRemainingMonths} {language === "pt" ? "meses restantes" : "months remaining"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
