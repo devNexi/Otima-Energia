@@ -190,6 +190,61 @@ Users have roles that determine feature access:
 - `GET /api/auth/me` - Get current user and session info
 - `GET /api/auth/setup-required` - Check if initial setup needed
 
+## Deal OS (MVP Complete)
+
+Deal OS is the revenue-control and deal-execution system - the authoritative source of financial truth for Ótima Energia, separate from CRM.
+
+### Deal OS Design Principles
+1. **Explicit State Machine**: Deals progress through 9 states in a defined order - state transitions are validated and logged
+2. **Full Auditability**: Every state change recorded with timestamp, actor, reason, and notes
+3. **Commission Tracking**: Complete lifecycle from FUTURE → PENDING → INVOICED → PAID/OVERDUE
+4. **Immutable Quote Records**: Raw supplier quotes preserved with original JSON data
+
+### Deal Lifecycle States
+1. `DRAFT` - Deal created, gathering requirements
+2. `RFQ_SENT` - Request for quotes sent to suppliers
+3. `QUOTES_RECEIVED` - Supplier quotes received and under review
+4. `OFFER_SELECTED` - Client has selected a supplier offer
+5. `CONTRACT_SIGNED` - Contract executed with chosen supplier
+6. `SUPPLY_LIVE` - Energy supply has begun
+7. `COMMISSION_ACTIVE` - Commission payments are being collected
+8. `CONTRACT_ENDED` - Supply contract has ended
+9. `CLOSED` - Deal is fully completed/archived
+
+### Deal OS Data Models
+- **Deals**: Core deal entity with client, supplier, energy details, pricing, commission config
+- **Deal State Transitions**: Audit log of all state changes with actor and reasoning
+- **Deal Quotes**: Supplier quotes with raw JSON, normalized pricing, selection status
+- **Deal Commission Events**: Individual commission payments with status tracking
+- **Deal Documents**: Contract, quote, and evidence documents with verification status
+
+### Deal OS API Endpoints (All Authenticated)
+- `GET /api/deals` - List all deals (with status/owner/client filters)
+- `GET /api/deals/dashboard` - Dashboard with stats and alerts
+- `GET /api/deals/:id` - Full deal details with related data
+- `POST /api/deals` - Create new deal
+- `PATCH /api/deals/:id` - Update deal
+- `GET /api/deals/:id/transitions` - Get valid next states
+- `POST /api/deals/:id/transition` - Advance deal state (with validation)
+- `GET /api/deals/:id/history` - State transition audit log
+- `GET /api/deals/:id/quotes` - Deal quotes
+- `POST /api/deals/:id/quotes` - Add supplier quote
+- `POST /api/deals/:dealId/quotes/:quoteId/select` - Select winning quote
+- `POST /api/deals/:dealId/quotes/:quoteId/reject` - Reject quote
+- `GET /api/deals/:id/commission-events` - Commission payment schedule
+- `POST /api/deals/:id/commission-events` - Add commission event
+- `PATCH /api/deals/:dealId/commission-events/:eventId` - Update commission status
+- `GET /api/commission-events/upcoming` - Upcoming payments (30 days)
+- `GET /api/commission-events/overdue` - Overdue payments
+- `GET /api/deals/:id/documents` - Deal documents
+- `POST /api/deals/:id/documents` - Add document
+- `POST /api/deals/:dealId/documents/:docId/verify` - Verify document
+
+### Deal OS Frontend Components
+- **DealRegistry** (`client/src/components/deals/DealRegistry.tsx`): Dashboard with stats, deal list with filters
+- **DealDetail** (`client/src/components/deals/DealDetail.tsx`): Full deal view with 5 tabs (Overview, Quotes, Commissions, Documents, History)
+- Accessible via "Deal OS" tab in Admin dashboard
+
 ## Zoho CRM Integration (Future)
 
 All client-facing tables include `zoho_id` fields for future bidirectional sync:
