@@ -1,0 +1,308 @@
+ÓTIMA OS FINAL POLISH (PRODUCTION READINESS)
+
+You are working inside an existing production admin portal for Ótima Energia, a Brazilian B2B energy brokerage.
+
+The system is already architecturally complete:
+
+Deal lifecycle management
+
+Revenue tracking (usage, commissions, reconciliation)
+
+Supplier playbooks
+
+Compliance enforcement
+
+Role-based access (Sales / Ops / Admin)
+
+Your task is not to redesign or add major features, but to polish, harden, and finalize the system so it is safe, intuitive, and reliable for real users.
+
+This is a FINAL POLISH pass.
+
+1️⃣ FIX ALL BLOCKING & DEAD UI (P0 — DO FIRST)
+Known Issue
+
+In Revenue → Playbooks, the “Add Playbook” button is visible but not clickable.
+
+Required Actions
+
+Identify root cause (z-index, overlay, disabled state, missing handler, pointer-events, etc.)
+
+Fix so the button:
+
+Is clickable
+
+Opens the creation modal/form
+
+Successfully saves a supplier playbook
+
+Confirm no silent failures:
+
+Log errors to console
+
+Surface validation errors to user
+
+Additional Sweep
+
+Click through every button in:
+
+Deals
+
+Revenue sub-tabs
+
+Compliance
+
+Ops Dashboard
+
+Remove or fix any non-functional UI elements
+
+This system must have zero dead clicks.
+
+2️⃣ MENTAL MODEL ALIGNMENT (ONE SYSTEM, NOT TWO)
+Business Rule
+
+Deal OS and Commission OS are ONE operational system.
+
+Required UI / COPY CHANGES
+
+Rename:
+
+“Deal OS” → “Deals”
+
+“Commission” → “Revenue”
+
+Revenue contains sub-tabs:
+
+Usage
+
+Playbooks
+
+Reconciliation
+
+Deal Cases
+
+Constraints
+
+Do NOT split state or logic
+
+Do NOT create new apps or modules
+
+Shared deal context everywhere
+
+Language across UI must reinforce:
+
+“This is one operating system”
+
+3️⃣ OPS DASHBOARD — REAL DATA, NO PLACEHOLDERS
+Current Issue
+
+Ops Dashboard KPIs show “–” placeholders.
+
+Required KPIs (Live Queries)
+
+Implement backend queries so these tiles show real counts:
+
+Deals blocked by compliance
+
+Active SLA breaches (supplier or internal)
+
+Overdue commission payments
+
+Deals awaiting supplier response
+
+Each Tile Must:
+
+Show an accurate count
+
+Be clickable
+
+Deep-link to a filtered list view
+
+Respect role permissions
+
+This is the daily command center for Ops.
+
+4️⃣ COMPLIANCE GATES — HARD ENFORCEMENT
+Requirement
+
+Deal state transitions must be impossible unless required checklist items are completed.
+
+Implementation
+
+On transition attempt:
+
+Validate all complianceChecklistRequirements
+
+If missing → block transition
+
+Show exact missing items
+
+Allow checklist completion with:
+
+Method (CALL / EMAIL / WHATSAPP / DOCUMENT)
+
+Confidence level (LOW / MEDIUM / HIGH)
+
+Linked communication log or document
+
+Non-Negotiable
+
+No bypass
+
+No admin override without audit trail
+
+Every transition must be defensible post-hoc
+
+5️⃣ AUDIT TRAIL — COMPLIANCE-GRADE
+
+You already added an Audit Trail tab. Now harden it.
+
+Must Support Filtering By:
+
+Client
+
+Deal
+
+User
+
+Date range
+
+Action type:
+
+Deal transition
+
+Checklist completion
+
+Communication log
+
+Commission status change
+
+Display Requirements
+
+Chronological table
+
+Timestamp
+
+Actor
+
+Action
+
+Entity (deal/client)
+
+Evidence link (if applicable)
+
+Enhancements
+
+Pagination (not hard-limited to 200)
+
+Click-through to source record
+
+CSV export
+
+This is a defensive legal asset, not a vanity log.
+
+6️⃣ LOST / RETURNED DEAL INTELLIGENCE (NO FREE TEXT)
+Enforce Structure
+
+When a deal is marked:
+
+LOST
+
+RETURNED / STUCK
+
+Require:
+
+Structured reason (from taxonomy)
+
+Supplier involved
+
+Stage of failure
+
+Sales user involved
+
+Build Aggregate Views
+
+Lost deals by reason
+
+Lost deals by supplier
+
+Lost deals by stage
+
+Lost deals by sales user
+
+These insights will be used for:
+
+Supplier renegotiation
+
+Sales coaching
+
+Process improvement
+
+7️⃣ EMAIL NOTIFICATIONS (MINIMAL, HIGH SIGNAL ONLY)
+
+Do NOT overbuild.
+
+Required Alerts
+
+Deal blocked > configurable X days
+
+SLA breach
+
+Commission payment overdue
+
+Constraints
+
+Simple email only (Google Workspace SMTP later)
+
+Configurable thresholds
+
+No SMS
+
+No push notifications
+
+No noise
+
+This is operational hygiene, not marketing.
+
+8️⃣ ROLE-BASED UX FINAL CHECK
+Verify:
+
+Sales users:
+
+Cannot see Revenue / Compliance by default
+
+Cannot bypass via URL
+
+Ops users:
+
+Land on Ops Dashboard
+
+Have full access to Deals + Revenue + Compliance
+
+Admin:
+
+Sees everything
+
+Goal
+
+No user should ever think:
+
+“Why am I seeing this?”
+
+9️⃣ FINAL ACCEPTANCE CRITERIA
+
+Before marking complete, confirm:
+
+✅ No dead UI elements
+
+✅ One sales user can run deals end-to-end (front office)
+
+✅ One ops analyst can run the entire business alone
+
+✅ All transitions are enforced and logged
+
+✅ Revenue tracking is accurate and reconcilable
+
+✅ System feels calm, obvious, and hard to misuse
+
+This is not a prototype.
+This is production infrastructure.
