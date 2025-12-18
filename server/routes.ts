@@ -2410,7 +2410,7 @@ export async function registerRoutes(
     }
   });
 
-  // Get audit trail with filtering
+  // Get audit trail with filtering and pagination
   app.get("/api/audit-trail", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
@@ -2419,15 +2419,134 @@ export async function registerRoutes(
         action: req.query.action as string | undefined,
         entityType: req.query.entityType as string | undefined,
         entityId: req.query.entityId ? parseInt(req.query.entityId as string) : undefined,
+        clientId: req.query.clientId ? parseInt(req.query.clientId as string) : undefined,
+        dealId: req.query.dealId as string | undefined,
         dateFrom: req.query.dateFrom as string | undefined,
         dateTo: req.query.dateTo as string | undefined,
-        limit: parseInt(req.query.limit as string) || 200,
+        page: parseInt(req.query.page as string) || 1,
+        pageSize: parseInt(req.query.pageSize as string) || 50,
       };
-      const logs = await storage.getAuditTrail(filters);
-      res.json({ success: true, logs });
+      const result = await storage.getAuditTrail(filters);
+      res.json({ success: true, ...result });
     } catch (error: any) {
       console.error("Error fetching audit trail:", error);
       res.status(500).json({ success: false, error: "Failed to fetch audit trail" });
+    }
+  });
+  
+  // Verify audit trail hash chain integrity
+  app.get("/api/audit-trail/verify", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { verifyHashChain } = await import("./audit");
+      const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined;
+      const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : undefined;
+      const result = await verifyHashChain(dateFrom, dateTo);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error verifying audit trail:", error);
+      res.status(500).json({ success: false, error: "Failed to verify audit trail" });
+    }
+  });
+  
+  // Export audit trail as CSV
+  app.get("/api/audit-trail/export", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const filters = {
+        actor: req.query.actor as string | undefined,
+        action: req.query.action as string | undefined,
+        entityType: req.query.entityType as string | undefined,
+        entityId: req.query.entityId ? parseInt(req.query.entityId as string) : undefined,
+        clientId: req.query.clientId ? parseInt(req.query.clientId as string) : undefined,
+        dealId: req.query.dealId as string | undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+        page: 1,
+        pageSize: 10000, // Export up to 10k records
+      };
+      const { logs } = await storage.getAuditTrail(filters);
+      
+      // Build CSV
+      const headers = [
+        "timestamp", "actor", "actorRole", "action", "entityType", "entityId",
+        "clientId", "dealId", "actorIp", "userAgent", "eventHash", "details"
+      ];
+      const rows = logs.map(log => [
+        log.timestamp.toISOString(),
+        log.actor,
+        log.actorRole || "",
+        log.action,
+        log.entityType || "",
+        log.entityId?.toString() || "",
+        log.clientId?.toString() || "",
+        log.dealId || "",
+        log.actorIp || "",
+        log.userAgent || "",
+        log.eventHash || "",
+        JSON.stringify(log.detailsJson || {})
+      ]);
+      
+      const csvContent = [headers.join(","), ...rows.map(row => 
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      )].join("\n");
+      
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="audit-trail-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvContent);
+    } catch (error: any) {
+      console.error("Error exporting audit trail:", error);
+      res.status(500).json({ success: false, error: "Failed to export audit trail" });
+    }
+  });
+  
+  // Saved audit filter presets
+  app.get("/api/audit-filters", async (req, res) => {
+    const session = await validateDealOsSession(req, res);
+    if (!session) return;
+    try {
+      const filters = await storage.getSavedAuditFilters(session.userId);
+      res.json({ success: true, filters });
+    } catch (error: any) {
+      console.error("Error fetching saved filters:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch saved filters" });
+    }
+  });
+  
+  app.post("/api/audit-filters", async (req, res) => {
+    const session = await validateDealOsSession(req, res);
+    if (!session) return;
+    try {
+      const { name, description, filtersJson } = req.body;
+      if (!name || !filtersJson) {
+        return res.status(400).json({ success: false, error: "Name and filters are required" });
+      }
+      const filter = await storage.createSavedAuditFilter({
+        userId: session.userId,
+        name,
+        description,
+        filtersJson,
+      });
+      res.json({ success: true, filter });
+    } catch (error: any) {
+      console.error("Error creating saved filter:", error);
+      res.status(500).json({ success: false, error: "Failed to create saved filter" });
+    }
+  });
+  
+  app.delete("/api/audit-filters/:id", async (req, res) => {
+    const session = await validateDealOsSession(req, res);
+    if (!session) return;
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSavedAuditFilter(id, session.userId);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: "Filter not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting saved filter:", error);
+      res.status(500).json({ success: false, error: "Failed to delete saved filter" });
     }
   });
 

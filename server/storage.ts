@@ -45,12 +45,13 @@ import {
   type DealChecklistItem, type InsertDealChecklistItem,
   type CommunicationLog, type InsertCommunicationLog,
   type PlaybookDealSnapshot, type InsertPlaybookDealSnapshot,
+  type SavedAuditFilter, type InsertSavedAuditFilter,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
   proposals, proposalTemplates, proposalViews,
   clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
-  adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots,
+  adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots, savedAuditFilters,
   deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments,
   dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking,
   clientUsagePeriods, supplierPlaybooks, supplierReportImports,
@@ -230,10 +231,18 @@ export interface IStorage {
     action?: string;
     entityType?: string;
     entityId?: number;
+    clientId?: number;
+    dealId?: string;
     dateFrom?: string;
     dateTo?: string;
-    limit?: number;
-  }): Promise<AdminAuditLog[]>;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ logs: AdminAuditLog[]; totalCount: number; page: number; pageSize: number }>;
+  
+  // Saved Audit Filters
+  getSavedAuditFilters(userId: string): Promise<SavedAuditFilter[]>;
+  createSavedAuditFilter(filter: InsertSavedAuditFilter): Promise<SavedAuditFilter>;
+  deleteSavedAuditFilter(id: number, userId: string): Promise<boolean>;
   
   // ECOS - Admin Sessions  
   createAdminSession(session: InsertAdminSession): Promise<AdminSession>;
@@ -1244,10 +1253,13 @@ export class Storage implements IStorage {
     action?: string;
     entityType?: string;
     entityId?: number;
+    clientId?: number;
+    dealId?: string;
     dateFrom?: string;
     dateTo?: string;
-    limit?: number;
-  }): Promise<AdminAuditLog[]> {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ logs: AdminAuditLog[]; totalCount: number; page: number; pageSize: number }> {
     const conditions = [];
     
     if (filters.actor) {
@@ -1262,6 +1274,12 @@ export class Storage implements IStorage {
     if (filters.entityId) {
       conditions.push(eq(adminAuditLog.entityId, filters.entityId));
     }
+    if (filters.clientId) {
+      conditions.push(eq(adminAuditLog.clientId, filters.clientId));
+    }
+    if (filters.dealId) {
+      conditions.push(eq(adminAuditLog.dealId, filters.dealId));
+    }
     if (filters.dateFrom) {
       conditions.push(sql`${adminAuditLog.timestamp} >= ${filters.dateFrom}::timestamp`);
     }
@@ -1269,13 +1287,48 @@ export class Storage implements IStorage {
       conditions.push(sql`${adminAuditLog.timestamp} <= ${filters.dateTo}::timestamp + interval '1 day'`);
     }
     
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || 50;
+    const offset = (page - 1) * pageSize;
+    
+    // Get total count
+    const countQuery = conditions.length > 0
+      ? db.select({ count: sql<number>`count(*)::int` }).from(adminAuditLog).where(and(...conditions))
+      : db.select({ count: sql<number>`count(*)::int` }).from(adminAuditLog);
+    
+    const [countResult] = await countQuery;
+    const totalCount = countResult?.count || 0;
+    
+    // Get paginated results
     const query = conditions.length > 0
       ? db.select().from(adminAuditLog).where(and(...conditions))
       : db.select().from(adminAuditLog);
     
-    return await query
+    const logs = await query
       .orderBy(desc(adminAuditLog.timestamp))
-      .limit(filters.limit || 200);
+      .limit(pageSize)
+      .offset(offset);
+    
+    return { logs, totalCount, page, pageSize };
+  }
+  
+  // Saved Audit Filters
+  async getSavedAuditFilters(userId: string): Promise<SavedAuditFilter[]> {
+    return await db.select().from(savedAuditFilters)
+      .where(eq(savedAuditFilters.userId, userId))
+      .orderBy(desc(savedAuditFilters.createdAt));
+  }
+  
+  async createSavedAuditFilter(filter: InsertSavedAuditFilter): Promise<SavedAuditFilter> {
+    const result = await db.insert(savedAuditFilters).values(filter).returning();
+    return result[0];
+  }
+  
+  async deleteSavedAuditFilter(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(savedAuditFilters)
+      .where(and(eq(savedAuditFilters.id, id), eq(savedAuditFilters.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 
   // Admin Sessions
