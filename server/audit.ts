@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import type { InsertAdminAuditLog, AdminAuditLog, AuditActionType } from "@shared/schema";
 import { db } from "./db";
 import { adminAuditLog } from "@shared/schema";
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 
 // Sensitive patterns to redact from audit log details
 const SENSITIVE_PATTERNS = [
@@ -101,10 +101,10 @@ export function generateEventHash(
 }
 
 /**
- * Get the previous event hash for chain continuity
+ * Get the previous event hash for chain continuity with row lock
  */
-async function getPreviousEventHash(): Promise<string | null> {
-  const [lastEvent] = await db
+async function getPreviousEventHashWithLock(tx: typeof db): Promise<string | null> {
+  const [lastEvent] = await tx
     .select({ eventHash: adminAuditLog.eventHash })
     .from(adminAuditLog)
     .orderBy(desc(adminAuditLog.id))
@@ -115,6 +115,7 @@ async function getPreviousEventHash(): Promise<string | null> {
 
 /**
  * Log an audit event with hash chain
+ * Uses transaction with advisory lock to prevent concurrent writes from breaking the chain
  */
 export async function logAuditEvent(
   log: InsertAdminAuditLog & { 
@@ -125,39 +126,47 @@ export async function logAuditEvent(
   }
 ): Promise<AdminAuditLog> {
   const timestamp = new Date();
-  const prevEventHash = await getPreviousEventHash();
   
-  // Redact sensitive data
+  // Redact sensitive data before entering transaction
   const redactedDetails = redactSensitiveData(log.detailsJson as Record<string, any>);
   
-  // Generate event hash
-  const eventHash = generateEventHash(
-    timestamp,
-    log.actor,
-    log.action,
-    log.entityType || null,
-    log.entityId || null,
-    redactedDetails,
-    prevEventHash
-  );
-  
-  const result = await db.insert(adminAuditLog).values({
-    actor: log.actor,
-    actorRole: log.actorRole || null,
-    actorIp: log.actorIp || null,
-    userAgent: log.userAgent || null,
-    action: log.action,
-    entityType: log.entityType || null,
-    entityId: log.entityId || null,
-    clientId: log.clientId || null,
-    dealId: log.dealId || null,
-    detailsJson: redactedDetails,
-    eventHash,
-    prevEventHash,
-    timestamp,
-  }).returning();
-  
-  return result[0];
+  // Use transaction to ensure atomicity of prev hash read + insert
+  return await db.transaction(async (tx) => {
+    // Acquire advisory lock for audit log writes (key: 1 for audit log)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(1)`);
+    
+    // Get previous hash within the transaction (after lock acquired)
+    const prevEventHash = await getPreviousEventHashWithLock(tx);
+    
+    // Generate event hash
+    const eventHash = generateEventHash(
+      timestamp,
+      log.actor,
+      log.action,
+      log.entityType || null,
+      log.entityId || null,
+      redactedDetails,
+      prevEventHash
+    );
+    
+    const result = await tx.insert(adminAuditLog).values({
+      actor: log.actor,
+      actorRole: log.actorRole || null,
+      actorIp: log.actorIp || null,
+      userAgent: log.userAgent || null,
+      action: log.action,
+      entityType: log.entityType || null,
+      entityId: log.entityId || null,
+      clientId: log.clientId || null,
+      dealId: log.dealId || null,
+      detailsJson: redactedDetails,
+      eventHash,
+      prevEventHash,
+      timestamp,
+    }).returning();
+    
+    return result[0];
+  });
 }
 
 /**
