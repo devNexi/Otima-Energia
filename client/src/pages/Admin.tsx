@@ -480,90 +480,159 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto p-6">
+        {/* Role-specific stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.leads")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-violet-900" data-testid="stat-leads">{leads.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.clients")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-violet-900" data-testid="stat-clients">{clients.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.rfqs")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-violet-900" data-testid="stat-rfqs">{rfqs.length}</div>
-            </CardContent>
-          </Card>
+          {/* Sales stats - visible to sales and admin */}
+          {(user?.role === "sales" || user?.role === "admin") && (
+            <>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.leads")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-violet-900" data-testid="stat-leads">{leads.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.clients")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-violet-900" data-testid="stat-clients">{clients.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.rfqs")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-violet-900" data-testid="stat-rfqs">{rfqs.length}</div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          {/* Ops stats - visible to ops role */}
+          {user?.role === "ops" && (
+            <>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    {language === "pt" ? "Deals Ativos" : "Active Deals"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-violet-900" data-testid="stat-active-deals">-</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    {language === "pt" ? "Casos Abertos" : "Open Cases"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600" data-testid="stat-open-cases">-</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-500">
+                    {language === "pt" ? "Conciliação Pendente" : "Pending Reconciliation"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600" data-testid="stat-pending-reconciliation">-</div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
-        <Tabs defaultValue="ecos-dashboard" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
-              <LayoutDashboard className="w-4 h-4" />
-              {language === "pt" ? "Painel ECOS" : "ECOS Dashboard"}
-            </TabsTrigger>
-            <TabsTrigger value="leads" className="flex items-center gap-2" data-testid="tab-leads">
-              <Inbox className="w-4 h-4" />
-              {t("admin.tab.leads")}
-            </TabsTrigger>
-            <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
-              <Users className="w-4 h-4" />
-              {t("admin.tab.clients")}
-            </TabsTrigger>
-            <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
-              <FileText className="w-4 h-4" />
-              {t("admin.tab.rfqs")}
-            </TabsTrigger>
-            <TabsTrigger value="deal-os" className="flex items-center gap-2" data-testid="tab-deal-os">
-              <Briefcase className="w-4 h-4" />
-              {language === "pt" ? "Deal OS" : "Deal OS"}
-            </TabsTrigger>
-            <TabsTrigger value="usage" className="flex items-center gap-2" data-testid="tab-usage">
-              <Zap className="w-4 h-4" />
-              {language === "pt" ? "Consumo" : "Usage"}
-            </TabsTrigger>
-            <TabsTrigger value="playbooks" className="flex items-center gap-2" data-testid="tab-playbooks">
-              <BookOpen className="w-4 h-4" />
-              {language === "pt" ? "Playbooks" : "Playbooks"}
-            </TabsTrigger>
-            <TabsTrigger value="reconciliation" className="flex items-center gap-2" data-testid="tab-reconciliation">
-              <Scale className="w-4 h-4" />
-              {language === "pt" ? "Conciliação" : "Reconciliation"}
-            </TabsTrigger>
+        <Tabs defaultValue={user?.role === "ops" ? "deal-os" : "ecos-dashboard"} className="space-y-4">
+          <TabsList className="flex flex-wrap gap-1">
+            {/* ECOS Dashboard - visible to sales and admin */}
+            {(user?.role === "sales" || user?.role === "admin") && (
+              <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
+                <LayoutDashboard className="w-4 h-4" />
+                {language === "pt" ? "Painel ECOS" : "ECOS Dashboard"}
+              </TabsTrigger>
+            )}
+            {/* Leads - visible to sales and admin */}
+            {(user?.role === "sales" || user?.role === "admin") && (
+              <TabsTrigger value="leads" className="flex items-center gap-2" data-testid="tab-leads">
+                <Inbox className="w-4 h-4" />
+                {t("admin.tab.leads")}
+              </TabsTrigger>
+            )}
+            {/* Clients - visible to sales and admin */}
+            {(user?.role === "sales" || user?.role === "admin") && (
+              <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
+                <Users className="w-4 h-4" />
+                {t("admin.tab.clients")}
+              </TabsTrigger>
+            )}
+            {/* RFQs (Quotes) - visible to sales and admin */}
+            {(user?.role === "sales" || user?.role === "admin") && (
+              <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
+                <FileText className="w-4 h-4" />
+                {t("admin.tab.rfqs")}
+              </TabsTrigger>
+            )}
+            {/* Deal OS - visible to ops and admin */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="deal-os" className="flex items-center gap-2" data-testid="tab-deal-os">
+                <Briefcase className="w-4 h-4" />
+                {language === "pt" ? "Deal OS" : "Deal OS"}
+              </TabsTrigger>
+            )}
+            {/* Usage - visible to ops and admin (Commission OS) */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="usage" className="flex items-center gap-2" data-testid="tab-usage">
+                <Zap className="w-4 h-4" />
+                {language === "pt" ? "Consumo" : "Usage"}
+              </TabsTrigger>
+            )}
+            {/* Playbooks - visible to ops and admin (Commission OS) */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="playbooks" className="flex items-center gap-2" data-testid="tab-playbooks">
+                <BookOpen className="w-4 h-4" />
+                {language === "pt" ? "Playbooks" : "Playbooks"}
+              </TabsTrigger>
+            )}
+            {/* Reconciliation - visible to ops and admin (Commission OS) */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="reconciliation" className="flex items-center gap-2" data-testid="tab-reconciliation">
+                <Scale className="w-4 h-4" />
+                {language === "pt" ? "Conciliação" : "Reconciliation"}
+              </TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="ecos-dashboard">
-            <EcosDashboard 
-              onViewClient={(clientId) => {
-                const client = clients.find((c: any) => c.id === clientId);
-                if (client) {
-                  setEnergyProfileClient({
-                    id: client.id,
-                    companyName: client.companyName,
-                    segment: client.segment,
-                    region: client.region,
-                    avgConsumptionKwh: client.avgConsumptionKwh
-                  });
-                }
-              }}
-            />
-          </TabsContent>
+          {/* Role-guarded TabsContent blocks */}
+          {(user?.role === "sales" || user?.role === "admin") && (
+            <TabsContent value="ecos-dashboard">
+              <EcosDashboard 
+                onViewClient={(clientId) => {
+                  const client = clients.find((c: any) => c.id === clientId);
+                  if (client) {
+                    setEnergyProfileClient({
+                      id: client.id,
+                      companyName: client.companyName,
+                      segment: client.segment,
+                      region: client.region,
+                      avgConsumptionKwh: client.avgConsumptionKwh
+                    });
+                  }
+                }}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="leads">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("admin.leads.title")}</CardTitle>
+          {(user?.role === "sales" || user?.role === "admin") && (
+            <TabsContent value="leads">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("admin.leads.title")}</CardTitle>
                 <CardDescription>{t("admin.leads.description")}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -784,9 +853,11 @@ export default function Admin() {
                 )}
               </DialogContent>
             </Dialog>
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          <TabsContent value="clients">
+          {(user?.role === "sales" || user?.role === "admin") && (
+            <TabsContent value="clients">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -1012,9 +1083,11 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          <TabsContent value="rfqs">
+          {(user?.role === "sales" || user?.role === "admin") && (
+            <TabsContent value="rfqs">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -1111,32 +1184,42 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
-          <TabsContent value="deal-os">
-            {selectedDealId ? (
-              <DealDetail 
-                dealId={selectedDealId}
-                onBack={() => setSelectedDealId(null)}
-              />
-            ) : (
-              <DealRegistry 
-                onViewDeal={(dealId) => setSelectedDealId(dealId)}
-              />
-            )}
-          </TabsContent>
+          {/* Commission OS tabs - visible to ops and admin */}
+          {(user?.role === "ops" || user?.role === "admin") && (
+            <TabsContent value="deal-os">
+              {selectedDealId ? (
+                <DealDetail 
+                  dealId={selectedDealId}
+                  onBack={() => setSelectedDealId(null)}
+                />
+              ) : (
+                <DealRegistry 
+                  onViewDeal={(dealId) => setSelectedDealId(dealId)}
+                />
+              )}
+            </TabsContent>
+          )}
 
-          <TabsContent value="usage">
-            <UsageTab />
-          </TabsContent>
+          {(user?.role === "ops" || user?.role === "admin") && (
+            <TabsContent value="usage">
+              <UsageTab />
+            </TabsContent>
+          )}
 
-          <TabsContent value="playbooks">
-            <PlaybooksTab />
-          </TabsContent>
+          {(user?.role === "ops" || user?.role === "admin") && (
+            <TabsContent value="playbooks">
+              <PlaybooksTab />
+            </TabsContent>
+          )}
 
-          <TabsContent value="reconciliation">
-            <ReconciliationTab />
-          </TabsContent>
+          {(user?.role === "ops" || user?.role === "admin") && (
+            <TabsContent value="reconciliation">
+              <ReconciliationTab />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -1933,7 +1933,7 @@ export const RECONCILIATION_LINE_STATUS = [
 ] as const;
 export type ReconciliationLineStatus = typeof RECONCILIATION_LINE_STATUS[number];
 
-// Deal case types
+// Deal case types (expanded per spec)
 export const DEAL_CASE_TYPE = [
   "RETURNED",
   "STUCK",
@@ -1941,11 +1941,36 @@ export const DEAL_CASE_TYPE = [
   "METERING_DELAY",
   "DOCS_PENDING",
   "CLIENT_WITHDREW",
+  "CLIENT_SWITCHED_SUPPLIER",
   "SUPPLIER_WITHDREW",
+  "SUPPLIER_BACKED_OUT",
+  "CCEE_REGISTRATION_FAILED",
+  "DOCUMENTATION_INCOMPLETE",
   "REGULATORY_BLOCK",
+  "PAYMENT_GUARANTEE_FAILED",
+  "START_DATE_DELAYED",
   "OTHER"
 ] as const;
 export type DealCaseType = typeof DEAL_CASE_TYPE[number];
+
+// Communication types for logging
+export const COMMUNICATION_TYPE = [
+  "CALL",
+  "EMAIL",
+  "WHATSAPP",
+  "MEETING",
+  "OTHER"
+] as const;
+export type CommunicationType = typeof COMMUNICATION_TYPE[number];
+
+// Confidence levels for usage data
+export const CONFIDENCE_LEVEL = [
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "UNVERIFIED"
+] as const;
+export type ConfidenceLevel = typeof CONFIDENCE_LEVEL[number];
 
 // Deal case severity
 export const DEAL_CASE_SEVERITY = [
@@ -2132,6 +2157,98 @@ export const insertDealCaseSchema = createInsertSchema(dealCases).omit({
 export type InsertDealCase = z.infer<typeof insertDealCaseSchema>;
 export type DealCase = typeof dealCases.$inferSelect;
 
+// 7) communication_log - tracks calls, emails, WhatsApp interactions
+export const communicationLog = pgTable("communication_log", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id),
+  clientId: integer("client_id").references(() => clients.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  communicationType: text("communication_type").notNull(), // COMMUNICATION_TYPE
+  direction: text("direction").default("outbound"), // 'inbound', 'outbound'
+  subject: text("subject"),
+  summary: text("summary"),
+  externalCallId: text("external_call_id"),
+  externalSystemLink: text("external_system_link"),
+  contactPerson: text("contact_person"),
+  contactInfo: text("contact_info"),
+  loggedBy: varchar("logged_by").references(() => users.id).notNull(),
+  occurredAt: timestamp("occurred_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCommunicationLogSchema = createInsertSchema(communicationLog).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCommunicationLog = z.infer<typeof insertCommunicationLogSchema>;
+export type CommunicationLog = typeof communicationLog.$inferSelect;
+
+// 8) compliance_checklist_requirements - configurable checklists per state transition
+export const complianceChecklistRequirements = pgTable("compliance_checklist_requirements", {
+  id: serial("id").primaryKey(),
+  transitionFrom: text("transition_from").notNull(), // DEAL_STATES
+  transitionTo: text("transition_to").notNull(), // DEAL_STATES
+  requirementKey: text("requirement_key").notNull(), // Unique per transition (composite constraint)
+  requirementLabel: text("requirement_label").notNull(),
+  description: text("description"),
+  isRequired: boolean("is_required").default(true),
+  requiredForRoles: jsonb("required_for_roles").default(["all"]),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  transitionKeyUnique: unique("compliance_checklist_requirements_transition_key_unique").on(
+    table.transitionFrom,
+    table.transitionTo,
+    table.requirementKey
+  ),
+}));
+
+export const insertComplianceChecklistRequirementSchema = createInsertSchema(complianceChecklistRequirements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertComplianceChecklistRequirement = z.infer<typeof insertComplianceChecklistRequirementSchema>;
+export type ComplianceChecklistRequirement = typeof complianceChecklistRequirements.$inferSelect;
+
+// 9) deal_checklist_items - completed checklist items per deal
+export const dealChecklistItems = pgTable("deal_checklist_items", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  requirementId: integer("requirement_id").references(() => complianceChecklistRequirements.id).notNull(),
+  completedBy: varchar("completed_by").references(() => users.id).notNull(),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+  notes: text("notes"),
+  evidenceDocId: integer("evidence_doc_id"),
+});
+
+export const insertDealChecklistItemSchema = createInsertSchema(dealChecklistItems).omit({
+  id: true,
+  completedAt: true,
+});
+export type InsertDealChecklistItem = z.infer<typeof insertDealChecklistItemSchema>;
+export type DealChecklistItem = typeof dealChecklistItems.$inferSelect;
+
+// 10) playbook_deal_snapshots - immutable snapshot of playbook at CONTRACT_SIGNED
+export const playbookDealSnapshots = pgTable("playbook_deal_snapshots", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull().unique(),
+  playbookId: integer("playbook_id").references(() => supplierPlaybooks.id).notNull(),
+  playbookVersion: integer("playbook_version").notNull(),
+  snapshotData: jsonb("snapshot_data").notNull(), // Full playbook config at time of snapshot
+  snapshotedBy: varchar("snapshoted_by").references(() => users.id).notNull(),
+  snapshotedAt: timestamp("snapshoted_at").defaultNow().notNull(),
+});
+
+export const insertPlaybookDealSnapshotSchema = createInsertSchema(playbookDealSnapshots).omit({
+  id: true,
+  snapshotedAt: true,
+});
+export type InsertPlaybookDealSnapshot = z.infer<typeof insertPlaybookDealSnapshotSchema>;
+export type PlaybookDealSnapshot = typeof playbookDealSnapshots.$inferSelect;
+
 // Commission OS Relations
 export const clientUsagePeriodsRelations = relations(clientUsagePeriods, ({ one }) => ({
   client: one(clients, {
@@ -2216,6 +2333,55 @@ export const dealCasesRelations = relations(dealCases, ({ one }) => ({
   }),
   owner: one(users, {
     fields: [dealCases.ownerUserId],
+    references: [users.id],
+  }),
+}));
+
+export const communicationLogRelations = relations(communicationLog, ({ one }) => ({
+  deal: one(deals, {
+    fields: [communicationLog.dealId],
+    references: [deals.id],
+  }),
+  client: one(clients, {
+    fields: [communicationLog.clientId],
+    references: [clients.id],
+  }),
+  lead: one(leads, {
+    fields: [communicationLog.leadId],
+    references: [leads.id],
+  }),
+  loggedByUser: one(users, {
+    fields: [communicationLog.loggedBy],
+    references: [users.id],
+  }),
+}));
+
+export const dealChecklistItemsRelations = relations(dealChecklistItems, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealChecklistItems.dealId],
+    references: [deals.id],
+  }),
+  requirement: one(complianceChecklistRequirements, {
+    fields: [dealChecklistItems.requirementId],
+    references: [complianceChecklistRequirements.id],
+  }),
+  completedByUser: one(users, {
+    fields: [dealChecklistItems.completedBy],
+    references: [users.id],
+  }),
+}));
+
+export const playbookDealSnapshotsRelations = relations(playbookDealSnapshots, ({ one }) => ({
+  deal: one(deals, {
+    fields: [playbookDealSnapshots.dealId],
+    references: [deals.id],
+  }),
+  playbook: one(supplierPlaybooks, {
+    fields: [playbookDealSnapshots.playbookId],
+    references: [supplierPlaybooks.id],
+  }),
+  snapshotedByUser: one(users, {
+    fields: [playbookDealSnapshots.snapshotedBy],
     references: [users.id],
   }),
 }));

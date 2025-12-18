@@ -1,0 +1,451 @@
+COMMISSION OS + COMPLIANCE LAYER
+CONTEXT
+
+You are building Commission OS and the compliance / operations layer for Ótima Energia, a Brazilian B2B energy brokerage.
+
+Ótima does not trade energy.
+Ótima intermediates, advises, enforces, and gets paid commissions by suppliers.
+
+This system must:
+
+Track expected vs earned vs paid commissions
+
+Handle supplier-specific rules (every supplier is different)
+
+Track client usage to calculate upside / downside commissions
+
+Enforce process compliance via gated workflows
+
+Produce a complete, immutable audit trail
+
+Be simple to use, but extremely strict behind the scenes
+
+Assume:
+
+Auth system already exists
+
+Deal OS already exists (state machine, deals, quotes, commissions)
+
+ECOS exists as a middle-office decision engine
+
+PostgreSQL + Drizzle ORM
+
+React + TypeScript frontend
+
+Admin portal already has tabs and role-based auth
+
+PART 1 — ROLE-BASED DASHBOARD STRUCTURE (CRITICAL)
+Implement role-based dashboards, not just tabs.
+Roles:
+
+sales (Renan)
+
+ops (Analyst)
+
+admin (Founder)
+
+Dashboards:
+🟢 Sales Dashboard (sales role)
+
+Visible ONLY:
+
+Leads
+
+Clients
+
+ECOS Snapshot (read-only)
+
+Quotes & Recommendations
+
+My Deals (read-only after CONTRACT_SIGNED)
+
+Hidden:
+
+Commission OS
+
+Usage
+
+Reconciliation
+
+Supplier Playbooks
+
+Disputes
+
+SLA tracking
+
+Sales users must never see commission internals.
+
+🔵 Office Dashboard (ops role)
+
+Default landing page.
+
+Visible:
+
+Today’s Tasks (home)
+
+Deal OS (full)
+
+Commission OS:
+
+Usage
+
+Reconciliation
+
+Supplier Playbooks
+
+Cases / Returns / Lost Deals
+
+Supplier SLA tracking
+
+Compliance checklists
+
+Audit history
+
+🔐 Admin Dashboard (admin role)
+
+Full access:
+
+All dashboards
+
+System configuration
+
+State machine rules
+
+Compliance schema
+
+Supplier performance scorecards
+
+Implement frontend routing + permission guards accordingly.
+
+PART 2 — COMMISSION OS CORE MODULES
+1. Supplier Playbooks (CONFIGURABLE, VERSIONED)
+
+Create a Supplier Playbooks module.
+
+Each supplier must have:
+
+Legal entity name
+
+Brand name
+
+Commission payer (supplier / intermediary)
+
+Payment method (invoice / statement / auto)
+
+Reporting cadence (monthly, quarterly, ad-hoc)
+
+Required documents
+
+Commission calculation rules:
+
+per MWh
+
+% of spread
+
+fixed
+
+hybrid
+
+Payment timing:
+
+upfront %
+
+residual %
+
+clawback rules
+
+SLA expectations (quote response, payment delay)
+
+Notes
+
+Requirements:
+
+Versioned playbooks (immutable history)
+
+New deals snapshot the playbook at CONTRACT_SIGNED
+
+Ability to add custom fields dynamically
+
+Each custom field defines:
+
+data type
+
+whether it impacts commission calc
+
+whether it blocks deal progression
+
+2. Usage Tracking Module (CRITICAL)
+
+Track actual client energy consumption per deal.
+
+Sources:
+
+Supplier report
+
+Client invoice (OCR / manual)
+
+Distributor data
+
+Client self-report (flagged low confidence)
+
+Each usage record must include:
+
+Deal ID
+
+Period (month/year)
+
+Expected volume
+
+Actual volume
+
+Variance (+ / -)
+
+Confidence level
+
+Source of truth
+
+Verified by (user/system)
+
+Evidence document link
+
+Usage data must:
+
+Feed commission recalculation
+
+Flag upside owed to Ótima
+
+Flag potential clawbacks (do NOT auto-chase)
+
+Be auditable
+
+3. Reconciliation Engine
+
+Build a Reconciliation module that compares:
+
+Expected commission (Deal OS)
+
+Supplier-reported commission
+
+Actual payments received
+
+Each reconciliation run:
+
+Is timestamped
+
+Is immutable
+
+Produces:
+
+variance
+
+reason codes
+
+action required flags
+
+Statuses:
+
+MATCHED
+
+UNDERPAID
+
+OVERPAID
+
+MISSING
+
+DISPUTED
+
+4. Commission Event State Machine
+
+Each commission payment must follow:
+
+FUTURE → PENDING → INVOICED → PAID
+or
+→ OVERDUE → DISPUTED → RESOLVED
+
+Each transition:
+
+Requires reason
+
+Is logged
+
+Has SLA timers
+
+PART 3 — CASES, RETURNS & LOST DEALS
+
+Enhance Deal OS with Cases.
+
+A deal can open one or more cases.
+
+Case types:
+
+CREDIT_REJECTED
+
+CLIENT_WITHDREW
+
+CLIENT_SWITCHED_SUPPLIER
+
+SUPPLIER_BACKED_OUT
+
+CCEE_REGISTRATION_FAILED
+
+DOCUMENTATION_INCOMPLETE
+
+REGULATORY_BLOCK
+
+PAYMENT_GUARANTEE_FAILED
+
+START_DATE_DELAYED
+
+OTHER (free text required)
+
+Each case:
+
+Has SLA
+
+Has owner
+
+Can be resolved or escalated
+
+Can convert deal to:
+
+RETURNED (attempt recovery)
+
+LOST (terminal)
+
+All reasons must be reportable.
+
+PART 4 — COMPLIANCE GATING (NON-NEGOTIABLE)
+
+Implement state transition gates.
+
+A deal cannot move forward unless required steps are completed.
+
+Examples:
+
+Before OFFER_SELECTED:
+
+≥2 supplier quotes logged
+
+ECOS recommendation generated
+
+Client acknowledgement recorded
+
+Before CONTRACT_SIGNED:
+
+Credit status recorded
+
+Supplier playbook snapshotted
+
+Commission model locked
+
+Before SUPPLY_LIVE:
+
+Contract uploaded + verified
+
+CCEE confirmation logged
+
+Usage source defined
+
+Each gate:
+
+Is configurable by admin
+
+Is enforced by backend
+
+Logs who completed what and when
+
+No bypass for sales users.
+
+PART 5 — AUDIT & EVIDENCE SYSTEM
+
+Everything must be provable.
+
+Log:
+
+All state changes
+
+All checklist completions
+
+All document uploads
+
+All commission changes
+
+All usage edits
+
+Audit logs must be:
+
+Append-only
+
+Timestamped
+
+User-attributed
+
+Exportable per client / deal
+
+Documents stored via object storage and referenced immutably.
+
+PART 6 — COMMUNICATION LOGGING (LIGHTWEIGHT)
+
+Do NOT build telephony.
+
+Instead:
+
+Allow logging of:
+
+Call occurred (with external call ID)
+
+Email sent
+
+WhatsApp interaction
+
+Store:
+
+timestamp
+
+user
+
+summary
+
+link to external system if available
+
+This supports compliance without cost explosion.
+
+PART 7 — UX PRINCIPLES (IMPORTANT)
+
+Ops dashboard defaults to “Today’s Tasks”
+
+Sales sees only what they need
+
+No wall-of-tabs
+
+No optional fields where compliance matters
+
+Clear warnings when data impacts money
+
+Complexity lives in rules, not UI.
+
+DELIVERABLES
+
+Backend schema updates
+
+API endpoints
+
+Frontend components
+
+Role-based routing
+
+Admin configuration panels
+
+Clear inline documentation
+
+This system must be robust enough that:
+
+One analyst can run operations alone
+
+Commissions are never “lost”
+
+Every dispute can be proven
+
+Scale does not require hiring back office
+
+Build this incrementally, safely, and without breaking existing Deal OS or ECOS functionality.

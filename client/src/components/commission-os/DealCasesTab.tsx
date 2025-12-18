@@ -158,9 +158,15 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
       CREDIT_REJECTED: "bg-red-100 text-red-800",
       METERING_DELAY: "bg-blue-100 text-blue-800",
       DOCS_PENDING: "bg-purple-100 text-purple-800",
+      DOCUMENTATION_INCOMPLETE: "bg-purple-100 text-purple-800",
       CLIENT_WITHDREW: "bg-gray-100 text-gray-800",
+      CLIENT_SWITCHED_SUPPLIER: "bg-gray-100 text-gray-800",
       SUPPLIER_WITHDREW: "bg-gray-100 text-gray-800",
+      SUPPLIER_BACKED_OUT: "bg-gray-100 text-gray-800",
+      CCEE_REGISTRATION_FAILED: "bg-red-100 text-red-800",
       REGULATORY_BLOCK: "bg-red-100 text-red-800",
+      PAYMENT_GUARANTEE_FAILED: "bg-red-100 text-red-800",
+      START_DATE_DELAYED: "bg-blue-100 text-blue-800",
       OTHER: "bg-gray-100 text-gray-800",
     };
     return <Badge className={colors[type] || "bg-gray-100"}>{type.replace(/_/g, " ")}</Badge>;
@@ -241,9 +247,15 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
                       <SelectItem value="CREDIT_REJECTED">Credit Rejected</SelectItem>
                       <SelectItem value="METERING_DELAY">Metering Delay</SelectItem>
                       <SelectItem value="DOCS_PENDING">Docs Pending</SelectItem>
+                      <SelectItem value="DOCUMENTATION_INCOMPLETE">Documentation Incomplete</SelectItem>
                       <SelectItem value="CLIENT_WITHDREW">Client Withdrew</SelectItem>
+                      <SelectItem value="CLIENT_SWITCHED_SUPPLIER">Client Switched Supplier</SelectItem>
                       <SelectItem value="SUPPLIER_WITHDREW">Supplier Withdrew</SelectItem>
+                      <SelectItem value="SUPPLIER_BACKED_OUT">Supplier Backed Out</SelectItem>
+                      <SelectItem value="CCEE_REGISTRATION_FAILED">CCEE Registration Failed</SelectItem>
                       <SelectItem value="REGULATORY_BLOCK">Regulatory Block</SelectItem>
+                      <SelectItem value="PAYMENT_GUARANTEE_FAILED">Payment Guarantee Failed</SelectItem>
+                      <SelectItem value="START_DATE_DELAYED">Start Date Delayed</SelectItem>
                       <SelectItem value="OTHER">Other</SelectItem>
                     </SelectContent>
                   </Select>
