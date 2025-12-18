@@ -154,6 +154,7 @@ export async function logAuditEvent(
     detailsJson: redactedDetails,
     eventHash,
     prevEventHash,
+    timestamp,
   }).returning();
   
   return result[0];

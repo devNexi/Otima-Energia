@@ -42,6 +42,7 @@ import { processBillFile } from "./ocrService";
 import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
+import { logAuditEvent } from "./audit";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -2792,8 +2793,26 @@ export async function registerRoutes(
   app.post("/api/deals", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const validatedData = insertDealSchema.parse(req.body);
       const deal = await storage.createDeal(validatedData);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEAL_CREATED",
+        entityType: "deal",
+        entityId: null,
+        dealId: deal.id,
+        clientId: deal.clientId || null,
+        detailsJson: { clientId: deal.clientId, owner: deal.owner, status: deal.status }
+      });
+      
       res.json({ success: true, deal });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -2810,10 +2829,28 @@ export async function registerRoutes(
   app.patch("/api/deals/:id", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const deal = await storage.updateDeal(req.params.id, req.body);
       if (!deal) {
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEAL_UPDATED",
+        entityType: "deal",
+        entityId: null,
+        dealId: deal.id,
+        clientId: deal.clientId || null,
+        detailsJson: { updates: Object.keys(req.body) }
+      });
+      
       res.json({ success: true, deal });
     } catch (error: any) {
       console.error("Error updating deal:", error);
@@ -2893,6 +2930,7 @@ export async function registerRoutes(
         }
       }
       
+      const fromState = deal.status;
       const result = await storage.transitionDealState(
         req.params.id,
         toState as DealState,
@@ -2906,6 +2944,23 @@ export async function registerRoutes(
       if (!result.success) {
         return res.status(400).json({ success: false, error: result.error });
       }
+      
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
+      await logAuditEvent({
+        actor: user?.username || triggeredBy,
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEAL_STATE_TRANSITIONED",
+        entityType: "deal",
+        entityId: null,
+        dealId: req.params.id,
+        clientId: deal.clientId || null,
+        detailsJson: { fromState, toState, triggeredBy, triggeredByType, reason, skipComplianceCheck: !!skipComplianceCheck }
+      });
       
       res.json({ success: true, deal: result.deal });
     } catch (error: any) {
@@ -2976,6 +3031,10 @@ export async function registerRoutes(
   app.post("/api/deals/:id/quotes", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const dealId = req.params.id;
       const deal = await storage.getDeal(dealId);
       if (!deal) {
@@ -2988,6 +3047,20 @@ export async function registerRoutes(
       });
       
       const quote = await storage.createDealQuote(validatedData);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "QUOTE_CREATED",
+        entityType: "quote",
+        entityId: quote.id,
+        dealId: dealId,
+        clientId: deal.clientId || null,
+        detailsJson: { supplierId: quote.supplierId, pricePerMwh: quote.pricePerMwh, termMonths: quote.termMonths }
+      });
+      
       res.json({ success: true, quote });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -3004,6 +3077,10 @@ export async function registerRoutes(
   app.post("/api/deals/:dealId/quotes/:quoteId/select", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const { reason } = req.body;
       if (!reason) {
         return res.status(400).json({ success: false, error: "Selection reason is required" });
@@ -3013,6 +3090,21 @@ export async function registerRoutes(
       if (!quote) {
         return res.status(404).json({ success: false, error: "Quote not found" });
       }
+      
+      const deal = await storage.getDeal(req.params.dealId);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "QUOTE_SELECTED",
+        entityType: "quote",
+        entityId: quote.id,
+        dealId: req.params.dealId,
+        clientId: deal?.clientId || null,
+        detailsJson: { reason, supplierId: quote.supplierId }
+      });
       
       res.json({ success: true, quote });
     } catch (error: any) {
@@ -3025,6 +3117,10 @@ export async function registerRoutes(
   app.post("/api/deals/:dealId/quotes/:quoteId/reject", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const { reason } = req.body;
       if (!reason) {
         return res.status(400).json({ success: false, error: "Rejection reason is required" });
@@ -3034,6 +3130,21 @@ export async function registerRoutes(
       if (!quote) {
         return res.status(404).json({ success: false, error: "Quote not found" });
       }
+      
+      const deal = await storage.getDeal(req.params.dealId);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "QUOTE_REJECTED",
+        entityType: "quote",
+        entityId: quote.id,
+        dealId: req.params.dealId,
+        clientId: deal?.clientId || null,
+        detailsJson: { reason, supplierId: quote.supplierId }
+      });
       
       res.json({ success: true, quote });
     } catch (error: any) {
@@ -3060,6 +3171,10 @@ export async function registerRoutes(
   app.post("/api/deals/:id/commission-events", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const dealId = req.params.id;
       const deal = await storage.getDeal(dealId);
       if (!deal) {
@@ -3072,6 +3187,20 @@ export async function registerRoutes(
       });
       
       const event = await storage.createDealCommissionEvent(validatedData);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "COMMISSION_EVENT_CREATED",
+        entityType: "commission",
+        entityId: event.id,
+        dealId: dealId,
+        clientId: deal.clientId || null,
+        detailsJson: { eventType: event.eventType, status: event.status, amountBrl: event.amountBrl }
+      });
+      
       res.json({ success: true, event });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -3088,11 +3217,31 @@ export async function registerRoutes(
   app.patch("/api/deals/:dealId/commission-events/:eventId", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const eventId = parseInt(req.params.eventId);
       const event = await storage.updateDealCommissionEvent(eventId, req.body);
       if (!event) {
         return res.status(404).json({ success: false, error: "Commission event not found" });
       }
+      
+      const deal = await storage.getDeal(req.params.dealId);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "COMMISSION_EVENT_UPDATED",
+        entityType: "commission",
+        entityId: eventId,
+        dealId: req.params.dealId,
+        clientId: deal?.clientId || null,
+        detailsJson: { updates: Object.keys(req.body), newStatus: event.status }
+      });
+      
       res.json({ success: true, event });
     } catch (error: any) {
       console.error("Error updating commission event:", error);
@@ -3963,6 +4112,10 @@ export async function registerRoutes(
   app.post("/api/deals/:id/cases", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const dealId = req.params.id;
       const deal = await storage.getDeal(dealId);
       if (!deal) {
@@ -3975,6 +4128,20 @@ export async function registerRoutes(
       });
 
       const dealCase = await storage.createDealCase(validatedData);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "CASE_CREATED",
+        entityType: "case",
+        entityId: dealCase.id,
+        dealId: dealId,
+        clientId: deal.clientId || null,
+        detailsJson: { caseType: dealCase.caseType, severity: dealCase.severity, title: dealCase.title }
+      });
+      
       res.json({ success: true, case: dealCase });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -4030,6 +4197,10 @@ export async function registerRoutes(
   app.post("/api/cases/:caseId/convert-to-lost", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
       const { triggeredBy, reason } = req.body;
       if (!triggeredBy || !reason) {
         return res.status(400).json({ success: false, error: "triggeredBy and reason are required" });
@@ -4044,6 +4215,19 @@ export async function registerRoutes(
       if (!result.success) {
         return res.status(400).json({ success: false, error: result.error });
       }
+      
+      await logAuditEvent({
+        actor: user?.username || triggeredBy,
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "CASE_CONVERTED_TO_LOST",
+        entityType: "case",
+        entityId: parseInt(req.params.caseId),
+        dealId: result.deal?.id || null,
+        clientId: result.deal?.clientId || null,
+        detailsJson: { reason, triggeredBy, previousDealStatus: result.deal?.status }
+      });
 
       res.json({ success: true, case: result.case, deal: result.deal });
     } catch (error: any) {
