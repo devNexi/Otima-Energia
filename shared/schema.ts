@@ -1127,21 +1127,130 @@ export const insertLeadEcosSnapshotSchema = createInsertSchema(leadEcosSnapshots
 export type InsertLeadEcosSnapshot = z.infer<typeof insertLeadEcosSnapshotSchema>;
 export type LeadEcosSnapshot = typeof leadEcosSnapshots.$inferSelect;
 
-// Admin Audit Log - Track all admin actions
+// Standardized Audit Action Types
+export const AUDIT_ACTION_TYPES = {
+  // Authentication
+  AUTH_LOGIN_SUCCESS: "AUTH_LOGIN_SUCCESS",
+  AUTH_LOGIN_FAILURE: "AUTH_LOGIN_FAILURE",
+  AUTH_LOGOUT: "AUTH_LOGOUT",
+  
+  // User/Role management
+  USER_CREATE: "USER_CREATE",
+  USER_UPDATE: "USER_UPDATE",
+  USER_ROLE_CHANGE: "USER_ROLE_CHANGE",
+  
+  // Client lifecycle
+  CLIENT_CREATE: "CLIENT_CREATE",
+  CLIENT_UPDATE: "CLIENT_UPDATE",
+  CLIENT_DELETE: "CLIENT_DELETE",
+  
+  // Lead lifecycle
+  LEAD_CREATE: "LEAD_CREATE",
+  LEAD_UPDATE: "LEAD_UPDATE",
+  LEAD_CONVERT: "LEAD_CONVERT",
+  
+  // Deal lifecycle
+  DEAL_CREATE: "DEAL_CREATE",
+  DEAL_UPDATE: "DEAL_UPDATE",
+  DEAL_TRANSITION: "DEAL_TRANSITION",
+  DEAL_MARK_LOST: "DEAL_MARK_LOST",
+  DEAL_REOPEN_ATTEMPT: "DEAL_REOPEN_ATTEMPT",
+  
+  // Quotes
+  QUOTE_ADD: "QUOTE_ADD",
+  QUOTE_SELECT: "QUOTE_SELECT",
+  QUOTE_REJECT: "QUOTE_REJECT",
+  QUOTE_EDIT: "QUOTE_EDIT",
+  QUOTE_ATTACHMENT_UPLOAD: "QUOTE_ATTACHMENT_UPLOAD",
+  
+  // Documents
+  DOCUMENT_UPLOAD: "DOCUMENT_UPLOAD",
+  DOCUMENT_DOWNLOAD: "DOCUMENT_DOWNLOAD",
+  DOCUMENT_VERIFY: "DOCUMENT_VERIFY",
+  DOCUMENT_REPLACE: "DOCUMENT_REPLACE",
+  
+  // Commission events
+  COMMISSION_CREATE: "COMMISSION_CREATE",
+  COMMISSION_UPDATE: "COMMISSION_UPDATE",
+  COMMISSION_STATUS_CHANGE: "COMMISSION_STATUS_CHANGE",
+  COMMISSION_DISPUTE_OPEN: "COMMISSION_DISPUTE_OPEN",
+  COMMISSION_DISPUTE_RESOLVE: "COMMISSION_DISPUTE_RESOLVE",
+  
+  // Usage tracking
+  USAGE_CREATE: "USAGE_CREATE",
+  USAGE_UPDATE: "USAGE_UPDATE",
+  USAGE_VERIFY: "USAGE_VERIFY",
+  
+  // Supplier playbooks
+  PLAYBOOK_CREATE: "PLAYBOOK_CREATE",
+  PLAYBOOK_UPDATE: "PLAYBOOK_UPDATE",
+  PLAYBOOK_VERSION: "PLAYBOOK_VERSION",
+  PLAYBOOK_SNAPSHOT: "PLAYBOOK_SNAPSHOT",
+  
+  // Reconciliation
+  RECONCILIATION_RUN_CREATE: "RECONCILIATION_RUN_CREATE",
+  RECONCILIATION_LINE_VARIANCE: "RECONCILIATION_LINE_VARIANCE",
+  RECONCILIATION_APPROVE: "RECONCILIATION_APPROVE",
+  RECONCILIATION_DISPUTE: "RECONCILIATION_DISPUTE",
+  
+  // Compliance
+  COMPLIANCE_TEMPLATE_UPDATE: "COMPLIANCE_TEMPLATE_UPDATE",
+  CHECKLIST_ITEM_COMPLETE: "CHECKLIST_ITEM_COMPLETE",
+  CHECKLIST_ITEM_UNCOMPLETE: "CHECKLIST_ITEM_UNCOMPLETE",
+  EVIDENCE_ATTACH: "EVIDENCE_ATTACH",
+  
+  // Communication log
+  COMMUNICATION_CREATE: "COMMUNICATION_CREATE",
+  COMMUNICATION_UPDATE: "COMMUNICATION_UPDATE",
+  
+  // ECOS
+  ECOS_REPORT_GENERATE: "ECOS_REPORT_GENERATE",
+  ECOS_REPORT_APPROVE: "ECOS_REPORT_APPROVE",
+  BENCHMARK_UPDATE: "BENCHMARK_UPDATE",
+  BENCHMARK_REVIEW: "BENCHMARK_REVIEW",
+  
+  // Contract
+  CONTRACT_CREATE: "CONTRACT_CREATE",
+  CONTRACT_UPDATE: "CONTRACT_UPDATE",
+  CONTRACT_RENEWAL: "CONTRACT_RENEWAL",
+  
+  // Cases
+  CASE_CREATE: "CASE_CREATE",
+  CASE_UPDATE: "CASE_UPDATE",
+  CASE_CONVERT_TO_LOST: "CASE_CONVERT_TO_LOST",
+  
+  // SLA
+  SLA_BREACH: "SLA_BREACH",
+  SLA_RESPONSE: "SLA_RESPONSE",
+} as const;
+
+export type AuditActionType = typeof AUDIT_ACTION_TYPES[keyof typeof AUDIT_ACTION_TYPES];
+
+// Admin Audit Log - Compliance-grade audit trail
 export const adminAuditLog = pgTable("admin_audit_log", {
   id: serial("id").primaryKey(),
   
   // Actor
   actor: text("actor").notNull(), // Username or 'system'
+  actorRole: text("actor_role"), // 'admin', 'ops', 'sales', 'system'
   actorIp: text("actor_ip"),
+  userAgent: text("user_agent"),
   
   // Action
-  action: text("action").notNull(), // 'login', 'create_client', 'approve_report', 'update_benchmark', etc.
-  entityType: text("entity_type"), // 'client', 'contract', 'benchmark', 'report', etc.
+  action: text("action").notNull(), // Standardized action type from AUDIT_ACTION_TYPES
+  entityType: text("entity_type"), // 'client', 'contract', 'benchmark', 'report', 'deal', etc.
   entityId: integer("entity_id"),
   
+  // Parent context for filtering
+  clientId: integer("client_id"),
+  dealId: text("deal_id"),
+  
   // Details
-  detailsJson: jsonb("details_json"), // Additional context
+  detailsJson: jsonb("details_json"), // Additional context (sensitive data redacted)
+  
+  // Tamper-evidence hash chain
+  eventHash: text("event_hash"), // SHA-256 of this event
+  prevEventHash: text("prev_event_hash"), // SHA-256 of previous event in chain
   
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
@@ -1149,10 +1258,38 @@ export const adminAuditLog = pgTable("admin_audit_log", {
 export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog).omit({
   id: true,
   timestamp: true,
+  eventHash: true,
+  prevEventHash: true,
 });
 
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
 export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
+
+// Saved Audit Filter Presets - Admin-specific saved views
+export const savedAuditFilters = pgTable("saved_audit_filters", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Filter configuration stored as JSON
+  filtersJson: jsonb("filters_json").notNull(), // { actor, action, entityType, clientId, dealId, dateFrom, dateTo }
+  
+  isDefault: boolean("is_default").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSavedAuditFilterSchema = createInsertSchema(savedAuditFilters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSavedAuditFilter = z.infer<typeof insertSavedAuditFilterSchema>;
+export type SavedAuditFilter = typeof savedAuditFilters.$inferSelect;
 
 // Admin Sessions - For session-based auth
 export const adminSessions = pgTable("admin_sessions", {

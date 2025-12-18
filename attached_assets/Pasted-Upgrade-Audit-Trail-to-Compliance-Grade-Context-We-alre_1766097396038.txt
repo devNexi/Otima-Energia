@@ -1,0 +1,164 @@
+Upgrade Audit Trail to Compliance-Grade
+
+Context: We already have an adminAuditLog table and a new admin-only “Audit Trail” tab + /api/audit-trail endpoint. This is good, but it needs to become a compliance-grade audit system usable for disputes and regulator-level evidence.
+
+Goals
+
+Make the audit trail reliable and tamper-evident
+
+Make it usable (fast search, pagination, deep linking, per-client/per-deal view)
+
+Make it complete (capture key events across Deal OS + Commission OS + Compliance layer)
+
+A) Core UX upgrades (must-have)
+
+Pagination / Infinite scroll
+
+Remove “limit 200 by default” as the only mode.
+
+Implement server-side pagination: page, pageSize (default 50), cursor optional.
+
+Return totalCount and nextCursor in the API response.
+
+Clickable entity deep links
+
+In each row, show entity type + entity id as a clickable link:
+
+deal → open DealDetail
+
+client → open Client detail
+
+lead → open Lead detail
+
+supplier playbook → open Playbook detail
+
+reconciliation run → open Reconciliation run detail
+
+Also show the “parent context” when available (e.g., dealId + clientId).
+
+Saved filters (“views”)
+
+Allow admin to save filter presets:
+
+“All commission edits”
+
+“All deal state transitions”
+
+“All edits for Client X”
+
+“All actions by user Renan”
+
+Save presets in DB tied to userId.
+
+Export
+
+Add “Export CSV” button for current filtered results.
+
+CSV must include: timestamp, actor, role, action type, entity type, entity id, clientId, dealId, IP, user agent, and JSON details.
+
+B) Compliance-grade improvements (must-have)
+
+Add ‘event hash’ + ‘hash chain’ for tamper evidence
+
+Add columns to adminAuditLog:
+
+eventHash (sha256)
+
+prevEventHash (sha256)
+
+When inserting a new event:
+
+prevEventHash = last eventHash in sequence (global chain is fine for MVP)
+
+eventHash = sha256(timestamp + actorId + actionType + entityType + entityId + canonicalJson(details) + prevEventHash)
+
+Display eventHash in UI (copy button).
+
+Add /api/audit-trail/verify endpoint that verifies chain integrity for a date range.
+
+Mask sensitive data in the UI
+
+In details, redact sensitive tokens (portal tokens, credentials, secrets) before storing or at least before rendering.
+
+Add a central redaction utility and apply it to all audit insertions.
+
+Retention & immutability
+
+Ensure audit logs cannot be updated or deleted through any API.
+
+Add DB constraint or code-level rule: inserts only.
+
+Add a setting for retention policy (even if not automated yet).
+
+C) Coverage — ensure we’re logging the right events (must-have)
+
+Guarantee audit logging for the most important actions
+Implement audit log insertions for:
+
+Authentication: login success/failure, logout
+
+Role / user changes (admin actions)
+
+Deal lifecycle: create, update, transition, mark LOST, reopen attempts
+
+Quotes: add, select, reject, edit, attachment upload
+
+Documents: upload, download, verify, replace
+
+Commission events: create/edit/status change, dispute open/resolve
+
+Usage: create period, edit, verify
+
+Supplier playbooks: create/update/new version, snapshot creation at CONTRACT_SIGNED
+
+Reconciliation: run creation, line variances, approvals, dispute generation
+
+Compliance: requirement templates updated, checklist item completed/uncompleted, evidence attached
+
+Communication log: created/edited
+
+Standardize action types
+
+Create a clear enum or constants list for actionType so we don’t end up with inconsistent strings.
+
+Example: DEAL_TRANSITION, DEAL_UPDATE, QUOTE_ADDED, COMMISSION_EVENT_STATUS_CHANGED, etc.
+
+D) API improvements (must-have)
+
+Add filter by clientId and dealId
+
+The audit trail must support directly:
+
+clientId
+
+dealId
+
+Many entities will be indirectly related; when logging events, store clientId/dealId when known.
+
+Performance
+
+Add indexes:
+
+(occurredAt desc)
+
+(entityType, entityId)
+
+(actionType)
+
+(userId)
+
+(clientId)
+
+(dealId)
+
+Ensure SQL query builds safely, using parameterized queries (no string concat).
+
+Acceptance criteria
+
+Admin can filter “everything for Client 123” and export CSV.
+
+Admin can click from any audit line to the exact deal/client page.
+
+Audit log is append-only and tamper-evident via hash chaining.
+
+Key business actions (deals/commissions/usage/compliance) are guaranteed to create audit entries.
