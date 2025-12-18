@@ -2701,11 +2701,11 @@ export async function registerRoutes(
     }
   });
 
-  // Transition deal state
+  // Transition deal state (with compliance enforcement)
   app.post("/api/deals/:id/transition", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
-      const { toState, triggeredBy, triggeredByType, reason, notes, requiresApproval } = req.body;
+      const { toState, triggeredBy, triggeredByType, reason, notes, requiresApproval, skipComplianceCheck } = req.body;
       
       if (!toState || !triggeredBy || !triggeredByType) {
         return res.status(400).json({ 
@@ -2720,6 +2720,31 @@ export async function registerRoutes(
       
       if (!['user', 'system', 'ai'].includes(triggeredByType)) {
         return res.status(400).json({ success: false, error: "triggeredByType must be 'user', 'system', or 'ai'" });
+      }
+      
+      // Get current deal to know fromState
+      const deal = await storage.getDeal(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      // COMPLIANCE CHECK: Validate that all required checklist items are complete
+      // Only skip for system transitions or if explicitly bypassed (admin only)
+      if (triggeredByType !== 'system' && !skipComplianceCheck) {
+        const compliance = await storage.validateTransitionCompliance(
+          req.params.id,
+          deal.status,
+          toState
+        );
+        
+        if (!compliance.canTransition) {
+          return res.status(400).json({ 
+            success: false, 
+            error: "Cannot proceed. The following compliance items are missing.",
+            complianceBlocked: true,
+            missingRequirements: compliance.missingRequirements
+          });
+        }
       }
       
       const result = await storage.transitionDealState(
@@ -2740,6 +2765,28 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error transitioning deal state:", error);
       res.status(500).json({ success: false, error: "Failed to transition deal state" });
+    }
+  });
+  
+  // Check compliance status for a transition (without actually transitioning)
+  app.get("/api/deals/:id/compliance/:toState", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const deal = await storage.getDeal(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const compliance = await storage.validateTransitionCompliance(
+        req.params.id,
+        deal.status,
+        req.params.toState
+      );
+      
+      res.json({ success: true, ...compliance });
+    } catch (error: any) {
+      console.error("Error checking compliance:", error);
+      res.status(500).json({ success: false, error: "Failed to check compliance" });
     }
   });
 
@@ -3856,6 +3903,184 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error converting case to lost:", error);
       res.status(500).json({ success: false, error: "Failed to convert case" });
+    }
+  });
+
+  // ============== COMPLIANCE LAYER ROUTES ==============
+
+  // Compliance Requirements CRUD
+  app.get("/api/compliance-requirements", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const requirements = await storage.getAllComplianceRequirements();
+      res.json({ success: true, requirements });
+    } catch (error: any) {
+      console.error("Error fetching compliance requirements:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch requirements" });
+    }
+  });
+
+  app.get("/api/compliance-requirements/:fromState/:toState", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const requirements = await storage.getComplianceRequirements(req.params.fromState, req.params.toState);
+      res.json({ success: true, requirements });
+    } catch (error: any) {
+      console.error("Error fetching compliance requirements:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch requirements" });
+    }
+  });
+
+  app.post("/api/compliance-requirements", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const requirement = await storage.createComplianceRequirement(req.body);
+      res.json({ success: true, requirement });
+    } catch (error: any) {
+      console.error("Error creating compliance requirement:", error);
+      res.status(500).json({ success: false, error: "Failed to create requirement" });
+    }
+  });
+
+  app.patch("/api/compliance-requirements/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const requirement = await storage.updateComplianceRequirement(parseInt(req.params.id), req.body);
+      if (!requirement) {
+        return res.status(404).json({ success: false, error: "Requirement not found" });
+      }
+      res.json({ success: true, requirement });
+    } catch (error: any) {
+      console.error("Error updating compliance requirement:", error);
+      res.status(500).json({ success: false, error: "Failed to update requirement" });
+    }
+  });
+
+  app.delete("/api/compliance-requirements/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      await storage.deleteComplianceRequirement(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting compliance requirement:", error);
+      res.status(500).json({ success: false, error: "Failed to delete requirement" });
+    }
+  });
+
+  // Deal Checklist Items CRUD
+  app.get("/api/deals/:id/checklist", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const items = await storage.getDealChecklistItems(req.params.id);
+      res.json({ success: true, items });
+    } catch (error: any) {
+      console.error("Error fetching checklist items:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch checklist items" });
+    }
+  });
+
+  app.post("/api/deals/:id/checklist", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const item = await storage.createDealChecklistItem({
+        ...req.body,
+        dealId: req.params.id
+      });
+      res.json({ success: true, item });
+    } catch (error: any) {
+      console.error("Error creating checklist item:", error);
+      res.status(500).json({ success: false, error: "Failed to create checklist item" });
+    }
+  });
+
+  app.patch("/api/checklist-items/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const item = await storage.updateDealChecklistItem(parseInt(req.params.id), req.body);
+      if (!item) {
+        return res.status(404).json({ success: false, error: "Checklist item not found" });
+      }
+      res.json({ success: true, item });
+    } catch (error: any) {
+      console.error("Error updating checklist item:", error);
+      res.status(500).json({ success: false, error: "Failed to update checklist item" });
+    }
+  });
+
+  app.delete("/api/checklist-items/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      await storage.deleteDealChecklistItem(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting checklist item:", error);
+      res.status(500).json({ success: false, error: "Failed to delete checklist item" });
+    }
+  });
+
+  // Communication Log CRUD
+  app.get("/api/communication-logs", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, clientId, leadId } = req.query;
+      const filters: { dealId?: string; clientId?: number; leadId?: number } = {};
+      if (dealId) filters.dealId = dealId as string;
+      if (clientId) filters.clientId = parseInt(clientId as string);
+      if (leadId) filters.leadId = parseInt(leadId as string);
+      
+      const logs = await storage.getCommunicationLogs(Object.keys(filters).length > 0 ? filters : undefined);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching communication logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch logs" });
+    }
+  });
+
+  app.post("/api/communication-logs", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const log = await storage.createCommunicationLog(req.body);
+      res.json({ success: true, log });
+    } catch (error: any) {
+      console.error("Error creating communication log:", error);
+      res.status(500).json({ success: false, error: "Failed to create log" });
+    }
+  });
+
+  app.patch("/api/communication-logs/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const log = await storage.updateCommunicationLog(parseInt(req.params.id), req.body);
+      if (!log) {
+        return res.status(404).json({ success: false, error: "Log not found" });
+      }
+      res.json({ success: true, log });
+    } catch (error: any) {
+      console.error("Error updating communication log:", error);
+      res.status(500).json({ success: false, error: "Failed to update log" });
+    }
+  });
+
+  app.delete("/api/communication-logs/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      await storage.deleteCommunicationLog(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting communication log:", error);
+      res.status(500).json({ success: false, error: "Failed to delete log" });
+    }
+  });
+
+  // Ops Dashboard - Today's Work Engine (TASK 5)
+  app.get("/api/ops/tasks/today", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const tasks = await storage.getOpsDashboardTasks();
+      res.json({ success: true, ...tasks });
+    } catch (error: any) {
+      console.error("Error fetching ops tasks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch tasks" });
     }
   });
 

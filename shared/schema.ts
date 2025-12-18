@@ -2220,8 +2220,16 @@ export const dealChecklistItems = pgTable("deal_checklist_items", {
   requirementId: integer("requirement_id").references(() => complianceChecklistRequirements.id).notNull(),
   completedBy: varchar("completed_by").references(() => users.id).notNull(),
   completedAt: timestamp("completed_at").defaultNow().notNull(),
+  
+  // Response and confirmation
+  response: text("response"), // YES / NO / N_A
+  confirmationMethod: text("confirmation_method"), // CALL / EMAIL / WHATSAPP / DOCUMENT / MEETING
+  confidenceLevel: text("confidence_level"), // LOW / MEDIUM / HIGH
+  
+  // Evidence linking
   notes: text("notes"),
   evidenceDocId: integer("evidence_doc_id"),
+  communicationLogId: integer("communication_log_id").references(() => communicationLog.id),
 });
 
 export const insertDealChecklistItemSchema = createInsertSchema(dealChecklistItems).omit({

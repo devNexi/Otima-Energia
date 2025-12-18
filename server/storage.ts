@@ -41,6 +41,10 @@ import {
   type CommissionReconciliationRun, type InsertCommissionReconciliationRun,
   type CommissionReconciliationLine, type InsertCommissionReconciliationLine,
   type DealCase, type InsertDealCase,
+  type ComplianceChecklistRequirement, type InsertComplianceChecklistRequirement,
+  type DealChecklistItem, type InsertDealChecklistItem,
+  type CommunicationLog, type InsertCommunicationLog,
+  type PlaybookDealSnapshot, type InsertPlaybookDealSnapshot,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -50,7 +54,8 @@ import {
   deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments,
   dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking,
   clientUsagePeriods, supplierPlaybooks, supplierReportImports,
-  commissionReconciliationRuns, commissionReconciliationLines, dealCases
+  commissionReconciliationRuns, commissionReconciliationLines, dealCases,
+  complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -378,6 +383,58 @@ export interface IStorage {
   getDealCase(id: number): Promise<DealCase | undefined>;
   updateDealCase(id: number, data: Partial<InsertDealCase>): Promise<DealCase | undefined>;
   convertCaseToLost(caseId: number, triggeredBy: string, reason: string): Promise<{ success: boolean; case?: DealCase; deal?: Deal; error?: string }>;
+  
+  // ============== COMPLIANCE LAYER ==============
+  
+  // Compliance Checklist Requirements (config per transition)
+  createComplianceRequirement(data: InsertComplianceChecklistRequirement): Promise<ComplianceChecklistRequirement>;
+  getComplianceRequirements(fromState: string, toState: string): Promise<ComplianceChecklistRequirement[]>;
+  getAllComplianceRequirements(): Promise<ComplianceChecklistRequirement[]>;
+  updateComplianceRequirement(id: number, data: Partial<InsertComplianceChecklistRequirement>): Promise<ComplianceChecklistRequirement | undefined>;
+  deleteComplianceRequirement(id: number): Promise<void>;
+  
+  // Deal Checklist Items (completed items per deal)
+  createDealChecklistItem(data: InsertDealChecklistItem): Promise<DealChecklistItem>;
+  getDealChecklistItems(dealId: string): Promise<DealChecklistItem[]>;
+  getDealChecklistItem(id: number): Promise<DealChecklistItem | undefined>;
+  updateDealChecklistItem(id: number, data: Partial<InsertDealChecklistItem>): Promise<DealChecklistItem | undefined>;
+  deleteDealChecklistItem(id: number): Promise<void>;
+  
+  // Compliance Validation
+  validateTransitionCompliance(dealId: string, fromState: string, toState: string): Promise<{
+    canTransition: boolean;
+    missingRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      requirementLabel: string;
+      requiredForRoles: string[];
+    }>;
+    completedRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      completedAt: Date;
+      completedBy: string;
+    }>;
+  }>;
+  
+  // Communication Log CRUD
+  createCommunicationLog(data: InsertCommunicationLog): Promise<CommunicationLog>;
+  getCommunicationLogs(filters?: { dealId?: string; clientId?: number; leadId?: number }): Promise<CommunicationLog[]>;
+  getCommunicationLog(id: number): Promise<CommunicationLog | undefined>;
+  updateCommunicationLog(id: number, data: Partial<InsertCommunicationLog>): Promise<CommunicationLog | undefined>;
+  deleteCommunicationLog(id: number): Promise<void>;
+  
+  // Playbook Deal Snapshots
+  createPlaybookDealSnapshot(data: InsertPlaybookDealSnapshot): Promise<PlaybookDealSnapshot>;
+  getPlaybookDealSnapshot(dealId: string): Promise<PlaybookDealSnapshot | undefined>;
+  
+  // Ops Dashboard
+  getOpsDashboardTasks(): Promise<{
+    dealsBlockedByCompliance: Array<{ deal: Deal; missingCount: number }>;
+    openCasesBreachingSla: DealCase[];
+    commissionEventsOverdue: DealCommissionEvent[];
+    dealsWaitingOnSupplier: Deal[];
+  }>;
 }
 
 export class Storage implements IStorage {
@@ -2180,6 +2237,244 @@ export class Storage implements IStorage {
       success: true, 
       case: updatedCase[0], 
       deal: transitionResult.deal 
+    };
+  }
+
+  // ============== COMPLIANCE LAYER ==============
+
+  // Compliance Checklist Requirements
+  async createComplianceRequirement(data: InsertComplianceChecklistRequirement): Promise<ComplianceChecklistRequirement> {
+    const result = await db.insert(complianceChecklistRequirements).values(data).returning();
+    return result[0];
+  }
+
+  async getComplianceRequirements(fromState: string, toState: string): Promise<ComplianceChecklistRequirement[]> {
+    return await db.select().from(complianceChecklistRequirements)
+      .where(and(
+        eq(complianceChecklistRequirements.transitionFrom, fromState),
+        eq(complianceChecklistRequirements.transitionTo, toState),
+        eq(complianceChecklistRequirements.isActive, true)
+      ))
+      .orderBy(complianceChecklistRequirements.sortOrder);
+  }
+
+  async getAllComplianceRequirements(): Promise<ComplianceChecklistRequirement[]> {
+    return await db.select().from(complianceChecklistRequirements)
+      .orderBy(complianceChecklistRequirements.transitionFrom, complianceChecklistRequirements.sortOrder);
+  }
+
+  async updateComplianceRequirement(id: number, data: Partial<InsertComplianceChecklistRequirement>): Promise<ComplianceChecklistRequirement | undefined> {
+    const result = await db.update(complianceChecklistRequirements)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(complianceChecklistRequirements.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteComplianceRequirement(id: number): Promise<void> {
+    await db.delete(complianceChecklistRequirements).where(eq(complianceChecklistRequirements.id, id));
+  }
+
+  // Deal Checklist Items
+  async createDealChecklistItem(data: InsertDealChecklistItem): Promise<DealChecklistItem> {
+    const result = await db.insert(dealChecklistItems).values(data).returning();
+    return result[0];
+  }
+
+  async getDealChecklistItems(dealId: string): Promise<DealChecklistItem[]> {
+    return await db.select().from(dealChecklistItems)
+      .where(eq(dealChecklistItems.dealId, dealId))
+      .orderBy(desc(dealChecklistItems.completedAt));
+  }
+
+  async getDealChecklistItem(id: number): Promise<DealChecklistItem | undefined> {
+    const result = await db.select().from(dealChecklistItems).where(eq(dealChecklistItems.id, id));
+    return result[0];
+  }
+
+  async updateDealChecklistItem(id: number, data: Partial<InsertDealChecklistItem>): Promise<DealChecklistItem | undefined> {
+    const result = await db.update(dealChecklistItems)
+      .set(data)
+      .where(eq(dealChecklistItems.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDealChecklistItem(id: number): Promise<void> {
+    await db.delete(dealChecklistItems).where(eq(dealChecklistItems.id, id));
+  }
+
+  // Compliance Validation
+  async validateTransitionCompliance(dealId: string, fromState: string, toState: string): Promise<{
+    canTransition: boolean;
+    missingRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      requirementLabel: string;
+      requiredForRoles: string[];
+    }>;
+    completedRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      completedAt: Date;
+      completedBy: string;
+    }>;
+  }> {
+    // Get all required requirements for this transition
+    const requirements = await this.getComplianceRequirements(fromState, toState);
+    
+    // Get completed items for this deal
+    const completedItems = await this.getDealChecklistItems(dealId);
+    const completedRequirementIds = new Set(completedItems.map(item => item.requirementId));
+    
+    const missingRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      requirementLabel: string;
+      requiredForRoles: string[];
+    }> = [];
+    
+    const completedRequirements: Array<{
+      requirementId: number;
+      requirementKey: string;
+      completedAt: Date;
+      completedBy: string;
+    }> = [];
+    
+    for (const req of requirements) {
+      if (req.isRequired && !completedRequirementIds.has(req.id)) {
+        missingRequirements.push({
+          requirementId: req.id,
+          requirementKey: req.requirementKey,
+          requirementLabel: req.requirementLabel,
+          requiredForRoles: (req.requiredForRoles as string[]) || ['all']
+        });
+      } else if (completedRequirementIds.has(req.id)) {
+        const completedItem = completedItems.find(item => item.requirementId === req.id);
+        if (completedItem) {
+          completedRequirements.push({
+            requirementId: req.id,
+            requirementKey: req.requirementKey,
+            completedAt: completedItem.completedAt,
+            completedBy: completedItem.completedBy
+          });
+        }
+      }
+    }
+    
+    return {
+      canTransition: missingRequirements.length === 0,
+      missingRequirements,
+      completedRequirements
+    };
+  }
+
+  // Communication Log
+  async createCommunicationLog(data: InsertCommunicationLog): Promise<CommunicationLog> {
+    const result = await db.insert(communicationLog).values(data).returning();
+    return result[0];
+  }
+
+  async getCommunicationLogs(filters?: { dealId?: string; clientId?: number; leadId?: number }): Promise<CommunicationLog[]> {
+    let query = db.select().from(communicationLog);
+    
+    if (filters?.dealId) {
+      query = query.where(eq(communicationLog.dealId, filters.dealId)) as typeof query;
+    } else if (filters?.clientId) {
+      query = query.where(eq(communicationLog.clientId, filters.clientId)) as typeof query;
+    } else if (filters?.leadId) {
+      query = query.where(eq(communicationLog.leadId, filters.leadId)) as typeof query;
+    }
+    
+    return await query.orderBy(desc(communicationLog.occurredAt));
+  }
+
+  async getCommunicationLog(id: number): Promise<CommunicationLog | undefined> {
+    const result = await db.select().from(communicationLog).where(eq(communicationLog.id, id));
+    return result[0];
+  }
+
+  async updateCommunicationLog(id: number, data: Partial<InsertCommunicationLog>): Promise<CommunicationLog | undefined> {
+    const result = await db.update(communicationLog)
+      .set(data)
+      .where(eq(communicationLog.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCommunicationLog(id: number): Promise<void> {
+    await db.delete(communicationLog).where(eq(communicationLog.id, id));
+  }
+
+  // Playbook Deal Snapshots
+  async createPlaybookDealSnapshot(data: InsertPlaybookDealSnapshot): Promise<PlaybookDealSnapshot> {
+    const result = await db.insert(playbookDealSnapshots).values(data).returning();
+    return result[0];
+  }
+
+  async getPlaybookDealSnapshot(dealId: string): Promise<PlaybookDealSnapshot | undefined> {
+    const result = await db.select().from(playbookDealSnapshots)
+      .where(eq(playbookDealSnapshots.dealId, dealId));
+    return result[0];
+  }
+
+  // Ops Dashboard
+  async getOpsDashboardTasks(): Promise<{
+    dealsBlockedByCompliance: Array<{ deal: Deal; missingCount: number }>;
+    openCasesBreachingSla: DealCase[];
+    commissionEventsOverdue: DealCommissionEvent[];
+    dealsWaitingOnSupplier: Deal[];
+  }> {
+    // Get deals that need compliance check (in states that have requirements)
+    const activeDeals = await db.select().from(deals)
+      .where(sql`${deals.status} NOT IN ('CLOSED', 'LOST', 'CONTRACT_ENDED')`);
+    
+    const dealsBlockedByCompliance: Array<{ deal: Deal; missingCount: number }> = [];
+    
+    for (const deal of activeDeals) {
+      // Check if there are pending requirements for next possible transitions
+      const nextStates = DEAL_STATE_TRANSITIONS[deal.status as DealState] || [];
+      for (const nextState of nextStates) {
+        const validation = await this.validateTransitionCompliance(deal.id, deal.status, nextState);
+        if (validation.missingRequirements.length > 0) {
+          dealsBlockedByCompliance.push({
+            deal,
+            missingCount: validation.missingRequirements.length
+          });
+          break; // Only count deal once
+        }
+      }
+    }
+    
+    // Get open cases breaching SLA
+    const openCasesBreachingSla = await db.select().from(dealCases)
+      .where(and(
+        sql`${dealCases.status} NOT IN ('RESOLVED', 'CONVERTED_TO_LOST')`,
+        sql`${dealCases.slaDueDate} < NOW()`
+      ))
+      .orderBy(dealCases.slaDueDate);
+    
+    // Get overdue commission events (check expectedDate for past due items with PENDING status)
+    const commissionEventsOverdue = await db.select().from(dealCommissionEvents)
+      .where(and(
+        sql`${dealCommissionEvents.status} = 'PENDING'`,
+        sql`${dealCommissionEvents.expectedDate} < NOW()`
+      ))
+      .orderBy(dealCommissionEvents.expectedDate);
+    
+    // Get deals waiting on supplier (in RFQ_SENT state for more than 7 days)
+    const dealsWaitingOnSupplier = await db.select().from(deals)
+      .where(and(
+        eq(deals.status, 'RFQ_SENT'),
+        sql`${deals.updatedAt} < NOW() - INTERVAL '7 days'`
+      ))
+      .orderBy(deals.updatedAt);
+    
+    return {
+      dealsBlockedByCompliance,
+      openCasesBreachingSla,
+      commissionEventsOverdue,
+      dealsWaitingOnSupplier
     };
   }
 }

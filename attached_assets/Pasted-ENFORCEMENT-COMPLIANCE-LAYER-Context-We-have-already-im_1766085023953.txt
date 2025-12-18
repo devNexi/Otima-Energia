@@ -1,0 +1,173 @@
+ENFORCEMENT & COMPLIANCE LAYER
+
+Context:
+We have already implemented Deal OS, Commission OS frontend, role-based dashboards, communication logs, compliance checklist tables, deal cases, and playbook snapshots.
+
+We now need to add enforcement, evidence, and operational intelligence — without adding unnecessary complexity.
+
+🎯 Objectives
+
+Prevent invalid or risky deals from progressing
+
+Force compliance without relying on human memory
+
+Create a defensible, auditable record for every deal
+
+Make the Ops role actionable and low-stress
+
+✅ TASK 1: Enforce Compliance Gates (Backend + UX)
+
+Backend
+
+Block deal_state_transition if required checklist items are incomplete
+
+Validation must:
+
+Identify missing requirements
+
+Return structured error:
+
+requirementKey
+
+requirementLabel
+
+requiredRole
+
+Frontend
+
+When transition is blocked:
+
+Show clear message:
+“Cannot proceed. The following compliance items are missing:”
+
+Link user directly to completion UI
+
+✅ TASK 2: Authority & Decision-Maker Enforcement (Critical)
+
+Create structured compliance requirements for transition:
+
+OFFER_SELECTED → CONTRACT_SIGNED
+
+Required checklist items:
+
+DECISION_MAKER_CONFIRMED
+
+SIGNATORY_AUTHORITY_VERIFIED
+
+KEY_TERMS_ACKNOWLEDGED
+
+SUPPLIER_TERMS_DELIVERED
+
+Each checklist item must:
+
+Require YES/NO
+
+Require confirmation method:
+
+CALL / EMAIL / WHATSAPP / DOCUMENT
+
+Require evidence attachment (doc or communication_log link)
+
+Record confidence level (LOW / MEDIUM / HIGH)
+
+These items must be non-optional.
+
+✅ TASK 3: Communication Log → Evidence System
+
+Enhance communication logs to:
+
+Allow linking to checklist items
+
+Appear in:
+
+Deal timeline
+
+Compliance review tab
+
+Support filters:
+
+“Pre-signature communications”
+
+“Authority confirmations”
+
+Add read-only “Compliance Evidence View” per deal.
+
+✅ TASK 4: Lost / Returned Deal Intelligence
+
+When a deal transitions to:
+
+LOST
+
+RETURNED
+
+Require:
+
+Primary reason (enum)
+
+Secondary contributing factors (multi-select)
+
+Free-text explanation
+
+Responsible party (CLIENT / SUPPLIER / INTERNAL)
+
+Add reporting endpoint:
+
+Loss reasons by supplier
+
+Loss reasons by stage
+
+% lost after signature (high-risk KPI)
+
+✅ TASK 5: Ops Dashboard — Today’s Work Engine
+
+Create backend endpoints for Ops dashboard:
+
+/api/ops/tasks/today
+
+/api/ops/tasks/overdue
+
+Return:
+
+Deals blocked by compliance
+
+Open cases breaching SLA
+
+Commission events overdue
+
+Deals waiting on supplier response > X days
+
+Frontend:
+
+Single “Today’s Tasks” list
+
+Click-through to exact resolution action
+
+✅ TASK 6: Evidence Integrity
+
+Hash all uploaded documents (SHA-256)
+
+Store hash + timestamp
+
+Display hash in document detail view
+
+Include hash in audit logs
+
+🚫 Explicitly Out of Scope
+
+No blockchain
+
+No trading logic
+
+No supplier API integrations yet
+
+No CRM replacement logic
+
+✅ Acceptance Criteria
+
+Renan cannot push a deal forward without compliance
+
+Analyst can explain any deal in under 2 minutes
+
+Commission disputes can be defended with evidence
+
+Ops dashboard answers “what do I do today?” instantly
