@@ -1862,6 +1862,366 @@ export const dealDocumentsRelations = relations(dealDocuments, ({ one }) => ({
   }),
 }));
 
+// ============== COMMISSION OS: USAGE, RECONCILIATION, CASES ==============
+
+// Usage source types
+export const USAGE_SOURCE_TYPES = [
+  "BILL_OCR",
+  "CLIENT_CSV", 
+  "SUPPLIER_REPORT",
+  "MANUAL"
+] as const;
+export type UsageSourceType = typeof USAGE_SOURCE_TYPES[number];
+
+// Usage verification status
+export const USAGE_STATUS = [
+  "DRAFT",
+  "VERIFIED",
+  "INVALID"
+] as const;
+export type UsageStatus = typeof USAGE_STATUS[number];
+
+// Supplier payment cadence
+export const PAYMENT_CADENCE = [
+  "UPFRONT",
+  "MONTHLY",
+  "QUARTERLY",
+  "MIXED"
+] as const;
+export type PaymentCadence = typeof PAYMENT_CADENCE[number];
+
+// Supplier report import parsing status
+export const IMPORT_PARSING_STATUS = [
+  "RECEIVED",
+  "PARSED",
+  "NEEDS_MAPPING",
+  "FAILED"
+] as const;
+export type ImportParsingStatus = typeof IMPORT_PARSING_STATUS[number];
+
+// Reconciliation run types
+export const RECONCILIATION_RUN_TYPE = [
+  "MONTHLY_CLOSE",
+  "ADHOC"
+] as const;
+export type ReconciliationRunType = typeof RECONCILIATION_RUN_TYPE[number];
+
+// Reconciliation run status
+export const RECONCILIATION_RUN_STATUS = [
+  "OPEN",
+  "FINALIZED"
+] as const;
+export type ReconciliationRunStatus = typeof RECONCILIATION_RUN_STATUS[number];
+
+// Reconciliation line variance reasons
+export const VARIANCE_REASON = [
+  "MISSING_REPORT",
+  "UNDERPAID",
+  "OVERPAID",
+  "USAGE_VARIANCE",
+  "CLAWBACK",
+  "DATA_ERROR",
+  "OTHER"
+] as const;
+export type VarianceReason = typeof VARIANCE_REASON[number];
+
+// Reconciliation line status
+export const RECONCILIATION_LINE_STATUS = [
+  "UNRECONCILED",
+  "RECONCILED",
+  "DISPUTED"
+] as const;
+export type ReconciliationLineStatus = typeof RECONCILIATION_LINE_STATUS[number];
+
+// Deal case types
+export const DEAL_CASE_TYPE = [
+  "RETURNED",
+  "STUCK",
+  "CREDIT_REJECTED",
+  "METERING_DELAY",
+  "DOCS_PENDING",
+  "CLIENT_WITHDREW",
+  "SUPPLIER_WITHDREW",
+  "REGULATORY_BLOCK",
+  "OTHER"
+] as const;
+export type DealCaseType = typeof DEAL_CASE_TYPE[number];
+
+// Deal case severity
+export const DEAL_CASE_SEVERITY = [
+  "LOW",
+  "MED",
+  "HIGH"
+] as const;
+export type DealCaseSeverity = typeof DEAL_CASE_SEVERITY[number];
+
+// Deal case status
+export const DEAL_CASE_STATUS = [
+  "OPEN",
+  "IN_PROGRESS",
+  "ESCALATED",
+  "RESOLVED",
+  "CONVERTED_TO_LOST"
+] as const;
+export type DealCaseStatus = typeof DEAL_CASE_STATUS[number];
+
+// 1) client_usage_periods - tracks real energy consumption
+export const clientUsagePeriods = pgTable("client_usage_periods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  dealId: varchar("deal_id").references(() => deals.id),
+  ucCode: text("uc_code"),
+  periodStartDate: date("period_start_date").notNull(),
+  periodEndDate: date("period_end_date").notNull(),
+  energyKwh: decimal("energy_kwh", { precision: 12, scale: 2 }).notNull(),
+  demandKw: decimal("demand_kw", { precision: 10, scale: 2 }),
+  billedAmountBrl: decimal("billed_amount_brl", { precision: 12, scale: 2 }),
+  sourceType: text("source_type").notNull(), // USAGE_SOURCE_TYPES
+  sourceDocId: integer("source_doc_id"),
+  extractionConfidence: decimal("extraction_confidence", { precision: 3, scale: 2 }),
+  status: text("status").default("DRAFT").notNull(), // USAGE_STATUS
+  verifiedByUserId: varchar("verified_by_user_id").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertClientUsagePeriodSchema = createInsertSchema(clientUsagePeriods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  verifiedAt: true,
+});
+export type InsertClientUsagePeriod = z.infer<typeof insertClientUsagePeriodSchema>;
+export type ClientUsagePeriod = typeof clientUsagePeriods.$inferSelect;
+
+// 2) supplier_playbooks - encodes how each supplier works (versioned, jsonb-flexible)
+export const supplierPlaybooks = pgTable("supplier_playbooks", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  commissionPayerEntity: text("commission_payer_entity"),
+  paymentCadence: text("payment_cadence").default("MONTHLY"), // PAYMENT_CADENCE
+  reportFormatsSupported: jsonb("report_formats_supported").default([]),
+  requiredFields: jsonb("required_fields").default({}),
+  calcDefaults: jsonb("calc_defaults").default({}),
+  submissionRequirements: jsonb("submission_requirements").default({}),
+  contacts: jsonb("contacts").default({}),
+  slaTargets: jsonb("sla_targets").default({}),
+  rules: jsonb("rules").default({}), // Lightweight rule engine storage
+  version: integer("version").default(1).notNull(),
+  isActive: boolean("is_active").default(true),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSupplierPlaybookSchema = createInsertSchema(supplierPlaybooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSupplierPlaybook = z.infer<typeof insertSupplierPlaybookSchema>;
+export type SupplierPlaybook = typeof supplierPlaybooks.$inferSelect;
+
+// 3) supplier_report_imports - tracks raw supplier reports and parsing
+export const supplierReportImports = pgTable("supplier_report_imports", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  importedBy: varchar("imported_by").references(() => users.id).notNull(),
+  importedAt: timestamp("imported_at").defaultNow().notNull(),
+  fileDocId: integer("file_doc_id"),
+  fileName: text("file_name"),
+  fileType: text("file_type"), // xlsx, csv, pdf
+  parsingStatus: text("parsing_status").default("RECEIVED").notNull(), // IMPORT_PARSING_STATUS
+  detectedColumns: jsonb("detected_columns").default([]),
+  mappingConfig: jsonb("mapping_config").default({}),
+  parsedData: jsonb("parsed_data").default([]),
+  rowCount: integer("row_count").default(0),
+  errorLog: text("error_log"),
+  hashSha256: text("hash_sha256"),
+});
+
+export const insertSupplierReportImportSchema = createInsertSchema(supplierReportImports).omit({
+  id: true,
+  importedAt: true,
+});
+export type InsertSupplierReportImport = z.infer<typeof insertSupplierReportImportSchema>;
+export type SupplierReportImport = typeof supplierReportImports.$inferSelect;
+
+// 4) commission_reconciliation_runs - monthly or ad-hoc close process
+export const commissionReconciliationRuns = pgTable("commission_reconciliation_runs", {
+  id: serial("id").primaryKey(),
+  runType: text("run_type").default("MONTHLY_CLOSE").notNull(), // RECONCILIATION_RUN_TYPE
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  status: text("status").default("OPEN").notNull(), // RECONCILIATION_RUN_STATUS
+  totalExpected: decimal("total_expected", { precision: 14, scale: 2 }),
+  totalReported: decimal("total_reported", { precision: 14, scale: 2 }),
+  totalPaid: decimal("total_paid", { precision: 14, scale: 2 }),
+  totalVariance: decimal("total_variance", { precision: 14, scale: 2 }),
+  lineCount: integer("line_count").default(0),
+  notes: text("notes"),
+  finalizedAt: timestamp("finalized_at"),
+  finalizedBy: varchar("finalized_by").references(() => users.id),
+});
+
+export const insertCommissionReconciliationRunSchema = createInsertSchema(commissionReconciliationRuns).omit({
+  id: true,
+  createdAt: true,
+  finalizedAt: true,
+  finalizedBy: true,
+});
+export type InsertCommissionReconciliationRun = z.infer<typeof insertCommissionReconciliationRunSchema>;
+export type CommissionReconciliationRun = typeof commissionReconciliationRuns.$inferSelect;
+
+// 5) commission_reconciliation_lines - line-by-line commission truth
+export const commissionReconciliationLines = pgTable("commission_reconciliation_lines", {
+  id: serial("id").primaryKey(),
+  reconciliationRunId: integer("reconciliation_run_id").references(() => commissionReconciliationRuns.id).notNull(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  commissionEventId: integer("commission_event_id").references(() => dealCommissionEvents.id),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  expectedAmountBrl: decimal("expected_amount_brl", { precision: 12, scale: 2 }).notNull(),
+  supplierReportedAmountBrl: decimal("supplier_reported_amount_brl", { precision: 12, scale: 2 }),
+  paidAmountBrl: decimal("paid_amount_brl", { precision: 12, scale: 2 }),
+  varianceAmountBrl: decimal("variance_amount_brl", { precision: 12, scale: 2 }),
+  varianceReason: text("variance_reason"), // VARIANCE_REASON
+  status: text("status").default("UNRECONCILED").notNull(), // RECONCILIATION_LINE_STATUS
+  evidenceDocIds: jsonb("evidence_doc_ids").default([]),
+  usagePeriodId: varchar("usage_period_id").references(() => clientUsagePeriods.id),
+  notes: text("notes"),
+  reconciledAt: timestamp("reconciled_at"),
+  reconciledBy: varchar("reconciled_by").references(() => users.id),
+});
+
+export const insertCommissionReconciliationLineSchema = createInsertSchema(commissionReconciliationLines).omit({
+  id: true,
+  reconciledAt: true,
+  reconciledBy: true,
+});
+export type InsertCommissionReconciliationLine = z.infer<typeof insertCommissionReconciliationLineSchema>;
+export type CommissionReconciliationLine = typeof commissionReconciliationLines.$inferSelect;
+
+// 6) deal_cases - for returned / stuck / failed deals after signing
+export const dealCases = pgTable("deal_cases", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  caseType: text("case_type").notNull(), // DEAL_CASE_TYPE
+  severity: text("severity").default("MED").notNull(), // DEAL_CASE_SEVERITY
+  status: text("status").default("OPEN").notNull(), // DEAL_CASE_STATUS
+  ownerUserId: varchar("owner_user_id").references(() => users.id),
+  nextActionDate: date("next_action_date"),
+  slaDueDate: date("sla_due_date"),
+  rootCause: text("root_cause"),
+  resolutionSummary: text("resolution_summary"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealCaseSchema = createInsertSchema(dealCases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertDealCase = z.infer<typeof insertDealCaseSchema>;
+export type DealCase = typeof dealCases.$inferSelect;
+
+// Commission OS Relations
+export const clientUsagePeriodsRelations = relations(clientUsagePeriods, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientUsagePeriods.clientId],
+    references: [clients.id],
+  }),
+  deal: one(deals, {
+    fields: [clientUsagePeriods.dealId],
+    references: [deals.id],
+  }),
+  verifiedBy: one(users, {
+    fields: [clientUsagePeriods.verifiedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const supplierPlaybooksRelations = relations(supplierPlaybooks, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierPlaybooks.supplierId],
+    references: [suppliers.id],
+  }),
+  updatedByUser: one(users, {
+    fields: [supplierPlaybooks.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const supplierReportImportsRelations = relations(supplierReportImports, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierReportImports.supplierId],
+    references: [suppliers.id],
+  }),
+  importedByUser: one(users, {
+    fields: [supplierReportImports.importedBy],
+    references: [users.id],
+  }),
+}));
+
+export const commissionReconciliationRunsRelations = relations(commissionReconciliationRuns, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [commissionReconciliationRuns.createdBy],
+    references: [users.id],
+  }),
+  finalizedByUser: one(users, {
+    fields: [commissionReconciliationRuns.finalizedBy],
+    references: [users.id],
+  }),
+  lines: many(commissionReconciliationLines),
+}));
+
+export const commissionReconciliationLinesRelations = relations(commissionReconciliationLines, ({ one }) => ({
+  run: one(commissionReconciliationRuns, {
+    fields: [commissionReconciliationLines.reconciliationRunId],
+    references: [commissionReconciliationRuns.id],
+  }),
+  deal: one(deals, {
+    fields: [commissionReconciliationLines.dealId],
+    references: [deals.id],
+  }),
+  client: one(clients, {
+    fields: [commissionReconciliationLines.clientId],
+    references: [clients.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [commissionReconciliationLines.supplierId],
+    references: [suppliers.id],
+  }),
+  commissionEvent: one(dealCommissionEvents, {
+    fields: [commissionReconciliationLines.commissionEventId],
+    references: [dealCommissionEvents.id],
+  }),
+  usagePeriod: one(clientUsagePeriods, {
+    fields: [commissionReconciliationLines.usagePeriodId],
+    references: [clientUsagePeriods.id],
+  }),
+}));
+
+export const dealCasesRelations = relations(dealCases, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealCases.dealId],
+    references: [deals.id],
+  }),
+  owner: one(users, {
+    fields: [dealCases.ownerUserId],
+    references: [users.id],
+  }),
+}));
+
+// ============== END COMMISSION OS SCHEMA ==============
+
 // ============== END DEAL OS SCHEMA ==============
 
 // ECOS Relations

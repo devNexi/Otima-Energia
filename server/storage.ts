@@ -35,6 +35,12 @@ import {
   type DealDispute, type InsertDealDispute,
   type DealChecklistRequirement, type InsertDealChecklistRequirement,
   type SupplierSlaTracking, type InsertSupplierSlaTracking,
+  type ClientUsagePeriod, type InsertClientUsagePeriod,
+  type SupplierPlaybook, type InsertSupplierPlaybook,
+  type SupplierReportImport, type InsertSupplierReportImport,
+  type CommissionReconciliationRun, type InsertCommissionReconciliationRun,
+  type CommissionReconciliationLine, type InsertCommissionReconciliationLine,
+  type DealCase, type InsertDealCase,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -42,7 +48,9 @@ import {
   clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
   adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots,
   deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments,
-  dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking
+  dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking,
+  clientUsagePeriods, supplierPlaybooks, supplierReportImports,
+  commissionReconciliationRuns, commissionReconciliationLines, dealCases
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -326,6 +334,50 @@ export interface IStorage {
   updateSupplierSlaTracking(id: number, data: Partial<InsertSupplierSlaTracking>): Promise<SupplierSlaTracking | undefined>;
   recordSupplierResponse(id: number, responseAt: Date): Promise<SupplierSlaTracking | undefined>;
   getSlaBreach(): Promise<SupplierSlaTracking[]>;
+
+  // ============== COMMISSION OS: USAGE, RECONCILIATION, CASES ==============
+  
+  // Client Usage Periods
+  createUsagePeriod(data: InsertClientUsagePeriod): Promise<ClientUsagePeriod>;
+  getUsagePeriods(filters?: { clientId?: number; dealId?: string; from?: string; to?: string }): Promise<ClientUsagePeriod[]>;
+  getUsagePeriod(id: string): Promise<ClientUsagePeriod | undefined>;
+  updateUsagePeriod(id: string, data: Partial<InsertClientUsagePeriod>): Promise<ClientUsagePeriod | undefined>;
+  verifyUsagePeriod(id: string, verifiedByUserId: string): Promise<ClientUsagePeriod | undefined>;
+  
+  // Supplier Playbooks
+  getSupplierPlaybooks(): Promise<SupplierPlaybook[]>;
+  getSupplierPlaybook(supplierId: number): Promise<SupplierPlaybook | undefined>;
+  getSupplierPlaybookVersions(supplierId: number): Promise<SupplierPlaybook[]>;
+  createSupplierPlaybook(data: InsertSupplierPlaybook): Promise<SupplierPlaybook>;
+  updateSupplierPlaybook(id: number, data: Partial<InsertSupplierPlaybook>): Promise<SupplierPlaybook>;
+  
+  // Supplier Report Imports
+  createSupplierReportImport(data: InsertSupplierReportImport): Promise<SupplierReportImport>;
+  getSupplierReportImports(supplierId?: number): Promise<SupplierReportImport[]>;
+  getSupplierReportImport(id: number): Promise<SupplierReportImport | undefined>;
+  updateSupplierReportImport(id: number, data: Partial<InsertSupplierReportImport>): Promise<SupplierReportImport | undefined>;
+  
+  // Commission Reconciliation Runs
+  createReconciliationRun(data: InsertCommissionReconciliationRun): Promise<CommissionReconciliationRun>;
+  getReconciliationRuns(): Promise<CommissionReconciliationRun[]>;
+  getReconciliationRun(id: number): Promise<CommissionReconciliationRun | undefined>;
+  updateReconciliationRun(id: number, data: Partial<InsertCommissionReconciliationRun>): Promise<CommissionReconciliationRun | undefined>;
+  finalizeReconciliationRun(id: number, finalizedBy: string): Promise<CommissionReconciliationRun | undefined>;
+  
+  // Commission Reconciliation Lines
+  createReconciliationLine(data: InsertCommissionReconciliationLine): Promise<CommissionReconciliationLine>;
+  getReconciliationLines(runId: number): Promise<CommissionReconciliationLine[]>;
+  getReconciliationLine(id: number): Promise<CommissionReconciliationLine | undefined>;
+  updateReconciliationLine(id: number, data: Partial<InsertCommissionReconciliationLine>): Promise<CommissionReconciliationLine | undefined>;
+  reconcileLine(id: number, reconciledBy: string): Promise<CommissionReconciliationLine | undefined>;
+  
+  // Deal Cases
+  createDealCase(data: InsertDealCase): Promise<DealCase>;
+  getDealCases(dealId: string): Promise<DealCase[]>;
+  getOpenDealCases(): Promise<DealCase[]>;
+  getDealCase(id: number): Promise<DealCase | undefined>;
+  updateDealCase(id: number, data: Partial<InsertDealCase>): Promise<DealCase | undefined>;
+  convertCaseToLost(caseId: number, triggeredBy: string, reason: string): Promise<{ success: boolean; case?: DealCase; deal?: Deal; error?: string }>;
 }
 
 export class Storage implements IStorage {
@@ -1833,6 +1885,302 @@ export class Storage implements IStorage {
     return await db.select().from(supplierSlaTracking)
       .where(eq(supplierSlaTracking.isSlaBreach, true))
       .orderBy(desc(supplierSlaTracking.requestSentAt));
+  }
+
+  // ============== COMMISSION OS: USAGE, RECONCILIATION, CASES ==============
+
+  // Client Usage Periods
+  async createUsagePeriod(data: InsertClientUsagePeriod): Promise<ClientUsagePeriod> {
+    const result = await db.insert(clientUsagePeriods).values(data).returning();
+    return result[0];
+  }
+
+  async getUsagePeriods(filters?: { clientId?: number; dealId?: string; from?: string; to?: string }): Promise<ClientUsagePeriod[]> {
+    let query = db.select().from(clientUsagePeriods);
+    const conditions = [];
+    
+    if (filters?.clientId) {
+      conditions.push(eq(clientUsagePeriods.clientId, filters.clientId));
+    }
+    if (filters?.dealId) {
+      conditions.push(eq(clientUsagePeriods.dealId, filters.dealId));
+    }
+    if (filters?.from) {
+      conditions.push(gte(clientUsagePeriods.periodStartDate, filters.from));
+    }
+    if (filters?.to) {
+      conditions.push(lte(clientUsagePeriods.periodEndDate, filters.to));
+    }
+    
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(clientUsagePeriods.periodStartDate));
+    }
+    return await query.orderBy(desc(clientUsagePeriods.periodStartDate));
+  }
+
+  async getUsagePeriod(id: string): Promise<ClientUsagePeriod | undefined> {
+    const result = await db.select().from(clientUsagePeriods).where(eq(clientUsagePeriods.id, id));
+    return result[0];
+  }
+
+  async updateUsagePeriod(id: string, data: Partial<InsertClientUsagePeriod>): Promise<ClientUsagePeriod | undefined> {
+    const result = await db.update(clientUsagePeriods)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(clientUsagePeriods.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async verifyUsagePeriod(id: string, verifiedByUserId: string): Promise<ClientUsagePeriod | undefined> {
+    const result = await db.update(clientUsagePeriods)
+      .set({ 
+        status: 'VERIFIED', 
+        verifiedByUserId, 
+        verifiedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(clientUsagePeriods.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Supplier Playbooks
+  async getSupplierPlaybooks(): Promise<SupplierPlaybook[]> {
+    return await db.select().from(supplierPlaybooks)
+      .where(eq(supplierPlaybooks.isActive, true))
+      .orderBy(desc(supplierPlaybooks.updatedAt));
+  }
+
+  async getSupplierPlaybook(supplierId: number): Promise<SupplierPlaybook | undefined> {
+    const result = await db.select().from(supplierPlaybooks)
+      .where(and(
+        eq(supplierPlaybooks.supplierId, supplierId),
+        eq(supplierPlaybooks.isActive, true)
+      ))
+      .orderBy(desc(supplierPlaybooks.version))
+      .limit(1);
+    return result[0];
+  }
+
+  async getSupplierPlaybookVersions(supplierId: number): Promise<SupplierPlaybook[]> {
+    return await db.select().from(supplierPlaybooks)
+      .where(eq(supplierPlaybooks.supplierId, supplierId))
+      .orderBy(desc(supplierPlaybooks.version));
+  }
+
+  async createSupplierPlaybook(data: InsertSupplierPlaybook): Promise<SupplierPlaybook> {
+    // Deactivate previous versions for this supplier
+    await db.update(supplierPlaybooks)
+      .set({ isActive: false })
+      .where(eq(supplierPlaybooks.supplierId, data.supplierId));
+    
+    // Get current max version
+    const existing = await db.select().from(supplierPlaybooks)
+      .where(eq(supplierPlaybooks.supplierId, data.supplierId))
+      .orderBy(desc(supplierPlaybooks.version))
+      .limit(1);
+    
+    const newVersion = existing[0] ? (existing[0].version || 0) + 1 : 1;
+    
+    const result = await db.insert(supplierPlaybooks)
+      .values({ ...data, version: newVersion, isActive: true })
+      .returning();
+    return result[0];
+  }
+
+  async updateSupplierPlaybook(id: number, data: Partial<InsertSupplierPlaybook>): Promise<SupplierPlaybook> {
+    // Get current playbook
+    const current = await db.select().from(supplierPlaybooks).where(eq(supplierPlaybooks.id, id));
+    if (!current[0]) throw new Error('Playbook not found');
+    
+    // Create new version with updated data
+    return await this.createSupplierPlaybook({
+      supplierId: current[0].supplierId,
+      commissionPayerEntity: data.commissionPayerEntity ?? current[0].commissionPayerEntity,
+      paymentCadence: data.paymentCadence ?? current[0].paymentCadence,
+      reportFormatsSupported: data.reportFormatsSupported ?? (current[0].reportFormatsSupported as any),
+      requiredFields: data.requiredFields ?? (current[0].requiredFields as any),
+      calcDefaults: data.calcDefaults ?? (current[0].calcDefaults as any),
+      submissionRequirements: data.submissionRequirements ?? (current[0].submissionRequirements as any),
+      contacts: data.contacts ?? (current[0].contacts as any),
+      slaTargets: data.slaTargets ?? (current[0].slaTargets as any),
+      rules: data.rules ?? (current[0].rules as any),
+      updatedBy: data.updatedBy ?? current[0].updatedBy,
+    });
+  }
+
+  // Supplier Report Imports
+  async createSupplierReportImport(data: InsertSupplierReportImport): Promise<SupplierReportImport> {
+    const result = await db.insert(supplierReportImports).values(data).returning();
+    return result[0];
+  }
+
+  async getSupplierReportImports(supplierId?: number): Promise<SupplierReportImport[]> {
+    if (supplierId) {
+      return await db.select().from(supplierReportImports)
+        .where(eq(supplierReportImports.supplierId, supplierId))
+        .orderBy(desc(supplierReportImports.importedAt));
+    }
+    return await db.select().from(supplierReportImports)
+      .orderBy(desc(supplierReportImports.importedAt));
+  }
+
+  async getSupplierReportImport(id: number): Promise<SupplierReportImport | undefined> {
+    const result = await db.select().from(supplierReportImports).where(eq(supplierReportImports.id, id));
+    return result[0];
+  }
+
+  async updateSupplierReportImport(id: number, data: Partial<InsertSupplierReportImport>): Promise<SupplierReportImport | undefined> {
+    const result = await db.update(supplierReportImports)
+      .set(data)
+      .where(eq(supplierReportImports.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Commission Reconciliation Runs
+  async createReconciliationRun(data: InsertCommissionReconciliationRun): Promise<CommissionReconciliationRun> {
+    const result = await db.insert(commissionReconciliationRuns).values(data).returning();
+    return result[0];
+  }
+
+  async getReconciliationRuns(): Promise<CommissionReconciliationRun[]> {
+    return await db.select().from(commissionReconciliationRuns)
+      .orderBy(desc(commissionReconciliationRuns.createdAt));
+  }
+
+  async getReconciliationRun(id: number): Promise<CommissionReconciliationRun | undefined> {
+    const result = await db.select().from(commissionReconciliationRuns)
+      .where(eq(commissionReconciliationRuns.id, id));
+    return result[0];
+  }
+
+  async updateReconciliationRun(id: number, data: Partial<InsertCommissionReconciliationRun>): Promise<CommissionReconciliationRun | undefined> {
+    const result = await db.update(commissionReconciliationRuns)
+      .set(data)
+      .where(eq(commissionReconciliationRuns.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async finalizeReconciliationRun(id: number, finalizedBy: string): Promise<CommissionReconciliationRun | undefined> {
+    const result = await db.update(commissionReconciliationRuns)
+      .set({ 
+        status: 'FINALIZED', 
+        finalizedAt: new Date(), 
+        finalizedBy 
+      })
+      .where(eq(commissionReconciliationRuns.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Commission Reconciliation Lines
+  async createReconciliationLine(data: InsertCommissionReconciliationLine): Promise<CommissionReconciliationLine> {
+    const result = await db.insert(commissionReconciliationLines).values(data).returning();
+    return result[0];
+  }
+
+  async getReconciliationLines(runId: number): Promise<CommissionReconciliationLine[]> {
+    return await db.select().from(commissionReconciliationLines)
+      .where(eq(commissionReconciliationLines.reconciliationRunId, runId));
+  }
+
+  async getReconciliationLine(id: number): Promise<CommissionReconciliationLine | undefined> {
+    const result = await db.select().from(commissionReconciliationLines)
+      .where(eq(commissionReconciliationLines.id, id));
+    return result[0];
+  }
+
+  async updateReconciliationLine(id: number, data: Partial<InsertCommissionReconciliationLine>): Promise<CommissionReconciliationLine | undefined> {
+    const result = await db.update(commissionReconciliationLines)
+      .set(data)
+      .where(eq(commissionReconciliationLines.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async reconcileLine(id: number, reconciledBy: string): Promise<CommissionReconciliationLine | undefined> {
+    const result = await db.update(commissionReconciliationLines)
+      .set({ 
+        status: 'RECONCILED', 
+        reconciledAt: new Date(), 
+        reconciledBy 
+      })
+      .where(eq(commissionReconciliationLines.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Deal Cases
+  async createDealCase(data: InsertDealCase): Promise<DealCase> {
+    const result = await db.insert(dealCases).values(data).returning();
+    return result[0];
+  }
+
+  async getDealCases(dealId: string): Promise<DealCase[]> {
+    return await db.select().from(dealCases)
+      .where(eq(dealCases.dealId, dealId))
+      .orderBy(desc(dealCases.createdAt));
+  }
+
+  async getOpenDealCases(): Promise<DealCase[]> {
+    return await db.select().from(dealCases)
+      .where(and(
+        sql`${dealCases.status} NOT IN ('RESOLVED', 'CONVERTED_TO_LOST')`
+      ))
+      .orderBy(desc(dealCases.createdAt));
+  }
+
+  async getDealCase(id: number): Promise<DealCase | undefined> {
+    const result = await db.select().from(dealCases).where(eq(dealCases.id, id));
+    return result[0];
+  }
+
+  async updateDealCase(id: number, data: Partial<InsertDealCase>): Promise<DealCase | undefined> {
+    const result = await db.update(dealCases)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealCases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async convertCaseToLost(caseId: number, triggeredBy: string, reason: string): Promise<{ success: boolean; case?: DealCase; deal?: Deal; error?: string }> {
+    // Get the case
+    const dealCase = await this.getDealCase(caseId);
+    if (!dealCase) {
+      return { success: false, error: 'Case not found' };
+    }
+
+    // Transition the deal to LOST using the state machine
+    const transitionResult = await this.transitionDealState(
+      dealCase.dealId,
+      'LOST',
+      triggeredBy,
+      'user',
+      reason,
+      `Converted from case #${caseId}`
+    );
+
+    if (!transitionResult.success) {
+      return { success: false, error: transitionResult.error };
+    }
+
+    // Update the case status
+    const updatedCase = await db.update(dealCases)
+      .set({ 
+        status: 'CONVERTED_TO_LOST', 
+        resolutionSummary: reason,
+        updatedAt: new Date() 
+      })
+      .where(eq(dealCases.id, caseId))
+      .returning();
+
+    return { 
+      success: true, 
+      case: updatedCase[0], 
+      deal: transitionResult.deal 
+    };
   }
 }
 

@@ -18,6 +18,7 @@ import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { EcosDashboard } from "@/components/ecos/EcosDashboard";
 import { DealRegistry } from "@/components/deals/DealRegistry";
 import { DealDetail } from "@/components/deals/DealDetail";
+import { UsageTab, PlaybooksTab, ReconciliationTab } from "@/components/commission-os";
 import { 
   Users, 
   Inbox, 
@@ -46,7 +47,9 @@ import {
   HelpCircle,
   LogOut,
   User,
-  Briefcase
+  Briefcase,
+  Scale,
+  BookOpen
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -525,6 +528,18 @@ export default function Admin() {
             <TabsTrigger value="deal-os" className="flex items-center gap-2" data-testid="tab-deal-os">
               <Briefcase className="w-4 h-4" />
               {language === "pt" ? "Deal OS" : "Deal OS"}
+            </TabsTrigger>
+            <TabsTrigger value="usage" className="flex items-center gap-2" data-testid="tab-usage">
+              <Zap className="w-4 h-4" />
+              {language === "pt" ? "Consumo" : "Usage"}
+            </TabsTrigger>
+            <TabsTrigger value="playbooks" className="flex items-center gap-2" data-testid="tab-playbooks">
+              <BookOpen className="w-4 h-4" />
+              {language === "pt" ? "Playbooks" : "Playbooks"}
+            </TabsTrigger>
+            <TabsTrigger value="reconciliation" className="flex items-center gap-2" data-testid="tab-reconciliation">
+              <Scale className="w-4 h-4" />
+              {language === "pt" ? "Conciliação" : "Reconciliation"}
             </TabsTrigger>
           </TabsList>
 
@@ -1109,6 +1124,18 @@ export default function Admin() {
                 onViewDeal={(dealId) => setSelectedDealId(dealId)}
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="usage">
+            <UsageTab />
+          </TabsContent>
+
+          <TabsContent value="playbooks">
+            <PlaybooksTab />
+          </TabsContent>
+
+          <TabsContent value="reconciliation">
+            <ReconciliationTab />
           </TabsContent>
         </Tabs>
       </main>

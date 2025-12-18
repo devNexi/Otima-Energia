@@ -105,3 +105,69 @@ DRAFT → RFQ_SENT → QUOTES_RECEIVED → OFFER_SELECTED → ONBOARDING_PENDING
 - `GET /api/suppliers/:id/sla-tracking`
 - `POST /api/supplier-sla`
 - `POST /api/supplier-sla/:id/response`
+
+## Commission OS (Phase 1)
+
+Commission OS is the usage tracking, reconciliation, and case management system built on top of Deal OS.
+
+### Database Tables
+- `client_usage_periods`: Monthly energy consumption tracking per client/deal
+- `supplier_playbooks`: Supplier configuration with versioning (payment cadence, SLA targets, rules)
+- `supplier_report_imports`: Batch import tracking for supplier commission reports
+- `commission_reconciliation_runs`: Monthly/ad-hoc reconciliation runs
+- `commission_reconciliation_lines`: Line-by-line expected vs reported vs paid tracking
+- `deal_cases`: Issue/blocker tracking with SLA and convert-to-lost capability
+
+### Key Enums
+- `usage_source_type`: BILL_OCR, CLIENT_CSV, SUPPLIER_REPORT, MANUAL
+- `usage_status`: DRAFT, VERIFIED, INVALID
+- `payment_cadence`: UPFRONT, MONTHLY, QUARTERLY, MIXED
+- `reconciliation_run_type`: MONTHLY_CLOSE, ADHOC
+- `reconciliation_run_status`: OPEN, FINALIZED
+- `reconciliation_line_status`: OPEN, MATCHED, DISPUTED, RECONCILED
+- `case_type`: RETURNED, STUCK, CREDIT_REJECTED, METERING_DELAY, DOCS_PENDING, etc.
+- `case_severity`: LOW, MED, HIGH
+- `case_status`: OPEN, IN_PROGRESS, ESCALATED, RESOLVED, CONVERTED_TO_LOST
+
+### API Endpoints
+**Usage Tracking:**
+- `GET/POST /api/usage` (filter by clientId, dealId)
+- `GET/PATCH/DELETE /api/usage/:id`
+- `POST /api/usage/:id/verify`
+
+**Supplier Playbooks:**
+- `GET /api/supplier-playbooks`
+- `GET/POST /api/suppliers/:id/playbook`
+- `GET /api/suppliers/:id/playbook/versions`
+
+**Report Imports:**
+- `GET/POST /api/supplier-report-imports`
+- `GET/PATCH /api/supplier-report-imports/:id`
+
+**Reconciliation:**
+- `GET/POST /api/reconciliation-runs`
+- `GET /api/reconciliation-runs/:id` (includes lines)
+- `POST /api/reconciliation-runs/:id/finalize`
+- `POST /api/reconciliation-runs/:runId/generate-lines`
+- `GET/POST /api/reconciliation-lines`
+- `GET/PATCH /api/reconciliation-lines/:id`
+- `POST /api/reconciliation-lines/:id/raise-dispute`
+
+**Deal Cases:**
+- `GET /api/cases` (filter by dealId, status, severity)
+- `GET/POST /api/deals/:id/cases`
+- `GET/PATCH /api/cases/:id`
+- `POST /api/cases/:id/convert-to-lost`
+
+### Frontend Components
+- `UsageTab`: Energy consumption tracking with verify workflow
+- `PlaybooksTab`: Supplier configuration with version history
+- `ReconciliationTab`: Monthly/ad-hoc runs with variance dashboard
+- `DealCasesTab`: Per-deal case management with convert-to-lost
+
+### Design Principles
+1. **Verification Workflow**: Usage periods start as DRAFT, require manual VERIFIED status
+2. **Automatic Versioning**: Creating new playbook auto-retires previous active version
+3. **Reconciliation Lines**: One line per deal per period, tracks expected/reported/paid/variance
+4. **Case → LOST**: Cases can trigger deal state machine transition to LOST terminal state
+5. **No Automation Logic**: All tables are clean CRUD - ready for future orchestration layer

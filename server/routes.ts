@@ -25,6 +25,12 @@ import {
   insertDealDisputeSchema,
   insertDealChecklistRequirementSchema,
   insertSupplierSlaTrackingSchema,
+  insertClientUsagePeriodSchema,
+  insertSupplierPlaybookSchema,
+  insertSupplierReportImportSchema,
+  insertCommissionReconciliationRunSchema,
+  insertCommissionReconciliationLineSchema,
+  insertDealCaseSchema,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState
@@ -3385,6 +3391,471 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error recording supplier response:", error);
       res.status(500).json({ success: false, error: "Failed to record response" });
+    }
+  });
+
+  // ============== COMMISSION OS: USAGE, RECONCILIATION, CASES ==============
+
+  // --- Client Usage Periods ---
+
+  // Get usage periods with filters
+  app.get("/api/usage", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const filters = {
+        clientId: req.query.clientId ? parseInt(req.query.clientId as string) : undefined,
+        dealId: req.query.dealId as string | undefined,
+        from: req.query.from as string | undefined,
+        to: req.query.to as string | undefined,
+      };
+      const periods = await storage.getUsagePeriods(filters);
+      res.json({ success: true, periods });
+    } catch (error: any) {
+      console.error("Error fetching usage periods:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch usage periods" });
+    }
+  });
+
+  // Create usage period
+  app.post("/api/usage", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertClientUsagePeriodSchema.parse(req.body);
+      const period = await storage.createUsagePeriod(validatedData);
+      res.json({ success: true, period });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating usage period:", error);
+        res.status(500).json({ success: false, error: "Failed to create usage period" });
+      }
+    }
+  });
+
+  // Update usage period
+  app.patch("/api/usage/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const period = await storage.updateUsagePeriod(req.params.id, req.body);
+      if (!period) {
+        return res.status(404).json({ success: false, error: "Usage period not found" });
+      }
+      res.json({ success: true, period });
+    } catch (error: any) {
+      console.error("Error updating usage period:", error);
+      res.status(500).json({ success: false, error: "Failed to update usage period" });
+    }
+  });
+
+  // Verify usage period
+  app.post("/api/usage/:id/verify", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { verifiedByUserId } = req.body;
+      if (!verifiedByUserId) {
+        return res.status(400).json({ success: false, error: "verifiedByUserId is required" });
+      }
+      const period = await storage.verifyUsagePeriod(req.params.id, verifiedByUserId);
+      if (!period) {
+        return res.status(404).json({ success: false, error: "Usage period not found" });
+      }
+      res.json({ success: true, period });
+    } catch (error: any) {
+      console.error("Error verifying usage period:", error);
+      res.status(500).json({ success: false, error: "Failed to verify usage period" });
+    }
+  });
+
+  // --- Supplier Playbooks ---
+
+  // Get all active playbooks
+  app.get("/api/supplier-playbooks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const playbooks = await storage.getSupplierPlaybooks();
+      res.json({ success: true, playbooks });
+    } catch (error: any) {
+      console.error("Error fetching playbooks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbooks" });
+    }
+  });
+
+  // Get active playbook for a supplier
+  app.get("/api/suppliers/:id/playbook", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const playbook = await storage.getSupplierPlaybook(parseInt(req.params.id));
+      res.json({ success: true, playbook: playbook || null });
+    } catch (error: any) {
+      console.error("Error fetching supplier playbook:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbook" });
+    }
+  });
+
+  // Get playbook version history for a supplier
+  app.get("/api/suppliers/:id/playbook/versions", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const versions = await storage.getSupplierPlaybookVersions(parseInt(req.params.id));
+      res.json({ success: true, versions });
+    } catch (error: any) {
+      console.error("Error fetching playbook versions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch versions" });
+    }
+  });
+
+  // Create new playbook version for a supplier
+  app.post("/api/suppliers/:id/playbook", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const supplierId = parseInt(req.params.id);
+      const validatedData = insertSupplierPlaybookSchema.parse({
+        ...req.body,
+        supplierId
+      });
+      const playbook = await storage.createSupplierPlaybook(validatedData);
+      res.json({ success: true, playbook });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating playbook:", error);
+        res.status(500).json({ success: false, error: "Failed to create playbook" });
+      }
+    }
+  });
+
+  // Update playbook (creates new version)
+  app.patch("/api/supplier-playbooks/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const playbook = await storage.updateSupplierPlaybook(parseInt(req.params.id), req.body);
+      res.json({ success: true, playbook });
+    } catch (error: any) {
+      console.error("Error updating playbook:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to update playbook" });
+    }
+  });
+
+  // --- Supplier Report Imports ---
+
+  // Import supplier report
+  app.post("/api/supplier-reports/import", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertSupplierReportImportSchema.parse(req.body);
+      const importRecord = await storage.createSupplierReportImport(validatedData);
+      res.json({ success: true, import: importRecord });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error importing report:", error);
+        res.status(500).json({ success: false, error: "Failed to import report" });
+      }
+    }
+  });
+
+  // Get supplier report imports
+  app.get("/api/supplier-reports/imports", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const supplierId = req.query.supplierId ? parseInt(req.query.supplierId as string) : undefined;
+      const imports = await storage.getSupplierReportImports(supplierId);
+      res.json({ success: true, imports });
+    } catch (error: any) {
+      console.error("Error fetching imports:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch imports" });
+    }
+  });
+
+  // Update import mapping config
+  app.post("/api/supplier-reports/:importId/map", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const importRecord = await storage.updateSupplierReportImport(
+        parseInt(req.params.importId),
+        { mappingConfig: req.body.mappingConfig }
+      );
+      if (!importRecord) {
+        return res.status(404).json({ success: false, error: "Import not found" });
+      }
+      res.json({ success: true, import: importRecord });
+    } catch (error: any) {
+      console.error("Error updating mapping:", error);
+      res.status(500).json({ success: false, error: "Failed to update mapping" });
+    }
+  });
+
+  // Parse imported report (update status and parsed data)
+  app.post("/api/supplier-reports/:importId/parse", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { parsedData, detectedColumns, rowCount, parsingStatus, errorLog } = req.body;
+      const importRecord = await storage.updateSupplierReportImport(
+        parseInt(req.params.importId),
+        { parsedData, detectedColumns, rowCount, parsingStatus, errorLog }
+      );
+      if (!importRecord) {
+        return res.status(404).json({ success: false, error: "Import not found" });
+      }
+      res.json({ success: true, import: importRecord });
+    } catch (error: any) {
+      console.error("Error parsing report:", error);
+      res.status(500).json({ success: false, error: "Failed to parse report" });
+    }
+  });
+
+  // --- Commission Reconciliation Runs ---
+
+  // Create reconciliation run
+  app.post("/api/reconciliation-runs", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertCommissionReconciliationRunSchema.parse(req.body);
+      const run = await storage.createReconciliationRun(validatedData);
+      res.json({ success: true, run });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating reconciliation run:", error);
+        res.status(500).json({ success: false, error: "Failed to create run" });
+      }
+    }
+  });
+
+  // Get all reconciliation runs
+  app.get("/api/reconciliation-runs", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const runs = await storage.getReconciliationRuns();
+      res.json({ success: true, runs });
+    } catch (error: any) {
+      console.error("Error fetching runs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch runs" });
+    }
+  });
+
+  // Get single reconciliation run with lines
+  app.get("/api/reconciliation-runs/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const run = await storage.getReconciliationRun(parseInt(req.params.id));
+      if (!run) {
+        return res.status(404).json({ success: false, error: "Run not found" });
+      }
+      const lines = await storage.getReconciliationLines(run.id);
+      res.json({ success: true, run, lines });
+    } catch (error: any) {
+      console.error("Error fetching run:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch run" });
+    }
+  });
+
+  // Generate reconciliation lines for a run
+  app.post("/api/reconciliation-runs/:id/generate-lines", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const runId = parseInt(req.params.id);
+      const run = await storage.getReconciliationRun(runId);
+      if (!run) {
+        return res.status(404).json({ success: false, error: "Run not found" });
+      }
+
+      // Get lines from request body (front-end computes expected commission)
+      const { lines } = req.body;
+      if (!lines || !Array.isArray(lines)) {
+        return res.status(400).json({ success: false, error: "lines array is required" });
+      }
+
+      const createdLines = [];
+      for (const line of lines) {
+        const validatedLine = insertCommissionReconciliationLineSchema.parse({
+          ...line,
+          reconciliationRunId: runId
+        });
+        const created = await storage.createReconciliationLine(validatedLine);
+        createdLines.push(created);
+      }
+
+      // Update run line count
+      await storage.updateReconciliationRun(runId, { lineCount: createdLines.length });
+
+      res.json({ success: true, lines: createdLines });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error generating lines:", error);
+        res.status(500).json({ success: false, error: "Failed to generate lines" });
+      }
+    }
+  });
+
+  // Finalize reconciliation run
+  app.post("/api/reconciliation-runs/:id/finalize", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { finalizedBy } = req.body;
+      if (!finalizedBy) {
+        return res.status(400).json({ success: false, error: "finalizedBy is required" });
+      }
+      const run = await storage.finalizeReconciliationRun(parseInt(req.params.id), finalizedBy);
+      if (!run) {
+        return res.status(404).json({ success: false, error: "Run not found" });
+      }
+      res.json({ success: true, run });
+    } catch (error: any) {
+      console.error("Error finalizing run:", error);
+      res.status(500).json({ success: false, error: "Failed to finalize run" });
+    }
+  });
+
+  // Update reconciliation line
+  app.patch("/api/reconciliation-lines/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const line = await storage.updateReconciliationLine(parseInt(req.params.id), req.body);
+      if (!line) {
+        return res.status(404).json({ success: false, error: "Line not found" });
+      }
+      res.json({ success: true, line });
+    } catch (error: any) {
+      console.error("Error updating line:", error);
+      res.status(500).json({ success: false, error: "Failed to update line" });
+    }
+  });
+
+  // Raise dispute from reconciliation line
+  app.post("/api/reconciliation-lines/:id/raise-dispute", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const lineId = parseInt(req.params.id);
+      const line = await storage.getReconciliationLine(lineId);
+      if (!line) {
+        return res.status(404).json({ success: false, error: "Line not found" });
+      }
+
+      // Create dispute using existing dispute system
+      const disputeData = {
+        dealId: line.dealId,
+        disputeReason: req.body.description || `Reconciliation variance of ${line.varianceAmountBrl} BRL`,
+        disputeOwner: req.body.raisedBy,
+        disputedAmount: line.varianceAmountBrl,
+        status: 'OPEN',
+      };
+
+      const dispute = await storage.createDealDispute(disputeData);
+
+      // Update line status to DISPUTED
+      await storage.updateReconciliationLine(lineId, { status: 'DISPUTED' });
+
+      res.json({ success: true, dispute });
+    } catch (error: any) {
+      console.error("Error raising dispute:", error);
+      res.status(500).json({ success: false, error: "Failed to raise dispute" });
+    }
+  });
+
+  // --- Deal Cases ---
+
+  // Create case for a deal
+  app.post("/api/deals/:id/cases", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const validatedData = insertDealCaseSchema.parse({
+        ...req.body,
+        dealId
+      });
+
+      const dealCase = await storage.createDealCase(validatedData);
+      res.json({ success: true, case: dealCase });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating case:", error);
+        res.status(500).json({ success: false, error: "Failed to create case" });
+      }
+    }
+  });
+
+  // Get cases for a deal
+  app.get("/api/deals/:id/cases", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const cases = await storage.getDealCases(req.params.id);
+      res.json({ success: true, cases });
+    } catch (error: any) {
+      console.error("Error fetching cases:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch cases" });
+    }
+  });
+
+  // Get all open cases
+  app.get("/api/cases/open", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const cases = await storage.getOpenDealCases();
+      res.json({ success: true, cases });
+    } catch (error: any) {
+      console.error("Error fetching open cases:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch cases" });
+    }
+  });
+
+  // Update case
+  app.patch("/api/cases/:caseId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealCase = await storage.updateDealCase(parseInt(req.params.caseId), req.body);
+      if (!dealCase) {
+        return res.status(404).json({ success: false, error: "Case not found" });
+      }
+      res.json({ success: true, case: dealCase });
+    } catch (error: any) {
+      console.error("Error updating case:", error);
+      res.status(500).json({ success: false, error: "Failed to update case" });
+    }
+  });
+
+  // Convert case to LOST (transitions deal state)
+  app.post("/api/cases/:caseId/convert-to-lost", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { triggeredBy, reason } = req.body;
+      if (!triggeredBy || !reason) {
+        return res.status(400).json({ success: false, error: "triggeredBy and reason are required" });
+      }
+
+      const result = await storage.convertCaseToLost(
+        parseInt(req.params.caseId),
+        triggeredBy,
+        reason
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+
+      res.json({ success: true, case: result.case, deal: result.deal });
+    } catch (error: any) {
+      console.error("Error converting case to lost:", error);
+      res.status(500).json({ success: false, error: "Failed to convert case" });
     }
   });
 

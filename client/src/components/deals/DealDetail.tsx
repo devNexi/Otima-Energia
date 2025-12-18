@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -28,7 +29,8 @@ import {
   Receipt,
   Upload,
   Check,
-  X
+  X,
+  Briefcase
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -312,6 +314,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="w-4 h-4" />
             {language === "pt" ? "Histórico" : "History"}
+          </TabsTrigger>
+          <TabsTrigger value="cases" className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            {language === "pt" ? "Casos" : "Cases"}
           </TabsTrigger>
         </TabsList>
 
@@ -740,6 +746,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="cases">
+          <DealCasesTab dealId={dealId} />
         </TabsContent>
       </Tabs>
     </div>

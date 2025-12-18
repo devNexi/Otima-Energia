@@ -1,0 +1,519 @@
+Commission OS: Usage Tracking, Reconciliation & Returned Deals
+
+You are working inside the existing Ótima Energia Admin Portal codebase:
+
+Frontend: React + TypeScript + Tailwind + shadcn/ui
+
+Backend: Node.js + Express + TypeScript
+
+Database: PostgreSQL + Drizzle ORM
+
+Deal OS already exists with:
+
+deals, deal_state_transitions, deal_quotes, deal_commission_events, deal_documents
+
+Deal states include: ONBOARDING_PENDING and LOST
+
+Immutable commission terms snapshot locked at CONTRACT_SIGNED
+
+Commission calculation metadata:
+
+calc_type
+
+calc_inputs
+
+source_of_truth
+
+evidence_doc_id
+
+Dispute workflow tables already exist
+
+Configurable checklist gating per deal state transition
+
+Now build the next critical system so Ótima can:
+
+Track monthly client energy usage in a structured, auditable way
+
+Ingest supplier commission / settlement reports (PDF, CSV, XLSX)
+
+Reconcile:
+
+expected commission
+
+supplier-reported commission
+
+actually paid commission
+
+Manage deals that fail or get stuck after signing, with a proper case workflow
+
+CORE PRINCIPLES
+
+This is a financial truth system, not a CRM
+
+Everything must be:
+
+auditable
+
+evidence-backed
+
+reproducible
+
+Every supplier is different
+
+payment cadence
+
+calculation method
+
+reporting format
+
+Model supplier variability via Supplier Playbooks
+
+Start with manual uploads, then automate later
+
+Never rely on supplier promises — rely on data + evidence
+
+A) DATABASE (Drizzle + migrations)
+1) client_usage_periods
+
+Tracks real energy consumption so commissions can be recalculated.
+
+Fields:
+
+id (uuid)
+
+client_id
+
+deal_id (nullable but preferred)
+
+uc_code (nullable)
+
+period_start_date
+
+period_end_date (or month reference)
+
+energy_kwh (numeric)
+
+demand_kw (numeric, nullable)
+
+billed_amount_brl (numeric, nullable)
+
+source_type enum:
+
+BILL_OCR
+
+CLIENT_CSV
+
+SUPPLIER_REPORT
+
+MANUAL
+
+source_doc_id (FK to deal_documents or equivalent)
+
+extraction_confidence (numeric, nullable)
+
+status enum: DRAFT | VERIFIED
+
+verified_by_user_id
+
+verified_at
+
+notes
+
+2) supplier_playbooks
+
+Encodes how each supplier works.
+
+Fields:
+
+id
+
+supplier_id
+
+commission_payer_entity (text)
+
+payment_cadence enum: UPFRONT | MONTHLY | QUARTERLY | MIXED
+
+report_formats_supported (jsonb)
+e.g. ["xlsx","csv","pdf"]
+
+required_fields (jsonb)
+
+calc_defaults (jsonb)
+
+submission_requirements (jsonb)
+
+contacts (jsonb) — ops / finance emails
+
+sla_targets (jsonb):
+
+quote_response_hours
+
+payment_days_after_invoice
+
+dispute_response_days
+
+version (int)
+
+updated_by
+
+updated_at
+
+Design this so new fields can be added without migrations (use jsonb).
+
+3) supplier_report_imports
+
+Tracks raw supplier reports and parsing.
+
+Fields:
+
+id
+
+supplier_id
+
+imported_by
+
+imported_at
+
+file_doc_id
+
+parsing_status enum:
+
+RECEIVED
+
+PARSED
+
+NEEDS_MAPPING
+
+FAILED
+
+detected_columns (jsonb)
+
+mapping_config (jsonb)
+
+row_count
+
+error_log
+
+hash_sha256
+
+4) commission_reconciliation_runs
+
+A monthly or ad-hoc close process.
+
+Fields:
+
+id
+
+run_type enum: MONTHLY_CLOSE | ADHOC
+
+period_start
+
+period_end
+
+created_by
+
+created_at
+
+status enum: OPEN | FINALIZED
+
+notes
+
+5) commission_reconciliation_lines
+
+Line-by-line commission truth.
+
+Fields:
+
+id
+
+reconciliation_run_id
+
+deal_id
+
+commission_event_id (nullable)
+
+client_id
+
+supplier_id
+
+period_start
+
+period_end
+
+expected_amount_brl
+
+supplier_reported_amount_brl (nullable)
+
+paid_amount_brl (nullable)
+
+variance_amount_brl
+
+variance_reason enum:
+
+MISSING_REPORT
+
+UNDERPAID
+
+OVERPAID
+
+USAGE_VARIANCE
+
+CLAWBACK
+
+DATA_ERROR
+
+OTHER
+
+status enum: UNRECONCILED | RECONCILED | DISPUTED
+
+evidence_doc_ids (jsonb array)
+
+6) deal_cases
+
+For returned / stuck / failed deals after signing.
+
+Fields:
+
+id
+
+deal_id
+
+case_type enum:
+
+RETURNED
+
+STUCK
+
+CREDIT_REJECTED
+
+METERING_DELAY
+
+DOCS_PENDING
+
+CLIENT_WITHDREW
+
+SUPPLIER_WITHDREW
+
+REGULATORY_BLOCK
+
+OTHER
+
+severity enum: LOW | MED | HIGH
+
+status enum:
+
+OPEN
+
+IN_PROGRESS
+
+ESCALATED
+
+RESOLVED
+
+CONVERTED_TO_LOST
+
+owner_user_id
+
+next_action_date
+
+SLA_due_date
+
+root_cause (text)
+
+resolution_summary (text)
+
+created_at
+
+updated_at
+
+B) BACKEND API (Express)
+Usage
+
+POST /api/usage
+
+GET /api/usage?clientId=&dealId=&from=&to=
+
+PATCH /api/usage/:id
+
+POST /api/usage/:id/verify
+
+Supplier Playbooks
+
+GET /api/supplier-playbooks
+
+GET /api/suppliers/:id/playbook
+
+POST /api/suppliers/:id/playbook (new version)
+
+PATCH /api/supplier-playbooks/:id (creates new version automatically)
+
+Supplier Report Import
+
+POST /api/supplier-reports/import
+
+POST /api/supplier-reports/:importId/map
+
+POST /api/supplier-reports/:importId/parse
+
+GET /api/supplier-reports/imports?supplierId=
+
+Reconciliation
+
+POST /api/reconciliation-runs
+
+GET /api/reconciliation-runs
+
+POST /api/reconciliation-runs/:id/generate-lines
+Logic:
+
+join deals + commission_events + usage_periods
+
+compute expected commission using calc_type + usage
+
+PATCH /api/reconciliation-lines/:id
+
+POST /api/reconciliation-lines/:id/raise-dispute
+
+Deal Cases
+
+POST /api/deals/:id/cases
+
+GET /api/deals/:id/cases
+
+PATCH /api/cases/:caseId
+
+POST /api/cases/:caseId/convert-to-lost
+(must use deal state machine + audit trail)
+
+C) FRONTEND UX
+New Admin Tabs
+1) Usage
+
+Filters: client, deal, month, source, status
+
+Table view
+
+“Add usage” modal
+
+Verification flow with document preview
+
+2) Supplier Playbooks
+
+Supplier list + playbook health
+
+Playbook editor:
+
+structured fields
+
+advanced JSON editor
+
+SLA targets
+
+contacts
+
+version history
+
+Ability to add custom fields dynamically
+
+3) Reconciliation
+
+Dashboard cards:
+
+expected
+
+supplier reported
+
+paid
+
+variances
+
+Reconciliation runs list
+
+Run detail table:
+
+variance highlighting
+
+attach evidence
+
+raise dispute
+
+mark reconciled
+
+Deal Detail Enhancements
+
+Cases tab
+
+open/track cases
+
+SLA countdown
+
+convert to LOST
+
+Usage summary panel
+
+last 3 months usage
+
+link to Usage tab filtered
+
+D) RULE ENGINE (LIGHTWEIGHT)
+
+Supplier playbooks may define rules that affect:
+
+commission due dates
+
+required documents
+
+dispute SLAs
+
+Store rules in:
+supplier_playbooks.rules (jsonb)
+
+Implement only these 3 rule types now:
+
+due_date_offset_days
+
+required_document_types
+
+dispute_sla_days
+
+If no rule exists → fallback to defaults.
+
+E) DEFINITION OF DONE
+
+An analyst can:
+
+record and verify monthly client usage
+
+import supplier commission reports
+
+reconcile expected vs reported vs paid
+
+detect underpayment or clawback risk
+
+open disputes with evidence
+
+manage stuck / returned deals until resolved or lost
+
+Everything:
+
+auditable
+
+permissioned
+
+supplier-agnostic
+
+ready to scale without hiring back office
+
+Deliver:
+
+migrations
+
+schema
+
+storage logic
+
+routes
+
+UI
+
+concise docs in replit.md explaining workflows
