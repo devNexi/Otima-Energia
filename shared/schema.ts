@@ -1302,6 +1302,15 @@ export const COMMISSION_CALC_TYPES = [
 
 export type CommissionCalcType = typeof COMMISSION_CALC_TYPES[number];
 
+// Commission accrual basis - how commission is calculated
+export const COMMISSION_ACCRUAL_BASIS = [
+  'contracted_volume',   // Commission based on contracted MW
+  'actual_consumption',  // Commission based on actual measured MWh
+  'hybrid'              // Mix of both (e.g., min on contracted, bonus on actual)
+] as const;
+
+export type CommissionAccrualBasis = typeof COMMISSION_ACCRUAL_BASIS[number];
+
 // Core Deals table - the heart of Ótima
 export const deals = pgTable("deals", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
@@ -1614,6 +1623,9 @@ export const dealCommissionTermsSnapshots = pgTable("deal_commission_terms_snaps
   commissionPaymentType: text("commission_payment_type"), // 'upfront', 'monthly', 'hybrid'
   commissionPayerEntityId: text("commission_payer_entity_id"),
   commissionPayerEntityName: text("commission_payer_entity_name"),
+  
+  // Accrual basis - how commission is calculated (critical for reconciliation)
+  accrualBasis: text("accrual_basis"), // 'contracted_volume', 'actual_consumption', 'hybrid'
   
   // Contract context at time of snapshot
   contractStartDate: date("contract_start_date"),

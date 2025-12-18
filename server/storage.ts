@@ -31,13 +31,18 @@ import {
   type DealQuote, type InsertDealQuote,
   type DealCommissionEvent, type InsertDealCommissionEvent,
   type DealDocument, type InsertDealDocument,
+  type DealCommissionTermsSnapshot, type InsertDealCommissionTermsSnapshot,
+  type DealDispute, type InsertDealDispute,
+  type DealChecklistRequirement, type InsertDealChecklistRequirement,
+  type SupplierSlaTracking, type InsertSupplierSlaTracking,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
   proposals, proposalTemplates, proposalViews,
   clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
   adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots,
-  deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments
+  deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments,
+  dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -289,6 +294,38 @@ export interface IStorage {
     overduePayments: number;
     dealsRequiringAction: Deal[];
   }>;
+  
+  // ============== DEAL OS - NEW TABLES ==============
+  
+  // Commission Terms Snapshots (immutable at CONTRACT_SIGNED)
+  createCommissionTermsSnapshot(snapshot: InsertDealCommissionTermsSnapshot): Promise<DealCommissionTermsSnapshot>;
+  getCommissionTermsSnapshots(dealId: string): Promise<DealCommissionTermsSnapshot[]>;
+  getActiveCommissionTermsSnapshot(dealId: string): Promise<DealCommissionTermsSnapshot | undefined>;
+  supersedeCommissionTermsSnapshot(snapshotId: number, newSnapshot: InsertDealCommissionTermsSnapshot): Promise<DealCommissionTermsSnapshot>;
+  
+  // Deal Disputes
+  createDealDispute(dispute: InsertDealDispute): Promise<DealDispute>;
+  getDealDisputes(dealId: string): Promise<DealDispute[]>;
+  getDealDispute(id: number): Promise<DealDispute | undefined>;
+  updateDealDispute(id: number, data: Partial<InsertDealDispute>): Promise<DealDispute | undefined>;
+  getOpenDisputes(): Promise<DealDispute[]>;
+  getDisputesByStatus(status: string): Promise<DealDispute[]>;
+  resolveDealDispute(id: number, resolution: string, resolvedBy: string, resolvedAmount?: string, notes?: string): Promise<DealDispute | undefined>;
+  
+  // Deal Checklist Requirements (config - what's required per state)
+  createChecklistRequirement(requirement: InsertDealChecklistRequirement): Promise<DealChecklistRequirement>;
+  getChecklistRequirements(targetState: string): Promise<DealChecklistRequirement[]>;
+  getAllChecklistRequirements(): Promise<DealChecklistRequirement[]>;
+  updateChecklistRequirement(id: number, data: Partial<InsertDealChecklistRequirement>): Promise<DealChecklistRequirement | undefined>;
+  deleteChecklistRequirement(id: number): Promise<void>;
+  
+  // Supplier SLA Tracking
+  createSupplierSlaTracking(tracking: InsertSupplierSlaTracking): Promise<SupplierSlaTracking>;
+  getSupplierSlaTrackingForDeal(dealId: string): Promise<SupplierSlaTracking[]>;
+  getSupplierSlaTrackingForSupplier(supplierId: number): Promise<SupplierSlaTracking[]>;
+  updateSupplierSlaTracking(id: number, data: Partial<InsertSupplierSlaTracking>): Promise<SupplierSlaTracking | undefined>;
+  recordSupplierResponse(id: number, responseAt: Date): Promise<SupplierSlaTracking | undefined>;
+  getSlaBreach(): Promise<SupplierSlaTracking[]>;
 }
 
 export class Storage implements IStorage {
@@ -1365,11 +1402,12 @@ export class Storage implements IStorage {
       'RFQ_SENT': 'rfqSentAt',
       'QUOTES_RECEIVED': 'quotesReceivedAt',
       'OFFER_SELECTED': 'offerSelectedAt',
+      'ONBOARDING_PENDING': 'onboardingPendingAt',
       'CONTRACT_SIGNED': 'contractSignedAt',
       'SUPPLY_LIVE': 'supplyLiveAt',
-      'COMMISSION_ACTIVE': 'commissionActiveAt',
       'CONTRACT_ENDED': 'contractEndedAt',
-      'CLOSED': 'closedAt'
+      'CLOSED': 'closedAt',
+      'LOST': 'lostAt'
     };
 
     const updateData: Record<string, unknown> = {
@@ -1450,7 +1488,7 @@ export class Storage implements IStorage {
       .set({
         selectedQuoteId: quoteId,
         supplierId: quote.supplierId,
-        supplierEntity: quote.supplierEntity,
+        supplierLegalEntityName: quote.supplierEntity,
         rawSupplierQuoteJson: quote.rawQuoteJson,
         priceStructure: quote.priceStructure,
         baseEnergyPriceRmwh: quote.baseEnergyPriceRmwh,
@@ -1604,6 +1642,197 @@ export class Storage implements IStorage {
       overduePayments: overdue.length,
       dealsRequiringAction
     };
+  }
+
+  // ============== DEAL OS - NEW TABLES ==============
+  
+  // Commission Terms Snapshots
+  async createCommissionTermsSnapshot(snapshot: InsertDealCommissionTermsSnapshot): Promise<DealCommissionTermsSnapshot> {
+    const result = await db.insert(dealCommissionTermsSnapshots).values({
+      ...snapshot,
+      snapshotTakenAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getCommissionTermsSnapshots(dealId: string): Promise<DealCommissionTermsSnapshot[]> {
+    return await db.select().from(dealCommissionTermsSnapshots)
+      .where(eq(dealCommissionTermsSnapshots.dealId, dealId))
+      .orderBy(desc(dealCommissionTermsSnapshots.snapshotTakenAt));
+  }
+
+  async getActiveCommissionTermsSnapshot(dealId: string): Promise<DealCommissionTermsSnapshot | undefined> {
+    const result = await db.select().from(dealCommissionTermsSnapshots)
+      .where(and(
+        eq(dealCommissionTermsSnapshots.dealId, dealId),
+        eq(dealCommissionTermsSnapshots.isActive, true)
+      ));
+    return result[0];
+  }
+
+  async supersedeCommissionTermsSnapshot(snapshotId: number, newSnapshot: InsertDealCommissionTermsSnapshot): Promise<DealCommissionTermsSnapshot> {
+    // Mark old snapshot as inactive
+    await db.update(dealCommissionTermsSnapshots)
+      .set({ isActive: false })
+      .where(eq(dealCommissionTermsSnapshots.id, snapshotId));
+    
+    // Create new snapshot with reference to old one
+    const result = await db.insert(dealCommissionTermsSnapshots).values({
+      ...newSnapshot,
+      supersedesSnapshotId: snapshotId,
+      snapshotTakenAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  // Deal Disputes
+  async createDealDispute(dispute: InsertDealDispute): Promise<DealDispute> {
+    const result = await db.insert(dealDisputes).values({
+      ...dispute,
+      openedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getDealDisputes(dealId: string): Promise<DealDispute[]> {
+    return await db.select().from(dealDisputes)
+      .where(eq(dealDisputes.dealId, dealId))
+      .orderBy(desc(dealDisputes.openedAt));
+  }
+
+  async getDealDispute(id: number): Promise<DealDispute | undefined> {
+    const result = await db.select().from(dealDisputes).where(eq(dealDisputes.id, id));
+    return result[0];
+  }
+
+  async updateDealDispute(id: number, data: Partial<InsertDealDispute>): Promise<DealDispute | undefined> {
+    const result = await db.update(dealDisputes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealDisputes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getOpenDisputes(): Promise<DealDispute[]> {
+    return await db.select().from(dealDisputes)
+      .where(sql`${dealDisputes.status} IN ('OPEN', 'IN_PROGRESS', 'PENDING_RESPONSE')`)
+      .orderBy(desc(dealDisputes.openedAt));
+  }
+
+  async getDisputesByStatus(status: string): Promise<DealDispute[]> {
+    return await db.select().from(dealDisputes)
+      .where(eq(dealDisputes.status, status))
+      .orderBy(desc(dealDisputes.openedAt));
+  }
+
+  async resolveDealDispute(id: number, resolution: string, resolvedBy: string, resolvedAmount?: string, notes?: string): Promise<DealDispute | undefined> {
+    const result = await db.update(dealDisputes)
+      .set({
+        status: 'RESOLVED',
+        resolution,
+        resolvedBy,
+        resolvedAt: new Date(),
+        resolvedAmountBrl: resolvedAmount,
+        resolutionNotes: notes,
+        updatedAt: new Date()
+      })
+      .where(eq(dealDisputes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Deal Checklist Requirements
+  async createChecklistRequirement(requirement: InsertDealChecklistRequirement): Promise<DealChecklistRequirement> {
+    const result = await db.insert(dealChecklistRequirements).values({
+      ...requirement,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getChecklistRequirements(targetState: string): Promise<DealChecklistRequirement[]> {
+    return await db.select().from(dealChecklistRequirements)
+      .where(and(
+        eq(dealChecklistRequirements.targetState, targetState),
+        eq(dealChecklistRequirements.isActive, true)
+      ))
+      .orderBy(dealChecklistRequirements.displayOrder);
+  }
+
+  async getAllChecklistRequirements(): Promise<DealChecklistRequirement[]> {
+    return await db.select().from(dealChecklistRequirements)
+      .orderBy(dealChecklistRequirements.targetState, dealChecklistRequirements.displayOrder);
+  }
+
+  async updateChecklistRequirement(id: number, data: Partial<InsertDealChecklistRequirement>): Promise<DealChecklistRequirement | undefined> {
+    const result = await db.update(dealChecklistRequirements)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealChecklistRequirements.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteChecklistRequirement(id: number): Promise<void> {
+    await db.delete(dealChecklistRequirements).where(eq(dealChecklistRequirements.id, id));
+  }
+
+  // Supplier SLA Tracking
+  async createSupplierSlaTracking(tracking: InsertSupplierSlaTracking): Promise<SupplierSlaTracking> {
+    const result = await db.insert(supplierSlaTracking).values({
+      ...tracking,
+      createdAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getSupplierSlaTrackingForDeal(dealId: string): Promise<SupplierSlaTracking[]> {
+    return await db.select().from(supplierSlaTracking)
+      .where(eq(supplierSlaTracking.dealId, dealId))
+      .orderBy(desc(supplierSlaTracking.requestSentAt));
+  }
+
+  async getSupplierSlaTrackingForSupplier(supplierId: number): Promise<SupplierSlaTracking[]> {
+    return await db.select().from(supplierSlaTracking)
+      .where(eq(supplierSlaTracking.supplierId, supplierId))
+      .orderBy(desc(supplierSlaTracking.requestSentAt));
+  }
+
+  async updateSupplierSlaTracking(id: number, data: Partial<InsertSupplierSlaTracking>): Promise<SupplierSlaTracking | undefined> {
+    const result = await db.update(supplierSlaTracking)
+      .set(data)
+      .where(eq(supplierSlaTracking.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async recordSupplierResponse(id: number, responseAt: Date): Promise<SupplierSlaTracking | undefined> {
+    // Get the tracking record to calculate hours
+    const tracking = await db.select().from(supplierSlaTracking).where(eq(supplierSlaTracking.id, id));
+    if (!tracking[0]) return undefined;
+
+    const requestedAt = new Date(tracking[0].requestSentAt);
+    const hoursElapsed = (responseAt.getTime() - requestedAt.getTime()) / (1000 * 60 * 60);
+    const expectedHours = tracking[0].expectedResponseHours || 48;
+    const isSlaBreach = hoursElapsed > expectedHours;
+
+    const result = await db.update(supplierSlaTracking)
+      .set({
+        firstResponseAt: responseAt,
+        actualResponseHours: hoursElapsed.toFixed(2),
+        isSlaBreach
+      })
+      .where(eq(supplierSlaTracking.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getSlaBreach(): Promise<SupplierSlaTracking[]> {
+    return await db.select().from(supplierSlaTracking)
+      .where(eq(supplierSlaTracking.isSlaBreach, true))
+      .orderBy(desc(supplierSlaTracking.requestSentAt));
   }
 }
 

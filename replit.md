@@ -66,3 +66,42 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - `DATABASE_URL`
 - `PUBLIC_OBJECT_SEARCH_PATHS`
 - `PRIVATE_OBJECT_DIR`
+
+## Deal OS (Revenue Control System)
+
+Deal OS is the authoritative source of financial truth for Ótima Energia - separate from CRM.
+
+### Design Principles
+1. **Explicit State Machine**: 10 states with validated transitions
+2. **Full Auditability**: Every state change recorded with timestamp, actor, reason
+3. **Commission Tracking**: FUTURE → PENDING → INVOICED → PAID with explicit state machine
+4. **Immutable Records**: Quote SHA-256 hashes, commission snapshots locked at CONTRACT_SIGNED
+5. **Party Structure**: Legal entities, brands, intermediaries, commission payers
+6. **Accrual Basis**: contracted_volume | actual_consumption | hybrid
+
+### Deal States
+DRAFT → RFQ_SENT → QUOTES_RECEIVED → OFFER_SELECTED → ONBOARDING_PENDING → CONTRACT_SIGNED → SUPPLY_LIVE → CONTRACT_ENDED → CLOSED
+(LOST is terminal, reachable from pre-signature states)
+
+### New API Endpoints (Commission OS Ready)
+**Commission Terms Snapshots:**
+- `GET/POST /api/deals/:id/commission-snapshots`
+- `GET /api/deals/:id/commission-snapshots/active`
+- `POST /api/deals/:dealId/commission-snapshots/:snapshotId/supersede`
+
+**Deal Disputes:**
+- `GET /api/disputes` (filter by ?status=)
+- `GET/POST /api/deals/:id/disputes`
+- `PATCH /api/disputes/:id`
+- `POST /api/disputes/:id/resolve`
+
+**Checklist Requirements:**
+- `GET/POST /api/deal-checklist-requirements`
+- `PATCH/DELETE /api/deal-checklist-requirements/:id`
+
+**Supplier SLA Tracking:**
+- `GET /api/supplier-sla/breaches`
+- `GET /api/deals/:id/sla-tracking`
+- `GET /api/suppliers/:id/sla-tracking`
+- `POST /api/supplier-sla`
+- `POST /api/supplier-sla/:id/response`

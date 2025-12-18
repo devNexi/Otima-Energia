@@ -21,6 +21,10 @@ import {
   insertDealQuoteSchema,
   insertDealCommissionEventSchema,
   insertDealDocumentSchema,
+  insertDealCommissionTermsSnapshotSchema,
+  insertDealDisputeSchema,
+  insertDealChecklistRequirementSchema,
+  insertSupplierSlaTrackingSchema,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState
@@ -3031,6 +3035,356 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching client deals:", error);
       res.status(500).json({ success: false, error: "Failed to fetch deals" });
+    }
+  });
+
+  // ============== DEAL OS - NEW TABLES ==============
+
+  // --- Commission Terms Snapshots ---
+
+  // Get all commission terms snapshots for a deal
+  app.get("/api/deals/:id/commission-snapshots", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshots = await storage.getCommissionTermsSnapshots(req.params.id);
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching commission snapshots:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch commission snapshots" });
+    }
+  });
+
+  // Get active commission terms snapshot for a deal
+  app.get("/api/deals/:id/commission-snapshots/active", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshot = await storage.getActiveCommissionTermsSnapshot(req.params.id);
+      res.json({ success: true, snapshot: snapshot || null });
+    } catch (error: any) {
+      console.error("Error fetching active commission snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch active snapshot" });
+    }
+  });
+
+  // Create commission terms snapshot
+  app.post("/api/deals/:id/commission-snapshots", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const validatedData = insertDealCommissionTermsSnapshotSchema.parse({
+        ...req.body,
+        dealId
+      });
+
+      const snapshot = await storage.createCommissionTermsSnapshot(validatedData);
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating commission snapshot:", error);
+        res.status(500).json({ success: false, error: "Failed to create commission snapshot" });
+      }
+    }
+  });
+
+  // Supersede commission terms snapshot (for amendments)
+  app.post("/api/deals/:dealId/commission-snapshots/:snapshotId/supersede", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshotId = parseInt(req.params.snapshotId);
+      const dealId = req.params.dealId;
+
+      const validatedData = insertDealCommissionTermsSnapshotSchema.parse({
+        ...req.body,
+        dealId
+      });
+
+      const newSnapshot = await storage.supersedeCommissionTermsSnapshot(snapshotId, validatedData);
+      res.json({ success: true, snapshot: newSnapshot });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error superseding commission snapshot:", error);
+        res.status(500).json({ success: false, error: "Failed to supersede commission snapshot" });
+      }
+    }
+  });
+
+  // --- Deal Disputes ---
+
+  // Get all open disputes
+  app.get("/api/disputes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const status = req.query.status as string | undefined;
+      let disputes;
+      if (status) {
+        disputes = await storage.getDisputesByStatus(status);
+      } else {
+        disputes = await storage.getOpenDisputes();
+      }
+      res.json({ success: true, disputes });
+    } catch (error: any) {
+      console.error("Error fetching disputes:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch disputes" });
+    }
+  });
+
+  // Get disputes for a deal
+  app.get("/api/deals/:id/disputes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const disputes = await storage.getDealDisputes(req.params.id);
+      res.json({ success: true, disputes });
+    } catch (error: any) {
+      console.error("Error fetching deal disputes:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch disputes" });
+    }
+  });
+
+  // Get single dispute
+  app.get("/api/disputes/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dispute = await storage.getDealDispute(parseInt(req.params.id));
+      if (!dispute) {
+        return res.status(404).json({ success: false, error: "Dispute not found" });
+      }
+      res.json({ success: true, dispute });
+    } catch (error: any) {
+      console.error("Error fetching dispute:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dispute" });
+    }
+  });
+
+  // Create dispute for a deal
+  app.post("/api/deals/:id/disputes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const validatedData = insertDealDisputeSchema.parse({
+        ...req.body,
+        dealId
+      });
+
+      const dispute = await storage.createDealDispute(validatedData);
+      res.json({ success: true, dispute });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating dispute:", error);
+        res.status(500).json({ success: false, error: "Failed to create dispute" });
+      }
+    }
+  });
+
+  // Update dispute
+  app.patch("/api/disputes/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dispute = await storage.updateDealDispute(parseInt(req.params.id), req.body);
+      if (!dispute) {
+        return res.status(404).json({ success: false, error: "Dispute not found" });
+      }
+      res.json({ success: true, dispute });
+    } catch (error: any) {
+      console.error("Error updating dispute:", error);
+      res.status(500).json({ success: false, error: "Failed to update dispute" });
+    }
+  });
+
+  // Resolve dispute
+  app.post("/api/disputes/:id/resolve", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { resolution, resolvedBy, resolvedAmount, notes } = req.body;
+      if (!resolution || !resolvedBy) {
+        return res.status(400).json({ success: false, error: "resolution and resolvedBy are required" });
+      }
+
+      const dispute = await storage.resolveDealDispute(
+        parseInt(req.params.id),
+        resolution,
+        resolvedBy,
+        resolvedAmount,
+        notes
+      );
+
+      if (!dispute) {
+        return res.status(404).json({ success: false, error: "Dispute not found" });
+      }
+      res.json({ success: true, dispute });
+    } catch (error: any) {
+      console.error("Error resolving dispute:", error);
+      res.status(500).json({ success: false, error: "Failed to resolve dispute" });
+    }
+  });
+
+  // --- Deal Checklist Requirements ---
+
+  // Get all checklist requirements
+  app.get("/api/deal-checklist-requirements", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const targetState = req.query.targetState as string | undefined;
+      let requirements;
+      if (targetState) {
+        requirements = await storage.getChecklistRequirements(targetState);
+      } else {
+        requirements = await storage.getAllChecklistRequirements();
+      }
+      res.json({ success: true, requirements });
+    } catch (error: any) {
+      console.error("Error fetching checklist requirements:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch requirements" });
+    }
+  });
+
+  // Create checklist requirement
+  app.post("/api/deal-checklist-requirements", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertDealChecklistRequirementSchema.parse(req.body);
+      const requirement = await storage.createChecklistRequirement(validatedData);
+      res.json({ success: true, requirement });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating checklist requirement:", error);
+        res.status(500).json({ success: false, error: "Failed to create requirement" });
+      }
+    }
+  });
+
+  // Update checklist requirement
+  app.patch("/api/deal-checklist-requirements/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const requirement = await storage.updateChecklistRequirement(parseInt(req.params.id), req.body);
+      if (!requirement) {
+        return res.status(404).json({ success: false, error: "Requirement not found" });
+      }
+      res.json({ success: true, requirement });
+    } catch (error: any) {
+      console.error("Error updating checklist requirement:", error);
+      res.status(500).json({ success: false, error: "Failed to update requirement" });
+    }
+  });
+
+  // Delete checklist requirement
+  app.delete("/api/deal-checklist-requirements/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      await storage.deleteChecklistRequirement(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting checklist requirement:", error);
+      res.status(500).json({ success: false, error: "Failed to delete requirement" });
+    }
+  });
+
+  // --- Supplier SLA Tracking ---
+
+  // Get SLA breaches
+  app.get("/api/supplier-sla/breaches", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const breaches = await storage.getSlaBreach();
+      res.json({ success: true, breaches });
+    } catch (error: any) {
+      console.error("Error fetching SLA breaches:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch SLA breaches" });
+    }
+  });
+
+  // Get SLA tracking for a deal
+  app.get("/api/deals/:id/sla-tracking", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const tracking = await storage.getSupplierSlaTrackingForDeal(req.params.id);
+      res.json({ success: true, tracking });
+    } catch (error: any) {
+      console.error("Error fetching deal SLA tracking:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch SLA tracking" });
+    }
+  });
+
+  // Get SLA tracking for a supplier
+  app.get("/api/suppliers/:id/sla-tracking", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const tracking = await storage.getSupplierSlaTrackingForSupplier(parseInt(req.params.id));
+      res.json({ success: true, tracking });
+    } catch (error: any) {
+      console.error("Error fetching supplier SLA tracking:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch SLA tracking" });
+    }
+  });
+
+  // Create SLA tracking record
+  app.post("/api/supplier-sla", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertSupplierSlaTrackingSchema.parse(req.body);
+      const tracking = await storage.createSupplierSlaTracking(validatedData);
+      res.json({ success: true, tracking });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating SLA tracking:", error);
+        res.status(500).json({ success: false, error: "Failed to create SLA tracking" });
+      }
+    }
+  });
+
+  // Update SLA tracking
+  app.patch("/api/supplier-sla/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const tracking = await storage.updateSupplierSlaTracking(parseInt(req.params.id), req.body);
+      if (!tracking) {
+        return res.status(404).json({ success: false, error: "SLA tracking not found" });
+      }
+      res.json({ success: true, tracking });
+    } catch (error: any) {
+      console.error("Error updating SLA tracking:", error);
+      res.status(500).json({ success: false, error: "Failed to update SLA tracking" });
+    }
+  });
+
+  // Record supplier response (auto-calculates SLA)
+  app.post("/api/supplier-sla/:id/response", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const responseAt = req.body.responseAt ? new Date(req.body.responseAt) : new Date();
+      const tracking = await storage.recordSupplierResponse(parseInt(req.params.id), responseAt);
+      if (!tracking) {
+        return res.status(404).json({ success: false, error: "SLA tracking not found" });
+      }
+      res.json({ success: true, tracking });
+    } catch (error: any) {
+      console.error("Error recording supplier response:", error);
+      res.status(500).json({ success: false, error: "Failed to record response" });
     }
   });
 
