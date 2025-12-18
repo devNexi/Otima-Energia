@@ -111,20 +111,20 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold">{blocked.length}</div>
+            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-compliance-blocked">
+              <div className="text-3xl font-bold" data-testid="text-compliance-blocked-count">{blocked.length}</div>
               <div className="text-sm text-violet-200">Compliance Blocked</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold">{slaBreach.length}</div>
+            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-sla-breach">
+              <div className="text-3xl font-bold" data-testid="text-sla-breach-count">{slaBreach.length}</div>
               <div className="text-sm text-violet-200">SLA Breaches</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold">{overdueCommission.length}</div>
+            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-overdue-commission">
+              <div className="text-3xl font-bold" data-testid="text-overdue-commission-count">{overdueCommission.length}</div>
               <div className="text-sm text-violet-200">Overdue Payments</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold">{waitingSupplier.length}</div>
+            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-awaiting-supplier">
+              <div className="text-3xl font-bold" data-testid="text-awaiting-supplier-count">{waitingSupplier.length}</div>
               <div className="text-sm text-violet-200">Awaiting Supplier</div>
             </div>
           </div>

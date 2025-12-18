@@ -271,13 +271,14 @@ export function ComplianceChecklistTab({ dealId, currentState, targetState, onCo
         <CardContent className="pt-4">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden" data-testid="progress-bar-compliance">
                 <div 
                   className={`h-full transition-all ${allComplete ? "bg-green-500" : "bg-orange-500"}`}
                   style={{ width: `${requiredCount > 0 ? (completedCount / requiredCount) * 100 : 0}%` }}
+                  data-testid="progress-bar-fill"
                 />
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500" data-testid="text-compliance-progress">
                 {completedCount}/{requiredCount} required
               </span>
             </div>

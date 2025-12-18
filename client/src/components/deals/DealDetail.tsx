@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
+import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChecklistTab";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -30,7 +31,8 @@ import {
   Upload,
   Check,
   X,
-  Briefcase
+  Briefcase,
+  ShieldCheck
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -318,6 +320,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <TabsTrigger value="cases" className="flex items-center gap-2">
             <Briefcase className="w-4 h-4" />
             {language === "pt" ? "Casos" : "Cases"}
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="flex items-center gap-2" data-testid="tab-compliance">
+            <ShieldCheck className="w-4 h-4" />
+            {language === "pt" ? "Conformidade" : "Compliance"}
           </TabsTrigger>
         </TabsList>
 
@@ -750,6 +756,14 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
 
         <TabsContent value="cases">
           <DealCasesTab dealId={dealId} />
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <ComplianceChecklistTab 
+            dealId={dealId}
+            currentState={deal.status}
+            targetState={validTransitions.length > 0 ? validTransitions[0] : undefined}
+          />
         </TabsContent>
       </Tabs>
     </div>
