@@ -1,0 +1,163 @@
+The big gaps to fix
+1) Deal needs a “party structure” field (who is counterparty)
+
+Right now it sounds like Deal = client ↔ supplier, but in Brazil you’ll often have:
+
+client ↔ comercializadora (supplier)
+
+sometimes an agente varejista / gestor / parceiro involved
+
+sometimes the “brand” differs from the legal entity (group)
+
+Add:
+
+supplier_legal_entity_id
+
+supplier_brand_name
+
+intermediary_partner_id (nullable)
+
+commission_payer_entity_id (who actually pays you)
+
+Otherwise you’ll win deals and later discover the payer is not who you logged.
+
+2) Missing a “Commission Basis Snapshot” at signing
+
+You have commission config fields on the deal, but you also need an immutable snapshot of the exact commission rules that applied at the moment the contract was signed.
+
+Because later:
+
+supplier changes playbook
+
+rep disputes
+
+you renegotiate terms mid-contract
+
+Create an immutable record:
+
+deal_commission_terms_snapshot (JSON + human-readable)
+
+created at CONTRACT_SIGNED
+
+used to generate commission events
+
+This prevents “moving goalposts.”
+
+3) Commission Events need calculation type + input references
+
+You mention “fixed or formula-based” but you need it explicit.
+
+Each deal_commission_event should store:
+
+calc_type = fixed_amount | per_mwh | percent_spread | hybrid
+
+calc_inputs (JSON): volume, rate, spread, any caps/floors
+
+source_of_truth = supplier_report | internal_calc | contract_clause
+
+evidence_doc_id (link to report/invoice/proof)
+
+Otherwise reconciliation becomes vibes.
+
+4) You need an explicit Dispute workflow
+
+Right now status includes DISPUTED, but you need:
+
+dispute reason taxonomy (late / underpay / wrong basis / missing deal ref)
+
+dispute owner
+
+dispute SLA
+
+dispute communications log (emails/calls/messages)
+
+resolution outcome (paid / written off / credit note / rolled forward)
+
+You’ll absolutely use this.
+
+5) Quotes: raw preservation is good — but you also need quote provenance
+
+Add:
+
+received_via: email | whatsapp | portal | pdf | excel | phone_summary
+
+received_from: name + email
+
+received_at timestamp
+
+attachments list (doc IDs)
+
+Also add a hash/fingerprint of the raw quote payload so it’s provably immutable.
+
+6) Deal lifecycle is missing 2 “real world” states
+
+Your nine states are clean, but you will encounter these constantly:
+
+ONBOARDING_PENDING (after OFFER_SELECTED, before CONTRACT_SIGNED)
+Used when client delays docs / compliance / CCEE/distribuidora steps.
+
+LOST / ABANDONED (from any state pre-signature)
+Otherwise dead deals pollute the pipeline forever.
+
+Also: allow CONTRACT_SIGNED → LOST only with admin approval + reason.
+
+7) Missing Supplier SLA tracking (response times)
+
+You already care about “supplier discipline”. Start tracking it here:
+
+For each RFQ and each quote:
+
+RFQ sent timestamp
+
+first response timestamp
+
+quote validity expiry
+
+response SLA breach flag
+
+This becomes your supplier scoring backbone.
+
+8) Missing “Deal checklist gating” (hard requirements per state)
+
+You have state machine validation, but you need per-state required fields and required documents.
+
+Example:
+
+To reach CONTRACT_SIGNED, require:
+
+signed contract doc uploaded & verified
+
+supplier legal entity confirmed
+
+commission terms snapshot created
+
+start/end dates locked
+
+Make this a config object so you can evolve without rewriting logic.
+
+Things that are slightly wrong (or risky)
+A) “Commission Active” is not a real state
+
+Commission isn’t a state of the deal; it’s a parallel lifecycle.
+
+Better:
+
+keep deal state as “SUPPLY_LIVE / CONTRACT_ENDED”
+
+commission events and reconciliation run alongside
+
+If you keep COMMISSION_ACTIVE, you’ll end up with deals “stuck” there when supply is live but commissions are delayed.
+
+Recommendation: either remove it, or redefine it as “commission schedule generated + first expected payment created”.
+
+B) x-session-id header only
+
+It’s fine internally, but add two protections now:
+
+server-side session rotation on login
+
+rate limiting on auth endpoints
+
+optional IP allowlist for admin roles later
+
+This is small, but it’s a money system.
