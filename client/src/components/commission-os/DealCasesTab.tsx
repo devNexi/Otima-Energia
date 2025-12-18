@@ -28,7 +28,7 @@ interface DealCase {
 }
 
 interface DealCasesTabProps {
-  dealId: string;
+  dealId?: string;
 }
 
 export function DealCasesTab({ dealId }: DealCasesTabProps) {
@@ -41,10 +41,13 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
 
   const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
+  const isAllCasesMode = !dealId;
+
   const { data: casesData, isLoading, error: casesError } = useQuery({
-    queryKey: ["/api/deals", dealId, "cases", sessionId],
+    queryKey: isAllCasesMode ? ["/api/cases", sessionId] : ["/api/deals", dealId, "cases", sessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/cases`, { headers: authHeaders });
+      const url = isAllCasesMode ? "/api/cases" : `/api/deals/${dealId}/cases`;
+      const res = await fetch(url, { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch cases");
@@ -218,10 +221,13 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Briefcase className="w-5 h-5" />
-              Deal Cases
+              {isAllCasesMode ? "All Cases" : "Deal Cases"}
             </CardTitle>
-            <CardDescription>Track issues and blockers for this deal</CardDescription>
+            <CardDescription>
+              {isAllCasesMode ? "View and manage all open cases across deals" : "Track issues and blockers for this deal"}
+            </CardDescription>
           </div>
+          {!isAllCasesMode && (
           <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
             <DialogTrigger asChild>
               <Button size="sm" data-testid="button-open-case">
@@ -297,6 +303,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>

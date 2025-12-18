@@ -2398,7 +2398,7 @@ export async function registerRoutes(
 
   // --- Admin Audit Log ---
 
-  // Get audit logs
+  // Get audit logs (legacy endpoint)
   app.get("/api/ecos/audit-log", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
@@ -2407,6 +2407,27 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ success: false, error: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get audit trail with filtering
+  app.get("/api/audit-trail", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const filters = {
+        actor: req.query.actor as string | undefined,
+        action: req.query.action as string | undefined,
+        entityType: req.query.entityType as string | undefined,
+        entityId: req.query.entityId ? parseInt(req.query.entityId as string) : undefined,
+        dateFrom: req.query.dateFrom as string | undefined,
+        dateTo: req.query.dateTo as string | undefined,
+        limit: parseInt(req.query.limit as string) || 200,
+      };
+      const logs = await storage.getAuditTrail(filters);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch audit trail" });
     }
   });
 

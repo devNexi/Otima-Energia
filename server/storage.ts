@@ -225,6 +225,15 @@ export interface IStorage {
   // ECOS - Admin Audit Log
   logAdminAction(log: InsertAdminAuditLog): Promise<AdminAuditLog>;
   getAdminAuditLogs(limit?: number): Promise<AdminAuditLog[]>;
+  getAuditTrail(filters: {
+    actor?: string;
+    action?: string;
+    entityType?: string;
+    entityId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    limit?: number;
+  }): Promise<AdminAuditLog[]>;
   
   // ECOS - Admin Sessions  
   createAdminSession(session: InsertAdminSession): Promise<AdminSession>;
@@ -1228,6 +1237,45 @@ export class Storage implements IStorage {
     return await db.select().from(adminAuditLog)
       .orderBy(desc(adminAuditLog.timestamp))
       .limit(limit);
+  }
+
+  async getAuditTrail(filters: {
+    actor?: string;
+    action?: string;
+    entityType?: string;
+    entityId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    limit?: number;
+  }): Promise<AdminAuditLog[]> {
+    const conditions = [];
+    
+    if (filters.actor) {
+      conditions.push(sql`${adminAuditLog.actor} ILIKE ${'%' + filters.actor + '%'}`);
+    }
+    if (filters.action) {
+      conditions.push(sql`${adminAuditLog.action} ILIKE ${'%' + filters.action + '%'}`);
+    }
+    if (filters.entityType) {
+      conditions.push(eq(adminAuditLog.entityType, filters.entityType));
+    }
+    if (filters.entityId) {
+      conditions.push(eq(adminAuditLog.entityId, filters.entityId));
+    }
+    if (filters.dateFrom) {
+      conditions.push(sql`${adminAuditLog.timestamp} >= ${filters.dateFrom}::timestamp`);
+    }
+    if (filters.dateTo) {
+      conditions.push(sql`${adminAuditLog.timestamp} <= ${filters.dateTo}::timestamp + interval '1 day'`);
+    }
+    
+    const query = conditions.length > 0
+      ? db.select().from(adminAuditLog).where(and(...conditions))
+      : db.select().from(adminAuditLog);
+    
+    return await query
+      .orderBy(desc(adminAuditLog.timestamp))
+      .limit(filters.limit || 200);
   }
 
   // Admin Sessions

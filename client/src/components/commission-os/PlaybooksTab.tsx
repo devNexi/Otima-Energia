@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, Settings, History, BookOpen, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -170,84 +170,14 @@ export function PlaybooksTab() {
             </CardTitle>
             <CardDescription>Configure how each supplier calculates commissions and reports</CardDescription>
           </div>
-          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-add-playbook" disabled={suppliers.length === 0}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Playbook
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create Supplier Playbook</DialogTitle>
-                <DialogDescription>Define how this supplier works with commissions</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div>
-                  <Label>Supplier *</Label>
-                  <Select value={newPlaybook.supplierId} onValueChange={(v) => setNewPlaybook({ ...newPlaybook, supplierId: v })}>
-                    <SelectTrigger data-testid="select-supplier">
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Commission Payer Entity</Label>
-                  <Input value={newPlaybook.commissionPayerEntity} onChange={(e) => setNewPlaybook({ ...newPlaybook, commissionPayerEntity: e.target.value })} placeholder="Legal entity name" />
-                </div>
-                <div>
-                  <Label>Payment Cadence *</Label>
-                  <Select value={newPlaybook.paymentCadence} onValueChange={(v) => setNewPlaybook({ ...newPlaybook, paymentCadence: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UPFRONT">Upfront</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
-                      <SelectItem value="QUARTERLY">Quarterly</SelectItem>
-                      <SelectItem value="MIXED">Mixed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Report Formats (comma-separated)</Label>
-                  <Input value={newPlaybook.reportFormatsSupported} onChange={(e) => setNewPlaybook({ ...newPlaybook, reportFormatsSupported: e.target.value })} placeholder="xlsx,csv,pdf" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Ops Contact Email</Label>
-                    <Input value={newPlaybook.opsContact} onChange={(e) => setNewPlaybook({ ...newPlaybook, opsContact: e.target.value })} placeholder="ops@supplier.com" />
-                  </div>
-                  <div>
-                    <Label>Finance Contact Email</Label>
-                    <Input value={newPlaybook.financeContact} onChange={(e) => setNewPlaybook({ ...newPlaybook, financeContact: e.target.value })} placeholder="finance@supplier.com" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Quote Response SLA (hours)</Label>
-                    <Input type="number" value={newPlaybook.quoteResponseHours} onChange={(e) => setNewPlaybook({ ...newPlaybook, quoteResponseHours: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Payment SLA (days after invoice)</Label>
-                    <Input type="number" value={newPlaybook.paymentDaysAfterInvoice} onChange={(e) => setNewPlaybook({ ...newPlaybook, paymentDaysAfterInvoice: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                <Button onClick={() => createMutation.mutate(newPlaybook)} disabled={createMutation.isPending || !isFormValid} data-testid="button-save-playbook">
-                  {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Save
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            data-testid="button-add-playbook" 
+            disabled={suppliers.length === 0}
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Playbook
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -312,6 +242,81 @@ export function PlaybooksTab() {
           </Table>
         )}
 
+        {/* Create Playbook Modal */}
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create Supplier Playbook</DialogTitle>
+              <DialogDescription>Define how this supplier works with commissions</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label>Supplier *</Label>
+                <Select value={newPlaybook.supplierId} onValueChange={(v) => setNewPlaybook({ ...newPlaybook, supplierId: v })}>
+                  <SelectTrigger data-testid="select-supplier">
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Commission Payer Entity</Label>
+                <Input value={newPlaybook.commissionPayerEntity} onChange={(e) => setNewPlaybook({ ...newPlaybook, commissionPayerEntity: e.target.value })} placeholder="Legal entity name" />
+              </div>
+              <div>
+                <Label>Payment Cadence *</Label>
+                <Select value={newPlaybook.paymentCadence} onValueChange={(v) => setNewPlaybook({ ...newPlaybook, paymentCadence: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UPFRONT">Upfront</SelectItem>
+                    <SelectItem value="MONTHLY">Monthly</SelectItem>
+                    <SelectItem value="QUARTERLY">Quarterly</SelectItem>
+                    <SelectItem value="MIXED">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Report Formats (comma-separated)</Label>
+                <Input value={newPlaybook.reportFormatsSupported} onChange={(e) => setNewPlaybook({ ...newPlaybook, reportFormatsSupported: e.target.value })} placeholder="xlsx,csv,pdf" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Ops Contact Email</Label>
+                  <Input value={newPlaybook.opsContact} onChange={(e) => setNewPlaybook({ ...newPlaybook, opsContact: e.target.value })} placeholder="ops@supplier.com" />
+                </div>
+                <div>
+                  <Label>Finance Contact Email</Label>
+                  <Input value={newPlaybook.financeContact} onChange={(e) => setNewPlaybook({ ...newPlaybook, financeContact: e.target.value })} placeholder="finance@supplier.com" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Quote Response SLA (hours)</Label>
+                  <Input type="number" value={newPlaybook.quoteResponseHours} onChange={(e) => setNewPlaybook({ ...newPlaybook, quoteResponseHours: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Payment SLA (days after invoice)</Label>
+                  <Input type="number" value={newPlaybook.paymentDaysAfterInvoice} onChange={(e) => setNewPlaybook({ ...newPlaybook, paymentDaysAfterInvoice: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+              <Button onClick={() => createMutation.mutate(newPlaybook)} disabled={createMutation.isPending || !isFormValid} data-testid="button-save-playbook">
+                {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Version History Modal */}
         <Dialog open={showVersionHistory} onOpenChange={setShowVersionHistory}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>

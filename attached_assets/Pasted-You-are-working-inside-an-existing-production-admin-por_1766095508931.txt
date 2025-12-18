@@ -1,0 +1,281 @@
+You are working inside an existing production admin portal for Ótima Energia, a Brazilian B2B energy brokerage.
+
+This system already includes:
+
+Deal lifecycle management
+
+Commission tracking
+
+Supplier playbooks
+
+Compliance enforcement
+
+Role-based access (Sales / Ops / Admin)
+
+Your task is to fix critical UX issues, align naming and structure with the business model, and complete missing operational functionality so the system is production-ready for real users (sales + analyst).
+
+1️⃣ FIX CRITICAL UI BUG (BLOCKING)
+Issue
+
+In the Playbooks tab, the “Add Playbook” button is visible but not clickable.
+
+Required Actions
+
+Identify and fix the root cause (likely causes: z-index overlay, disabled state, pointer-events, or missing onClick handler)
+
+Confirm the button:
+
+Is clickable
+
+Opens the expected modal or form
+
+Allows creation and saving of a supplier playbook
+
+Ensure no silent failures (log errors to console if any)
+
+This is a P0 issue — fix before anything else.
+
+2️⃣ UNIFY DEAL OS + COMMISSION OS (CONCEPTUAL ALIGNMENT)
+Business Requirement
+
+Deal OS and Commission OS are not separate systems.
+They are one operational system with different functional areas.
+
+UI / NAVIGATION CHANGES
+
+Rename “Deal OS” tab → “Deals”
+
+Rename “Commission” tab → “Revenue”
+
+Revenue contains sub-tabs:
+
+Usage
+
+Playbooks
+
+Reconciliation
+
+Deal Cases
+
+Do NOT create separate apps or modules
+
+Keep shared state and shared deal context
+
+The system as a whole should feel like one coherent operating system.
+
+3️⃣ DASHBOARD STRUCTURE (SALES / OFFICE / ADMIN UX)
+Goal
+
+Reduce cognitive load. Users should only see what they need.
+
+Required Implementation
+A) Two Primary Dashboards
+
+Sales Dashboard
+
+Default landing for users with role = sales
+
+Shows:
+
+ECOS Dashboard
+
+Leads
+
+Clients
+
+RFQs
+
+Deals (read-only or “my deals” only)
+
+Sales users should NOT see Revenue / Compliance / Ops by default
+
+Office Dashboard
+
+Default landing for users with role = ops
+
+Shows:
+
+Ops Dashboard (“Today’s Work Engine”)
+
+Deals (full access)
+
+Revenue (Usage / Playbooks / Reconciliation / Cases)
+
+Compliance
+
+Admin
+
+Sees everything
+
+Can access both dashboards and all tabs
+
+No restrictions
+
+B) Navigation Behavior
+
+Tabs may remain globally defined
+
+Default tab + grouping must change based on role
+
+Prevent access via URL manipulation (already partially implemented — ensure consistency)
+
+4️⃣ OPS DASHBOARD — REAL DATA (NO PLACEHOLDERS)
+Current Issue
+
+Ops Dashboard KPIs show placeholder values (“-”).
+
+Required KPIs (REAL COUNTS)
+
+Implement backend queries and endpoints so these tiles show live data:
+
+Deals blocked by compliance
+
+Active SLA breaches (supplier or internal)
+
+Overdue commission payments
+
+Deals awaiting supplier response
+
+Each tile must:
+
+Show a real count
+
+Be clickable
+
+Deep-link to the filtered list of deals/cases
+
+5️⃣ AUDIT TRAIL VIEWER (COMPLIANCE CRITICAL)
+Requirement
+
+Build a searchable Audit Trail UI using existing logs.
+
+Must Support Filtering By:
+
+Client
+
+Deal
+
+User
+
+Date range
+
+Action type:
+
+Deal transition
+
+Checklist completion
+
+Communication log
+
+Commission status change
+
+Display
+
+Chronological table
+
+Timestamp
+
+Actor
+
+Action
+
+Object (deal/client)
+
+Linked evidence (if applicable)
+
+This is a defensive compliance feature — must be clear and fast.
+
+6️⃣ LOST / RETURNED DEAL INTELLIGENCE
+Expand Existing Case Tracking
+
+You already track deal cases. Now enforce structure and analytics.
+
+Required Enhancements
+
+Structured reason taxonomy (no free-text only)
+
+Mandatory reason selection when:
+
+Deal is marked LOST
+
+Deal is RETURNED / STUCK
+
+Capture:
+
+Supplier involved
+
+Stage of failure
+
+Sales user involved
+
+Reporting
+
+Aggregate views:
+
+Lost deals by reason
+
+Lost deals by supplier
+
+Lost deals by stage
+
+Lost deals by sales user
+
+This data will be used for:
+
+Supplier negotiations
+
+Sales coaching
+
+Process improvement
+
+7️⃣ EMAIL NOTIFICATIONS (MINIMAL, HIGH SIGNAL)
+
+Do NOT overbuild.
+
+Required Notifications
+
+Deal blocked > X days
+
+SLA breach
+
+Commission payment overdue
+
+Constraints
+
+Use simple email (Google Workspace SMTP later)
+
+Configurable thresholds
+
+No SMS, no push, no noise
+
+8️⃣ FINAL CHECKS
+
+Before marking complete:
+
+Verify role-based dashboards behave correctly
+
+Verify no dead UI elements remain
+
+Verify all critical paths can be completed by:
+
+1 sales user
+
+1 ops analyst
+
+Ensure all changes are reflected in existing schema and API patterns
+
+No breaking changes to existing deals or data
+
+OUTPUT EXPECTATION
+
+When complete, confirm:
+
+Which items were fixed
+
+Which files were modified
+
+Any assumptions made
+
+Any known limitations or follow-ups
+
+Do NOT propose new features unless explicitly requested.

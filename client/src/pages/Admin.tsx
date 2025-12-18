@@ -18,7 +18,8 @@ import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { EcosDashboard } from "@/components/ecos/EcosDashboard";
 import { DealRegistry } from "@/components/deals/DealRegistry";
 import { DealDetail } from "@/components/deals/DealDetail";
-import { UsageTab, PlaybooksTab, ReconciliationTab, OpsDashboardTab } from "@/components/commission-os";
+import { OpsDashboardTab, RevenueTab } from "@/components/commission-os";
+import { AuditTrailTab } from "@/components/admin/AuditTrailTab";
 import { 
   Users, 
   Inbox, 
@@ -599,32 +600,25 @@ export default function Admin() {
                 {language === "pt" ? "Painel Ops" : "Ops Dashboard"}
               </TabsTrigger>
             )}
-            {/* Deal OS - visible to ops and admin */}
+            {/* Deals - visible to ops and admin */}
             {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="deal-os" className="flex items-center gap-2" data-testid="tab-deal-os">
+              <TabsTrigger value="deals" className="flex items-center gap-2" data-testid="tab-deals">
                 <Briefcase className="w-4 h-4" />
-                {language === "pt" ? "Deal OS" : "Deal OS"}
+                {language === "pt" ? "Negócios" : "Deals"}
               </TabsTrigger>
             )}
-            {/* Usage - visible to ops and admin (Commission OS) */}
+            {/* Revenue - visible to ops and admin (replaces Commission OS tabs) */}
             {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="usage" className="flex items-center gap-2" data-testid="tab-usage">
-                <Zap className="w-4 h-4" />
-                {language === "pt" ? "Consumo" : "Usage"}
+              <TabsTrigger value="revenue" className="flex items-center gap-2" data-testid="tab-revenue">
+                <DollarSign className="w-4 h-4" />
+                {language === "pt" ? "Receita" : "Revenue"}
               </TabsTrigger>
             )}
-            {/* Playbooks - visible to ops and admin (Commission OS) */}
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="playbooks" className="flex items-center gap-2" data-testid="tab-playbooks">
+            {/* Audit Trail - visible to admin only */}
+            {user?.role === "admin" && (
+              <TabsTrigger value="audit-trail" className="flex items-center gap-2" data-testid="tab-audit-trail">
                 <BookOpen className="w-4 h-4" />
-                {language === "pt" ? "Playbooks" : "Playbooks"}
-              </TabsTrigger>
-            )}
-            {/* Reconciliation - visible to ops and admin (Commission OS) */}
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="reconciliation" className="flex items-center gap-2" data-testid="tab-reconciliation">
-                <Scale className="w-4 h-4" />
-                {language === "pt" ? "Conciliação" : "Reconciliation"}
+                {language === "pt" ? "Auditoria" : "Audit Trail"}
               </TabsTrigger>
             )}
           </TabsList>
@@ -1214,15 +1208,15 @@ export default function Admin() {
               <OpsDashboardTab 
                 onNavigateToDeal={(dealId) => {
                   setSelectedDealId(dealId);
-                  setActiveTab("deal-os");
+                  setActiveTab("deals");
                 }}
               />
             </TabsContent>
           )}
 
-          {/* Commission OS tabs - visible to ops and admin */}
+          {/* Deals tab - visible to ops and admin */}
           {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="deal-os">
+            <TabsContent value="deals">
               {selectedDealId ? (
                 <DealDetail 
                   dealId={selectedDealId}
@@ -1236,21 +1230,17 @@ export default function Admin() {
             </TabsContent>
           )}
 
+          {/* Revenue tab - visible to ops and admin (replaces Commission OS tabs) */}
           {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="usage">
-              <UsageTab />
+            <TabsContent value="revenue">
+              <RevenueTab language={language} />
             </TabsContent>
           )}
-
-          {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="playbooks">
-              <PlaybooksTab />
-            </TabsContent>
-          )}
-
-          {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="reconciliation">
-              <ReconciliationTab />
+          
+          {/* Audit Trail - admin only */}
+          {user?.role === "admin" && (
+            <TabsContent value="audit-trail">
+              <AuditTrailTab />
             </TabsContent>
           )}
         </Tabs>
