@@ -277,12 +277,12 @@ export function UsageTab() {
             <span className="text-sm text-gray-500">Filters:</span>
           </div>
           <div className="w-48">
-            <Select value={filterClientId} onValueChange={setFilterClientId}>
+            <Select value={filterClientId || "all"} onValueChange={(v) => setFilterClientId(v === "all" ? "" : v)}>
               <SelectTrigger data-testid="filter-client">
                 <SelectValue placeholder="All clients" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All clients</SelectItem>
+                <SelectItem value="all">All clients</SelectItem>
                 {clients.map((c: any) => (
                   <SelectItem key={c.id} value={c.id.toString()}>{c.companyName}</SelectItem>
                 ))}
