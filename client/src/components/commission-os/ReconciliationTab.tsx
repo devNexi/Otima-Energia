@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, CheckCircle, AlertTriangle, TrendingDown, TrendingUp, Scale, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 interface ReconciliationRun {
   id: number;
@@ -43,41 +44,37 @@ interface ReconciliationLine {
 export function ReconciliationTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { sessionId, user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
 
-  const { data: authData } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      return res.json();
-    },
-  });
+  const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
   const { data: runsData, isLoading: runsLoading, error: runsError } = useQuery({
-    queryKey: ["/api/reconciliation-runs"],
+    queryKey: ["/api/reconciliation-runs", sessionId],
     queryFn: async () => {
-      const res = await fetch("/api/reconciliation-runs", { credentials: "include" });
+      const res = await fetch("/api/reconciliation-runs", { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch reconciliation runs");
       }
       return res.json();
     },
+    enabled: !!sessionId,
   });
 
   const { data: runDetailData, isLoading: detailLoading, error: detailError } = useQuery({
-    queryKey: ["/api/reconciliation-runs", selectedRunId],
+    queryKey: ["/api/reconciliation-runs", selectedRunId, sessionId],
     queryFn: async () => {
       if (!selectedRunId) return null;
-      const res = await fetch(`/api/reconciliation-runs/${selectedRunId}`, { credentials: "include" });
+      const res = await fetch(`/api/reconciliation-runs/${selectedRunId}`, { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch run details");
       }
       return res.json();
     },
-    enabled: !!selectedRunId,
+    enabled: !!selectedRunId && !!sessionId,
   });
 
   const [newRun, setNewRun] = useState({
@@ -89,7 +86,7 @@ export function ReconciliationTab() {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof newRun) => {
-      const userId = authData?.user?.id || "system";
+      const userId = user?.id || "system";
       const payload = {
         runType: data.runType,
         periodStart: data.periodStart,
@@ -101,8 +98,7 @@ export function ReconciliationTab() {
 
       const res = await fetch("/api/reconciliation-runs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -127,11 +123,10 @@ export function ReconciliationTab() {
 
   const finalizeMutation = useMutation({
     mutationFn: async (runId: number) => {
-      const userId = authData?.user?.id || "system";
+      const userId = user?.id || "system";
       const res = await fetch(`/api/reconciliation-runs/${runId}/finalize`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ finalizedBy: userId }),
       });
       if (!res.ok) {
@@ -142,7 +137,6 @@ export function ReconciliationTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reconciliation-runs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reconciliation-runs", selectedRunId] });
       toast({ title: "Run finalized", description: "The reconciliation run has been closed." });
     },
     onError: (error: Error) => {

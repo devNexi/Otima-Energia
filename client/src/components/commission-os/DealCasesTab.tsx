@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, AlertTriangle, Clock, XCircle, CheckCircle, Briefcase, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 interface DealCase {
   id: number;
@@ -33,28 +34,24 @@ interface DealCasesTabProps {
 export function DealCasesTab({ dealId }: DealCasesTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { sessionId, user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<DealCase | null>(null);
 
-  const { data: authData } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      return res.json();
-    },
-  });
+  const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
   const { data: casesData, isLoading, error: casesError } = useQuery({
-    queryKey: ["/api/deals", dealId, "cases"],
+    queryKey: ["/api/deals", dealId, "cases", sessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/cases`, { credentials: "include" });
+      const res = await fetch(`/api/deals/${dealId}/cases`, { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch cases");
       }
       return res.json();
     },
+    enabled: !!sessionId,
   });
 
   const [newCase, setNewCase] = useState({
@@ -69,7 +66,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof newCase) => {
-      const userId = authData?.user?.id || "system";
+      const userId = user?.id || "system";
       const payload: Record<string, any> = {
         caseType: data.caseType,
         severity: data.severity,
@@ -82,8 +79,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
 
       const res = await fetch(`/api/deals/${dealId}/cases`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -107,8 +103,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
     mutationFn: async ({ caseId, data }: { caseId: number; data: Partial<DealCase> }) => {
       const res = await fetch(`/api/cases/${caseId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -128,11 +123,10 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
 
   const convertMutation = useMutation({
     mutationFn: async ({ caseId, reason }: { caseId: number; reason: string }) => {
-      const userId = authData?.user?.id || "system";
+      const userId = user?.id || "system";
       const res = await fetch(`/api/cases/${caseId}/convert-to-lost`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ triggeredBy: userId, reason }),
       });
       if (!res.ok) {

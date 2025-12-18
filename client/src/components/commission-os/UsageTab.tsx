@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, CheckCircle, Filter, Zap, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 interface UsagePeriod {
   id: string;
@@ -31,37 +32,35 @@ interface UsagePeriod {
 export function UsageTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { sessionId, user } = useAuth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterClientId, setFilterClientId] = useState("");
   const [filterDealId, setFilterDealId] = useState("");
 
+  const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
+
   const { data: usageData, isLoading, error: usageError } = useQuery({
-    queryKey: ["/api/usage", filterClientId, filterDealId],
+    queryKey: ["/api/usage", filterClientId, filterDealId, sessionId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filterClientId) params.append("clientId", filterClientId);
       if (filterDealId) params.append("dealId", filterDealId);
-      const res = await fetch(`/api/usage?${params.toString()}`, { credentials: "include" });
+      const res = await fetch(`/api/usage?${params.toString()}`, { 
+        headers: authHeaders 
+      });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch usage data");
       }
       return res.json();
     },
+    enabled: !!sessionId,
   });
 
   const { data: clientsData } = useQuery({
     queryKey: ["/api/clients"],
     queryFn: async () => {
-      const res = await fetch("/api/clients", { credentials: "include" });
-      return res.json();
-    },
-  });
-
-  const { data: authData } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch("/api/clients");
       return res.json();
     },
   });
@@ -97,8 +96,7 @@ export function UsageTab() {
 
       const res = await fetch("/api/usage", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -131,11 +129,10 @@ export function UsageTab() {
 
   const verifyMutation = useMutation({
     mutationFn: async (id: string) => {
-      const userId = authData?.user?.id || "unknown";
+      const userId = user?.id || "unknown";
       const res = await fetch(`/api/usage/${id}/verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ verifiedByUserId: userId }),
       });
       if (!res.ok) {

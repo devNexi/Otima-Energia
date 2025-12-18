@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, Settings, History, BookOpen, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 interface SupplierPlaybook {
   id: number;
@@ -28,14 +29,17 @@ interface SupplierPlaybook {
 export function PlaybooksTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { sessionId, user } = useAuth();
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
 
+  const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
+
   const { data: suppliersData, isLoading: suppliersLoading, error: suppliersError } = useQuery({
     queryKey: ["/api/suppliers"],
     queryFn: async () => {
-      const res = await fetch("/api/suppliers", { credentials: "include" });
+      const res = await fetch("/api/suppliers");
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch suppliers");
@@ -45,29 +49,30 @@ export function PlaybooksTab() {
   });
 
   const { data: playbooksData, isLoading, error: playbooksError } = useQuery({
-    queryKey: ["/api/supplier-playbooks"],
+    queryKey: ["/api/supplier-playbooks", sessionId],
     queryFn: async () => {
-      const res = await fetch("/api/supplier-playbooks", { credentials: "include" });
+      const res = await fetch("/api/supplier-playbooks", { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch playbooks");
       }
       return res.json();
     },
+    enabled: !!sessionId,
   });
 
   const { data: versionsData, isLoading: versionsLoading, error: versionsError } = useQuery({
-    queryKey: ["/api/suppliers", selectedSupplierId, "playbook", "versions"],
+    queryKey: ["/api/suppliers", selectedSupplierId, "playbook", "versions", sessionId],
     queryFn: async () => {
       if (!selectedSupplierId) return { versions: [] };
-      const res = await fetch(`/api/suppliers/${selectedSupplierId}/playbook/versions`, { credentials: "include" });
+      const res = await fetch(`/api/suppliers/${selectedSupplierId}/playbook/versions`, { headers: authHeaders });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to fetch versions");
       }
       return res.json();
     },
-    enabled: !!selectedSupplierId && showVersionHistory,
+    enabled: !!selectedSupplierId && showVersionHistory && !!sessionId,
   });
 
   const [newPlaybook, setNewPlaybook] = useState({
@@ -103,12 +108,12 @@ export function PlaybooksTab() {
         },
         rules: {},
         isActive: true,
+        updatedBy: user?.id || null,
       };
 
       const res = await fetch(`/api/suppliers/${data.supplierId}/playbook`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
