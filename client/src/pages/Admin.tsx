@@ -18,7 +18,7 @@ import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { EcosDashboard } from "@/components/ecos/EcosDashboard";
 import { DealRegistry } from "@/components/deals/DealRegistry";
 import { DealDetail } from "@/components/deals/DealDetail";
-import { UsageTab, PlaybooksTab, ReconciliationTab } from "@/components/commission-os";
+import { UsageTab, PlaybooksTab, ReconciliationTab, OpsDashboardTab } from "@/components/commission-os";
 import { 
   Users, 
   Inbox, 
@@ -49,7 +49,8 @@ import {
   User,
   Briefcase,
   Scale,
-  BookOpen
+  BookOpen,
+  ShieldAlert
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -88,7 +89,7 @@ export default function Admin() {
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   
   const getDefaultTab = (role: string | undefined) => {
-    if (role === "ops") return "deal-os";
+    if (role === "ops") return "ops-dashboard";
     return "ecos-dashboard";
   };
   const [activeTab, setActiveTab] = useState(() => getDefaultTab(user?.role));
@@ -589,6 +590,13 @@ export default function Admin() {
               <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
                 <FileText className="w-4 h-4" />
                 {t("admin.tab.rfqs")}
+              </TabsTrigger>
+            )}
+            {/* Ops Dashboard - visible to ops and admin */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="ops-dashboard" className="flex items-center gap-2" data-testid="tab-ops-dashboard">
+                <ShieldAlert className="w-4 h-4" />
+                {language === "pt" ? "Painel Ops" : "Ops Dashboard"}
               </TabsTrigger>
             )}
             {/* Deal OS - visible to ops and admin */}
@@ -1197,6 +1205,18 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+            </TabsContent>
+          )}
+
+          {/* Ops Dashboard - Today's Work Engine */}
+          {(user?.role === "ops" || user?.role === "admin") && (
+            <TabsContent value="ops-dashboard">
+              <OpsDashboardTab 
+                onNavigateToDeal={(dealId) => {
+                  setSelectedDealId(dealId);
+                  setActiveTab("deal-os");
+                }}
+              />
             </TabsContent>
           )}
 
