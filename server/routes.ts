@@ -2502,9 +2502,11 @@ export async function registerRoutes(
   
   // Saved audit filter presets
   app.get("/api/audit-filters", async (req, res) => {
-    const session = await validateDealOsSession(req, res);
-    if (!session) return;
+    if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      if (!session) return res.status(401).json({ success: false, error: "Session not found" });
       const filters = await storage.getSavedAuditFilters(session.userId);
       res.json({ success: true, filters });
     } catch (error: any) {
@@ -2514,9 +2516,11 @@ export async function registerRoutes(
   });
   
   app.post("/api/audit-filters", async (req, res) => {
-    const session = await validateDealOsSession(req, res);
-    if (!session) return;
+    if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      if (!session) return res.status(401).json({ success: false, error: "Session not found" });
       const { name, description, filtersJson } = req.body;
       if (!name || !filtersJson) {
         return res.status(400).json({ success: false, error: "Name and filters are required" });
@@ -2535,9 +2539,11 @@ export async function registerRoutes(
   });
   
   app.delete("/api/audit-filters/:id", async (req, res) => {
-    const session = await validateDealOsSession(req, res);
-    if (!session) return;
+    if (!await validateDealOsSession(req, res)) return;
     try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      if (!session) return res.status(401).json({ success: false, error: "Session not found" });
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteSavedAuditFilter(id, session.userId);
       if (!deleted) {
