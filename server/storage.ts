@@ -46,6 +46,7 @@ import {
   type CommunicationLog, type InsertCommunicationLog,
   type PlaybookDealSnapshot, type InsertPlaybookDealSnapshot,
   type SavedAuditFilter, type InsertSavedAuditFilter,
+  type NotificationQueue, type InsertNotificationQueue,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -56,7 +57,7 @@ import {
   dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking,
   clientUsagePeriods, supplierPlaybooks, supplierReportImports,
   commissionReconciliationRuns, commissionReconciliationLines, dealCases,
-  complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots
+  complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -456,6 +457,12 @@ export interface IStorage {
     commissionEventsOverdue: DealCommissionEvent[];
     dealsWaitingOnSupplier: Deal[];
   }>;
+  
+  // Notification Queue
+  createNotification(data: InsertNotificationQueue): Promise<NotificationQueue>;
+  getPendingNotifications(): Promise<NotificationQueue[]>;
+  markNotificationSent(id: number): Promise<void>;
+  markNotificationFailed(id: number, reason: string): Promise<void>;
 }
 
 export class Storage implements IStorage {
@@ -2587,6 +2594,30 @@ export class Storage implements IStorage {
       commissionEventsOverdue,
       dealsWaitingOnSupplier
     };
+  }
+
+  // Notification Queue
+  async createNotification(data: InsertNotificationQueue): Promise<NotificationQueue> {
+    const result = await db.insert(notificationQueue).values(data).returning();
+    return result[0];
+  }
+
+  async getPendingNotifications(): Promise<NotificationQueue[]> {
+    return await db.select().from(notificationQueue)
+      .where(eq(notificationQueue.status, 'PENDING'))
+      .orderBy(notificationQueue.createdAt);
+  }
+
+  async markNotificationSent(id: number): Promise<void> {
+    await db.update(notificationQueue)
+      .set({ status: 'SENT', sentAt: new Date() })
+      .where(eq(notificationQueue.id, id));
+  }
+
+  async markNotificationFailed(id: number, reason: string): Promise<void> {
+    await db.update(notificationQueue)
+      .set({ status: 'FAILED', failReason: reason })
+      .where(eq(notificationQueue.id, id));
   }
 }
 

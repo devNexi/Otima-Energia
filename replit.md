@@ -171,3 +171,50 @@ Commission OS is the usage tracking, reconciliation, and case management system 
 3. **Reconciliation Lines**: One line per deal per period, tracks expected/reported/paid/variance
 4. **Case → LOST**: Cases can trigger deal state machine transition to LOST terminal state
 5. **No Automation Logic**: All tables are clean CRUD - ready for future orchestration layer
+
+## Notification System
+
+### Overview
+Email notification infrastructure for operational alerts. Queues notifications for delivery via SendGrid or Resend when configured.
+
+### Notification Types
+- `DEAL_BLOCKED`: Deals blocked by incomplete compliance requirements
+- `SLA_BREACH`: Cases that have exceeded their SLA deadline
+- `COMMISSION_OVERDUE`: Commission events past their expected date
+
+### Database Table
+- `notification_queue`: Stores pending, sent, and failed notifications with full audit trail
+
+### API Endpoints
+- `POST /api/notifications/check` (Admin only): Triggers notification generation and processing
+- `GET /api/notifications/pending` (Admin/Ops): View pending notification queue
+
+### Environment Variables
+- `OPS_NOTIFICATION_EMAIL` or `ADMIN_EMAIL`: Recipient for notification emails
+- `SENDGRID_API_KEY` or `RESEND_API_KEY`: Email service credentials (when configured)
+
+### Design Principles
+1. **Queue-Based**: Notifications are queued first, processed separately
+2. **Configurable Recipients**: Uses environment variable for notification email
+3. **Graceful Degradation**: Without email service configured, logs notification intent
+4. **Role-Guarded**: Endpoints protected by appropriate role checks
+
+## Lost Deal Intelligence
+
+### Structured Reason Taxonomy (20+ categories)
+**Client Reasons**: CLIENT_NO_RESPONSE, CLIENT_PRICE_SENSITIVE, CLIENT_INTERNAL_CHANGE, CLIENT_RELOCATED, CLIENT_CLOSED
+**Supplier Reasons**: SUPPLIER_REJECTED_CREDIT, SUPPLIER_VOLUME_MINIMUM, SUPPLIER_NO_QUOTE, SUPPLIER_CONTRACT_TERMS
+**Competitive Reasons**: LOST_TO_COMPETITOR, INCUMBENT_RETENTION, PRICE_NOT_COMPETITIVE
+**Process Reasons**: PROCESS_TIMEOUT, DOCS_NOT_PROVIDED, MIGRATION_FAILED, REGULATORY_BLOCK
+**Other**: OTHER (requires notes)
+
+### Tracking Fields
+- `lost_reason_category`: Structured category from taxonomy
+- `lost_supplier_id`: If lost to specific supplier
+- `lost_stage`: Deal state when lost
+- `lost_by_user_id`: User who marked deal as LOST
+- `lost_at`: Timestamp of LOST transition
+- `lost_notes`: Mandatory if reason is OTHER
+
+### Analytics API
+- `GET /api/analytics/lost-deals`: Aggregated views by reason, supplier, stage, user

@@ -2585,6 +2585,46 @@ export const playbookDealSnapshotsRelations = relations(playbookDealSnapshots, (
   }),
 }));
 
+// ============== NOTIFICATION QUEUE ==============
+
+export const notificationQueue = pgTable("notification_queue", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // DEAL_BLOCKED, SLA_BREACH, COMMISSION_OVERDUE
+  recipientEmail: text("recipient_email").notNull(),
+  recipientUserId: varchar("recipient_user_id").references(() => users.id),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  dealId: varchar("deal_id").references(() => deals.id),
+  metadata: jsonb("metadata").default({}),
+  status: text("status").default("PENDING").notNull(), // PENDING, SENT, FAILED
+  sentAt: timestamp("sent_at"),
+  failReason: text("fail_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertNotificationQueueSchema = createInsertSchema(notificationQueue).omit({
+  id: true,
+  sentAt: true,
+  failReason: true,
+  createdAt: true,
+});
+
+export type InsertNotificationQueue = z.infer<typeof insertNotificationQueueSchema>;
+export type NotificationQueue = typeof notificationQueue.$inferSelect;
+
+export const notificationQueueRelations = relations(notificationQueue, ({ one }) => ({
+  deal: one(deals, {
+    fields: [notificationQueue.dealId],
+    references: [deals.id],
+  }),
+  recipientUser: one(users, {
+    fields: [notificationQueue.recipientUserId],
+    references: [users.id],
+  }),
+}));
+
+// ============== END NOTIFICATION QUEUE ==============
+
 // ============== END COMMISSION OS SCHEMA ==============
 
 // ============== END DEAL OS SCHEMA ==============

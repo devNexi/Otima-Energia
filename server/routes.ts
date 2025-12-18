@@ -4521,5 +4521,43 @@ export async function registerRoutes(
     }
   });
 
+  // Notification Queue - Admin only
+  app.post("/api/notifications/check", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const session = await storage.getSession(req.headers["x-session-id"] as string);
+    const user = session?.userId ? await storage.getUser(session.userId) : null;
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      const { runNotificationCheck } = await import("./notifications");
+      const result = await runNotificationCheck();
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error running notification check:", error);
+      res.status(500).json({ success: false, error: "Failed to run notification check" });
+    }
+  });
+
+  app.get("/api/notifications/pending", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const session = await storage.getSession(req.headers["x-session-id"] as string);
+    const user = session?.userId ? await storage.getUser(session.userId) : null;
+    if (user?.role !== 'admin' && user?.role !== 'ops') {
+      return res.status(403).json({ success: false, error: "Admin or Ops access required" });
+    }
+    
+    try {
+      const pending = await storage.getPendingNotifications();
+      res.json({ success: true, notifications: pending });
+    } catch (error: any) {
+      console.error("Error fetching pending notifications:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch notifications" });
+    }
+  });
+
   return httpServer;
 }
