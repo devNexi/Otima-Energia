@@ -33,6 +33,7 @@ export function PlaybooksTab() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [editingPlaybook, setEditingPlaybook] = useState<SupplierPlaybook | null>(null);
 
   const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
@@ -124,18 +125,12 @@ export function PlaybooksTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/supplier-playbooks"] });
-      setShowCreateModal(false);
-      setNewPlaybook({
-        supplierId: "",
-        commissionPayerEntity: "",
-        paymentCadence: "MONTHLY",
-        reportFormatsSupported: "xlsx,csv",
-        opsContact: "",
-        financeContact: "",
-        quoteResponseHours: "48",
-        paymentDaysAfterInvoice: "30",
+      const wasEdit = !!editingPlaybook;
+      closeModal();
+      toast({ 
+        title: wasEdit ? "Playbook updated" : "Playbook created", 
+        description: wasEdit ? "New version has been saved." : "Supplier playbook has been configured."
       });
-      toast({ title: "Playbook created", description: "New supplier playbook version has been saved." });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -159,6 +154,39 @@ export function PlaybooksTab() {
   const isFormValid = newPlaybook.supplierId && newPlaybook.paymentCadence;
   const hasError = suppliersError || playbooksError;
 
+  const openEditModal = (playbook: SupplierPlaybook) => {
+    const contacts = playbook.contacts || {};
+    const slaTargets = playbook.slaTargets || {};
+    const formats = Array.isArray(playbook.reportFormatsSupported) ? playbook.reportFormatsSupported.join(",") : "";
+    setNewPlaybook({
+      supplierId: playbook.supplierId.toString(),
+      commissionPayerEntity: playbook.commissionPayerEntity || "",
+      paymentCadence: playbook.paymentCadence,
+      reportFormatsSupported: formats,
+      opsContact: contacts.ops || "",
+      financeContact: contacts.finance || "",
+      quoteResponseHours: String(slaTargets.quoteResponseHours || 48),
+      paymentDaysAfterInvoice: String(slaTargets.paymentDaysAfterInvoice || 30),
+    });
+    setEditingPlaybook(playbook);
+    setShowCreateModal(true);
+  };
+
+  const closeModal = () => {
+    setShowCreateModal(false);
+    setEditingPlaybook(null);
+    setNewPlaybook({
+      supplierId: "",
+      commissionPayerEntity: "",
+      paymentCadence: "MONTHLY",
+      reportFormatsSupported: "xlsx,csv",
+      opsContact: "",
+      financeContact: "",
+      quoteResponseHours: "48",
+      paymentDaysAfterInvoice: "30",
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -170,14 +198,19 @@ export function PlaybooksTab() {
             </CardTitle>
             <CardDescription>Configure how each supplier calculates commissions and reports</CardDescription>
           </div>
-          <Button 
-            data-testid="button-add-playbook" 
-            disabled={suppliers.length === 0}
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Playbook
-          </Button>
+          <div className="flex items-center gap-2">
+            {suppliers.length === 0 && !suppliersLoading && (
+              <span className="text-sm text-amber-600">Create suppliers first</span>
+            )}
+            <Button 
+              data-testid="button-add-playbook" 
+              disabled={suppliers.length === 0 || suppliersLoading}
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Playbook
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -230,7 +263,7 @@ export function PlaybooksTab() {
                         <Button size="sm" variant="outline" onClick={() => { setSelectedSupplierId(playbook.supplierId); setShowVersionHistory(true); }} data-testid={`button-history-${playbook.id}`}>
                           <History className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" data-testid={`button-edit-${playbook.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => openEditModal(playbook)} data-testid={`button-edit-${playbook.id}`}>
                           <Settings className="w-4 h-4" />
                         </Button>
                       </div>
@@ -242,17 +275,25 @@ export function PlaybooksTab() {
           </Table>
         )}
 
-        {/* Create Playbook Modal */}
-        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        {/* Create/Edit Playbook Modal */}
+        <Dialog open={showCreateModal} onOpenChange={(open) => !open && closeModal()}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Create Supplier Playbook</DialogTitle>
-              <DialogDescription>Define how this supplier works with commissions</DialogDescription>
+              <DialogTitle>{editingPlaybook ? "Edit Supplier Playbook" : "Create Supplier Playbook"}</DialogTitle>
+              <DialogDescription>
+                {editingPlaybook 
+                  ? "Update this playbook (creates a new version)" 
+                  : "Define how this supplier works with commissions"}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
                 <Label>Supplier *</Label>
-                <Select value={newPlaybook.supplierId} onValueChange={(v) => setNewPlaybook({ ...newPlaybook, supplierId: v })}>
+                <Select 
+                  value={newPlaybook.supplierId} 
+                  onValueChange={(v) => setNewPlaybook({ ...newPlaybook, supplierId: v })}
+                  disabled={!!editingPlaybook}
+                >
                   <SelectTrigger data-testid="select-supplier">
                     <SelectValue placeholder="Select supplier" />
                   </SelectTrigger>
@@ -307,7 +348,7 @@ export function PlaybooksTab() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+              <Button variant="outline" onClick={closeModal}>Cancel</Button>
               <Button onClick={() => createMutation.mutate(newPlaybook)} disabled={createMutation.isPending || !isFormValid} data-testid="button-save-playbook">
                 {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Save
