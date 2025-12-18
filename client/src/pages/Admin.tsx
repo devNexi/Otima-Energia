@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +86,19 @@ export default function Admin() {
   const [snapshotLead, setSnapshotLead] = useState<{ id: number; name: string } | null>(null);
   const [snapshotViewMode, setSnapshotViewMode] = useState<"create" | "view">("create");
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  
+  const getDefaultTab = (role: string | undefined) => {
+    if (role === "ops") return "deal-os";
+    return "ecos-dashboard";
+  };
+  const [activeTab, setActiveTab] = useState(() => getDefaultTab(user?.role));
+  
+  useEffect(() => {
+    if (user?.role) {
+      setActiveTab(getDefaultTab(user.role));
+    }
+  }, [user?.role]);
+  
   const [snapshotForm, setSnapshotForm] = useState({
     estimatedConsumptionKwh: "",
     estimatedPriceRmwh: "",
@@ -548,7 +561,7 @@ export default function Admin() {
           )}
         </div>
 
-        <Tabs defaultValue={user?.role === "ops" ? "deal-os" : "ecos-dashboard"} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="flex flex-wrap gap-1">
             {/* ECOS Dashboard - visible to sales and admin */}
             {(user?.role === "sales" || user?.role === "admin") && (
