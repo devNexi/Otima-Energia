@@ -446,6 +446,9 @@ export interface IStorage {
   createPlaybookDealSnapshot(data: InsertPlaybookDealSnapshot): Promise<PlaybookDealSnapshot>;
   getPlaybookDealSnapshot(dealId: string): Promise<PlaybookDealSnapshot | undefined>;
   
+  // Lost Deal Analytics
+  getLostDeals(): Promise<Deal[]>;
+  
   // Ops Dashboard
   getOpsDashboardTasks(): Promise<{
     dealsBlockedByCompliance: Array<{ deal: Deal; missingCount: number }>;
@@ -2517,6 +2520,13 @@ export class Storage implements IStorage {
     const result = await db.select().from(playbookDealSnapshots)
       .where(eq(playbookDealSnapshots.dealId, dealId));
     return result[0];
+  }
+
+  // Lost Deal Analytics
+  async getLostDeals(): Promise<Deal[]> {
+    return await db.select().from(deals)
+      .where(eq(deals.status, 'LOST'))
+      .orderBy(desc(deals.lostAt));
   }
 
   // Ops Dashboard

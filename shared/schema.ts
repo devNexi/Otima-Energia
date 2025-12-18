@@ -1390,6 +1390,56 @@ export const COMMISSION_EVENT_STATE_TRANSITIONS: Record<CommissionEventState, Co
   'CANCELLED': []  // Terminal
 };
 
+// LOST Deal Reason Taxonomy (structured, not free text)
+export const LOST_DEAL_REASONS = [
+  // Client-side reasons
+  'CLIENT_WITHDREW',           // Client no longer interested
+  'CLIENT_BUDGET_ISSUE',       // Budget constraints
+  'CLIENT_INTERNAL_DECISION',  // Internal company decision
+  'CLIENT_CREDIT_REJECTED',    // Client credit not approved
+  'CLIENT_DOCS_NOT_PROVIDED',  // Failed to provide required documents
+  
+  // Supplier-side reasons
+  'SUPPLIER_NO_QUOTE',         // Supplier didn't respond
+  'SUPPLIER_PRICE_UNCOMPETITIVE', // Supplier pricing too high
+  'SUPPLIER_TERMS_REJECTED',   // Client rejected supplier terms
+  'SUPPLIER_CREDIT_DENIED',    // Supplier denied client credit
+  
+  // Competitive reasons
+  'LOST_TO_COMPETITOR',        // Client chose another broker
+  'LOST_TO_DIRECT_SUPPLIER',   // Client went direct with supplier
+  'LOST_TO_INCUMBENT',         // Client stayed with current supplier
+  
+  // Process reasons
+  'DEAL_STALLED_TOO_LONG',     // Deal inactive for too long
+  'COMPLIANCE_FAILURE',        // Failed compliance requirements
+  'METERING_ISSUE',            // CCEE/metering problems
+  'CONTRACT_NEGOTIATION_FAILED', // Failed to agree on contract terms
+  
+  // Other
+  'DUPLICATE_DEAL',            // Duplicate of another deal
+  'TEST_DEAL',                 // Was only for testing
+  'OTHER',                     // Requires explanation in notes
+] as const;
+
+export type LostDealReason = typeof LOST_DEAL_REASONS[number];
+
+// RETURNED/STUCK Deal Reason Taxonomy
+export const RETURNED_DEAL_REASONS = [
+  'DOCS_INCOMPLETE',           // Missing required documents
+  'CREDIT_PENDING',            // Awaiting credit approval
+  'METERING_DELAY',            // CCEE metering setup delayed
+  'CLIENT_UNRESPONSIVE',       // Client not responding
+  'SUPPLIER_DELAY',            // Supplier not responding
+  'COMPLIANCE_PENDING',        // Awaiting compliance items
+  'INTERNAL_REVIEW',           // Internal review required
+  'CONTRACT_REVISION',         // Contract needs revision
+  'PAYMENT_PENDING',           // Awaiting payment
+  'OTHER',                     // Requires explanation
+] as const;
+
+export type ReturnedDealReason = typeof RETURNED_DEAL_REASONS[number];
+
 // Dispute reason taxonomy
 export const DISPUTE_REASONS = [
   'late_payment',
@@ -1530,7 +1580,11 @@ export const deals = pgTable("deals", {
   contractEndedAt: timestamp("contract_ended_at"),
   closedAt: timestamp("closed_at"),
   lostAt: timestamp("lost_at"),
-  lostReason: text("lost_reason"), // Why deal was lost
+  lostReason: text("lost_reason"), // Why deal was lost (free text - legacy)
+  lostReasonCategory: text("lost_reason_category"), // Structured reason from LOST_DEAL_REASONS taxonomy
+  lostSupplierId: integer("lost_supplier_id").references(() => suppliers.id), // Supplier involved in loss
+  lostStage: text("lost_stage"), // Stage at which deal was lost (from DEAL_STATES)
+  lostByUserId: text("lost_by_user_id"), // Sales user who was handling the deal
   lostNotes: text("lost_notes"),
 });
 

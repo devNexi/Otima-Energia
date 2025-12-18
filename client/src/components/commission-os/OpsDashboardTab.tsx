@@ -49,6 +49,20 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
   const { sessionId } = useAuth();
   const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
+  // Scroll to section when KPI tile is clicked
+  const scrollToSection = (sectionId: string) => {
+    const sectionIds: Record<string, string> = {
+      'blocked': 'section-blocked',
+      'sla': 'section-sla',
+      'overdue': 'section-overdue',
+      'waiting': 'section-waiting'
+    };
+    const element = document.getElementById(sectionIds[sectionId]);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const { data: tasksData, isLoading, error } = useQuery<{ success: boolean } & OpsTasks>({
     queryKey: ["/api/ops/tasks/today", sessionId],
     queryFn: async () => {
@@ -111,28 +125,48 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-compliance-blocked">
+            <button 
+              onClick={() => scrollToSection('blocked')}
+              className="bg-white/10 rounded-lg p-4 text-center hover:bg-white/20 transition-colors cursor-pointer" 
+              data-testid="card-compliance-blocked"
+              disabled={blocked.length === 0}
+            >
               <div className="text-3xl font-bold" data-testid="text-compliance-blocked-count">{blocked.length}</div>
               <div className="text-sm text-violet-200">Compliance Blocked</div>
-            </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-sla-breach">
+            </button>
+            <button 
+              onClick={() => scrollToSection('sla')}
+              className="bg-white/10 rounded-lg p-4 text-center hover:bg-white/20 transition-colors cursor-pointer" 
+              data-testid="card-sla-breach"
+              disabled={slaBreach.length === 0}
+            >
               <div className="text-3xl font-bold" data-testid="text-sla-breach-count">{slaBreach.length}</div>
               <div className="text-sm text-violet-200">SLA Breaches</div>
-            </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-overdue-commission">
+            </button>
+            <button 
+              onClick={() => scrollToSection('overdue')}
+              className="bg-white/10 rounded-lg p-4 text-center hover:bg-white/20 transition-colors cursor-pointer" 
+              data-testid="card-overdue-commission"
+              disabled={overdueCommission.length === 0}
+            >
               <div className="text-3xl font-bold" data-testid="text-overdue-commission-count">{overdueCommission.length}</div>
               <div className="text-sm text-violet-200">Overdue Payments</div>
-            </div>
-            <div className="bg-white/10 rounded-lg p-4 text-center" data-testid="card-awaiting-supplier">
+            </button>
+            <button 
+              onClick={() => scrollToSection('waiting')}
+              className="bg-white/10 rounded-lg p-4 text-center hover:bg-white/20 transition-colors cursor-pointer" 
+              data-testid="card-awaiting-supplier"
+              disabled={waitingSupplier.length === 0}
+            >
               <div className="text-3xl font-bold" data-testid="text-awaiting-supplier-count">{waitingSupplier.length}</div>
               <div className="text-sm text-violet-200">Awaiting Supplier</div>
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
 
       {blocked.length > 0 && (
-        <Card className="border-orange-200">
+        <Card id="section-blocked" className="border-orange-200">
           <CardHeader className="bg-orange-50 border-b border-orange-200">
             <CardTitle className="flex items-center gap-2 text-orange-800">
               <AlertTriangle className="w-5 h-5" />
@@ -189,7 +223,7 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
       )}
 
       {slaBreach.length > 0 && (
-        <Card className="border-red-200">
+        <Card id="section-sla" className="border-red-200">
           <CardHeader className="bg-red-50 border-b border-red-200">
             <CardTitle className="flex items-center gap-2 text-red-800">
               <Clock className="w-5 h-5" />
@@ -250,7 +284,7 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
       )}
 
       {overdueCommission.length > 0 && (
-        <Card className="border-amber-200">
+        <Card id="section-overdue" className="border-amber-200">
           <CardHeader className="bg-amber-50 border-b border-amber-200">
             <CardTitle className="flex items-center gap-2 text-amber-800">
               <DollarSign className="w-5 h-5" />
@@ -311,7 +345,7 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
       )}
 
       {waitingSupplier.length > 0 && (
-        <Card className="border-blue-200">
+        <Card id="section-waiting" className="border-blue-200">
           <CardHeader className="bg-blue-50 border-b border-blue-200">
             <CardTitle className="flex items-center gap-2 text-blue-800">
               <Truck className="w-5 h-5" />

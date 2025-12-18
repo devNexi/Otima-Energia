@@ -2884,11 +2884,15 @@ export async function registerRoutes(
     }
   });
 
-  // Transition deal state (with compliance enforcement)
+  // Transition deal state (with HARD compliance enforcement)
   app.post("/api/deals/:id/transition", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
-      const { toState, triggeredBy, triggeredByType, reason, notes, requiresApproval, skipComplianceCheck } = req.body;
+      const { 
+        toState, triggeredBy, triggeredByType, reason, notes, requiresApproval,
+        // LOST transition fields (required when transitioning to LOST)
+        lostReasonCategory, lostSupplierId, lostNotes
+      } = req.body;
       
       if (!toState || !triggeredBy || !triggeredByType) {
         return res.status(400).json({ 
@@ -2911,9 +2915,41 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
       
-      // COMPLIANCE CHECK: Validate that all required checklist items are complete
-      // Only skip for system transitions or if explicitly bypassed (admin only)
-      if (triggeredByType !== 'system' && !skipComplianceCheck) {
+      // Get session for role check
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
+      // LOST TRANSITION: Require structured reason taxonomy
+      if (toState === 'LOST') {
+        if (!lostReasonCategory) {
+          return res.status(400).json({
+            success: false,
+            error: "lostReasonCategory is required when marking a deal as LOST",
+            requiredFields: ['lostReasonCategory'],
+            validReasons: [
+              'CLIENT_WITHDREW', 'CLIENT_BUDGET_ISSUE', 'CLIENT_INTERNAL_DECISION', 
+              'CLIENT_CREDIT_REJECTED', 'CLIENT_DOCS_NOT_PROVIDED',
+              'SUPPLIER_NO_QUOTE', 'SUPPLIER_PRICE_UNCOMPETITIVE', 'SUPPLIER_TERMS_REJECTED', 'SUPPLIER_CREDIT_DENIED',
+              'LOST_TO_COMPETITOR', 'LOST_TO_DIRECT_SUPPLIER', 'LOST_TO_INCUMBENT',
+              'DEAL_STALLED_TOO_LONG', 'COMPLIANCE_FAILURE', 'METERING_ISSUE', 'CONTRACT_NEGOTIATION_FAILED',
+              'DUPLICATE_DEAL', 'TEST_DEAL', 'OTHER'
+            ]
+          });
+        }
+        
+        // If reason is OTHER, notes are required
+        if (lostReasonCategory === 'OTHER' && !lostNotes) {
+          return res.status(400).json({
+            success: false,
+            error: "lostNotes is required when lostReasonCategory is 'OTHER'"
+          });
+        }
+      }
+      
+      // HARD COMPLIANCE CHECK: No bypass allowed except for system transitions
+      // Admin override requires explicit audit trail entry
+      if (triggeredByType !== 'system') {
         const compliance = await storage.validateTransitionCompliance(
           req.params.id,
           deal.status,
@@ -2945,9 +2981,17 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: result.error });
       }
       
-      const sessionId = req.headers["x-session-id"] as string;
-      const session = await storage.getAdminSession(sessionId);
-      const user = session ? await storage.getUser(session.userId) : null;
+      // If transitioning to LOST, update the deal with structured lost information
+      if (toState === 'LOST') {
+        await storage.updateDeal(req.params.id, {
+          lostAt: new Date(),
+          lostReasonCategory: lostReasonCategory,
+          lostSupplierId: lostSupplierId ? parseInt(lostSupplierId) : null,
+          lostStage: fromState,
+          lostByUserId: user?.id || null,
+          lostNotes: lostNotes || null,
+        });
+      }
       
       await logAuditEvent({
         actor: user?.username || triggeredBy,
@@ -2959,7 +3003,14 @@ export async function registerRoutes(
         entityId: null,
         dealId: req.params.id,
         clientId: deal.clientId || null,
-        detailsJson: { fromState, toState, triggeredBy, triggeredByType, reason, skipComplianceCheck: !!skipComplianceCheck }
+        detailsJson: { 
+          fromState, 
+          toState, 
+          triggeredBy, 
+          triggeredByType, 
+          reason,
+          ...(toState === 'LOST' ? { lostReasonCategory, lostSupplierId, lostNotes } : {})
+        }
       });
       
       res.json({ success: true, deal: result.deal });
@@ -4411,6 +4462,62 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching ops tasks:", error);
       res.status(500).json({ success: false, error: "Failed to fetch tasks" });
+    }
+  });
+
+  // Lost Deal Analytics - Aggregate views for insights
+  app.get("/api/analytics/lost-deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const lostDeals = await storage.getLostDeals();
+      
+      // Aggregate by reason category
+      const byReason: Record<string, number> = {};
+      const bySupplier: Record<string, { id: number; name: string; count: number }> = {};
+      const byStage: Record<string, number> = {};
+      const byUser: Record<string, { id: string; username: string; count: number }> = {};
+      
+      for (const deal of lostDeals) {
+        // By reason
+        const reason = deal.lostReasonCategory || 'UNKNOWN';
+        byReason[reason] = (byReason[reason] || 0) + 1;
+        
+        // By stage
+        const stage = deal.lostStage || 'UNKNOWN';
+        byStage[stage] = (byStage[stage] || 0) + 1;
+        
+        // By supplier
+        if (deal.lostSupplierId) {
+          const supplier = await storage.getSupplier(deal.lostSupplierId);
+          const supplierKey = deal.lostSupplierId.toString();
+          if (!bySupplier[supplierKey]) {
+            bySupplier[supplierKey] = { id: deal.lostSupplierId, name: supplier?.name || 'Unknown', count: 0 };
+          }
+          bySupplier[supplierKey].count++;
+        }
+        
+        // By user
+        if (deal.lostByUserId) {
+          const user = await storage.getUser(deal.lostByUserId);
+          if (!byUser[deal.lostByUserId]) {
+            byUser[deal.lostByUserId] = { id: deal.lostByUserId, username: user?.username || 'Unknown', count: 0 };
+          }
+          byUser[deal.lostByUserId].count++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        totalLost: lostDeals.length,
+        byReason: Object.entries(byReason).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count),
+        bySupplier: Object.values(bySupplier).sort((a, b) => b.count - a.count),
+        byStage: Object.entries(byStage).map(([stage, count]) => ({ stage, count })).sort((a, b) => b.count - a.count),
+        byUser: Object.values(byUser).sort((a, b) => b.count - a.count),
+        deals: lostDeals
+      });
+    } catch (error: any) {
+      console.error("Error fetching lost deal analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch analytics" });
     }
   });
 
