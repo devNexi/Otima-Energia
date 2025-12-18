@@ -1,0 +1,747 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  ArrowRight,
+  Building2, 
+  Calendar, 
+  DollarSign, 
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  FileText,
+  History,
+  User,
+  Zap,
+  Receipt,
+  Upload,
+  Check,
+  X
+} from "lucide-react";
+
+const DEAL_STATES = [
+  'DRAFT',
+  'RFQ_SENT',
+  'QUOTES_RECEIVED',
+  'OFFER_SELECTED',
+  'CONTRACT_SIGNED',
+  'SUPPLY_LIVE',
+  'COMMISSION_ACTIVE',
+  'CONTRACT_ENDED',
+  'CLOSED'
+] as const;
+
+type DealState = typeof DEAL_STATES[number];
+
+const stateColors: Record<DealState, string> = {
+  DRAFT: "bg-gray-100 text-gray-800 border-gray-300",
+  RFQ_SENT: "bg-blue-100 text-blue-800 border-blue-300",
+  QUOTES_RECEIVED: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  OFFER_SELECTED: "bg-purple-100 text-purple-800 border-purple-300",
+  CONTRACT_SIGNED: "bg-amber-100 text-amber-800 border-amber-300",
+  SUPPLY_LIVE: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  COMMISSION_ACTIVE: "bg-green-100 text-green-800 border-green-300",
+  CONTRACT_ENDED: "bg-orange-100 text-orange-800 border-orange-300",
+  CLOSED: "bg-slate-100 text-slate-800 border-slate-300"
+};
+
+const stateLabels: Record<DealState, { en: string; pt: string }> = {
+  DRAFT: { en: "Draft", pt: "Rascunho" },
+  RFQ_SENT: { en: "RFQ Sent", pt: "RFQ Enviado" },
+  QUOTES_RECEIVED: { en: "Quotes Received", pt: "Cotações Recebidas" },
+  OFFER_SELECTED: { en: "Offer Selected", pt: "Oferta Selecionada" },
+  CONTRACT_SIGNED: { en: "Contract Signed", pt: "Contrato Assinado" },
+  SUPPLY_LIVE: { en: "Supply Live", pt: "Fornecimento Ativo" },
+  COMMISSION_ACTIVE: { en: "Commission Active", pt: "Comissão Ativa" },
+  CONTRACT_ENDED: { en: "Contract Ended", pt: "Contrato Encerrado" },
+  CLOSED: { en: "Closed", pt: "Fechado" }
+};
+
+interface DealDetailProps {
+  dealId: string;
+  onBack: () => void;
+}
+
+export function DealDetail({ dealId, onBack }: DealDetailProps) {
+  const { toast } = useToast();
+  const { language } = useI18n();
+  const queryClient = useQueryClient();
+  
+  const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
+  const [transitionForm, setTransitionForm] = useState({
+    reason: "",
+    notes: ""
+  });
+
+  const { data: dealData, isLoading } = useQuery({
+    queryKey: [`/api/deals/${dealId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}`);
+      return res.json();
+    }
+  });
+
+  const { data: transitionsData } = useQuery({
+    queryKey: [`/api/deals/${dealId}/transitions`],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}/transitions`);
+      return res.json();
+    }
+  });
+
+  const transitionMutation = useMutation({
+    mutationFn: async (data: { toState: string; reason: string; notes?: string }) => {
+      const res = await fetch(`/api/deals/${dealId}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          triggeredBy: "admin",
+          triggeredByType: "user"
+        })
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: language === "pt" ? "Status atualizado" : "Status updated",
+          description: language === "pt" ? "O deal foi movido para o próximo estado." : "The deal was moved to the next state."
+        });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/transitions`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+        setTransitionDialogOpen(false);
+        setTransitionForm({ reason: "", notes: "" });
+      } else {
+        toast({
+          title: language === "pt" ? "Erro" : "Error",
+          description: data.error,
+          variant: "destructive"
+        });
+      }
+    }
+  });
+
+  const deal = dealData?.deal;
+  const validTransitions = transitionsData?.validTransitions || [];
+  const currentState = transitionsData?.currentState;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+      </div>
+    );
+  }
+
+  if (!deal) {
+    return (
+      <div className="text-center py-12 text-gray-500">
+        <p>{language === "pt" ? "Deal não encontrado" : "Deal not found"}</p>
+        <Button onClick={onBack} className="mt-4">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          {language === "pt" ? "Voltar" : "Back"}
+        </Button>
+      </div>
+    );
+  }
+
+  const handleTransition = (toState: string) => {
+    if (!transitionForm.reason) {
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: language === "pt" ? "Motivo é obrigatório" : "Reason is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    transitionMutation.mutate({
+      toState,
+      reason: transitionForm.reason,
+      notes: transitionForm.notes
+    });
+  };
+
+  const getStateIndex = (state: string) => DEAL_STATES.indexOf(state as DealState);
+
+  return (
+    <div className="space-y-6" data-testid="deal-detail">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={onBack} data-testid="button-back">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {language === "pt" ? "Voltar" : "Back"}
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Building2 className="w-6 h-6" />
+              {deal.client?.companyName || `Client #${deal.clientId}`}
+            </h1>
+            <p className="text-sm text-gray-500">Deal ID: {deal.id.substring(0, 8)}...</p>
+          </div>
+        </div>
+        <Badge className={`${stateColors[deal.status as DealState]} border text-lg px-4 py-2`}>
+          {stateLabels[deal.status as DealState][language as "en" | "pt"]}
+        </Badge>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-500">
+            {language === "pt" ? "Progresso do Deal" : "Deal Progress"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {DEAL_STATES.map((state, index) => {
+              const isActive = state === deal.status;
+              const isPast = getStateIndex(deal.status) > index;
+              const isFuture = getStateIndex(deal.status) < index;
+              
+              return (
+                <div key={state} className="flex items-center">
+                  <div className={`
+                    flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium
+                    ${isActive ? "bg-violet-600 text-white" : ""}
+                    ${isPast ? "bg-green-500 text-white" : ""}
+                    ${isFuture ? "bg-gray-200 text-gray-500" : ""}
+                  `}>
+                    {isPast ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
+                  </div>
+                  <span className={`ml-2 text-xs whitespace-nowrap ${isActive ? "font-bold" : ""} ${isFuture ? "text-gray-400" : ""}`}>
+                    {stateLabels[state][language as "en" | "pt"]}
+                  </span>
+                  {index < DEAL_STATES.length - 1 && (
+                    <ArrowRight className={`w-4 h-4 mx-2 ${isPast ? "text-green-500" : "text-gray-300"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {validTransitions.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-sm text-gray-600 mb-2">
+                {language === "pt" ? "Próxima ação disponível:" : "Next available action:"}
+              </p>
+              <Dialog open={transitionDialogOpen} onOpenChange={setTransitionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-violet-600 hover:bg-violet-700" data-testid="button-advance-state">
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    {language === "pt" ? "Avançar para" : "Advance to"} {stateLabels[validTransitions[0] as DealState]?.[language as "en" | "pt"]}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {language === "pt" ? "Confirmar Transição" : "Confirm Transition"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {language === "pt" 
+                        ? `Mover deal de ${stateLabels[currentState as DealState]?.[language]} para ${stateLabels[validTransitions[0] as DealState]?.[language]}`
+                        : `Move deal from ${stateLabels[currentState as DealState]?.[language]} to ${stateLabels[validTransitions[0] as DealState]?.[language]}`}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>{language === "pt" ? "Motivo *" : "Reason *"}</Label>
+                      <Input 
+                        value={transitionForm.reason}
+                        onChange={(e) => setTransitionForm(prev => ({ ...prev, reason: e.target.value }))}
+                        placeholder={language === "pt" ? "Ex: Cliente aprovou proposta" : "Ex: Client approved proposal"}
+                        data-testid="input-transition-reason"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{language === "pt" ? "Notas (opcional)" : "Notes (optional)"}</Label>
+                      <Textarea 
+                        value={transitionForm.notes}
+                        onChange={(e) => setTransitionForm(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder={language === "pt" ? "Detalhes adicionais..." : "Additional details..."}
+                        data-testid="input-transition-notes"
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => handleTransition(validTransitions[0])}
+                      disabled={transitionMutation.isPending}
+                      className="w-full"
+                      data-testid="button-confirm-transition"
+                    >
+                      {transitionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {language === "pt" ? "Confirmar Transição" : "Confirm Transition"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            {language === "pt" ? "Visão Geral" : "Overview"}
+          </TabsTrigger>
+          <TabsTrigger value="quotes" className="flex items-center gap-2">
+            <Receipt className="w-4 h-4" />
+            {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="commission" className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            {language === "pt" ? "Comissões" : "Commissions"} ({deal.commissionEvents?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            {language === "pt" ? "Documentos" : "Documents"} ({deal.documents?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="w-4 h-4" />
+            {language === "pt" ? "Histórico" : "History"}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Building2 className="w-5 h-5" />
+                  {language === "pt" ? "Informações do Cliente" : "Client Information"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-500">{language === "pt" ? "Empresa" : "Company"}</p>
+                  <p className="font-medium">{deal.client?.companyName}</p>
+                </div>
+                {deal.client?.cnpj && (
+                  <div>
+                    <p className="text-sm text-gray-500">CNPJ</p>
+                    <p className="font-medium">{deal.client.cnpj}</p>
+                  </div>
+                )}
+                {deal.client?.email && (
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium">{deal.client.email}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-gray-500">{language === "pt" ? "Responsável" : "Owner"}</p>
+                  <p className="font-medium">{deal.internalOwner}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  {language === "pt" ? "Detalhes Comerciais" : "Commercial Details"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Tipo de Energia" : "Energy Type"}</p>
+                    <p className="font-medium capitalize">{deal.energyType?.replace("_", " ") || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Submercado</p>
+                    <p className="font-medium">{deal.submarket || "-"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Tipo de Volume" : "Volume Type"}</p>
+                    <p className="font-medium capitalize">{deal.volumeType?.replace("_", " ") || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Estrutura de Preço" : "Price Structure"}</p>
+                    <p className="font-medium capitalize">{deal.priceStructure?.replace("_", " ") || "-"}</p>
+                  </div>
+                </div>
+                {deal.baseEnergyPriceRmwh && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Preço Base" : "Base Price"}</p>
+                    <p className="font-medium text-lg text-green-600">
+                      R$ {parseFloat(deal.baseEnergyPriceRmwh).toFixed(2)}/MWh
+                    </p>
+                  </div>
+                )}
+                {deal.supplier && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Fornecedor" : "Supplier"}</p>
+                    <p className="font-medium">{deal.supplier.name}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  {language === "pt" ? "Datas do Contrato" : "Contract Dates"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Início" : "Start"}</p>
+                    <p className="font-medium">
+                      {deal.contractStartDate 
+                        ? new Date(deal.contractStartDate).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Término" : "End"}</p>
+                    <p className="font-medium">
+                      {deal.contractEndDate 
+                        ? new Date(deal.contractEndDate).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+                {deal.contractTermMonths && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Prazo" : "Term"}</p>
+                    <p className="font-medium">{deal.contractTermMonths} {language === "pt" ? "meses" : "months"}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  {language === "pt" ? "Comissão" : "Commission"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Modelo" : "Model"}</p>
+                    <p className="font-medium capitalize">{deal.commissionModel?.replace("_", " ") || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Tipo Pagamento" : "Payment Type"}</p>
+                    <p className="font-medium capitalize">{deal.commissionPaymentType?.replace("_", " ") || "-"}</p>
+                  </div>
+                </div>
+                {deal.commissionValueRmwh && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Valor R$/MWh" : "Value R$/MWh"}</p>
+                    <p className="font-medium text-green-600">R$ {parseFloat(deal.commissionValueRmwh).toFixed(4)}/MWh</p>
+                  </div>
+                )}
+                {deal.expectedCommissionTotal && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Total Esperado" : "Expected Total"}</p>
+                    <p className="font-medium text-lg text-green-600">
+                      R$ {parseFloat(deal.expectedCommissionTotal).toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                )}
+                {deal.expectedCommissionMonthly && (
+                  <div>
+                    <p className="text-sm text-gray-500">{language === "pt" ? "Mensal Esperado" : "Expected Monthly"}</p>
+                    <p className="font-medium text-green-600">
+                      R$ {parseFloat(deal.expectedCommissionMonthly).toLocaleString("pt-BR")}/mês
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="quotes">
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === "pt" ? "Cotações de Fornecedores" : "Supplier Quotes"}</CardTitle>
+              <CardDescription>
+                {language === "pt" 
+                  ? "Cotações recebidas para este deal"
+                  : "Quotes received for this deal"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!deal.quotes || deal.quotes.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>{language === "pt" ? "Nenhuma cotação recebida ainda" : "No quotes received yet"}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {deal.quotes.map((quote: any) => (
+                    <div 
+                      key={quote.id}
+                      className={`border rounded-lg p-4 ${quote.isSelected ? "border-green-500 bg-green-50" : quote.isRejected ? "border-red-300 bg-red-50" : ""}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{quote.supplier?.name || `Supplier #${quote.supplierId}`}</h4>
+                        <div className="flex items-center gap-2">
+                          {quote.isSelected && (
+                            <Badge className="bg-green-100 text-green-800">
+                              <Check className="w-3 h-3 mr-1" />
+                              {language === "pt" ? "Selecionada" : "Selected"}
+                            </Badge>
+                          )}
+                          {quote.isRejected && (
+                            <Badge className="bg-red-100 text-red-800">
+                              <X className="w-3 h-3 mr-1" />
+                              {language === "pt" ? "Rejeitada" : "Rejected"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Preço" : "Price"}</p>
+                          <p className="font-medium">
+                            {quote.baseEnergyPriceRmwh 
+                              ? `R$ ${parseFloat(quote.baseEnergyPriceRmwh).toFixed(2)}/MWh`
+                              : "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Comissão" : "Commission"}</p>
+                          <p className="font-medium">
+                            {quote.commissionValueRmwh 
+                              ? `R$ ${parseFloat(quote.commissionValueRmwh).toFixed(4)}/MWh`
+                              : "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Validade" : "Valid Until"}</p>
+                          <p className="font-medium">
+                            {quote.validUntil 
+                              ? new Date(quote.validUntil).toLocaleDateString("pt-BR")
+                              : "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Recebida" : "Received"}</p>
+                          <p className="font-medium">
+                            {new Date(quote.receivedAt).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+                      {quote.selectionReason && (
+                        <p className="text-sm text-green-600 mt-2">
+                          <strong>{language === "pt" ? "Motivo seleção:" : "Selection reason:"}</strong> {quote.selectionReason}
+                        </p>
+                      )}
+                      {quote.rejectionReason && (
+                        <p className="text-sm text-red-600 mt-2">
+                          <strong>{language === "pt" ? "Motivo rejeição:" : "Rejection reason:"}</strong> {quote.rejectionReason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="commission">
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === "pt" ? "Eventos de Comissão" : "Commission Events"}</CardTitle>
+              <CardDescription>
+                {language === "pt" 
+                  ? "Cronograma de pagamentos de comissão"
+                  : "Commission payment schedule"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!deal.commissionEvents || deal.commissionEvents.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>{language === "pt" ? "Nenhum evento de comissão registrado" : "No commission events recorded"}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {deal.commissionEvents.map((event: any) => (
+                    <div key={event.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{event.eventType}</Badge>
+                          {event.eventIndex && <span className="text-sm text-gray-500">#{event.eventIndex}</span>}
+                        </div>
+                        <Badge className={
+                          event.status === "PAID" ? "bg-green-100 text-green-800" :
+                          event.status === "OVERDUE" ? "bg-red-100 text-red-800" :
+                          event.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-gray-100 text-gray-800"
+                        }>
+                          {event.status}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Valor" : "Amount"}</p>
+                          <p className="font-medium">
+                            {event.amountBrl 
+                              ? `R$ ${parseFloat(event.amountBrl).toLocaleString("pt-BR")}`
+                              : event.amountFormula || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Data Esperada" : "Expected Date"}</p>
+                          <p className="font-medium">
+                            {event.expectedDate 
+                              ? new Date(event.expectedDate).toLocaleDateString("pt-BR")
+                              : "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Condição" : "Condition"}</p>
+                          <p className="font-medium">{event.dueCondition || "-"}</p>
+                        </div>
+                        {event.paidAt && (
+                          <div>
+                            <p className="text-gray-500">{language === "pt" ? "Pago em" : "Paid on"}</p>
+                            <p className="font-medium text-green-600">
+                              {new Date(event.paidAt).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === "pt" ? "Documentos" : "Documents"}</CardTitle>
+              <CardDescription>
+                {language === "pt" 
+                  ? "Contratos, cotações e evidências"
+                  : "Contracts, quotes and evidence"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!deal.documents || deal.documents.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Upload className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>{language === "pt" ? "Nenhum documento anexado" : "No documents attached"}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {deal.documents.map((doc: any) => (
+                    <div key={doc.id} className="border rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                        <div>
+                          <p className="font-medium">{doc.fileName}</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Badge variant="outline">{doc.documentType}</Badge>
+                            {doc.documentSubtype && <span>{doc.documentSubtype}</span>}
+                            <span>{new Date(doc.createdAt).toLocaleDateString("pt-BR")}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {doc.isVerified ? (
+                          <Badge className="bg-green-100 text-green-800">
+                            <Check className="w-3 h-3 mr-1" />
+                            {language === "pt" ? "Verificado" : "Verified"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            {language === "pt" ? "Pendente" : "Pending"}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>{language === "pt" ? "Histórico de Transições" : "Transition History"}</CardTitle>
+              <CardDescription>
+                {language === "pt" 
+                  ? "Registro completo de todas as mudanças de estado"
+                  : "Complete record of all state changes"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!deal.transitions || deal.transitions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>{language === "pt" ? "Nenhuma transição registrada ainda" : "No transitions recorded yet"}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {deal.transitions.map((transition: any, index: number) => (
+                    <div key={transition.id} className="relative pl-8 pb-4 border-l-2 border-gray-200 last:pb-0">
+                      <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-violet-500 border-2 border-white" />
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className={stateColors[transition.fromState as DealState]}>
+                            {stateLabels[transition.fromState as DealState]?.[language as "en" | "pt"]}
+                          </Badge>
+                          <ArrowRight className="w-4 h-4" />
+                          <Badge className={stateColors[transition.toState as DealState]}>
+                            {stateLabels[transition.toState as DealState]?.[language as "en" | "pt"]}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            {transition.triggeredBy} ({transition.triggeredByType})
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {new Date(transition.timestamp).toLocaleString("pt-BR")}
+                          </p>
+                          {transition.reason && (
+                            <p><strong>{language === "pt" ? "Motivo:" : "Reason:"}</strong> {transition.reason}</p>
+                          )}
+                          {transition.notes && (
+                            <p><strong>{language === "pt" ? "Notas:" : "Notes:"}</strong> {transition.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

@@ -1,0 +1,471 @@
+I’ll break this into three clearly separated sections, exactly as you asked:
+
+Deal Record schema (the core object of your business)
+
+Zoho ↔ Ótima sync rules (clean, minimal, non-dangerous)
+
+Deal OS build brief (step-by-step, build order, UX, logic)
+
+This is written as a comprehensive engineering + product brief, not theory.
+
+1️⃣ DEAL RECORD SCHEMA
+
+(This is the heart of Ótima. Everything else hangs off this.)
+
+Think of a Deal as:
+
+“A legally and financially defined commercial event that produces commission over time.”
+
+Not a lead.
+Not an opportunity.
+A money-bearing object.
+
+1.1 Deal lifecycle (states)
+
+Every Deal must move through explicit, irreversible states.
+
+DRAFT
+→ RFQ_SENT
+→ QUOTES_RECEIVED
+→ OFFER_SELECTED
+→ CONTRACT_SIGNED
+→ SUPPLY_LIVE
+→ COMMISSION_ACTIVE
+→ CONTRACT_ENDED
+→ CLOSED
+
+
+Rules:
+
+You cannot skip states
+
+Each transition logs:
+
+timestamp
+
+user / AI agent
+
+reason
+
+Some transitions are manual-only (e.g. CONTRACT_SIGNED)
+
+Some can be AI-suggested but human-approved
+
+1.2 Deal core fields (database-level)
+Identity
+
+deal_id (UUID)
+
+client_id
+
+zoho_opportunity_id (nullable, reference only)
+
+internal_owner (Renan initially)
+
+ops_owner (Analyst)
+
+Commercial context
+
+supplier_id
+
+supplier_entity (some suppliers have multiple legal entities)
+
+energy_type
+
+convencional
+
+incentivada (50%, 100%)
+
+gas (future)
+
+submarket (SE/CO, S, NE, N)
+
+volume_type
+
+flat
+
+modulated
+
+linked_to_load
+
+contract_start_date
+
+contract_end_date
+
+contract_term_months
+
+Pricing (normalized)
+
+price_structure
+
+R$/MWh fixed
+
+indexed (IPCA, IGPM, PLD + spread)
+
+base_energy_price
+
+indexation_rules (JSON)
+
+flexibility_clauses (JSON)
+
+penalties (JSON)
+
+⚠️ Important:
+
+Store raw supplier quote
+
+Store normalized internal view
+Never overwrite supplier truth.
+
+1.3 Commission block (DO NOT simplify this)
+
+This exists even before Commission OS is built, because Deal OS must anticipate it.
+
+Commission definition
+
+commission_model
+
+R$/MWh
+
+% of spread
+
+hybrid
+
+commission_value
+
+commission_currency
+
+commission_payer (supplier legal entity)
+
+commission_payment_type
+
+upfront
+
+monthly
+
+hybrid
+
+Payment schedule (array)
+
+Each Deal generates multiple Commission Events.
+
+Example:
+
+[
+  {
+    "type": "UPFRONT",
+    "amount": 80000,
+    "due_condition": "SUPPLY_LIVE",
+    "expected_date": "2025-03-01",
+    "status": "PENDING"
+  },
+  {
+    "type": "RECONCILIATION",
+    "amount_formula": "actual_consumption * commission_rate",
+    "due_condition": "CONTRACT_END",
+    "status": "FUTURE"
+  }
+]
+
+
+This is CRITICAL for:
+
+cash forecasting
+
+chasing payments
+
+supplier discipline
+
+1.4 Risk & control fields
+
+These power ECOS + AI later.
+
+credit_risk_rating (supplier)
+
+contract_risk_flags (array)
+
+commission_risk_score (0–100)
+
+missing_documents (array)
+
+manual_override_required (boolean)
+
+1.5 Audit & enforcement
+
+Every Deal stores:
+
+full quote history
+
+rejected offers + reason
+
+contract files
+
+WhatsApp/email evidence (future)
+
+This is how you win disputes.
+
+2️⃣ ZOHO ↔ ÓTIMA SYNC RULES
+
+(This prevents data corruption and revenue leakage)
+
+Golden rule
+
+Zoho never writes financial truth. Ever.
+
+2.1 What flows FROM Zoho → Ótima
+
+Triggered events only:
+
+Event: Opportunity marked “Qualified”
+
+→ Create Draft Deal
+
+client
+
+estimated volume
+
+target start date
+
+Renan as owner
+
+Event: Opportunity marked “Won”
+
+→ Flag Deal as Commercially Approved
+
+still NOT contractually active
+
+still NOT commission-active
+
+Zoho fields consumed:
+
+Account ID
+
+Opportunity ID
+
+Owner
+
+Expected close date
+
+High-level notes
+
+That’s it.
+
+2.2 What flows FROM Ótima → Zoho
+
+Read-only updates:
+
+Deal status (human-readable)
+
+Supplier selected
+
+Contract start/end
+
+“Live” indicator
+
+Purpose:
+
+Keep sales visibility
+
+Keep CRM reporting sane
+
+Avoid shadow systems
+
+2.3 What NEVER syncs
+
+❌ Prices
+❌ Commission values
+❌ Payment schedules
+❌ Supplier terms
+❌ Risk flags
+
+Those live and die in Ótima.
+
+3️⃣ DEAL OS — BUILD BRIEF (THIS IS YOUR REPLIT PROMPT)
+
+Below is the exact system you should build first, in order.
+
+3.1 Deal OS – Core modules
+Module 1: Deal Registry
+
+UI:
+
+Table of all Deals
+
+Filters:
+
+status
+
+supplier
+
+owner
+
+commission risk
+
+Red/amber/green indicators
+
+Actions:
+
+open deal
+
+advance state
+
+assign owner
+
+Module 2: RFQ & Quote Engine
+
+Purpose:
+
+Centralize supplier responses
+
+Kill email chaos
+
+Features:
+
+RFQ template per supplier
+
+Send RFQ (email integration later)
+
+Quote intake:
+
+manual entry
+
+file upload
+
+Quote normalization:
+
+AI-assisted parsing
+
+unit normalization
+
+UX:
+
+Side-by-side comparison
+
+“Why this offer wins” AI summary
+
+Module 3: Offer Selection & Lock
+
+Once an offer is selected:
+
+lock quote
+
+generate Deal snapshot
+
+prevent silent edits
+
+require justification for override
+
+This is compliance + leverage.
+
+Module 4: Contract Capture
+
+Upload signed contract
+
+Extract:
+
+dates
+
+pricing
+
+clauses
+
+Human verification step
+
+Deal moves to CONTRACT_SIGNED only after confirmation
+
+Module 5: Commission Pre-Engine (v1)
+
+Before full Commission OS:
+
+Deal OS must:
+
+calculate expected commission
+
+generate payment events
+
+flag:
+
+missing clauses
+
+non-standard terms
+
+delayed payment risk
+
+This feeds:
+
+cash planning
+
+supplier pressure
+
+3.2 AI agents (minimal but lethal)
+
+Start with assistive AI, not autonomous.
+
+Agent 1: Quote Normalizer
+
+Input: messy supplier quote
+
+Output: normalized price, flags
+
+Agent 2: Deal Risk Scout
+
+Reads deal
+
+Flags:
+
+vague commission language
+
+delayed payment terms
+
+unilateral termination risk
+
+Agent 3: Ops Reminder Agent
+
+Daily:
+
+“Deals stuck too long”
+
+“Payments due in 30 days”
+
+“Supplier hasn’t confirmed”
+
+This replaces a junior back office hire.
+
+3.3 Build order (DO NOT DEVIATE)
+
+Deal Registry + schema
+
+Deal lifecycle engine
+
+RFQ + Quote comparison
+
+Contract capture
+
+Commission event generation (light)
+
+Zoho event hooks
+
+AI assist (only after data exists)
+
+Final strategic note (important)
+
+What you’re building is not Brazilian default:
+
+Not spreadsheet ops
+
+Not CRM-led
+
+Not “trust the supplier”
+
+You are building:
+
+A Revenue-Control System that just happens to sell energy.
+
+That’s why this will scale cleanly to:
+
+10 clients
+
+100 clients
+
+1,000 clients
+without headcount explosion.

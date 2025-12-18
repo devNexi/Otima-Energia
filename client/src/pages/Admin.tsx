@@ -16,6 +16,8 @@ import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
 import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { EcosDashboard } from "@/components/ecos/EcosDashboard";
+import { DealRegistry } from "@/components/deals/DealRegistry";
+import { DealDetail } from "@/components/deals/DealDetail";
 import { 
   Users, 
   Inbox, 
@@ -43,7 +45,8 @@ import {
   AlertCircle,
   HelpCircle,
   LogOut,
-  User
+  User,
+  Briefcase
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -79,6 +82,7 @@ export default function Admin() {
   });
   const [snapshotLead, setSnapshotLead] = useState<{ id: number; name: string } | null>(null);
   const [snapshotViewMode, setSnapshotViewMode] = useState<"create" | "view">("create");
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [snapshotForm, setSnapshotForm] = useState({
     estimatedConsumptionKwh: "",
     estimatedPriceRmwh: "",
@@ -517,6 +521,10 @@ export default function Admin() {
             <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
               <FileText className="w-4 h-4" />
               {t("admin.tab.rfqs")}
+            </TabsTrigger>
+            <TabsTrigger value="deal-os" className="flex items-center gap-2" data-testid="tab-deal-os">
+              <Briefcase className="w-4 h-4" />
+              {language === "pt" ? "Deal OS" : "Deal OS"}
             </TabsTrigger>
           </TabsList>
 
@@ -1088,6 +1096,19 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="deal-os">
+            {selectedDealId ? (
+              <DealDetail 
+                dealId={selectedDealId}
+                onBack={() => setSelectedDealId(null)}
+              />
+            ) : (
+              <DealRegistry 
+                onViewDeal={(dealId) => setSelectedDealId(dealId)}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </main>

@@ -1194,6 +1194,357 @@ export const insertPortalAccessLogSchema = createInsertSchema(portalAccessLogs).
 export type InsertPortalAccessLog = z.infer<typeof insertPortalAccessLogSchema>;
 export type PortalAccessLog = typeof portalAccessLogs.$inferSelect;
 
+// ============== DEAL OS SCHEMA ==============
+// Revenue-control and deal-execution system
+// Financial truth lives ONLY in this system
+
+// Deal states - explicit, irreversible transitions
+export const DEAL_STATES = [
+  'DRAFT',
+  'RFQ_SENT',
+  'QUOTES_RECEIVED',
+  'OFFER_SELECTED',
+  'CONTRACT_SIGNED',
+  'SUPPLY_LIVE',
+  'COMMISSION_ACTIVE',
+  'CONTRACT_ENDED',
+  'CLOSED'
+] as const;
+
+export type DealState = typeof DEAL_STATES[number];
+
+// Valid state transitions (cannot skip states)
+export const DEAL_STATE_TRANSITIONS: Record<DealState, DealState[]> = {
+  'DRAFT': ['RFQ_SENT'],
+  'RFQ_SENT': ['QUOTES_RECEIVED'],
+  'QUOTES_RECEIVED': ['OFFER_SELECTED'],
+  'OFFER_SELECTED': ['CONTRACT_SIGNED'],
+  'CONTRACT_SIGNED': ['SUPPLY_LIVE'],
+  'SUPPLY_LIVE': ['COMMISSION_ACTIVE'],
+  'COMMISSION_ACTIVE': ['CONTRACT_ENDED'],
+  'CONTRACT_ENDED': ['CLOSED'],
+  'CLOSED': []
+};
+
+// Core Deals table - the heart of Ótima
+export const deals = pgTable("deals", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Identity
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  zohoOpportunityId: text("zoho_opportunity_id"), // Reference only, never source of truth
+  internalOwner: text("internal_owner").default("Renan").notNull(), // Deal owner
+  opsOwner: text("ops_owner"), // Analyst assigned
+  
+  // State machine
+  status: text("status").default("DRAFT").notNull(), // DEAL_STATES
+  
+  // Commercial context
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  supplierEntity: text("supplier_entity"), // Legal entity (some suppliers have multiple)
+  energyType: text("energy_type"), // 'convencional', 'incentivada_50', 'incentivada_100', 'gas'
+  submarket: text("submarket"), // 'SE_CO', 'S', 'NE', 'N'
+  volumeType: text("volume_type"), // 'flat', 'modulated', 'linked_to_load'
+  
+  // Contract dates
+  contractStartDate: date("contract_start_date"),
+  contractEndDate: date("contract_end_date"),
+  contractTermMonths: integer("contract_term_months"),
+  
+  // Volume
+  volumeMwhYear: decimal("volume_mwh_year", { precision: 12, scale: 2 }),
+  volumeMwhMonth: decimal("volume_mwh_month", { precision: 12, scale: 2 }),
+  
+  // Pricing (normalized internal view)
+  priceStructure: text("price_structure"), // 'fixed', 'indexed_ipca', 'indexed_igpm', 'pld_spread'
+  baseEnergyPriceRmwh: decimal("base_energy_price_rmwh", { precision: 10, scale: 4 }),
+  indexationRules: jsonb("indexation_rules"), // JSON: { index: 'IPCA', base_date: '2025-01', spread: 0.05 }
+  flexibilityClauses: jsonb("flexibility_clauses"), // JSON: { min_percent: 80, max_percent: 120, penalty: 'X' }
+  penaltyClauses: jsonb("penalty_clauses"), // JSON: early termination, non-payment, etc.
+  
+  // Raw supplier quote (NEVER overwrite)
+  rawSupplierQuoteJson: jsonb("raw_supplier_quote_json"),
+  selectedQuoteId: varchar("selected_quote_id", { length: 255 }),
+  
+  // Commission block (DO NOT simplify)
+  commissionModel: text("commission_model"), // 'rmwh', 'percent_spread', 'hybrid'
+  commissionValueRmwh: decimal("commission_value_rmwh", { precision: 10, scale: 4 }),
+  commissionPercentSpread: decimal("commission_percent_spread", { precision: 5, scale: 4 }),
+  commissionCurrency: text("commission_currency").default("BRL"),
+  commissionPayer: text("commission_payer"), // Supplier legal entity
+  commissionPaymentType: text("commission_payment_type"), // 'upfront', 'monthly', 'hybrid'
+  
+  // Expected commission totals (calculated)
+  expectedCommissionTotal: decimal("expected_commission_total", { precision: 14, scale: 2 }),
+  expectedCommissionMonthly: decimal("expected_commission_monthly", { precision: 12, scale: 2 }),
+  
+  // Risk & control fields
+  creditRiskRating: text("credit_risk_rating"), // 'low', 'medium', 'high', 'critical'
+  contractRiskFlags: jsonb("contract_risk_flags"), // Array of flags
+  commissionRiskScore: integer("commission_risk_score"), // 0-100
+  missingDocuments: jsonb("missing_documents"), // Array of document types
+  manualOverrideRequired: boolean("manual_override_required").default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  
+  // State timestamps (for tracking)
+  rfqSentAt: timestamp("rfq_sent_at"),
+  quotesReceivedAt: timestamp("quotes_received_at"),
+  offerSelectedAt: timestamp("offer_selected_at"),
+  contractSignedAt: timestamp("contract_signed_at"),
+  supplyLiveAt: timestamp("supply_live_at"),
+  commissionActiveAt: timestamp("commission_active_at"),
+  contractEndedAt: timestamp("contract_ended_at"),
+  closedAt: timestamp("closed_at"),
+});
+
+export const insertDealSchema = createInsertSchema(deals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDeal = z.infer<typeof insertDealSchema>;
+export type Deal = typeof deals.$inferSelect;
+
+// Deal State Transitions - Audit log for every state change
+export const dealStateTransitions = pgTable("deal_state_transitions", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  
+  fromState: text("from_state").notNull(),
+  toState: text("to_state").notNull(),
+  
+  // Actor
+  triggeredBy: text("triggered_by").notNull(), // Username, 'system', or 'ai_agent'
+  triggeredByType: text("triggered_by_type").notNull(), // 'user', 'system', 'ai'
+  
+  // Reason & context
+  reason: text("reason"), // Why this transition happened
+  notes: text("notes"),
+  
+  // Approval (some transitions require approval)
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  
+  // Metadata
+  metadataJson: jsonb("metadata_json"), // Additional context
+  
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertDealStateTransitionSchema = createInsertSchema(dealStateTransitions).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertDealStateTransition = z.infer<typeof insertDealStateTransitionSchema>;
+export type DealStateTransition = typeof dealStateTransitions.$inferSelect;
+
+// Deal Quotes - Supplier quotes for a deal (separate from RFQ quotes)
+export const dealQuotes = pgTable("deal_quotes", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Quote identity
+  quoteReference: text("quote_reference"), // Supplier's quote ID/reference
+  supplierEntity: text("supplier_entity"), // Legal entity if different from main
+  
+  // Raw quote (NEVER modify)
+  rawQuoteJson: jsonb("raw_quote_json").notNull(),
+  rawQuoteSource: text("raw_quote_source"), // 'email', 'portal', 'phone', 'meeting'
+  rawQuoteFileUrl: text("raw_quote_file_url"),
+  
+  // Normalized fields (parsed from raw)
+  energyType: text("energy_type"),
+  priceStructure: text("price_structure"),
+  baseEnergyPriceRmwh: decimal("base_energy_price_rmwh", { precision: 10, scale: 4 }),
+  indexationRules: jsonb("indexation_rules"),
+  flexibilityClauses: jsonb("flexibility_clauses"),
+  penaltyClauses: jsonb("penalty_clauses"),
+  
+  // Commission terms offered
+  commissionModel: text("commission_model"),
+  commissionValueRmwh: decimal("commission_value_rmwh", { precision: 10, scale: 4 }),
+  commissionPercentSpread: decimal("commission_percent_spread", { precision: 5, scale: 4 }),
+  commissionPaymentType: text("commission_payment_type"),
+  
+  // Validity
+  validUntil: date("valid_until"),
+  isExpired: boolean("is_expired").default(false),
+  
+  // Selection status
+  isSelected: boolean("is_selected").default(false),
+  selectedAt: timestamp("selected_at"),
+  selectionReason: text("selection_reason"),
+  
+  // Rejection (if not selected)
+  isRejected: boolean("is_rejected").default(false),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Risk assessment
+  riskFlags: jsonb("risk_flags"), // AI-detected issues
+  normalizationConfidence: decimal("normalization_confidence", { precision: 3, scale: 2 }), // 0.00-1.00
+  
+  // Metadata
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  normalizedBy: text("normalized_by"), // 'ai', 'user:xxx'
+  normalizedAt: timestamp("normalized_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealQuoteSchema = createInsertSchema(dealQuotes).omit({
+  id: true,
+  createdAt: true,
+  receivedAt: true,
+});
+
+export type InsertDealQuote = z.infer<typeof insertDealQuoteSchema>;
+export type DealQuote = typeof dealQuotes.$inferSelect;
+
+// Deal Commission Events - Payment schedule for a deal
+export const dealCommissionEvents = pgTable("deal_commission_events", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  
+  // Event type
+  eventType: text("event_type").notNull(), // 'UPFRONT', 'MONTHLY', 'RECONCILIATION', 'BONUS', 'PENALTY'
+  eventIndex: integer("event_index"), // For monthly: 1, 2, 3... etc
+  
+  // Amount
+  amountBrl: decimal("amount_brl", { precision: 14, scale: 2 }),
+  amountFormula: text("amount_formula"), // For calculated amounts: 'actual_consumption * commission_rate'
+  isEstimated: boolean("is_estimated").default(true), // True until actual consumption known
+  
+  // Trigger condition
+  dueCondition: text("due_condition"), // 'SUPPLY_LIVE', 'CONTRACT_END', 'MONTHLY', specific date
+  expectedDate: date("expected_date"),
+  
+  // Payment status
+  status: text("status").default("FUTURE").notNull(), // 'FUTURE', 'PENDING', 'INVOICED', 'PAID', 'OVERDUE', 'DISPUTED', 'CANCELLED'
+  
+  // Payment tracking
+  invoicedAt: timestamp("invoiced_at"),
+  invoiceNumber: text("invoice_number"),
+  paidAt: timestamp("paid_at"),
+  paidAmount: decimal("paid_amount", { precision: 14, scale: 2 }),
+  paymentReference: text("payment_reference"),
+  
+  // Overdue tracking
+  daysOverdue: integer("days_overdue").default(0),
+  lastReminderSent: timestamp("last_reminder_sent"),
+  reminderCount: integer("reminder_count").default(0),
+  
+  // Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealCommissionEventSchema = createInsertSchema(dealCommissionEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealCommissionEvent = z.infer<typeof insertDealCommissionEventSchema>;
+export type DealCommissionEvent = typeof dealCommissionEvents.$inferSelect;
+
+// Deal Documents - Contracts, evidence, communications
+export const dealDocuments = pgTable("deal_documents", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  
+  // Document type
+  documentType: text("document_type").notNull(), // 'CONTRACT', 'QUOTE', 'AMENDMENT', 'EMAIL', 'WHATSAPP', 'EVIDENCE'
+  documentSubtype: text("document_subtype"), // 'signed', 'draft', 'counter-proposal', etc.
+  
+  // File info
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url"),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  
+  // Metadata
+  description: text("description"),
+  uploadedBy: text("uploaded_by").notNull(),
+  
+  // Verification (for contracts)
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: text("verified_by"),
+  verifiedAt: timestamp("verified_at"),
+  
+  // Extracted data (for contracts)
+  extractedDataJson: jsonb("extracted_data_json"), // AI-extracted: dates, prices, clauses
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealDocumentSchema = createInsertSchema(dealDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealDocument = z.infer<typeof insertDealDocumentSchema>;
+export type DealDocument = typeof dealDocuments.$inferSelect;
+
+// Deal OS Relations
+export const dealsRelations = relations(deals, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [deals.clientId],
+    references: [clients.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [deals.supplierId],
+    references: [suppliers.id],
+  }),
+  stateTransitions: many(dealStateTransitions),
+  quotes: many(dealQuotes),
+  commissionEvents: many(dealCommissionEvents),
+  documents: many(dealDocuments),
+}));
+
+export const dealStateTransitionsRelations = relations(dealStateTransitions, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealStateTransitions.dealId],
+    references: [deals.id],
+  }),
+}));
+
+export const dealQuotesRelations = relations(dealQuotes, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealQuotes.dealId],
+    references: [deals.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [dealQuotes.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+export const dealCommissionEventsRelations = relations(dealCommissionEvents, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealCommissionEvents.dealId],
+    references: [deals.id],
+  }),
+}));
+
+export const dealDocumentsRelations = relations(dealDocuments, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealDocuments.dealId],
+    references: [deals.id],
+  }),
+}));
+
+// ============== END DEAL OS SCHEMA ==============
+
 // ECOS Relations
 export const clientContractsRelations = relations(clientContracts, ({ one, many }) => ({
   client: one(clients, {

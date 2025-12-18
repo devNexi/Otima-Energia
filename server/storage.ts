@@ -26,11 +26,18 @@ import {
   type AdminSession, type InsertAdminSession,
   type PortalAccessLog, type InsertPortalAccessLog,
   type LeadEcosSnapshot, type InsertLeadEcosSnapshot,
+  type Deal, type InsertDeal,
+  type DealStateTransition, type InsertDealStateTransition,
+  type DealQuote, type InsertDealQuote,
+  type DealCommissionEvent, type InsertDealCommissionEvent,
+  type DealDocument, type InsertDealDocument,
+  type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
   proposals, proposalTemplates, proposalViews,
   clientContracts, marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, quarterlyReports,
-  adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots
+  adminAuditLog, adminSessions, portalAccessLogs, leadEcosSnapshots,
+  deals, dealStateTransitions, dealQuotes, dealCommissionEvents, dealDocuments
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -227,6 +234,61 @@ export interface IStorage {
   
   // ECOS - Audit Trail
   getAuditTrailForClient(clientId: number): Promise<any[]>;
+  
+  // ============== DEAL OS ==============
+  // Deals
+  createDeal(deal: InsertDeal): Promise<Deal>;
+  getDeals(): Promise<Deal[]>;
+  getDeal(id: string): Promise<Deal | undefined>;
+  getDealsForClient(clientId: number): Promise<Deal[]>;
+  updateDeal(id: string, data: Partial<InsertDeal>): Promise<Deal | undefined>;
+  getDealsByStatus(status: DealState): Promise<Deal[]>;
+  getDealsByOwner(owner: string): Promise<Deal[]>;
+  
+  // Deal State Machine
+  transitionDealState(
+    dealId: string, 
+    toState: DealState, 
+    triggeredBy: string, 
+    triggeredByType: 'user' | 'system' | 'ai',
+    reason?: string,
+    notes?: string,
+    requiresApproval?: boolean
+  ): Promise<{ success: boolean; deal?: Deal; error?: string }>;
+  
+  // Deal State Transitions (audit)
+  getDealStateTransitions(dealId: string): Promise<DealStateTransition[]>;
+  
+  // Deal Quotes
+  createDealQuote(quote: InsertDealQuote): Promise<DealQuote>;
+  getDealQuotes(dealId: string): Promise<DealQuote[]>;
+  getDealQuote(id: string): Promise<DealQuote | undefined>;
+  updateDealQuote(id: string, data: Partial<InsertDealQuote>): Promise<DealQuote | undefined>;
+  selectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined>;
+  rejectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined>;
+  
+  // Deal Commission Events
+  createDealCommissionEvent(event: InsertDealCommissionEvent): Promise<DealCommissionEvent>;
+  getDealCommissionEvents(dealId: string): Promise<DealCommissionEvent[]>;
+  updateDealCommissionEvent(id: number, data: Partial<InsertDealCommissionEvent>): Promise<DealCommissionEvent | undefined>;
+  getUpcomingCommissionEvents(daysAhead: number): Promise<DealCommissionEvent[]>;
+  getOverdueCommissionEvents(): Promise<DealCommissionEvent[]>;
+  
+  // Deal Documents
+  createDealDocument(document: InsertDealDocument): Promise<DealDocument>;
+  getDealDocuments(dealId: string): Promise<DealDocument[]>;
+  getDealDocument(id: number): Promise<DealDocument | undefined>;
+  verifyDealDocument(id: number, verifiedBy: string): Promise<DealDocument | undefined>;
+  
+  // Deal OS Dashboard
+  getDealOsDashboard(): Promise<{
+    totalDeals: number;
+    dealsByStatus: Record<string, number>;
+    activeCommissionValue: string;
+    upcomingPayments: number;
+    overduePayments: number;
+    dealsRequiringAction: Deal[];
+  }>;
 }
 
 export class Storage implements IStorage {
@@ -1209,6 +1271,339 @@ export class Storage implements IStorage {
     }
     
     return trail.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  // ============== DEAL OS IMPLEMENTATION ==============
+  
+  // Deals
+  async createDeal(deal: InsertDeal): Promise<Deal> {
+    const result = await db.insert(deals).values({
+      ...deal,
+      status: 'DRAFT',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getDeals(): Promise<Deal[]> {
+    return await db.select().from(deals).orderBy(desc(deals.createdAt));
+  }
+
+  async getDeal(id: string): Promise<Deal | undefined> {
+    const result = await db.select().from(deals).where(eq(deals.id, id));
+    return result[0];
+  }
+
+  async getDealsForClient(clientId: number): Promise<Deal[]> {
+    return await db.select().from(deals)
+      .where(eq(deals.clientId, clientId))
+      .orderBy(desc(deals.createdAt));
+  }
+
+  async updateDeal(id: string, data: Partial<InsertDeal>): Promise<Deal | undefined> {
+    const result = await db.update(deals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(deals.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getDealsByStatus(status: DealState): Promise<Deal[]> {
+    return await db.select().from(deals)
+      .where(eq(deals.status, status))
+      .orderBy(desc(deals.createdAt));
+  }
+
+  async getDealsByOwner(owner: string): Promise<Deal[]> {
+    return await db.select().from(deals)
+      .where(eq(deals.internalOwner, owner))
+      .orderBy(desc(deals.createdAt));
+  }
+
+  // Deal State Machine - core logic with validation and logging
+  async transitionDealState(
+    dealId: string,
+    toState: DealState,
+    triggeredBy: string,
+    triggeredByType: 'user' | 'system' | 'ai',
+    reason?: string,
+    notes?: string,
+    requiresApproval?: boolean
+  ): Promise<{ success: boolean; deal?: Deal; error?: string }> {
+    const deal = await this.getDeal(dealId);
+    if (!deal) {
+      return { success: false, error: 'Deal not found' };
+    }
+
+    const currentState = deal.status as DealState;
+    const validTransitions = DEAL_STATE_TRANSITIONS[currentState];
+
+    if (!validTransitions.includes(toState)) {
+      return { 
+        success: false, 
+        error: `Invalid transition: cannot move from ${currentState} to ${toState}. Valid transitions: ${validTransitions.join(', ') || 'none'}` 
+      };
+    }
+
+    // Log the transition
+    await db.insert(dealStateTransitions).values({
+      dealId,
+      fromState: currentState,
+      toState,
+      triggeredBy,
+      triggeredByType,
+      reason,
+      notes,
+      requiresApproval: requiresApproval || false,
+      timestamp: new Date()
+    });
+
+    // Update the deal status and corresponding timestamp
+    const stateTimestampMap: Record<DealState, string> = {
+      'DRAFT': 'createdAt',
+      'RFQ_SENT': 'rfqSentAt',
+      'QUOTES_RECEIVED': 'quotesReceivedAt',
+      'OFFER_SELECTED': 'offerSelectedAt',
+      'CONTRACT_SIGNED': 'contractSignedAt',
+      'SUPPLY_LIVE': 'supplyLiveAt',
+      'COMMISSION_ACTIVE': 'commissionActiveAt',
+      'CONTRACT_ENDED': 'contractEndedAt',
+      'CLOSED': 'closedAt'
+    };
+
+    const updateData: Record<string, unknown> = {
+      status: toState,
+      updatedAt: new Date()
+    };
+
+    const timestampField = stateTimestampMap[toState];
+    if (timestampField && timestampField !== 'createdAt') {
+      updateData[timestampField] = new Date();
+    }
+
+    const result = await db.update(deals)
+      .set(updateData)
+      .where(eq(deals.id, dealId))
+      .returning();
+
+    return { success: true, deal: result[0] };
+  }
+
+  // Deal State Transitions (audit)
+  async getDealStateTransitions(dealId: string): Promise<DealStateTransition[]> {
+    return await db.select().from(dealStateTransitions)
+      .where(eq(dealStateTransitions.dealId, dealId))
+      .orderBy(desc(dealStateTransitions.timestamp));
+  }
+
+  // Deal Quotes
+  async createDealQuote(quote: InsertDealQuote): Promise<DealQuote> {
+    const result = await db.insert(dealQuotes).values({
+      ...quote,
+      receivedAt: new Date(),
+      createdAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getDealQuotes(dealId: string): Promise<DealQuote[]> {
+    return await db.select().from(dealQuotes)
+      .where(eq(dealQuotes.dealId, dealId))
+      .orderBy(desc(dealQuotes.receivedAt));
+  }
+
+  async getDealQuote(id: string): Promise<DealQuote | undefined> {
+    const result = await db.select().from(dealQuotes).where(eq(dealQuotes.id, id));
+    return result[0];
+  }
+
+  async updateDealQuote(id: string, data: Partial<InsertDealQuote>): Promise<DealQuote | undefined> {
+    const result = await db.update(dealQuotes)
+      .set(data)
+      .where(eq(dealQuotes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async selectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined> {
+    // First, unselect any other selected quotes for this deal
+    const quote = await this.getDealQuote(quoteId);
+    if (!quote) return undefined;
+
+    await db.update(dealQuotes)
+      .set({ isSelected: false })
+      .where(eq(dealQuotes.dealId, quote.dealId));
+
+    // Select this quote
+    const result = await db.update(dealQuotes)
+      .set({ 
+        isSelected: true, 
+        selectedAt: new Date(),
+        selectionReason: reason 
+      })
+      .where(eq(dealQuotes.id, quoteId))
+      .returning();
+
+    // Update the deal with selected quote
+    await db.update(deals)
+      .set({
+        selectedQuoteId: quoteId,
+        supplierId: quote.supplierId,
+        supplierEntity: quote.supplierEntity,
+        rawSupplierQuoteJson: quote.rawQuoteJson,
+        priceStructure: quote.priceStructure,
+        baseEnergyPriceRmwh: quote.baseEnergyPriceRmwh,
+        indexationRules: quote.indexationRules,
+        flexibilityClauses: quote.flexibilityClauses,
+        penaltyClauses: quote.penaltyClauses,
+        commissionModel: quote.commissionModel,
+        commissionValueRmwh: quote.commissionValueRmwh,
+        commissionPercentSpread: quote.commissionPercentSpread,
+        commissionPaymentType: quote.commissionPaymentType,
+        updatedAt: new Date()
+      })
+      .where(eq(deals.id, quote.dealId));
+
+    return result[0];
+  }
+
+  async rejectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined> {
+    const result = await db.update(dealQuotes)
+      .set({ 
+        isRejected: true, 
+        rejectedAt: new Date(),
+        rejectionReason: reason 
+      })
+      .where(eq(dealQuotes.id, quoteId))
+      .returning();
+    return result[0];
+  }
+
+  // Deal Commission Events
+  async createDealCommissionEvent(event: InsertDealCommissionEvent): Promise<DealCommissionEvent> {
+    const result = await db.insert(dealCommissionEvents).values({
+      ...event,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getDealCommissionEvents(dealId: string): Promise<DealCommissionEvent[]> {
+    return await db.select().from(dealCommissionEvents)
+      .where(eq(dealCommissionEvents.dealId, dealId))
+      .orderBy(dealCommissionEvents.expectedDate);
+  }
+
+  async updateDealCommissionEvent(id: number, data: Partial<InsertDealCommissionEvent>): Promise<DealCommissionEvent | undefined> {
+    const result = await db.update(dealCommissionEvents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealCommissionEvents.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getUpcomingCommissionEvents(daysAhead: number): Promise<DealCommissionEvent[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + daysAhead);
+    
+    return await db.select().from(dealCommissionEvents)
+      .where(and(
+        lte(dealCommissionEvents.expectedDate, futureDate.toISOString().split('T')[0]),
+        eq(dealCommissionEvents.status, 'PENDING')
+      ))
+      .orderBy(dealCommissionEvents.expectedDate);
+  }
+
+  async getOverdueCommissionEvents(): Promise<DealCommissionEvent[]> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    return await db.select().from(dealCommissionEvents)
+      .where(and(
+        lte(dealCommissionEvents.expectedDate, today),
+        eq(dealCommissionEvents.status, 'PENDING')
+      ))
+      .orderBy(dealCommissionEvents.expectedDate);
+  }
+
+  // Deal Documents
+  async createDealDocument(document: InsertDealDocument): Promise<DealDocument> {
+    const result = await db.insert(dealDocuments).values({
+      ...document,
+      createdAt: new Date()
+    }).returning();
+    return result[0];
+  }
+
+  async getDealDocuments(dealId: string): Promise<DealDocument[]> {
+    return await db.select().from(dealDocuments)
+      .where(eq(dealDocuments.dealId, dealId))
+      .orderBy(desc(dealDocuments.createdAt));
+  }
+
+  async getDealDocument(id: number): Promise<DealDocument | undefined> {
+    const result = await db.select().from(dealDocuments).where(eq(dealDocuments.id, id));
+    return result[0];
+  }
+
+  async verifyDealDocument(id: number, verifiedBy: string): Promise<DealDocument | undefined> {
+    const result = await db.update(dealDocuments)
+      .set({ 
+        isVerified: true, 
+        verifiedBy,
+        verifiedAt: new Date() 
+      })
+      .where(eq(dealDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Deal OS Dashboard
+  async getDealOsDashboard(): Promise<{
+    totalDeals: number;
+    dealsByStatus: Record<string, number>;
+    activeCommissionValue: string;
+    upcomingPayments: number;
+    overduePayments: number;
+    dealsRequiringAction: Deal[];
+  }> {
+    const allDeals = await this.getDeals();
+    
+    // Count by status
+    const dealsByStatus: Record<string, number> = {};
+    for (const state of DEAL_STATES) {
+      dealsByStatus[state] = allDeals.filter(d => d.status === state).length;
+    }
+
+    // Calculate active commission value (deals in COMMISSION_ACTIVE state)
+    const activeDeals = allDeals.filter(d => d.status === 'COMMISSION_ACTIVE');
+    const activeCommissionValue = activeDeals.reduce((sum, d) => {
+      return sum + (parseFloat(d.expectedCommissionMonthly || '0') || 0);
+    }, 0);
+
+    // Get upcoming and overdue payments
+    const upcoming = await this.getUpcomingCommissionEvents(30);
+    const overdue = await this.getOverdueCommissionEvents();
+
+    // Deals requiring action (stuck too long or missing documents)
+    const dealsRequiringAction = allDeals.filter(d => {
+      if (d.manualOverrideRequired) return true;
+      if (d.missingDocuments && Array.isArray(d.missingDocuments) && d.missingDocuments.length > 0) return true;
+      // Check if deal is stuck (in certain states for too long)
+      const daysInState = (Date.now() - new Date(d.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (['DRAFT', 'RFQ_SENT', 'QUOTES_RECEIVED'].includes(d.status) && daysInState > 14) return true;
+      return false;
+    });
+
+    return {
+      totalDeals: allDeals.length,
+      dealsByStatus,
+      activeCommissionValue: activeCommissionValue.toFixed(2),
+      upcomingPayments: upcoming.length,
+      overduePayments: overdue.length,
+      dealsRequiringAction
+    };
   }
 }
 

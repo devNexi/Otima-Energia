@@ -16,7 +16,14 @@ import {
   insertEcosSettingsSchema,
   insertEcosDecisionLogSchema,
   insertQuarterlyReportSchema,
-  insertLeadEcosSnapshotSchema
+  insertLeadEcosSnapshotSchema,
+  insertDealSchema,
+  insertDealQuoteSchema,
+  insertDealCommissionEventSchema,
+  insertDealDocumentSchema,
+  DEAL_STATES,
+  DEAL_STATE_TRANSITIONS,
+  type DealState
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -2518,6 +2525,512 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching enhanced dashboard:", error);
       res.status(500).json({ success: false, error: "Failed to fetch dashboard" });
+    }
+  });
+
+  // ============== DEAL OS ENDPOINTS ==============
+
+  // Helper function to validate admin session for Deal OS
+  const validateDealOsSession = async (req: Request, res: Response): Promise<boolean> => {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (!sessionId) {
+      res.status(401).json({ success: false, error: "Authentication required" });
+      return false;
+    }
+    const session = await storage.getAdminSession(sessionId);
+    if (!session || new Date(session.expiresAt) < new Date()) {
+      res.status(401).json({ success: false, error: "Session expired or invalid" });
+      return false;
+    }
+    return true;
+  };
+
+  // --- Deal Registry ---
+
+  // Get all deals
+  app.get("/api/deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { status, owner, clientId } = req.query;
+      
+      let deals;
+      if (clientId) {
+        deals = await storage.getDealsForClient(parseInt(clientId as string));
+      } else if (status && DEAL_STATES.includes(status as DealState)) {
+        deals = await storage.getDealsByStatus(status as DealState);
+      } else if (owner) {
+        deals = await storage.getDealsByOwner(owner as string);
+      } else {
+        deals = await storage.getDeals();
+      }
+      
+      // Enrich with client and supplier info
+      const clients = await storage.getClients();
+      const suppliers = await storage.getSuppliers();
+      const clientsMap = new Map(clients.map(c => [c.id, c]));
+      const suppliersMap = new Map(suppliers.map(s => [s.id, s]));
+      
+      const enrichedDeals = deals.map(deal => ({
+        ...deal,
+        client: clientsMap.get(deal.clientId),
+        supplier: deal.supplierId ? suppliersMap.get(deal.supplierId) : null
+      }));
+      
+      res.json({ success: true, deals: enrichedDeals });
+    } catch (error: any) {
+      console.error("Error fetching deals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch deals" });
+    }
+  });
+
+  // Get Deal OS dashboard
+  app.get("/api/deals/dashboard", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dashboard = await storage.getDealOsDashboard();
+      res.json({ success: true, dashboard });
+    } catch (error: any) {
+      console.error("Error fetching Deal OS dashboard:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dashboard" });
+    }
+  });
+
+  // Get single deal with full details
+  app.get("/api/deals/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const deal = await storage.getDeal(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      // Get related data
+      const [client, supplier, quotes, transitions, commissionEvents, documents] = await Promise.all([
+        storage.getClient(deal.clientId),
+        deal.supplierId ? storage.getSupplier(deal.supplierId) : null,
+        storage.getDealQuotes(deal.id),
+        storage.getDealStateTransitions(deal.id),
+        storage.getDealCommissionEvents(deal.id),
+        storage.getDealDocuments(deal.id)
+      ]);
+      
+      res.json({ 
+        success: true, 
+        deal: {
+          ...deal,
+          client,
+          supplier,
+          quotes,
+          transitions,
+          commissionEvents,
+          documents
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching deal:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch deal" });
+    }
+  });
+
+  // Create new deal
+  app.post("/api/deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const validatedData = insertDealSchema.parse(req.body);
+      const deal = await storage.createDeal(validatedData);
+      res.json({ success: true, deal });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error creating deal:", error);
+        res.status(500).json({ success: false, error: "Failed to create deal" });
+      }
+    }
+  });
+
+  // Update deal
+  app.patch("/api/deals/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const deal = await storage.updateDeal(req.params.id, req.body);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      res.json({ success: true, deal });
+    } catch (error: any) {
+      console.error("Error updating deal:", error);
+      res.status(500).json({ success: false, error: "Failed to update deal" });
+    }
+  });
+
+  // --- Deal State Machine ---
+
+  // Get valid transitions for a deal
+  app.get("/api/deals/:id/transitions", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const deal = await storage.getDeal(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const currentState = deal.status as DealState;
+      const validTransitions = DEAL_STATE_TRANSITIONS[currentState] || [];
+      
+      res.json({ 
+        success: true, 
+        currentState,
+        validTransitions,
+        allStates: DEAL_STATES
+      });
+    } catch (error: any) {
+      console.error("Error fetching transitions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch transitions" });
+    }
+  });
+
+  // Transition deal state
+  app.post("/api/deals/:id/transition", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { toState, triggeredBy, triggeredByType, reason, notes, requiresApproval } = req.body;
+      
+      if (!toState || !triggeredBy || !triggeredByType) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "toState, triggeredBy, and triggeredByType are required" 
+        });
+      }
+      
+      if (!DEAL_STATES.includes(toState)) {
+        return res.status(400).json({ success: false, error: `Invalid state: ${toState}` });
+      }
+      
+      if (!['user', 'system', 'ai'].includes(triggeredByType)) {
+        return res.status(400).json({ success: false, error: "triggeredByType must be 'user', 'system', or 'ai'" });
+      }
+      
+      const result = await storage.transitionDealState(
+        req.params.id,
+        toState as DealState,
+        triggeredBy,
+        triggeredByType,
+        reason,
+        notes,
+        requiresApproval
+      );
+      
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      
+      res.json({ success: true, deal: result.deal });
+    } catch (error: any) {
+      console.error("Error transitioning deal state:", error);
+      res.status(500).json({ success: false, error: "Failed to transition deal state" });
+    }
+  });
+
+  // Get deal state history
+  app.get("/api/deals/:id/history", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const transitions = await storage.getDealStateTransitions(req.params.id);
+      res.json({ success: true, transitions });
+    } catch (error: any) {
+      console.error("Error fetching deal history:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch deal history" });
+    }
+  });
+
+  // --- Deal Quotes ---
+
+  // Get quotes for a deal
+  app.get("/api/deals/:id/quotes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const quotes = await storage.getDealQuotes(req.params.id);
+      
+      // Enrich with supplier info
+      const suppliers = await storage.getSuppliers();
+      const suppliersMap = new Map(suppliers.map(s => [s.id, s]));
+      
+      const enrichedQuotes = quotes.map(quote => ({
+        ...quote,
+        supplier: suppliersMap.get(quote.supplierId)
+      }));
+      
+      res.json({ success: true, quotes: enrichedQuotes });
+    } catch (error: any) {
+      console.error("Error fetching deal quotes:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch quotes" });
+    }
+  });
+
+  // Add quote to deal
+  app.post("/api/deals/:id/quotes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const validatedData = insertDealQuoteSchema.parse({
+        ...req.body,
+        dealId
+      });
+      
+      const quote = await storage.createDealQuote(validatedData);
+      res.json({ success: true, quote });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error adding deal quote:", error);
+        res.status(500).json({ success: false, error: "Failed to add quote" });
+      }
+    }
+  });
+
+  // Select a quote (locks the deal to this quote)
+  app.post("/api/deals/:dealId/quotes/:quoteId/select", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { reason } = req.body;
+      if (!reason) {
+        return res.status(400).json({ success: false, error: "Selection reason is required" });
+      }
+      
+      const quote = await storage.selectDealQuote(req.params.quoteId, reason);
+      if (!quote) {
+        return res.status(404).json({ success: false, error: "Quote not found" });
+      }
+      
+      res.json({ success: true, quote });
+    } catch (error: any) {
+      console.error("Error selecting quote:", error);
+      res.status(500).json({ success: false, error: "Failed to select quote" });
+    }
+  });
+
+  // Reject a quote
+  app.post("/api/deals/:dealId/quotes/:quoteId/reject", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { reason } = req.body;
+      if (!reason) {
+        return res.status(400).json({ success: false, error: "Rejection reason is required" });
+      }
+      
+      const quote = await storage.rejectDealQuote(req.params.quoteId, reason);
+      if (!quote) {
+        return res.status(404).json({ success: false, error: "Quote not found" });
+      }
+      
+      res.json({ success: true, quote });
+    } catch (error: any) {
+      console.error("Error rejecting quote:", error);
+      res.status(500).json({ success: false, error: "Failed to reject quote" });
+    }
+  });
+
+  // --- Deal Commission Events ---
+
+  // Get commission events for a deal
+  app.get("/api/deals/:id/commission-events", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const events = await storage.getDealCommissionEvents(req.params.id);
+      res.json({ success: true, events });
+    } catch (error: any) {
+      console.error("Error fetching commission events:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch commission events" });
+    }
+  });
+
+  // Add commission event to deal
+  app.post("/api/deals/:id/commission-events", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const validatedData = insertDealCommissionEventSchema.parse({
+        ...req.body,
+        dealId
+      });
+      
+      const event = await storage.createDealCommissionEvent(validatedData);
+      res.json({ success: true, event });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error adding commission event:", error);
+        res.status(500).json({ success: false, error: "Failed to add commission event" });
+      }
+    }
+  });
+
+  // Update commission event
+  app.patch("/api/deals/:dealId/commission-events/:eventId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const event = await storage.updateDealCommissionEvent(eventId, req.body);
+      if (!event) {
+        return res.status(404).json({ success: false, error: "Commission event not found" });
+      }
+      res.json({ success: true, event });
+    } catch (error: any) {
+      console.error("Error updating commission event:", error);
+      res.status(500).json({ success: false, error: "Failed to update commission event" });
+    }
+  });
+
+  // Get upcoming commission payments
+  app.get("/api/commission-events/upcoming", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const days = parseInt(req.query.days as string) || 30;
+      const events = await storage.getUpcomingCommissionEvents(days);
+      res.json({ success: true, events });
+    } catch (error: any) {
+      console.error("Error fetching upcoming commission events:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch upcoming events" });
+    }
+  });
+
+  // Get overdue commission payments
+  app.get("/api/commission-events/overdue", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const events = await storage.getOverdueCommissionEvents();
+      res.json({ success: true, events });
+    } catch (error: any) {
+      console.error("Error fetching overdue commission events:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch overdue events" });
+    }
+  });
+
+  // --- Deal Documents ---
+
+  // Get documents for a deal
+  app.get("/api/deals/:id/documents", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const documents = await storage.getDealDocuments(req.params.id);
+      res.json({ success: true, documents });
+    } catch (error: any) {
+      console.error("Error fetching deal documents:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch documents" });
+    }
+  });
+
+  // Add document to deal
+  app.post("/api/deals/:id/documents", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const validatedData = insertDealDocumentSchema.parse({
+        ...req.body,
+        dealId
+      });
+      
+      const document = await storage.createDealDocument(validatedData);
+      res.json({ success: true, document });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error adding deal document:", error);
+        res.status(500).json({ success: false, error: "Failed to add document" });
+      }
+    }
+  });
+
+  // Verify document
+  app.post("/api/deals/:dealId/documents/:docId/verify", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { verifiedBy } = req.body;
+      if (!verifiedBy) {
+        return res.status(400).json({ success: false, error: "verifiedBy is required" });
+      }
+      
+      const docId = parseInt(req.params.docId);
+      const document = await storage.verifyDealDocument(docId, verifiedBy);
+      if (!document) {
+        return res.status(404).json({ success: false, error: "Document not found" });
+      }
+      
+      res.json({ success: true, document });
+    } catch (error: any) {
+      console.error("Error verifying document:", error);
+      res.status(500).json({ success: false, error: "Failed to verify document" });
+    }
+  });
+
+  // --- Deal Creation from Client ---
+
+  // Create deal for existing client
+  app.post("/api/clients/:clientId/deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+      
+      const dealData = {
+        clientId,
+        internalOwner: req.body.internalOwner || "Renan",
+        opsOwner: req.body.opsOwner,
+        energyType: req.body.energyType,
+        submarket: req.body.submarket,
+        volumeType: req.body.volumeType,
+        volumeMwhYear: req.body.volumeMwhYear,
+        volumeMwhMonth: req.body.volumeMwhMonth,
+        contractStartDate: req.body.contractStartDate,
+        contractEndDate: req.body.contractEndDate,
+        contractTermMonths: req.body.contractTermMonths,
+        zohoOpportunityId: req.body.zohoOpportunityId
+      };
+      
+      const deal = await storage.createDeal(dealData);
+      res.json({ success: true, deal });
+    } catch (error: any) {
+      console.error("Error creating deal for client:", error);
+      res.status(500).json({ success: false, error: "Failed to create deal" });
+    }
+  });
+
+  // Get deals for a client
+  app.get("/api/clients/:clientId/deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const deals = await storage.getDealsForClient(clientId);
+      res.json({ success: true, deals });
+    } catch (error: any) {
+      console.error("Error fetching client deals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch deals" });
     }
   });
 
