@@ -97,7 +97,7 @@ export function Process() {
                 <img 
                   src={migrateImage} 
                   alt="Migração e acompanhamento" 
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-cover hue-rotate-[-20deg] saturate-[0.85] brightness-[0.9]"
                 />
               </div>
               <div className="mb-4">
