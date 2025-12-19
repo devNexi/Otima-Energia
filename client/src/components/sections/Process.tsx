@@ -1,4 +1,7 @@
 import { ArrowRight } from "lucide-react";
+import diagnosisImage from "@/assets/homepage/diagnosis.png";
+import compareImage from "@/assets/homepage/compare.png";
+import migrateImage from "@/assets/homepage/migrate.png";
 
 export function Process() {
   const handleScroll = (href: string) => {
@@ -47,8 +50,15 @@ export function Process() {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {/* Step 1 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">01</span>
+              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                <img 
+                  src={diagnosisImage} 
+                  alt="Diagnóstico de energia" 
+                  className="w-full h-48 object-cover"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Envie sua conta de luz para um diagnóstico gratuito
@@ -60,8 +70,15 @@ export function Process() {
 
             {/* Step 2 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">02</span>
+              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                <img 
+                  src={compareImage} 
+                  alt="Comparação de mercado" 
+                  className="w-full h-48 object-cover"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Comparamos o mercado e negociamos as melhores condições
@@ -73,8 +90,15 @@ export function Process() {
 
             {/* Step 3 */}
             <div className="group">
-              <div className="mb-6">
-                <span className="text-6xl font-light text-[#c88ff5]">03</span>
+              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                <img 
+                  src={migrateImage} 
+                  alt="Migração e acompanhamento" 
+                  className="w-full h-48 object-cover"
+                />
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Migramos, contratamos e acompanhamos
