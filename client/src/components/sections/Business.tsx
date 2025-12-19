@@ -45,7 +45,7 @@ export function Business() {
   return (
     <>
       {/* Statement Section */}
-      <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#eee7f1] py-16 lg:py-20 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl">
             Ajudamos empresas de todos os portes a{" "}
@@ -56,7 +56,7 @@ export function Business() {
       </section>
 
       {/* Solutions Section */}
-      <section id="business" className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section id="business" className="bg-white py-16 lg:py-20 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           {/* Section Title */}
           <h2 className="dcvc-section-title mb-16 text-center">Soluções</h2>

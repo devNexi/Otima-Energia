@@ -9,7 +9,7 @@ import { CheckCircle } from "lucide-react";
 
 function EcosSection() {
   return (
-    <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           <div>
@@ -79,7 +79,7 @@ function TrustSection() {
   ];
 
   return (
-    <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+    <section className="bg-[#eee7f1] py-16 lg:py-20 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <h2 className="dcvc-section-title mb-16 text-center">
           Por que confiar no processo da Ótima Energia?

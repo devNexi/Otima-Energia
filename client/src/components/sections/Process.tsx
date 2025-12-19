@@ -14,7 +14,7 @@ export function Process() {
   return (
     <>
       {/* Statement Section - Like DCVC's "For 13 years..." */}
-      <section className="bg-[#eee7f1] py-24 lg:py-32">
+      <section className="bg-[#eee7f1] py-16 lg:py-20">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
             A maioria das empresas brasileiras paga mais do que deveria pela energia elétrica — não porque os preços são altos, mas porque o mercado é{" "}
@@ -44,7 +44,7 @@ export function Process() {
       </section>
 
       {/* Process Steps Section */}
-      <section id="process" className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section id="process" className="bg-white py-16 lg:py-20 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           {/* Section Title */}
           <h2 className="dcvc-section-title mb-16">Como Funciona</h2>
