@@ -97,13 +97,13 @@ function shouldSkipPrerender(): boolean {
     return true;
   }
   
-  if (process.env.REPLIT_DEPLOYMENT === "1") {
-    console.log("Skipping prerender: Running in Replit deployment build");
+  if (process.env.CI) {
+    console.log("Skipping prerender: CI environment detected (deployment build)");
     return true;
   }
   
-  if (process.env.REPLIT_DB_URL && !process.env.REPL_ID) {
-    console.log("Skipping prerender: Deployment environment detected");
+  if (process.env.REPLIT_DEPLOYMENT === "1") {
+    console.log("Skipping prerender: Running in Replit deployment build");
     return true;
   }
   
@@ -114,7 +114,13 @@ async function buildWithPrerender() {
   await buildAll();
   
   if (!shouldSkipPrerender()) {
-    await runPrerender();
+    try {
+      await runPrerender();
+    } catch (err) {
+      console.warn("Prerender failed (non-fatal):", err);
+      console.log("Build will continue without prerendered pages.");
+      console.log("Run 'npx tsx script/prerender.ts' locally to generate static HTML for SEO");
+    }
   } else {
     console.log("Note: Run 'npx tsx script/prerender.ts' locally to generate static HTML for SEO");
   }
