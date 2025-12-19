@@ -116,13 +116,17 @@
     @apply text-[2.5rem] md:text-[3rem] lg:text-[3.75rem] font-normal leading-[1.1] tracking-tight;
   }
   
-  /* Highlighted text - solid background */
+  /* Highlighted text - solid background with proper line spacing */
   .text-highlight {
-    @apply bg-[var(--primary-purple)] text-white px-1;
+    @apply bg-[var(--primary-purple)] text-white px-2 py-1;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   
   .text-highlight-pink {
-    @apply bg-[var(--accent-pink)] text-white px-1;
+    @apply bg-[var(--accent-pink)] text-white px-2 py-1;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   
   /* Section headers - bold purple */
