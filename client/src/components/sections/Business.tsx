@@ -1,6 +1,4 @@
-import { ArrowRight } from "lucide-react";
-import migracaoImage from "@/assets/homepage/migracao.png";
-import estrategiasImage from "@/assets/homepage/estrategias.png";
+import { Wallet, Settings, TrendingUp, Shield } from "lucide-react";
 
 export function Business() {
   const handleScroll = (href: string) => {
@@ -9,6 +7,33 @@ export function Business() {
       element.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  const solutions = [
+    {
+      icon: Wallet,
+      label: "Empresas e PMEs",
+      title: "Migração Simplificada",
+      description: "Simplificamos toda a migração para o Mercado Livre, eliminando burocracia e gerando economia de até 40%.",
+    },
+    {
+      icon: Settings,
+      label: "Empresas de Maior Porte",
+      title: "Estratégias Personalizadas",
+      description: "Estratégias sob medida com foco em previsibilidade, flexibilidade e redução consistente de custos.",
+    },
+    {
+      icon: TrendingUp,
+      label: "Gestão Contínua",
+      title: "Otimização de Contratos",
+      description: "Acompanhamos seu contrato ao longo do tempo, identificando oportunidades de melhoria e economia.",
+    },
+    {
+      icon: Shield,
+      label: "Segurança Total",
+      title: "Transparência Garantida",
+      description: "Nosso serviço é gratuito para você. Trabalhamos com total transparência e sem conflitos de interesse.",
+    },
+  ];
 
   return (
     <>
@@ -27,75 +52,46 @@ export function Business() {
       <section id="business" className="bg-white py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           {/* Section Title */}
-          <h2 className="dcvc-section-title mb-16">Soluções</h2>
+          <h2 className="dcvc-section-title mb-16 text-center">Soluções</h2>
 
-          {/* Solutions Grid - Like DCVC Spotlight cards */}
-          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            {/* SME Solution */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-              <div className="opacity-75 hover:opacity-100 transition-opacity">
-                <img 
-                  src={migracaoImage} 
-                  alt="Migração Simplificada" 
-                  className="w-full h-56 object-cover"
-                />
-              </div>
-              <div className="p-8 lg:p-10">
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-4">
-                  Empresas e PMEs
+          {/* Solutions Grid - Professional Service Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {solutions.map((solution, index) => (
+              <div 
+                key={index}
+                className="group text-center p-8 rounded-xl hover:shadow-lg transition-all duration-300 bg-white"
+              >
+                {/* Icon */}
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#f5f0f7] mb-6 group-hover:bg-[#9e3ffd] transition-colors">
+                  <solution.icon className="w-8 h-8 text-[#9e3ffd] group-hover:text-white transition-colors" />
+                </div>
+
+                {/* Label */}
+                <p className="text-xs tracking-wide text-[#9e3ffd] uppercase mb-2 font-medium">
+                  {solution.label}
                 </p>
-                <h3 className="text-2xl font-medium text-gray-900 mb-4">
-                  Migração Simplificada
+
+                {/* Title */}
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                  {solution.title}
                 </h3>
-                <p className="text-[#736d77] leading-relaxed mb-8">
-                  Para PMEs, simplificamos toda a migração para o Mercado Livre de Energia, eliminando burocracia, riscos e falta de transparência. Nossa comparação é gratuita, sem obrigação, e focada em gerar economia de até 40% para reinvestir no crescimento do seu negócio.
+
+                {/* Description */}
+                <p className="text-[#736d77] text-sm leading-relaxed mb-6">
+                  {solution.description}
                 </p>
+
+                {/* Button */}
                 <button 
                   onClick={() => handleScroll("#contact")}
-                  className="dcvc-arrow-btn group"
+                  className="inline-flex items-center gap-2 text-[#9e3ffd] font-medium text-sm hover:text-[#df0af2] transition-colors group/btn"
+                  data-testid={`solution-btn-${index}`}
                 >
-                  <span className="arrow">
-                    <ArrowRight className="w-5 h-5" />
-                  </span>
-                  <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
-                    SAIBA MAIS
-                  </span>
+                  <span>Saiba Mais</span>
+                  <span className="transform group-hover/btn:translate-x-1 transition-transform">&rarr;</span>
                 </button>
               </div>
-            </div>
-
-            {/* Industrial Solution */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-              <div className="opacity-75 hover:opacity-100 transition-opacity">
-                <img 
-                  src={estrategiasImage} 
-                  alt="Estratégias Personalizadas" 
-                  className="w-full h-56 object-cover"
-                />
-              </div>
-              <div className="p-8 lg:p-10">
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-4">
-                  Empresas de Maior Porte
-                </p>
-                <h3 className="text-2xl font-medium text-gray-900 mb-4">
-                  Estratégias Personalizadas
-                </h3>
-                <p className="text-[#736d77] leading-relaxed mb-8">
-                  Para empresas de maior porte, estruturamos estratégias personalizadas de contratação, com foco em previsibilidade, flexibilidade contratual e redução consistente de custos. Atuamos desde a análise inicial até a gestão contínua do contrato, sempre buscando as melhores condições do mercado.
-                </p>
-                <button 
-                  onClick={() => handleScroll("#contact")}
-                  className="dcvc-arrow-btn group"
-                >
-                  <span className="arrow">
-                    <ArrowRight className="w-5 h-5" />
-                  </span>
-                  <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
-                    SAIBA MAIS
-                  </span>
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
