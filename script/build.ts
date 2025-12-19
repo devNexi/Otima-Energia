@@ -73,7 +73,33 @@ async function buildAll() {
   });
 }
 
-buildAll().catch((err) => {
+async function runPrerender(): Promise<void> {
+  console.log("prerendering static pages...");
+  return new Promise((resolve, reject) => {
+    const child = spawn("npx", ["tsx", "script/prerender.ts"], {
+      stdio: "inherit",
+      shell: true,
+    });
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`Prerender exited with code ${code}`));
+      }
+    });
+    child.on("error", reject);
+  });
+}
+
+async function buildWithPrerender() {
+  await buildAll();
+  
+  if (process.env.SKIP_PRERENDER !== "true") {
+    await runPrerender();
+  }
+}
+
+buildWithPrerender().catch((err) => {
   console.error(err);
   process.exit(1);
 });
