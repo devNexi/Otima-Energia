@@ -1,0 +1,234 @@
+You are working on the public marketing website for Ótima Energia, a Brazilian B2B energy advisory and brokerage operating in the Mercado Livre de Energia (ACL).
+
+This is a PRE-LAUNCH site.
+There are NO public testimonials or case studies yet.
+Your task is to strengthen trust, clarity, education, and conversion WITHOUT inventing proof or guarantees.
+
+ABSOLUTE RULES
+- Do NOT mention the UK or any foreign market
+- Do NOT guarantee savings
+- Always use “economia potencial de até 40%”
+- Do NOT show partners/logos publicly yet
+- Tone: elite, calm, analytical, transparent — never salesy
+
+────────────────────────
+GLOBAL STRATEGIC CHANGES
+────────────────────────
+
+1) HIDE PARTNERS PAGE
+- Remove /parceiros from:
+  - Navbar
+  - Footer
+- Keep the page live but inaccessible publicly (future use)
+
+2) GLOBAL TRUST LANGUAGE
+Replace vague “results” language with **methodological proof** everywhere.
+
+Approved trust phrases (reuse across site):
+- “Análise auditável e documentada”
+- “Metodologia estruturada de comparação de ofertas”
+- “Diagnóstico técnico impulsionado por IA”
+- “Decisões com justificativa, histórico e rastreabilidade”
+- “Processo compatível com práticas regulatórias do setor elétrico”
+
+3) DECISION-MAKER CONFIRMATION (ALL FORMS)
+Add below every submit button (small helper text):
+
+“Ao enviar, você confirma que é decisor(a) ou está autorizado(a) pela empresa a solicitar análises, cotações e avançar no processo.”
+
+4) VISUAL TRUST ELEMENTS (LIGHT, ELEGANT)
+Add subtle icon+label blocks where appropriate:
+- “IA aplicada à análise energética”
+- “Processo auditável”
+- “Sem conflito de interesse”
+- “Transparência contratual”
+
+No loud badges. Calm, professional.
+
+────────────────────────
+PAGE-BY-PAGE UPDATES
+────────────────────────
+
+====================
+HOME (/)
+====================
+
+HERO — REPLACE COPY
+
+Headline:
+“Economia inteligente para a energia da sua empresa no Mercado Livre.”
+
+Subheadline:
+“Analisamos sua conta, comparamos ofertas do mercado e estruturamos contratos com clareza, segurança e transparência — sem custo para sua empresa.”
+
+CTA:
+“Simular economia (diagnóstico gratuito)”
+
+Below CTA (small):
+“Economia potencial de até 40%, dependendo do perfil e das condições de contratação.”
+
+────────────────────
+STATEMENT BLOCK
+────────────────────
+
+KEEP opening sentence.
+
+Replace supporting paragraph with:
+
+“O problema não é o preço da energia — é a falta de visibilidade.
+O mercado livre é complexo, fragmentado e difícil de comparar.
+A Ótima Energia existe para estruturar decisões melhores, com análise técnica, comparação ampla e contratos bem posicionados.”
+
+Stats section — keep numbers but add line below:
+
+“*Valores indicam potencial de mercado e economia estimada. Resultados variam conforme perfil, região e prazo.”
+
+────────────────────
+COMO FUNCIONA (3 STEPS)
+────────────────────
+
+Step 1 text:
+“Envie sua conta de luz. Nossa análise identifica perfil, elegibilidade, riscos e oportunidades — mesmo que a migração ainda não seja imediata.”
+
+Step 2 text:
+“Comparamos cenários, explicamos diferenças contratuais (preço, prazo, indexação, flexibilidade) e negociamos com fornecedores.”
+
+Step 3 text:
+“Acompanhamos da decisão ao fornecimento — e seguimos monitorando para evitar contratos mal posicionados.”
+
+Add below steps (new line):
+“Decisão orientada por dados, não por pressão comercial.”
+
+────────────────────
+ECOS™ SECTION
+────────────────────
+
+Replace paragraph 2 with:
+
+“O ECOS™ é o sistema de inteligência da Ótima Energia.
+Ele organiza dados, automatiza análises e cria um histórico auditável de decisões — reduzindo ruído, riscos e decisões mal informadas.”
+
+Add closing line:
+“ECOS™ não empurra mudanças. Ele mostra quando agir — e quando não agir.”
+
+────────────────────────
+NEW SECTION (ADD TO HOME)
+────────────────────────
+
+Title:
+“Por que confiar no processo da Ótima Energia?”
+
+4 cards:
+
+1) Metodologia Estruturada  
+“Comparação ampla de ofertas, com critérios claros e documentados.”
+
+2) Análise por IA  
+“Automação aplicada à leitura de faturas, cenários e riscos.”
+
+3) Sem Conflito de Interesse  
+“O diagnóstico é gratuito. Você decide se quer avançar.”
+
+4) Rastreabilidade Total  
+“Cada decisão tem justificativa, histórico e registro.”
+
+────────────────────────
+SOLUÇÕES (/solucoes)
+────────────────────────
+
+ADD EDUCATIONAL BLOCK AFTER HERO
+
+Title:
+“O que realmente gera economia no Mercado Livre”
+
+Text:
+“A economia não vem de ‘promoções’.
+Ela vem de contratos bem estruturados, entendimento de risco, comparação real e acompanhamento ao longo do tempo.”
+
+Bullets:
+- Visibilidade de mercado
+- Estrutura contratual correta
+- Planejamento de prazo
+- Monitoramento contínuo
+
+────────────────────────
+SEJA CLIENTE (/seja-cliente)
+────────────────────────
+
+Hero headline:
+“Simule sua economia com um diagnóstico técnico gratuito”
+
+Subtitle:
+“Uma análise clara, sem compromisso, para entender se — e quando — faz sentido migrar.”
+
+4-STEP PROCESS (REPLACE COPY):
+
+1) Envie sua conta  
+“Informações básicas já permitem iniciar a análise.”
+
+2) Diagnóstico técnico  
+“Análise de perfil, elegibilidade e cenários.”
+
+3) Comparação estruturada  
+“Diferenças explicadas, não escondidas.”
+
+4) Recomendação formal  
+“Você decide com clareza — sem pressão.”
+
+Add below steps:
+“Economia potencial de até 40%. Sem obrigação de contratar.”
+
+────────────────────────
+NEW PAGE — REDE DE LUCROS ÓTIMA
+(create /rede-de-lucros-otima)
+────────────────────────
+
+Hero:
+“Rede de Lucros Ótima”
+
+Subheadline:
+“Um programa para profissionais que querem gerar valor real no Mercado Livre de Energia.”
+
+Intro text:
+“A abertura do mercado cria oportunidade — mas também confusão.
+A Rede de Lucros Ótima conecta consultores, contadores, gestores e especialistas a uma estrutura técnica confiável.”
+
+Who it’s for:
+- Consultores empresariais
+- Contadores
+- Gestores de facilities
+- Profissionais do setor energético
+
+What we provide:
+- Análise técnica estruturada
+- Plataforma de acompanhamento
+- Processo claro e auditável
+- Remuneração alinhada ao sucesso
+
+CTA:
+“Quero entender como funciona”
+
+────────────────────────
+FAQ — ADD ONE QUESTION
+────────────────────────
+
+Q:
+“Vocês garantem economia?”
+
+A:
+“Não. A economia depende do perfil, do mercado e das condições de contratação.
+O que garantimos é um processo estruturado, transparente e tecnicamente justificado para tomar a melhor decisão possível.”
+
+────────────────────────
+FINAL CHECKS
+────────────────────────
+
+- No mention of partners publicly
+- No guarantees
+- “Até 40%” used consistently
+- Methodology > hype
+- Calm, premium tone
+- All forms include decision-maker confirmation
+- Mobile layout intact
+
+END.

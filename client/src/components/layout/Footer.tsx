@@ -46,12 +46,6 @@ export function Footer() {
             >
               Equipe
             </Link>
-            <Link 
-              href="/parceiros"
-              className="dcvc-footer-link block text-left"
-            >
-              Parceiros
-            </Link>
           </div>
 
           {/* Resources */}
