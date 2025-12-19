@@ -1,4 +1,7 @@
-import { Wallet, Settings, TrendingUp, Shield } from "lucide-react";
+import migracaoImg from "@/assets/homepage/sol-migracao.png";
+import estrategiasImg from "@/assets/homepage/sol-estrategias.png";
+import otimizacaoImg from "@/assets/homepage/sol-otimizacao.png";
+import transparenciaImg from "@/assets/homepage/sol-transparencia.png";
 
 export function Business() {
   const handleScroll = (href: string) => {
@@ -10,25 +13,25 @@ export function Business() {
 
   const solutions = [
     {
-      icon: Wallet,
+      image: migracaoImg,
       label: "Empresas e PMEs",
       title: "Migração Simplificada",
       description: "Simplificamos toda a migração para o Mercado Livre, eliminando burocracia e gerando economia de até 40%.",
     },
     {
-      icon: Settings,
+      image: estrategiasImg,
       label: "Empresas de Maior Porte",
       title: "Estratégias Personalizadas",
       description: "Estratégias sob medida com foco em previsibilidade, flexibilidade e redução consistente de custos.",
     },
     {
-      icon: TrendingUp,
+      image: otimizacaoImg,
       label: "Gestão Contínua",
       title: "Otimização de Contratos",
       description: "Acompanhamos seu contrato ao longo do tempo, identificando oportunidades de melhoria e economia.",
     },
     {
-      icon: Shield,
+      image: transparenciaImg,
       label: "Segurança Total",
       title: "Transparência Garantida",
       description: "Nosso serviço é gratuito para você. Trabalhamos com total transparência e sem conflitos de interesse.",
@@ -59,11 +62,15 @@ export function Business() {
             {solutions.map((solution, index) => (
               <div 
                 key={index}
-                className="group text-center p-8 rounded-xl hover:shadow-lg transition-all duration-300 bg-white"
+                className="group flex flex-col text-center p-6 rounded-xl hover:shadow-lg transition-all duration-300 bg-white h-full"
               >
-                {/* Icon */}
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#f5f0f7] mb-6 group-hover:bg-[#9e3ffd] transition-colors">
-                  <solution.icon className="w-8 h-8 text-[#9e3ffd] group-hover:text-white transition-colors" />
+                {/* Image */}
+                <div className="mb-6 rounded-xl overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+                  <img 
+                    src={solution.image} 
+                    alt={solution.title} 
+                    className="w-full h-40 object-cover"
+                  />
                 </div>
 
                 {/* Label */}
@@ -77,19 +84,21 @@ export function Business() {
                 </h3>
 
                 {/* Description */}
-                <p className="text-[#736d77] text-sm leading-relaxed mb-6">
+                <p className="text-[#736d77] text-sm leading-relaxed flex-grow">
                   {solution.description}
                 </p>
 
-                {/* Button */}
-                <button 
-                  onClick={() => handleScroll("#contact")}
-                  className="inline-flex items-center gap-2 text-[#9e3ffd] font-medium text-sm hover:text-[#df0af2] transition-colors group/btn"
-                  data-testid={`solution-btn-${index}`}
-                >
-                  <span>Saiba Mais</span>
-                  <span className="transform group-hover/btn:translate-x-1 transition-transform">&rarr;</span>
-                </button>
+                {/* Button - pushed to bottom with mt-auto */}
+                <div className="mt-6">
+                  <button 
+                    onClick={() => handleScroll("#contact")}
+                    className="inline-flex items-center gap-2 text-[#9e3ffd] font-medium text-sm hover:text-[#df0af2] transition-colors group/btn"
+                    data-testid={`solution-btn-${index}`}
+                  >
+                    <span>Saiba Mais</span>
+                    <span className="transform group-hover/btn:translate-x-1 transition-transform">&rarr;</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
