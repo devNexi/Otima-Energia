@@ -91,11 +91,32 @@ async function runPrerender(): Promise<void> {
   });
 }
 
+function shouldSkipPrerender(): boolean {
+  if (process.env.SKIP_PRERENDER === "true") {
+    console.log("Skipping prerender: SKIP_PRERENDER=true");
+    return true;
+  }
+  
+  if (process.env.REPLIT_DEPLOYMENT === "1") {
+    console.log("Skipping prerender: Running in Replit deployment build");
+    return true;
+  }
+  
+  if (process.env.REPLIT_DB_URL && !process.env.REPL_ID) {
+    console.log("Skipping prerender: Deployment environment detected");
+    return true;
+  }
+  
+  return false;
+}
+
 async function buildWithPrerender() {
   await buildAll();
   
-  if (process.env.SKIP_PRERENDER !== "true") {
+  if (!shouldSkipPrerender()) {
     await runPrerender();
+  } else {
+    console.log("Note: Run 'npx tsx script/prerender.ts' locally to generate static HTML for SEO");
   }
 }
 
