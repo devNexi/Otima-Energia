@@ -78,7 +78,7 @@ export default function Insights() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#3C145C] py-24 lg:py-32">
+      <section className="bg-[#16163f] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quer saber mais sobre o mercado livre de energia?
@@ -88,7 +88,7 @@ export default function Insights() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
             data-testid="insights-cta"
           >
             Solicitar Diagnóstico Gratuito
@@ -118,7 +118,7 @@ function ArticleCard({ article }: { article: Article }) {
       
       {/* Content */}
       <div className="p-6">
-        <h3 className="text-xl font-medium text-[#3C145C] group-hover:text-[#9e3ffd] transition-colors mb-3">
+        <h3 className="text-xl font-medium text-[#16163f] group-hover:text-[#9e3ffd] transition-colors mb-3">
           {article.title}
         </h3>
         <p className="text-[#736d77] leading-relaxed mb-4">

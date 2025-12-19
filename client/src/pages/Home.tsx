@@ -13,7 +13,7 @@ function EcosSection() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           <div>
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-6">
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
               Como garantimos economia contínua — não apenas no primeiro contrato
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
@@ -27,7 +27,7 @@ function EcosSection() {
               <p>
                 O ECOS acompanha continuamente o desempenho do seu contrato, compara sua posição com referências de mercado e indica ações apenas quando fazem sentido financeiro.
               </p>
-              <p className="font-medium text-[#3C145C]">
+              <p className="font-medium text-[#16163f]">
                 ECOS™ não empurra mudanças. Ele mostra quando agir — e quando não agir.
               </p>
             </div>
@@ -36,19 +36,19 @@ function EcosSection() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#3C145C]">Monitoramento contínuo de contratos</span>
+                <span className="text-lg text-[#16163f]">Monitoramento contínuo de contratos</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#3C145C]">Relatórios periódicos de posicionamento</span>
+                <span className="text-lg text-[#16163f]">Relatórios periódicos de posicionamento</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#3C145C]">Proteção contra decisões precipitadas</span>
+                <span className="text-lg text-[#16163f]">Proteção contra decisões precipitadas</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#3C145C]">Economia sustentável no longo prazo</span>
+                <span className="text-lg text-[#16163f]">Economia sustentável no longo prazo</span>
               </li>
             </ul>
           </div>
@@ -93,7 +93,7 @@ function TrustSection() {
               <div className="w-10 h-10 bg-[#9e3ffd]/10 rounded-lg flex items-center justify-center mb-4">
                 <CheckCircle className="w-5 h-5 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-lg font-semibold text-[#3C145C] mb-2">
+              <h3 className="text-lg font-semibold text-[#16163f] mb-2">
                 {card.title}
               </h3>
               <p className="text-[#736d77] text-sm leading-relaxed">

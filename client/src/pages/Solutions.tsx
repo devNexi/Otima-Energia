@@ -33,10 +33,10 @@ export default function Solutions() {
                 href="/seja-cliente"
                 className="inline-flex items-center gap-3 text-sm font-normal tracking-wide uppercase group"
               >
-                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#704094] flex items-center justify-center text-white transition-colors">
+                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#3C145C] group-hover:text-[#704094] transition-colors">
+                <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
                   DIAGNÓSTICO GRATUITO
                 </span>
               </Link>
@@ -48,7 +48,7 @@ export default function Solutions() {
       {/* Educational Block */}
       <section className="bg-white py-16 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#3C145C] mb-4">
+          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
             O que realmente gera economia no Mercado Livre
           </h2>
           <p className="text-lg text-[#736d77] leading-relaxed mb-6 max-w-3xl">
@@ -78,7 +78,7 @@ export default function Solutions() {
       {/* Renovation & Migration Block */}
       <section className="bg-[#eee7f1] py-16 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#3C145C] mb-4">
+          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
             Renovação e migração com planejamento
           </h2>
           <p className="text-lg text-[#736d77] leading-relaxed mb-6 max-w-3xl">
@@ -86,7 +86,7 @@ export default function Solutions() {
           </p>
           <Link 
             href="/renovacao-contrato"
-            className="text-[#9e3ffd] hover:text-[#704094] font-medium transition-colors"
+            className="text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
           >
             Saiba mais sobre renovação e migração →
           </Link>
@@ -119,7 +119,7 @@ export default function Solutions() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <Zap className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-2xl font-medium text-[#3C145C] mb-4">
+              <h3 className="text-2xl font-medium text-[#16163f] mb-4">
                 Economia
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
@@ -146,7 +146,7 @@ export default function Solutions() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-2xl font-medium text-[#3C145C] mb-4">
+              <h3 className="text-2xl font-medium text-[#16163f] mb-4">
                 Soluções Financeiras
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
@@ -173,7 +173,7 @@ export default function Solutions() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <Leaf className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-2xl font-medium text-[#3C145C] mb-4">
+              <h3 className="text-2xl font-medium text-[#16163f] mb-4">
                 Sustentabilidade
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
@@ -200,7 +200,7 @@ export default function Solutions() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <FileCheck className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-2xl font-medium text-[#3C145C] mb-4">
+              <h3 className="text-2xl font-medium text-[#16163f] mb-4">
                 Gestão Energética
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
@@ -227,7 +227,7 @@ export default function Solutions() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-2xl font-medium text-[#3C145C] mb-4">
+              <h3 className="text-2xl font-medium text-[#16163f] mb-4">
                 Monitoramento Inteligente
               </h3>
               <p className="text-[#736d77] leading-relaxed mb-6">
@@ -250,7 +250,7 @@ export default function Solutions() {
             </div>
 
             {/* ECOS - Otimização Contínua */}
-            <div className="bg-[#3C145C] border border-[#3C145C] rounded-lg p-8 lg:p-10 hover:shadow-lg transition-all duration-300">
+            <div className="bg-[#16163f] border border-[#16163f] rounded-lg p-8 lg:p-10 hover:shadow-lg transition-all duration-300">
               <div className="w-14 h-14 bg-[#9e3ffd] rounded-lg flex items-center justify-center mb-6">
                 <Zap className="w-7 h-7 text-white" />
               </div>
@@ -280,7 +280,7 @@ export default function Solutions() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#3C145C] py-24 lg:py-32">
+      <section className="bg-[#16163f] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Pronto para começar a economizar?
@@ -290,7 +290,7 @@ export default function Solutions() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
           >
             Solicitar Diagnóstico Gratuito
             <ArrowRight className="w-5 h-5" />

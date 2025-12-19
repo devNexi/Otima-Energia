@@ -133,7 +133,7 @@ export default function BecomeClient() {
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
             {/* Left Column - Benefits */}
             <div>
-              <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#3C145C] mb-8">
+              <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-8">
                 Como funciona o diagnóstico
               </h2>
               
@@ -143,7 +143,7 @@ export default function BecomeClient() {
                     1
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#3C145C] mb-2">Envie sua conta</h3>
+                    <h3 className="font-medium text-[#16163f] mb-2">Envie sua conta</h3>
                     <p className="text-[#736d77]">Informações básicas já permitem iniciar a análise.</p>
                   </div>
                 </div>
@@ -153,7 +153,7 @@ export default function BecomeClient() {
                     2
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#3C145C] mb-2">Diagnóstico técnico</h3>
+                    <h3 className="font-medium text-[#16163f] mb-2">Diagnóstico técnico</h3>
                     <p className="text-[#736d77]">Análise de perfil, elegibilidade e cenários.</p>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ export default function BecomeClient() {
                     3
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#3C145C] mb-2">Comparação estruturada</h3>
+                    <h3 className="font-medium text-[#16163f] mb-2">Comparação estruturada</h3>
                     <p className="text-[#736d77]">Diferenças explicadas, não escondidas.</p>
                   </div>
                 </div>
@@ -173,14 +173,14 @@ export default function BecomeClient() {
                     4
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#3C145C] mb-2">Recomendação formal</h3>
+                    <h3 className="font-medium text-[#16163f] mb-2">Recomendação formal</h3>
                     <p className="text-[#736d77]">Você decide com clareza — sem pressão.</p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg">
-                <h3 className="font-medium text-[#3C145C] mb-2">Elegibilidade</h3>
+                <h3 className="font-medium text-[#16163f] mb-2">Elegibilidade</h3>
                 <p className="text-[#736d77] text-sm">
                   Para migrar ao mercado livre, sua empresa precisa ter conta de luz acima de R$8.000/mês ou demanda contratada de 500kW+. Não sabe se é elegível? <a href="/faq" className="text-[#9e3ffd] hover:underline">Consulte nosso FAQ</a> ou envie seus dados que verificamos para você.
                 </p>
@@ -189,7 +189,7 @@ export default function BecomeClient() {
 
             {/* Right Column - Form */}
             <div className="bg-[#eee7f1] rounded-lg p-8 lg:p-10">
-              <h2 className="text-2xl font-medium text-[#3C145C] mb-6">
+              <h2 className="text-2xl font-medium text-[#16163f] mb-6">
                 Solicite seu diagnóstico
               </h2>
               
@@ -201,7 +201,7 @@ export default function BecomeClient() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">Nome Completo *</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">Nome Completo *</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Seu nome" 
@@ -219,7 +219,7 @@ export default function BecomeClient() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">Telefone *</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">Telefone *</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="+55 21 99999-9999" 
@@ -239,7 +239,7 @@ export default function BecomeClient() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-[#3C145C]">E-mail Corporativo *</FormLabel>
+                        <FormLabel className="text-sm text-[#16163f]">E-mail Corporativo *</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="voce@empresa.com.br" 
@@ -259,7 +259,7 @@ export default function BecomeClient() {
                       name="company"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">Empresa *</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">Empresa *</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Nome da empresa" 
@@ -277,7 +277,7 @@ export default function BecomeClient() {
                       name="cnpj"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">CNPJ</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">CNPJ</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="00.000.000/0000-00" 
@@ -298,7 +298,7 @@ export default function BecomeClient() {
                       name="ucCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">Código UC (se souber)</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">Código UC (se souber)</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Código da Unidade Consumidora" 
@@ -316,7 +316,7 @@ export default function BecomeClient() {
                       name="averageBill"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-[#3C145C]">Valor médio da conta</FormLabel>
+                          <FormLabel className="text-sm text-[#16163f]">Valor médio da conta</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="R$ 10.000/mês" 
@@ -336,7 +336,7 @@ export default function BecomeClient() {
                     name="message"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-[#3C145C]">Informações adicionais</FormLabel>
+                        <FormLabel className="text-sm text-[#16163f]">Informações adicionais</FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="Conte-nos mais sobre sua empresa e consumo de energia..." 
@@ -352,7 +352,7 @@ export default function BecomeClient() {
 
                   <button 
                     type="submit" 
-                    className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
                     disabled={submitLead.isPending}
                     data-testid="button-submit-diagnosis"
                   >

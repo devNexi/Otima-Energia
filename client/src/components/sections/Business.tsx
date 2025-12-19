@@ -96,7 +96,7 @@ export function Business() {
                 <div className="mt-6">
                   <button 
                     onClick={() => handleScroll("#contact")}
-                    className="inline-flex items-center gap-2 text-[#9e3ffd] font-medium text-sm hover:text-[#704094] transition-colors group/btn"
+                    className="inline-flex items-center gap-2 text-[#9e3ffd] font-medium text-sm hover:text-[#df0af2] transition-colors group/btn"
                     data-testid={`solution-btn-${index}`}
                   >
                     <span>Saiba Mais</span>

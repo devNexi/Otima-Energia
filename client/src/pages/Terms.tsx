@@ -22,7 +22,7 @@ export default function Terms() {
         <div className="max-w-[900px] mx-auto px-6 lg:px-12">
           <div className="prose prose-lg max-w-none text-[#736d77]">
             
-            <h2 className="text-2xl font-medium text-[#3C145C] mb-4">1. Introdução</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mb-4">1. Introdução</h2>
             <p>
               1.1. Estes Termos de Uso ("Termos") regulam o acesso e a utilização do site operado pela Ótima Energia Ltda. ("Ótima Energia", "nós", "nosso"), disponível em https://otimaenergia.com.br e de quaisquer páginas, formulários, áreas de acesso e conteúdos relacionados (em conjunto, o "Site").
             </p>
@@ -36,14 +36,14 @@ export default function Terms() {
               1.4. O Site pode conter conteúdos informativos e canais para solicitação de diagnóstico, contato e envio de documentos (por exemplo, faturas de energia). O uso do Site não cria, por si só, obrigação de contratação de serviços.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">2. Quem Somos</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">2. Quem Somos</h2>
             <ul className="list-none pl-0 space-y-2">
               <li>2.1. <strong>Controladora/Responsável pelo Site:</strong> Ótima Energia Ltda.</li>
               <li>2.2. <strong>Site:</strong> https://otimaenergia.com.br</li>
               <li>2.3. <strong>E-mail de contato:</strong> contato@otimaenergia.com.br</li>
             </ul>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">3. Elegibilidade e Uso Permitido</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">3. Elegibilidade e Uso Permitido</h2>
             <p>
               3.1. O Site é destinado principalmente a empresas e a seus representantes, gestores e responsáveis autorizados.
             </p>
@@ -55,7 +55,7 @@ export default function Terms() {
               <li>d) utilizará o Site apenas para finalidades lícitas.</li>
             </ul>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">4. Descrição dos Serviços e Natureza das Informações</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">4. Descrição dos Serviços e Natureza das Informações</h2>
             <p>
               4.1. A Ótima Energia atua como intermediadora e parceira de migração, contratação e otimização para empresas que desejam avaliar condições no Mercado Livre de Energia, inclusive com análise de faturas e elaboração de simulações e propostas.
             </p>
@@ -66,7 +66,7 @@ export default function Terms() {
               4.3. O "serviço de comparação" é gratuito para o empresário/empresa usuária do Site. A remuneração da Ótima Energia pode ocorrer por meio de comissões pagas por fornecedores e/ou parceiros, sem cobrança direta ao usuário, conforme aplicável e conforme instrumentos contratuais específicos.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">5. Cadastro, Formulários e Envio de Documentos</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">5. Cadastro, Formulários e Envio de Documentos</h2>
             <p>
               5.1. Para utilizar determinadas funcionalidades (por exemplo, solicitar diagnóstico, enviar faturas, acessar área restrita), você pode precisar fornecer dados e documentos.
             </p>
@@ -80,7 +80,7 @@ export default function Terms() {
               5.4. Podemos recusar, bloquear ou excluir envios que estejam ilegíveis, incompletos, suspeitos, fraudulentos, ofensivos ou em desconformidade com estes Termos.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">6. Licença de Uso do Site e Propriedade Intelectual</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">6. Licença de Uso do Site e Propriedade Intelectual</h2>
             <p>
               6.1. Todo o conteúdo do Site, incluindo textos, marcas, logotipos, layout, bases de dados, gráficos, imagens, vídeos, materiais, códigos e funcionalidades, é de propriedade da Ótima Energia ou de seus licenciantes e está protegido por legislação aplicável de propriedade intelectual.
             </p>
@@ -94,7 +94,7 @@ export default function Terms() {
               6.4. "Ótima Energia" e sinais distintivos associados são marcas de titularidade da Ótima Energia (ou de terceiros, quando indicado).
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">7. Condutas Proibidas</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">7. Condutas Proibidas</h2>
             <p>7.1. Você concorda em não:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>a) utilizar o Site para fins ilícitos, fraudulentos ou abusivos;</li>
@@ -107,7 +107,7 @@ export default function Terms() {
               <li>h) utilizar o Site de forma a impor carga desproporcional à infraestrutura.</li>
             </ul>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">8. Conteúdos de Terceiros e Links Externos</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">8. Conteúdos de Terceiros e Links Externos</h2>
             <p>
               8.1. O Site pode conter links para sites de terceiros. A Ótima Energia não controla, não endossa e não se responsabiliza por conteúdos, políticas, práticas ou segurança de sites de terceiros.
             </p>
@@ -115,7 +115,7 @@ export default function Terms() {
               8.2. O uso de sites de terceiros é por sua conta e risco. Recomendamos a leitura dos termos e políticas desses terceiros.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">9. Disponibilidade do Site e Alterações</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">9. Disponibilidade do Site e Alterações</h2>
             <p>
               9.1. Podemos, a qualquer momento, modificar, suspender, descontinuar ou restringir o acesso a qualquer parte do Site, temporária ou permanentemente, com ou sem aviso prévio.
             </p>
@@ -123,7 +123,7 @@ export default function Terms() {
               9.2. Não garantimos que o Site funcionará de forma ininterrupta, livre de erros ou totalmente segura. Podemos realizar manutenções e atualizações.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">10. Isenções e Limitações de Responsabilidade</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">10. Isenções e Limitações de Responsabilidade</h2>
             <p>
               10.1. O Site e seu conteúdo são fornecidos "no estado em que se encontram" e "conforme disponível", sem garantias expressas ou implícitas, inclusive de adequação a um propósito específico, não violação ou disponibilidade contínua.
             </p>
@@ -139,7 +139,7 @@ export default function Terms() {
               10.3. Nada nestes Termos exclui responsabilidades que não possam ser excluídas pela legislação aplicável.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">11. Indenização</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">11. Indenização</h2>
             <p>11.1. Você concorda em indenizar, defender e isentar a Ótima Energia, seus administradores, colaboradores, parceiros e prestadores de serviços contra quaisquer reivindicações, perdas, danos, custos e despesas (incluindo honorários advocatícios), decorrentes:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>a) do uso indevido do Site;</li>
@@ -147,7 +147,7 @@ export default function Terms() {
               <li>c) da violação destes Termos, da Política de Privacidade ou de direitos de terceiros.</li>
             </ul>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">12. Privacidade e Proteção de Dados</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">12. Privacidade e Proteção de Dados</h2>
             <p>
               12.1. O tratamento de Dados Pessoais realizado pela Ótima Energia está descrito na <a href="/privacidade" className="text-[#9e3ffd] hover:underline">Política de Privacidade</a> do Site.
             </p>
@@ -155,7 +155,7 @@ export default function Terms() {
               12.2. Ao utilizar o Site, você declara ciência de que dados podem ser coletados e tratados conforme a Política de Privacidade.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">13. Comunicações</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">13. Comunicações</h2>
             <p>
               13.1. Podemos enviar comunicações operacionais relacionadas ao seu contato/diagnóstico (por e-mail, telefone, WhatsApp ou outros meios informados).
             </p>
@@ -163,12 +163,12 @@ export default function Terms() {
               13.2. Comunicações de marketing dependerão da base legal aplicável e, quando necessário, do seu consentimento, com opção de descadastro.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">14. Rescisão e Bloqueio de Acesso</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">14. Rescisão e Bloqueio de Acesso</h2>
             <p>
               14.1. Podemos suspender ou encerrar seu acesso ao Site (incluindo área restrita), a qualquer tempo, se identificarmos violação destes Termos, condutas suspeitas, fraude, risco de segurança ou exigência legal/regulatória.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">15. Atualizações destes Termos</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">15. Atualizações destes Termos</h2>
             <p>
               15.1. Podemos alterar estes Termos periodicamente. A versão vigente será sempre a publicada no Site, com indicação da data de atualização.
             </p>
@@ -176,7 +176,7 @@ export default function Terms() {
               15.2. O uso continuado do Site após a publicação de alterações será considerado como aceitação dos Termos atualizados.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">16. Legislação Aplicável e Foro</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">16. Legislação Aplicável e Foro</h2>
             <p>
               16.1. Estes Termos são regidos pelas leis da República Federativa do Brasil.
             </p>
@@ -184,7 +184,7 @@ export default function Terms() {
               16.2. Fica eleito o foro da Comarca do Rio de Janeiro, RJ, com renúncia a qualquer outro, por mais privilegiado que seja, para dirimir eventuais controvérsias relacionadas a estes Termos, salvo quando a legislação aplicável determinar foro diverso.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">17. Disposições Gerais</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">17. Disposições Gerais</h2>
             <p>
               17.1. Se qualquer disposição destes Termos for considerada inválida ou inexequível, as demais permanecerão em pleno vigor.
             </p>
@@ -195,7 +195,7 @@ export default function Terms() {
               17.3. Estes Termos constituem o acordo integral entre você e a Ótima Energia sobre o uso do Site.
             </p>
 
-            <h2 className="text-2xl font-medium text-[#3C145C] mt-12 mb-4">18. Contato</h2>
+            <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">18. Contato</h2>
             <p>Em caso de dúvidas, solicitações ou reclamações:</p>
             <ul className="list-none pl-0 space-y-2">
               <li><strong>E-mail:</strong> contato@otimaenergia.com.br</li>
