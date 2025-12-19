@@ -65,7 +65,7 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+    <section id="contact" className="bg-[#eee7f1] pt-20 pb-12 lg:pt-24 lg:pb-16 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
           {/* Left Column - Info */}
