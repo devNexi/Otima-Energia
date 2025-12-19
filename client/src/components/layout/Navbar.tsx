@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import logoFull from "@/assets/brand/logo-full.png";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,13 +46,16 @@ export function Navbar() {
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-20">
-          {/* Logo - Simple text like DCVC */}
+          {/* Logo */}
           <Link 
             href="/"
-            className="text-xl font-semibold tracking-tight text-[#9e3ffd]"
             data-testid="logo-home"
           >
-            ÓTIMA<br/>ENERGIA
+            <img 
+              src={logoFull} 
+              alt="Ótima Energia" 
+              className="h-12 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation - Simple links like DCVC */}
@@ -100,7 +104,7 @@ export function Navbar() {
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="block w-full text-left text-lg tracking-wide text-[#16163f] hover:text-[#9e3ffd]"
+                  className="block w-full text-left text-lg tracking-wide text-[#3C145C] hover:text-[#9e3ffd]"
                 >
                   {link.name}
                 </Link>
@@ -108,7 +112,7 @@ export function Navbar() {
                 <button
                   key={link.name}
                   onClick={() => handleNavClick(link.href, link.isPage)}
-                  className="block w-full text-left text-lg tracking-wide text-[#16163f] hover:text-[#9e3ffd]"
+                  className="block w-full text-left text-lg tracking-wide text-[#3C145C] hover:text-[#9e3ffd]"
                 >
                   {link.name}
                 </button>

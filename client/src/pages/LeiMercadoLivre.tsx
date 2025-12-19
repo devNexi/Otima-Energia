@@ -34,7 +34,7 @@ export default function LeiMercadoLivre() {
                 <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
                   DESCUBRA QUANDO SUA EMPRESA PODE MIGRAR
                 </span>
               </Link>
@@ -46,7 +46,7 @@ export default function LeiMercadoLivre() {
       {/* When Can You Migrate Section */}
       <section className="bg-white py-16 lg:py-24 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-8">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-8">
             Quando sua empresa pode migrar?
           </h2>
           <ul className="space-y-4 text-lg text-[#736d77] max-w-3xl mb-8">
@@ -78,7 +78,7 @@ export default function LeiMercadoLivre() {
       {/* Timeline Section */}
       <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-16">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-16">
             Cronograma de Abertura do Mercado
           </h2>
           
@@ -89,7 +89,7 @@ export default function LeiMercadoLivre() {
                 <Factory className="w-8 h-8 text-[#9e3ffd]" />
                 <span className="text-sm tracking-wide text-[#9e3ffd] uppercase font-medium">Já Podem Migrar</span>
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Empresas Elegíveis Hoje
               </h3>
               <ul className="space-y-3 text-[#736d77]">
@@ -114,7 +114,7 @@ export default function LeiMercadoLivre() {
                 <Calendar className="w-8 h-8 text-[#9e3ffd]" />
                 <span className="text-sm tracking-wide text-[#736d77] uppercase">2026-2027</span>
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Próxima Fase
               </h3>
               <ul className="space-y-3 text-[#736d77]">
@@ -135,7 +135,7 @@ export default function LeiMercadoLivre() {
                 <Calendar className="w-8 h-8 text-[#9e3ffd]" />
                 <span className="text-sm tracking-wide text-[#736d77] uppercase">Até 2028</span>
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Abertura Total
               </h3>
               <ul className="space-y-3 text-[#736d77]">
@@ -185,7 +185,7 @@ export default function LeiMercadoLivre() {
       <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl">
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-8">
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-8">
               Por que empresas inteligentes começam antes
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
@@ -195,7 +195,7 @@ export default function LeiMercadoLivre() {
               <p>
                 O <span className="font-medium text-[#9e3ffd]">ECOS™</span> permite que empresas se preparem com antecedência, entendendo seu perfil, riscos e posicionamento antes mesmo da migração ser possível.
               </p>
-              <p className="font-medium text-[#16163f]">
+              <p className="font-medium text-[#3C145C]">
                 Quem chega com dados, chega negociando melhor.
               </p>
             </div>
@@ -204,7 +204,7 @@ export default function LeiMercadoLivre() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#16163f] py-24 lg:py-32">
+      <section className="bg-[#3C145C] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Descubra quando sua empresa pode migrar

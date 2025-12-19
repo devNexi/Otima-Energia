@@ -120,7 +120,7 @@ export function Process() {
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
-              <strong className="text-[#16163f]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.{" "}
+              <strong className="text-[#3C145C]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.{" "}
               <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre o Mercado Livre</a>
             </p>
           </div>
@@ -135,7 +135,7 @@ export function Process() {
               <span className="arrow">
                 <ArrowRight className="w-5 h-5" />
               </span>
-              <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
+              <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
                 FAZER DIAGNÓSTICO GRATUITO
               </span>
             </a>

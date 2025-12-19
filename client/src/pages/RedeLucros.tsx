@@ -55,7 +55,7 @@ export default function RedeLucros() {
               </p>
             </div>
             <div className="bg-white rounded-lg p-8 lg:p-10">
-              <h2 className="text-xl font-medium text-[#16163f] mb-6">
+              <h2 className="text-xl font-medium text-[#3C145C] mb-6">
                 Para quem é este programa?
               </h2>
               <ul className="space-y-4">
@@ -88,7 +88,7 @@ export default function RedeLucros() {
                   <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mx-auto mb-6">
                     <Icon className="w-7 h-7 text-[#9e3ffd]" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#16163f] mb-3">
+                  <h3 className="text-lg font-semibold text-[#3C145C] mb-3">
                     {item.title}
                   </h3>
                   <p className="text-[#736d77] text-sm leading-relaxed">
@@ -133,7 +133,7 @@ export default function RedeLucros() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#16163f] py-24 lg:py-32">
+      <section className="bg-[#3C145C] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quero entender como funciona

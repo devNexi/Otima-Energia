@@ -28,7 +28,7 @@ export default function RenovacaoContrato() {
                 <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
                   SOLICITAR DIAGNÓSTICO GRATUITO
                 </span>
               </Link>
@@ -40,7 +40,7 @@ export default function RenovacaoContrato() {
       {/* Section A - Simple explanation */}
       <section className="bg-white py-16 lg:py-24 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-8">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-8">
             A regra prática: sua empresa pode se preparar agora.
           </h2>
           <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed max-w-4xl mb-4">
@@ -61,7 +61,7 @@ export default function RenovacaoContrato() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <Building2 className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Empresas que já estão no Mercado Livre
               </h3>
               <p className="text-[#736d77] leading-relaxed">
@@ -74,7 +74,7 @@ export default function RenovacaoContrato() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <Clock className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Empresas ainda no mercado regulado
               </h3>
               <p className="text-[#736d77] leading-relaxed">
@@ -87,7 +87,7 @@ export default function RenovacaoContrato() {
               <div className="w-14 h-14 bg-[#eee7f1] rounded-lg flex items-center justify-center mb-6">
                 <FileText className="w-7 h-7 text-[#9e3ffd]" />
               </div>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 O que realmente define o momento da migração
               </h3>
               <p className="text-[#736d77] leading-relaxed">
@@ -101,15 +101,15 @@ export default function RenovacaoContrato() {
       {/* Section C - Practical scenarios table */}
       <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-12">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-12">
             Cenários comuns na prática
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b-2 border-[#9e3ffd]">
-                  <th className="text-left py-4 pr-8 text-lg font-medium text-[#16163f]">Situação da Empresa</th>
-                  <th className="text-left py-4 text-lg font-medium text-[#16163f]">O que faz sentido</th>
+                  <th className="text-left py-4 pr-8 text-lg font-medium text-[#3C145C]">Situação da Empresa</th>
+                  <th className="text-left py-4 text-lg font-medium text-[#3C145C]">O que faz sentido</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,7 +165,7 @@ export default function RenovacaoContrato() {
       </section>
 
       {/* Section E - CTA */}
-      <section className="bg-[#16163f] py-24 lg:py-32">
+      <section className="bg-[#3C145C] py-24 lg:py-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quer entender o melhor caminho para sua empresa?

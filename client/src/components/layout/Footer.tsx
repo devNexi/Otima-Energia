@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import logoFull from "@/assets/brand/logo-full.png";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -87,11 +88,12 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-8 border-t border-gray-300">
           {/* Logo */}
-          <Link 
-            href="/"
-            className="text-xl font-semibold tracking-tight text-[#9e3ffd]"
-          >
-            ÓTIMA<br/>ENERGIA
+          <Link href="/">
+            <img 
+              src={logoFull} 
+              alt="Ótima Energia" 
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Copyright & Links */}

@@ -28,7 +28,7 @@ export default function About() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-6">
                 Estamos com pressa.
               </h2>
               <p className="text-lg text-[#736d77] leading-relaxed">
@@ -43,7 +43,7 @@ export default function About() {
                 <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
                   EXPLORAR SOLUÇÕES
                 </span>
               </Link>
@@ -129,7 +129,7 @@ export default function About() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
               <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Expertise</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Conhecimento de Mercado
               </h3>
               <p className="text-[#736d77] leading-relaxed">
@@ -138,7 +138,7 @@ export default function About() {
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
               <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Tecnologia</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Plataforma Inteligente
               </h3>
               <p className="text-[#736d77] leading-relaxed">
@@ -147,7 +147,7 @@ export default function About() {
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
               <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Resultados</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
+              <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Economia Comprovada
               </h3>
               <p className="text-[#736d77] leading-relaxed">

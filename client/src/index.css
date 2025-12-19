@@ -24,7 +24,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Roboto Slab', serif;
+  --font-display: 'Alata', sans-serif;
   
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -37,39 +38,41 @@
   Vibrant, confident, professional
 */
 :root {
-  /* NEW Brand Colors - USE BOLDLY */
-  --primary-purple: #9e3ffd;      /* Main brand - USE BOLDLY */
-  --dark-purple: #16163f;         /* Dark backgrounds/headlines */
-  --light-purple: #c88ff5;        /* Light accents */
-  --accent-pink: #df0af2;         /* CTA/hover accents */
+  /* ÓTIMA ENERGIA Brand Colors */
+  --primary-purple: #9e3ffd;      /* Main brand purple */
+  --dark-purple: #3C145C;         /* Dark purple for headlines/backgrounds */
+  --mid-purple: #704094;          /* Mid-tone purple */
+  --light-purple: #c88ff5;        /* Light purple accents */
+  --lavender: #dfbaf2;            /* Light lavender */
   --light-bg: #eee7f1;            /* Light section backgrounds */
+  --off-white: #eff1ea;           /* Off-white/cream */
   --text-gray: #736d77;           /* Body text */
-  --accent-blue: #004a98;         /* Optional accent */
   --white: #ffffff;
   --black: #000000;
   
   /* Legacy aliases for compatibility */
   --accent-purple: #9e3ffd;
-  --accent-purple-dark: #16163f;
+  --accent-purple-dark: #3C145C;
+  --accent-pink: #9e3ffd;         /* Using primary purple for accent */
   --cream: #eee7f1;
-  --cream-dark: #e0d8e5;
-  --gray-100: #f7f5f9;
+  --cream-dark: #dfbaf2;
+  --gray-100: #eff1ea;
   --gray-200: #E5E5E3;
   --gray-400: #9CA3AF;
   --gray-600: #736d77;
-  --gray-800: #16163f;
-  --gray-900: #16163f;
+  --gray-800: #3C145C;
+  --gray-900: #3C145C;
   
   /* Theme Variables */
   --background: #FFFFFF;
-  --foreground: #16163f;
+  --foreground: #3C145C;
   --card: #FFFFFF;
-  --card-foreground: #16163f;
+  --card-foreground: #3C145C;
   --popover: #FFFFFF;
-  --popover-foreground: #16163f;
+  --popover-foreground: #3C145C;
   --primary: #9e3ffd;
   --primary-foreground: #FFFFFF;
-  --secondary: #df0af2;
+  --secondary: #704094;
   --secondary-foreground: #FFFFFF;
   --muted: #eee7f1;
   --muted-foreground: #736d77;
@@ -114,6 +117,7 @@
   /* Statement text - large headlines with highlighted words */
   .dcvc-statement {
     @apply text-[2.5rem] md:text-[3rem] lg:text-[3.75rem] font-normal leading-[1.1] tracking-tight;
+    font-family: 'Alata', sans-serif;
   }
   
   /* Highlighted text - solid background with proper line spacing */
@@ -132,6 +136,7 @@
   /* Section headers - bold purple */
   .dcvc-section-title {
     @apply text-2xl md:text-3xl font-normal tracking-tight text-[var(--primary-purple)];
+    font-family: 'Alata', sans-serif;
   }
   
   /* Body text - new gray */
@@ -168,7 +173,8 @@
   
   /* Footer link - bold purple */
   .dcvc-footer-link {
-    @apply text-3xl md:text-4xl font-normal text-[var(--primary-purple)] hover:text-[var(--accent-pink)] transition-colors;
+    @apply text-3xl md:text-4xl font-normal text-[var(--primary-purple)] hover:text-[var(--dark-purple)] transition-colors;
+    font-family: 'Alata', sans-serif;
   }
   
   /* Primary button */

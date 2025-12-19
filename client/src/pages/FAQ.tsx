@@ -98,7 +98,7 @@ export default function FAQ() {
                   className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50 transition-colors"
                   data-testid={`faq-question-${index}`}
                 >
-                  <span className="text-lg font-medium text-[#16163f] pr-4">
+                  <span className="text-lg font-medium text-[#3C145C] pr-4">
                     {faq.question}
                   </span>
                   <ChevronDown 
@@ -123,7 +123,7 @@ export default function FAQ() {
       {/* CTA Section */}
       <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
-          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+          <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#3C145C] mb-6">
             Ainda tem dúvidas?
           </h2>
           <p className="text-xl text-[#736d77] mb-12 max-w-2xl mx-auto">
