@@ -247,6 +247,9 @@ export default function Partners() {
                   Enviar
                   <ArrowRight className="w-5 h-5" />
                 </button>
+                <p className="text-xs text-[#736d77] mt-3 text-center">
+                  Ao enviar, você confirma que é decisor(a) ou está autorizado(a) pela empresa a solicitar análises, cotações e avançar no processo.
+                </p>
               </form>
             </div>
           </div>

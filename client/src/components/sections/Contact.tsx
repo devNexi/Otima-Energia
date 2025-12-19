@@ -215,6 +215,9 @@ export function Contact() {
                     {submitLead.isPending ? "ENVIANDO..." : "ENVIAR SOLICITAÇÃO"}
                   </span>
                 </button>
+                <p className="text-xs text-[#736d77] mt-3">
+                  Ao enviar, você confirma que é decisor(a) ou está autorizado(a) pela empresa a solicitar análises, cotações e avançar no processo.
+                </p>
               </form>
             </Form>
           </div>

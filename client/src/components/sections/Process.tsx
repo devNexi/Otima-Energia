@@ -21,9 +21,9 @@ export function Process() {
             <span className="text-highlight">opaco, fragmentado e difícil de comparar</span>.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            Nosso serviço de comparação é gratuito. Analisamos sua conta, comparamos o máximo possível do mercado e apresentamos opções claras e flexíveis. Nossa remuneração vem exclusivamente dos fornecedores — nunca do empresário.
+            O problema não é o preço da energia — é a falta de visibilidade. O mercado livre é complexo, fragmentado e difícil de comparar. A Ótima Energia existe para estruturar decisões melhores, com análise técnica, comparação ampla e contratos bem posicionados.
           </p>
-          <div className="flex gap-16 max-w-4xl">
+          <div className="flex flex-wrap gap-8 lg:gap-16 max-w-4xl">
             <div>
               <p className="text-4xl font-light text-[#9e3ffd]">40%</p>
               <p className="text-[#736d77] mt-2">Economia de até</p>
@@ -37,6 +37,9 @@ export function Process() {
               <p className="text-[#736d77] mt-2">Elegíveis até 2028</p>
             </div>
           </div>
+          <p className="text-sm text-[#736d77] mt-8 max-w-2xl">
+            *Valores indicam potencial de mercado e economia estimada. Resultados variam conforme perfil, região e prazo.
+          </p>
         </div>
       </section>
 
@@ -61,10 +64,10 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Envie sua conta de luz para um diagnóstico gratuito
+                Envie sua conta de luz
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Envie sua conta de luz para um diagnóstico gratuito. Nossa tecnologia analisa seu perfil e verifica se sua empresa já pode migrar — ou quando poderá. Mesmo que ainda não esteja apta, você já pode iniciar o planejamento.
+                Nossa análise identifica perfil, elegibilidade, riscos e oportunidades — mesmo que a migração ainda não seja imediata.
               </p>
             </div>
 
@@ -81,10 +84,10 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Comparamos o mercado e negociamos as melhores condições
+                Comparamos cenários e negociamos
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Tornamos visível um mercado que normalmente é fechado e fragmentado, comparando ofertas e negociando contratos estruturados para gerar economia real — sem viés e sem custo para você.
+                Comparamos cenários, explicamos diferenças contratuais (preço, prazo, indexação, flexibilidade) e negociamos com fornecedores.
               </p>
             </div>
 
@@ -101,13 +104,18 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Migramos, contratamos e acompanhamos
+                Acompanhamos da decisão ao fornecimento
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Você começa a economizar, enquanto cuidamos de toda a migração e seguimos otimizando seu contrato ao longo do tempo.
+                Acompanhamos da decisão ao fornecimento — e seguimos monitorando para evitar contratos mal posicionados.
               </p>
             </div>
           </div>
+
+          {/* Data-driven decision note */}
+          <p className="mt-8 text-lg text-[#9e3ffd] font-medium">
+            Decisão orientada por dados, não por pressão comercial.
+          </p>
 
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">

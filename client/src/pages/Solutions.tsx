@@ -45,8 +45,38 @@ export default function Solutions() {
         </div>
       </section>
 
-      {/* Renovation & Migration Block */}
+      {/* Educational Block */}
       <section className="bg-white py-16 border-t border-gray-200">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
+            O que realmente gera economia no Mercado Livre
+          </h2>
+          <p className="text-lg text-[#736d77] leading-relaxed mb-6 max-w-3xl">
+            A economia não vem de "promoções". Ela vem de contratos bem estruturados, entendimento de risco, comparação real e acompanhamento ao longo do tempo.
+          </p>
+          <ul className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl">
+            <li className="flex items-center gap-2 text-[#736d77]">
+              <span className="text-[#9e3ffd]">•</span>
+              Visibilidade de mercado
+            </li>
+            <li className="flex items-center gap-2 text-[#736d77]">
+              <span className="text-[#9e3ffd]">•</span>
+              Estrutura contratual correta
+            </li>
+            <li className="flex items-center gap-2 text-[#736d77]">
+              <span className="text-[#9e3ffd]">•</span>
+              Planejamento de prazo
+            </li>
+            <li className="flex items-center gap-2 text-[#736d77]">
+              <span className="text-[#9e3ffd]">•</span>
+              Monitoramento contínuo
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* Renovation & Migration Block */}
+      <section className="bg-[#eee7f1] py-16 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
             Renovação e migração com planejamento

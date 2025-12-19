@@ -58,6 +58,10 @@ const faqs: FAQItem[] = [
   {
     question: "O que é o ECOS?",
     answer: "O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro — com total transparência."
+  },
+  {
+    question: "Vocês garantem economia?",
+    answer: "Não. A economia depende do perfil, do mercado e das condições de contratação. O que garantimos é um processo estruturado, transparente e tecnicamente justificado para tomar a melhor decisão possível."
   }
 ];
 

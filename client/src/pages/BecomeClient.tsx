@@ -97,13 +97,13 @@ export default function BecomeClient() {
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
               <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
-                Solicite seu diagnóstico gratuito impulsionado por IA
+                Simule sua economia com um diagnóstico técnico gratuito
               </h1>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-                Envie sua conta de luz para uma estimativa de economia sem custo ou obrigação.
+                Uma análise clara, sem compromisso, para entender se — e quando — faz sentido migrar.
               </p>
               <p className="text-base text-[#736d77] mt-4">
-                Mesmo que sua empresa ainda não possa migrar imediatamente, o diagnóstico antecipado permite planejar a transição, estimar economias futuras e evitar decisões apressadas quando o mercado abrir.
+                Economia potencial de até 40%. Sem obrigação de contratar.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4">
@@ -143,8 +143,8 @@ export default function BecomeClient() {
                     1
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#16163f] mb-2">Envie seus dados</h3>
-                    <p className="text-[#736d77]">Preencha o formulário com suas informações básicas e dados de consumo.</p>
+                    <h3 className="font-medium text-[#16163f] mb-2">Envie sua conta</h3>
+                    <p className="text-[#736d77]">Informações básicas já permitem iniciar a análise.</p>
                   </div>
                 </div>
                 
@@ -153,8 +153,8 @@ export default function BecomeClient() {
                     2
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#16163f] mb-2">Análise personalizada</h3>
-                    <p className="text-[#736d77]">Nossa equipe analisa seu perfil de consumo e compara ofertas de múltiplos fornecedores.</p>
+                    <h3 className="font-medium text-[#16163f] mb-2">Diagnóstico técnico</h3>
+                    <p className="text-[#736d77]">Análise de perfil, elegibilidade e cenários.</p>
                   </div>
                 </div>
                 
@@ -163,8 +163,8 @@ export default function BecomeClient() {
                     3
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#16163f] mb-2">Receba sua proposta</h3>
-                    <p className="text-[#736d77]">Em até 48 horas, você recebe um relatório com sua economia potencial e melhores ofertas.</p>
+                    <h3 className="font-medium text-[#16163f] mb-2">Comparação estruturada</h3>
+                    <p className="text-[#736d77]">Diferenças explicadas, não escondidas.</p>
                   </div>
                 </div>
                 
@@ -173,8 +173,8 @@ export default function BecomeClient() {
                     4
                   </div>
                   <div>
-                    <h3 className="font-medium text-[#16163f] mb-2">Decida sem pressão</h3>
-                    <p className="text-[#736d77]">Você analisa as opções e decide se quer migrar. Sem compromisso, sem custos ocultos.</p>
+                    <h3 className="font-medium text-[#16163f] mb-2">Recomendação formal</h3>
+                    <p className="text-[#736d77]">Você decide com clareza — sem pressão.</p>
                   </div>
                 </div>
               </div>
@@ -359,6 +359,9 @@ export default function BecomeClient() {
                     {submitLead.isPending ? "Enviando..." : "Solicitar Diagnóstico Gratuito"}
                     <ArrowRight className="w-5 h-5" />
                   </button>
+                  <p className="text-xs text-[#736d77] mt-3 text-center">
+                    Ao enviar, você confirma que é decisor(a) ou está autorizado(a) pela empresa a solicitar análises, cotações e avançar no processo.
+                  </p>
                 </form>
               </Form>
             </div>
