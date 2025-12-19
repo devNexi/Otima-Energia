@@ -24,6 +24,13 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Build**: esbuild (server), Vite (client)
 - **API Pattern**: RESTful endpoints (`/api/*`)
 
+### SEO & Prerendering
+- **Static HTML Generation**: Puppeteer-based prerendering at build time
+- **Script Location**: `script/prerender.ts`
+- **Public Routes**: All marketing pages are prerendered to static HTML for crawlers and AI tools
+- **Skip Prerendering**: Set `SKIP_PRERENDER=true` to skip during development builds
+- **System Dependencies**: Requires glib, nss, X11 libs, gtk3, mesa, libxkbcommon for Puppeteer
+
 ### Database
 - **ORM**: Drizzle ORM with PostgreSQL dialect
 - **Schema Location**: `shared/schema.ts`
