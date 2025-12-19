@@ -40,10 +40,10 @@ export default function About() {
                 href="/#business"
                 className="inline-flex items-center gap-3 text-sm font-normal tracking-wide uppercase group"
               >
-                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
+                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#704094] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#704094] transition-colors">
                   EXPLORAR SOLUÇÕES
                 </span>
               </Link>
@@ -128,7 +128,7 @@ export default function About() {
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Expertise</p>
+              <p className="text-sm tracking-wide text-[#704094] uppercase mb-4">Expertise</p>
               <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Conhecimento de Mercado
               </h3>
@@ -137,7 +137,7 @@ export default function About() {
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Tecnologia</p>
+              <p className="text-sm tracking-wide text-[#704094] uppercase mb-4">Tecnologia</p>
               <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Plataforma Inteligente
               </h3>
@@ -146,7 +146,7 @@ export default function About() {
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Resultados</p>
+              <p className="text-sm tracking-wide text-[#704094] uppercase mb-4">Resultados</p>
               <h3 className="text-xl font-medium text-[#3C145C] mb-4">
                 Economia Comprovada
               </h3>

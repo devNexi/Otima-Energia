@@ -131,7 +131,7 @@ export default function FAQ() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
           >
             Fazer Diagnóstico Gratuito
             <ArrowRight className="w-5 h-5" />

@@ -135,7 +135,7 @@ export function Process() {
               <span className="arrow">
                 <ArrowRight className="w-5 h-5" />
               </span>
-              <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
+              <span className="text-[#3C145C] group-hover:text-[#704094] transition-colors">
                 FAZER DIAGNÓSTICO GRATUITO
               </span>
             </a>

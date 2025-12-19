@@ -352,7 +352,7 @@ export default function BecomeClient() {
 
                   <button 
                     type="submit" 
-                    className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
                     disabled={submitLead.isPending}
                     data-testid="button-submit-diagnosis"
                   >

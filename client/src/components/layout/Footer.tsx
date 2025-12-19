@@ -99,8 +99,8 @@ export function Footer() {
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
             <span>©{currentYear} Ótima Energia. Todos os direitos reservados.</span>
-            <Link href="/privacidade" className="hover:text-[#df0af2] transition-colors">Privacidade</Link>
-            <Link href="/termos" className="hover:text-[#df0af2] transition-colors">Termos de Uso</Link>
+            <Link href="/privacidade" className="hover:text-[#704094] transition-colors">Privacidade</Link>
+            <Link href="/termos" className="hover:text-[#704094] transition-colors">Termos de Uso</Link>
           </div>
         </div>
       </div>

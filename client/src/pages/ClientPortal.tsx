@@ -69,14 +69,14 @@ export default function ClientPortal() {
                     <input type="checkbox" className="rounded border-gray-300 text-[#9e3ffd] focus:ring-[#9e3ffd]" />
                     <span className="text-[#736d77]">Lembrar-me</span>
                   </label>
-                  <a href="#" className="text-[#9e3ffd] hover:text-[#df0af2]">
+                  <a href="#" className="text-[#9e3ffd] hover:text-[#704094]">
                     Esqueci a senha
                   </a>
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
                   data-testid="button-portal-login"
                 >
                   Entrar
@@ -86,7 +86,7 @@ export default function ClientPortal() {
 
               <p className="text-center text-sm text-[#736d77] mt-6">
                 Ainda não é cliente?{" "}
-                <Link href="/seja-cliente" className="text-[#9e3ffd] hover:text-[#df0af2]">
+                <Link href="/seja-cliente" className="text-[#9e3ffd] hover:text-[#704094]">
                   Solicite seu diagnóstico gratuito
                 </Link>
               </p>
@@ -165,7 +165,7 @@ export default function ClientPortal() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
           >
             Solicitar Diagnóstico Gratuito
             <ArrowRight className="w-5 h-5" />

@@ -139,7 +139,7 @@ export default function Partners() {
             Exibindo {filteredPartners.length} Parceiros em Destaque, de Todos os Setores.{" "}
             <button 
               onClick={() => setFilter(filter === "todos" ? "destaque" : "todos")}
-              className="text-[#9e3ffd] hover:text-[#df0af2] hover:underline transition-colors"
+              className="text-[#9e3ffd] hover:text-[#704094] hover:underline transition-colors"
             >
               {filter === "todos" ? "Mostrar Destaques" : "Mostrar Todos os Parceiros"}
             </button>
@@ -241,7 +241,7 @@ export default function Partners() {
                 </div>
                 <button 
                   type="submit"
-                  className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
                   data-testid="button-submit-partner"
                 >
                   Enviar

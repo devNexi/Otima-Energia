@@ -28,7 +28,7 @@ export default function Team() {
               <h3 className="text-2xl font-medium text-[#9e3ffd]">
                 Callum Sinclair
               </h3>
-              <p className="text-[#df0af2] font-medium mt-2">
+              <p className="text-[#704094] font-medium mt-2">
                 Fundador & CEO
               </p>
               <p className="text-[#736d77] leading-relaxed mt-4">
@@ -44,7 +44,7 @@ export default function Team() {
               <h3 className="text-2xl font-medium text-[#9e3ffd]">
                 Renan
               </h3>
-              <p className="text-[#df0af2] font-medium mt-2">
+              <p className="text-[#704094] font-medium mt-2">
                 Diretor de Operações Brasil
               </p>
               <p className="text-[#736d77] leading-relaxed mt-4">

@@ -33,10 +33,10 @@ export default function Solutions() {
                 href="/seja-cliente"
                 className="inline-flex items-center gap-3 text-sm font-normal tracking-wide uppercase group"
               >
-                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
+                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#704094] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#704094] transition-colors">
                   DIAGNÓSTICO GRATUITO
                 </span>
               </Link>
@@ -86,7 +86,7 @@ export default function Solutions() {
           </p>
           <Link 
             href="/renovacao-contrato"
-            className="text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
+            className="text-[#9e3ffd] hover:text-[#704094] font-medium transition-colors"
           >
             Saiba mais sobre renovação e migração →
           </Link>
@@ -290,7 +290,7 @@ export default function Solutions() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
           >
             Solicitar Diagnóstico Gratuito
             <ArrowRight className="w-5 h-5" />

@@ -31,10 +31,10 @@ export default function LeiMercadoLivre() {
                 className="inline-flex items-center gap-3 text-sm font-normal tracking-wide uppercase group"
                 data-testid="lei-cta"
               >
-                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
+                <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#704094] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#3C145C] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-[#3C145C] group-hover:text-[#704094] transition-colors">
                   DESCUBRA QUANDO SUA EMPRESA PODE MIGRAR
                 </span>
               </Link>
@@ -214,7 +214,7 @@ export default function LeiMercadoLivre() {
           </p>
           <Link 
             href="/seja-cliente"
-            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+            className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#704094] text-white px-8 py-4 text-lg font-medium transition-colors"
             data-testid="lei-bottom-cta"
           >
             Solicitar Diagnóstico Gratuito

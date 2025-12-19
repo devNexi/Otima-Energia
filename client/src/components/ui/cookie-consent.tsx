@@ -35,7 +35,7 @@ export function CookieConsent() {
         </p>
         <button
           onClick={handleAccept}
-          className="bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-wide transition-colors whitespace-nowrap"
+          className="bg-[#9e3ffd] hover:bg-[#704094] text-white px-4 py-1.5 text-[10px] font-medium uppercase tracking-wide transition-colors whitespace-nowrap"
           data-testid="cookie-accept-button"
         >
           Aceitar
