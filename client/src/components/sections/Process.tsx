@@ -57,7 +57,7 @@ export function Process() {
                 <img 
                   src={diagnosisImage} 
                   alt="Diagnóstico de energia" 
-                  className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
+                  className="w-full h-48 object-cover saturate-[1.6] contrast-[1.1] brightness-[1.05]"
                 />
               </div>
               <div className="mb-4">
@@ -77,7 +77,7 @@ export function Process() {
                 <img 
                   src={compareImage} 
                   alt="Comparação de mercado" 
-                  className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
+                  className="w-full h-48 object-cover saturate-[1.6] contrast-[1.1] brightness-[1.05]"
                 />
               </div>
               <div className="mb-4">
