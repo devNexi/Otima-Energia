@@ -59,6 +59,7 @@ export function Footer() {
               <li><Link href="/insights" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Insights</Link></li>
               <li><Link href="/seja-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Diagnóstico Gratuito</Link></li>
               <li><Link href="/portal-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Portal do Cliente</Link></li>
+              <li><Link href="/rede-de-lucros-otima" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Rede de Lucros Ótima</Link></li>
             </ul>
           </div>
 

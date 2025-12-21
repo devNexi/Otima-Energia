@@ -23,6 +23,7 @@ import LeiMercadoLivre from "@/pages/LeiMercadoLivre";
 import RenovacaoContrato from "@/pages/RenovacaoContrato";
 import Insights from "@/pages/Insights";
 import RedeLucros from "@/pages/RedeLucros";
+import TermosParcerias from "@/pages/TermosParcerias";
 import SupplierManager from "@/pages/SupplierManager";
 import ProposalTracker from "@/pages/ProposalTracker";
 import BenchmarkManager from "@/pages/BenchmarkManager";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/renovacao-contrato" component={RenovacaoContrato} />
       <Route path="/insights" component={Insights} />
       <Route path="/rede-de-lucros-otima" component={RedeLucros} />
+      <Route path="/termos-parcerias" component={TermosParcerias} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/suppliers" component={SupplierManager} />
