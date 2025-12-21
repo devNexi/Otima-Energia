@@ -31,14 +31,14 @@ export function Business() {
       label: "Gestão Contínua",
       title: "Otimização de Contratos",
       description: "Acompanhamos seu contrato ao longo do tempo, identificando oportunidades de melhoria e economia.",
-      imageClass: "saturate-[1.6] contrast-[1.1] brightness-[1.05]",
+      imageClass: "saturate-[1.3] contrast-[1.05]",
     },
     {
       image: transparenciaImg,
       label: "Segurança Total",
       title: "Transparência Garantida",
       description: "Nosso serviço é gratuito para você. Trabalhamos com total transparência e sem conflitos de interesse.",
-      imageClass: "saturate-[1.6] contrast-[1.1] brightness-[1.05]",
+      imageClass: "saturate-[1.3] contrast-[1.05]",
     },
   ];
 
