@@ -53,7 +53,7 @@ export function Process() {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {/* Step 1 */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+              <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={diagnosisImage} 
                   alt="Diagnóstico de energia" 
@@ -73,7 +73,7 @@ export function Process() {
 
             {/* Step 2 */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+              <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={compareImage} 
                   alt="Comparação de mercado" 
@@ -93,11 +93,11 @@ export function Process() {
 
             {/* Step 3 */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+              <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={migrateImage} 
                   alt="Migração e acompanhamento" 
-                  className="w-full h-48 object-cover hue-rotate-[-20deg] saturate-[0.85] brightness-[0.9]"
+                  className="w-full h-48 object-cover"
                 />
               </div>
               <div className="mb-4">

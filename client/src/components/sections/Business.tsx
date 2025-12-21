@@ -17,14 +17,14 @@ export function Business() {
       label: "Empresas e PMEs",
       title: "Migração Simplificada",
       description: "Simplificamos toda a migração para o Mercado Livre, eliminando burocracia e gerando economia de até 40%.",
-      imageClass: "hue-rotate-[-15deg] saturate-[0.9] brightness-[0.95]",
+      imageClass: "",
     },
     {
       image: estrategiasImg,
       label: "Empresas de Maior Porte",
       title: "Estratégias Personalizadas",
       description: "Estratégias sob medida com foco em previsibilidade, flexibilidade e redução consistente de custos.",
-      imageClass: "hue-rotate-[-10deg] saturate-[0.9] brightness-[0.95]",
+      imageClass: "",
     },
     {
       image: otimizacaoImg,
@@ -38,7 +38,7 @@ export function Business() {
       label: "Segurança Total",
       title: "Transparência Garantida",
       description: "Nosso serviço é gratuito para você. Trabalhamos com total transparência e sem conflitos de interesse.",
-      imageClass: "hue-rotate-[-15deg] saturate-[0.85] brightness-[0.9]",
+      imageClass: "",
     },
   ];
 
@@ -69,7 +69,7 @@ export function Business() {
                 className="group flex flex-col text-center p-6 rounded-xl hover:shadow-lg transition-all duration-300 bg-white h-full"
               >
                 {/* Image */}
-                <div className="mb-6 rounded-xl overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+                <div className="mb-6 rounded-xl overflow-hidden">
                   <img 
                     src={solution.image} 
                     alt={solution.title} 
