@@ -1,0 +1,223 @@
+BUILD “REDE DE LUCROS ÓTIMA”
+You are working inside the existing Ótima Energia website and admin system.
+
+Your task is to CREATE a new public landing page and basic backend support for a partner referral program called:
+
+“Rede de Lucros Ótima”
+
+This page does NOT exist yet and must be created from scratch.
+
+The tone must be:
+- Clear
+- Ethical
+- Professional
+- Aspirational but not hypey
+- Brazilian Portuguese only
+
+DO NOT add guarantees.
+DO NOT promise fixed income.
+DO NOT mention foreign markets.
+
+────────────────────────
+1️⃣ NEW PUBLIC PAGE
+────────────────────────
+
+Create a new public page at:
+
+/rede-de-lucros-otima
+
+Add it to:
+- Footer (Resources column)
+- NOT to the main navbar yet
+
+────────────────────────
+2️⃣ PAGE CONTENT (USE EXACT COPY BELOW)
+────────────────────────
+
+H1:
+Transforme suas conexões em renda passiva vitalícia.
+
+Subheadline:
+Indique clientes para a Ótima e ganhe comissões mensais — enquanto os contratos estiverem ativos.
+
+Supporting line:
+Programa de Parcerias Ótima: simples, transparente e escalável.  
+Sem custo. Sem vender. Apenas indique — sempre com consentimento do cliente.
+
+────────────────────────
+📈 COMO FUNCIONA (3 STEPS)
+────────────────────────
+
+Step 1 — Você indica um cliente interessado  
+Você só pode indicar empresas, instituições ou pessoas que **autorizaram explicitamente** o contato da Ótima Energia.  
+Nada de listas frias, contatos aleatórios ou spam.
+
+Step 2 — A Ótima negocia e fecha o contrato  
+Nosso time cuida de toda a análise, negociação e contratação no Mercado Livre de Energia.
+
+Step 3 — Você recebe comissões recorrentes  
+• 20% da comissão líquida da Ótima em cada contrato indicado  
+• 5% adicional sobre comissões geradas por parceiros que você indicar para a rede  
+• Sempre que houver renovação, você volta a receber
+
+Add disclaimer line below:
+“As comissões são pagas enquanto os contratos estiverem ativos e conforme os termos do programa.”
+
+────────────────────────
+💰 EXEMPLO ILUSTRATIVO (NOT GUARANTEED)
+────────────────────────
+
+Title:
+Exemplo ilustrativo de ganhos
+
+Body:
+Você indica um cliente que gera uma comissão de R$10.000 para a Ótima.
+
+• Você recebe R$2.000 conforme o recebimento da Ótima  
+• Em renovações, você volta a receber proporcionalmente  
+
+Supporting text:
+Valores meramente ilustrativos. Resultados dependem do perfil do cliente, consumo, contrato e permanência.
+
+────────────────────────
+🔁 COMO OS PAGAMENTOS FUNCIONAM
+────────────────────────
+
+Headline:
+Você ganha quando e como a Ótima ganha
+
+Bullets:
+• Pagamento à vista → repasse proporcional à vista  
+• Pagamento mensal → repasse mensal  
+• Total transparência via painel do parceiro  
+
+────────────────────────
+📌 PERFIL IDEAL DE CLIENTES
+────────────────────────
+
+Intro:
+Indicações com maior consumo geram maior impacto e melhores comissões.
+
+Bullets:
+• Escolas e universidades  
+• Condomínios residenciais e comerciais  
+• Hospitais e clínicas  
+• Shoppings e supermercados  
+• Fábricas e galpões industriais  
+• Grandes obras e construtoras  
+
+Note (smaller text):
+Pequenos comércios geralmente apresentam consumo insuficiente para gerar impacto relevante.
+
+────────────────────────
+✅ PARA QUEM É
+────────────────────────
+
+Bullets:
+• Contadores, engenheiros, corretores e consultores  
+• Prestadores de serviço e empresários  
+• Profissionais com bom networking empresarial  
+• Pessoas que valorizam ética, clareza e relações de longo prazo  
+
+────────────────────────
+🎁 O QUE O PARCEIRO RECEBE
+────────────────────────
+
+Bullets:
+• Painel exclusivo de parceiro  
+• Link único de indicação  
+• Kit de boas-vindas com modelos de mensagem  
+• Acompanhamento das indicações  
+• Suporte da equipe Ótima  
+
+────────────────────────
+🚀 CTA SECTION
+────────────────────────
+
+Headline:
+Comece a transformar conexões qualificadas em renda recorrente
+
+CTA Button:
+Quero me cadastrar como parceiro
+
+────────────────────────
+3️⃣ FORMULÁRIO DE CADASTRO
+────────────────────────
+
+Create a form that submits to backend:
+
+Fields:
+- Nome completo (required)
+- Email (required)
+- Celular com WhatsApp (required)
+- CPF ou CNPJ (required)
+- Profissão ou ramo de atuação (optional)
+- Como conheceu a Ótima? (Google, Indicação, Instagram, Outro)
+
+Checkbox (required):
+☑️ Li e aceito os termos do Programa de Parcerias da Ótima.
+
+Link the checkbox to:
+/termos-parcerias (placeholder page, can be static text for now)
+
+Submit button:
+Quero me cadastrar e começar
+
+────────────────────────
+4️⃣ SUCCESS STATE
+────────────────────────
+
+After submission, show success message:
+
+“Cadastro recebido com sucesso.
+
+Em até 24h úteis você receberá:
+• Seu link exclusivo de indicação  
+• Kit de boas-vindas  
+• Acesso ao painel de parceiro”
+
+────────────────────────
+5️⃣ LEGAL / COMPLIANCE NOTICE
+────────────────────────
+
+At the bottom of the page, add a muted legal notice:
+
+“Indicações sem consentimento do cliente ou fora do perfil mínimo de consumo poderão ser desconsideradas.  
+A participação no programa está sujeita à aprovação e aos termos vigentes.”
+
+────────────────────────
+6️⃣ OPTIONAL BONUS SECTION (FEATURE FLAG)
+────────────────────────
+
+Add a section that can be toggled ON/OFF via config:
+
+Title:
+Bônus de ativação
+
+Text:
+Parceiros aprovados podem receber um bônus promocional no primeiro contrato indicado, conforme regras vigentes no momento da adesão.
+
+(No fixed amounts hardcoded.)
+
+────────────────────────
+7️⃣ BACKEND (MINIMAL)
+────────────────────────
+
+Create:
+- partners table
+- partner_referrals table
+- partner_status (PENDING / APPROVED / REJECTED)
+
+No payouts logic needed yet.
+Just store data cleanly for future expansion.
+
+────────────────────────
+8️⃣ STYLE & UX
+────────────────────────
+
+- Match existing Ótima design system
+- Calm, premium, readable
+- No aggressive sales language
+- Mobile-first responsive layout
+
+END.

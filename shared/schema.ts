@@ -2625,6 +2625,103 @@ export const notificationQueueRelations = relations(notificationQueue, ({ one })
 
 // ============== END NOTIFICATION QUEUE ==============
 
+// ============== PARTNER REFERRAL PROGRAM ==============
+
+export const partnerStatusEnum = ["PENDING", "APPROVED", "REJECTED"] as const;
+export type PartnerStatus = typeof partnerStatusEnum[number];
+
+export const referralSourceEnum = ["google", "indicacao", "instagram", "outro"] as const;
+export type ReferralSource = typeof referralSourceEnum[number];
+
+export const partners = pgTable("partners", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone").notNull(),
+  cpfCnpj: text("cpf_cnpj").notNull(),
+  profession: text("profession"),
+  referralSource: text("referral_source"), // google, indicacao, instagram, outro
+  status: text("status").default("PENDING").notNull(), // PENDING, APPROVED, REJECTED
+  referralCode: text("referral_code").unique(), // Unique code for tracking referrals
+  referredByPartnerId: integer("referred_by_partner_id").references(() => partners.id),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectedReason: text("rejected_reason"),
+  termsAcceptedAt: timestamp("terms_accepted_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPartnerSchema = createInsertSchema(partners).omit({
+  id: true,
+  status: true,
+  referralCode: true,
+  approvedAt: true,
+  approvedBy: true,
+  rejectedAt: true,
+  rejectedReason: true,
+  createdAt: true,
+});
+
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type Partner = typeof partners.$inferSelect;
+
+export const partnerReferrals = pgTable("partner_referrals", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").references(() => partners.id).notNull(),
+  leadId: integer("lead_id").references(() => leads.id),
+  clientId: integer("client_id").references(() => clients.id),
+  dealId: varchar("deal_id").references(() => deals.id),
+  referralStatus: text("referral_status").default("PENDING").notNull(), // PENDING, QUALIFIED, CONTRACTED, CANCELLED
+  commissionEarned: decimal("commission_earned", { precision: 12, scale: 2 }),
+  commissionPaid: decimal("commission_paid", { precision: 12, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPartnerReferralSchema = createInsertSchema(partnerReferrals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPartnerReferral = z.infer<typeof insertPartnerReferralSchema>;
+export type PartnerReferral = typeof partnerReferrals.$inferSelect;
+
+export const partnersRelations = relations(partners, ({ one, many }) => ({
+  referredBy: one(partners, {
+    fields: [partners.referredByPartnerId],
+    references: [partners.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [partners.approvedBy],
+    references: [users.id],
+  }),
+  referrals: many(partnerReferrals),
+}));
+
+export const partnerReferralsRelations = relations(partnerReferrals, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerReferrals.partnerId],
+    references: [partners.id],
+  }),
+  lead: one(leads, {
+    fields: [partnerReferrals.leadId],
+    references: [leads.id],
+  }),
+  client: one(clients, {
+    fields: [partnerReferrals.clientId],
+    references: [clients.id],
+  }),
+  deal: one(deals, {
+    fields: [partnerReferrals.dealId],
+    references: [deals.id],
+  }),
+}));
+
+// ============== END PARTNER REFERRAL PROGRAM ==============
+
 // ============== END COMMISSION OS SCHEMA ==============
 
 // ============== END DEAL OS SCHEMA ==============
