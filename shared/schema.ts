@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -2643,7 +2643,7 @@ export const partners = pgTable("partners", {
   referralSource: text("referral_source"), // google, indicacao, instagram, outro
   status: text("status").default("PENDING").notNull(), // PENDING, APPROVED, REJECTED
   referralCode: text("referral_code").unique(), // Unique code for tracking referrals
-  referredByPartnerId: integer("referred_by_partner_id").references(() => partners.id),
+  referredByPartnerId: integer("referred_by_partner_id").references((): AnyPgColumn => partners.id),
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by").references(() => users.id),
   rejectedAt: timestamp("rejected_at"),

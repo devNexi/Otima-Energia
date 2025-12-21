@@ -4559,5 +4559,82 @@ export async function registerRoutes(
     }
   });
 
+  // ============== PARTNER REFERRAL PROGRAM ==============
+
+  // Public: Register as a partner
+  app.post("/api/partners/register", async (req, res) => {
+    try {
+      const { insertPartnerSchema } = await import("@shared/schema");
+      const validatedData = insertPartnerSchema.parse(req.body);
+      
+      // Check if email already registered
+      const existingPartner = await storage.getPartnerByEmail(validatedData.email);
+      if (existingPartner) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Este email já está cadastrado no programa." 
+        });
+      }
+      
+      const partner = await storage.createPartner(validatedData);
+      res.json({ 
+        success: true, 
+        partner: { id: partner.id, email: partner.email, status: partner.status } 
+      });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        const validationError = fromError(error);
+        res.status(400).json({ success: false, error: validationError.toString() });
+      } else {
+        console.error("Error registering partner:", error);
+        res.status(500).json({ success: false, error: "Falha ao processar o cadastro. Tente novamente." });
+      }
+    }
+  });
+
+  // Admin: Get all partners
+  app.get("/api/partners", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const allPartners = await storage.getPartners();
+      res.json({ success: true, partners: allPartners });
+    } catch (error: any) {
+      console.error("Error fetching partners:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch partners" });
+    }
+  });
+
+  // Admin: Update partner status (approve/reject)
+  app.patch("/api/partners/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const partnerId = parseInt(req.params.id);
+      const { status, rejectedReason } = req.body;
+      
+      const session = await storage.getSession(req.headers["x-session-id"] as string);
+      
+      const updateData: any = { status };
+      if (status === 'APPROVED') {
+        updateData.approvedAt = new Date();
+        updateData.approvedBy = session?.userId;
+      } else if (status === 'REJECTED') {
+        updateData.rejectedAt = new Date();
+        updateData.rejectedReason = rejectedReason;
+      }
+      
+      const partner = await storage.updatePartner(partnerId, updateData);
+      if (!partner) {
+        return res.status(404).json({ success: false, error: "Partner not found" });
+      }
+      
+      res.json({ success: true, partner });
+    } catch (error: any) {
+      console.error("Error updating partner:", error);
+      res.status(500).json({ success: false, error: "Failed to update partner" });
+    }
+  });
+
   return httpServer;
 }

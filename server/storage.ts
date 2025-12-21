@@ -47,6 +47,8 @@ import {
   type PlaybookDealSnapshot, type InsertPlaybookDealSnapshot,
   type SavedAuditFilter, type InsertSavedAuditFilter,
   type NotificationQueue, type InsertNotificationQueue,
+  type Partner, type InsertPartner,
+  type PartnerReferral, type InsertPartnerReferral,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -57,7 +59,8 @@ import {
   dealCommissionTermsSnapshots, dealDisputes, dealChecklistRequirements, supplierSlaTracking,
   clientUsagePeriods, supplierPlaybooks, supplierReportImports,
   commissionReconciliationRuns, commissionReconciliationLines, dealCases,
-  complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue
+  complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue,
+  partners, partnerReferrals
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -463,6 +466,13 @@ export interface IStorage {
   getPendingNotifications(): Promise<NotificationQueue[]>;
   markNotificationSent(id: number): Promise<void>;
   markNotificationFailed(id: number, reason: string): Promise<void>;
+  
+  // Partners
+  createPartner(data: InsertPartner): Promise<Partner>;
+  getPartners(): Promise<Partner[]>;
+  getPartner(id: number): Promise<Partner | undefined>;
+  getPartnerByEmail(email: string): Promise<Partner | undefined>;
+  updatePartner(id: number, data: Partial<InsertPartner & { status?: string; approvedAt?: Date; approvedBy?: string; rejectedAt?: Date; rejectedReason?: string; referralCode?: string }>): Promise<Partner | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -2618,6 +2628,36 @@ export class Storage implements IStorage {
     await db.update(notificationQueue)
       .set({ status: 'FAILED', failReason: reason })
       .where(eq(notificationQueue.id, id));
+  }
+
+  // Partners
+  async createPartner(data: InsertPartner): Promise<Partner> {
+    // Generate unique referral code
+    const referralCode = randomBytes(4).toString('hex').toUpperCase();
+    const result = await db.insert(partners).values({
+      ...data,
+      referralCode,
+    }).returning();
+    return result[0];
+  }
+
+  async getPartners(): Promise<Partner[]> {
+    return await db.select().from(partners).orderBy(desc(partners.createdAt));
+  }
+
+  async getPartner(id: number): Promise<Partner | undefined> {
+    const result = await db.select().from(partners).where(eq(partners.id, id));
+    return result[0];
+  }
+
+  async getPartnerByEmail(email: string): Promise<Partner | undefined> {
+    const result = await db.select().from(partners).where(eq(partners.email, email));
+    return result[0];
+  }
+
+  async updatePartner(id: number, data: Partial<InsertPartner & { status?: string; approvedAt?: Date; approvedBy?: string; rejectedAt?: Date; rejectedReason?: string; referralCode?: string }>): Promise<Partner | undefined> {
+    const result = await db.update(partners).set(data).where(eq(partners.id, id)).returning();
+    return result[0];
   }
 }
 
