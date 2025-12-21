@@ -4565,7 +4565,14 @@ export async function registerRoutes(
   app.post("/api/partners/register", async (req, res) => {
     try {
       const { insertPartnerSchema } = await import("@shared/schema");
-      const validatedData = insertPartnerSchema.parse(req.body);
+      
+      // Convert ISO string to Date if needed
+      const bodyWithDate = {
+        ...req.body,
+        termsAcceptedAt: req.body.termsAcceptedAt ? new Date(req.body.termsAcceptedAt) : new Date(),
+      };
+      
+      const validatedData = insertPartnerSchema.parse(bodyWithDate);
       
       // Check if email already registered
       const existingPartner = await storage.getPartnerByEmail(validatedData.email);
@@ -4613,7 +4620,7 @@ export async function registerRoutes(
       const partnerId = parseInt(req.params.id);
       const { status, rejectedReason } = req.body;
       
-      const session = await storage.getSession(req.headers["x-session-id"] as string);
+      const session = await storage.getAdminSession(req.headers["x-session-id"] as string);
       
       const updateData: any = { status };
       if (status === 'APPROVED') {
