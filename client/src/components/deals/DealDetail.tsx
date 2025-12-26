@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
 import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChecklistTab";
+import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -294,6 +295,9 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Next Action Widget */}
+      <NextActionWidget entityType="deal" entityId={dealId} />
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>

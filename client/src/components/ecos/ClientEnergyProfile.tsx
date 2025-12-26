@@ -35,6 +35,7 @@ import {
   FolderOpen
 } from "lucide-react";
 import { ClientDossierTab } from "../dossier/ClientDossierTab";
+import { NextActionWidget } from "../widgets/NextActionWidget";
 
 interface ClientEnergyProfileProps {
   client: {
@@ -329,6 +330,11 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Next Action Widget */}
+          <div className="mb-6">
+            <NextActionWidget entityType="client" entityId={client.id} />
           </div>
 
           {ecosStatus?.recommendation && (
