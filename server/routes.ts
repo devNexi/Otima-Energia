@@ -3212,6 +3212,173 @@ export async function registerRoutes(
     }
   });
 
+  // Auto-generate dossier from OCR/consumption data
+  app.post("/api/clients/:id/dossier/generate", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const clientId = parseInt(req.params.id);
+      const userId = await getSessionUserId(req) || 'system';
+      
+      // Check if dossier already exists
+      const existing = await storage.getClientDossier(clientId);
+      if (existing) {
+        return res.status(400).json({ success: false, error: "Dossier already exists for this client. Use PATCH to update." });
+      }
+      
+      // Get client info
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+      
+      // Get bill uploads (OCR data)
+      const bills = await storage.getBillUploads(clientId);
+      const verifiedBills = bills.filter(b => b.ocrStatus === 'success' || b.ocrStatus === 'manual');
+      
+      // Get consumption profiles
+      const profiles = await storage.getConsumptionProfiles(clientId);
+      
+      // Calculate consumption metrics from bills
+      let totalConsumptionKwh = 0;
+      let totalDemandKw = 0;
+      let billCount = 0;
+      let ucCodes = new Set<string>();
+      let distributor: string | null = null;
+      
+      for (const bill of verifiedBills) {
+        if (bill.consumoKwh) {
+          totalConsumptionKwh += parseFloat(bill.consumoKwh.toString());
+          billCount++;
+        }
+        if (bill.demandaKw) {
+          totalDemandKw = Math.max(totalDemandKw, parseFloat(bill.demandaKw.toString()));
+        }
+        if (bill.ucCode) {
+          ucCodes.add(bill.ucCode);
+        }
+        if (bill.distribuidora && !distributor) {
+          distributor = bill.distribuidora;
+        }
+      }
+      
+      // Calculate from profiles if available
+      for (const profile of profiles) {
+        if (profile.distributor && !distributor) {
+          distributor = profile.distributor;
+        }
+        if (profile.demandKw) {
+          totalDemandKw = Math.max(totalDemandKw, parseFloat(profile.demandKw.toString()));
+        }
+        if (profile.monthlyConsumptionKwh && typeof profile.monthlyConsumptionKwh === 'object') {
+          const monthly = profile.monthlyConsumptionKwh as Record<string, number>;
+          for (const val of Object.values(monthly)) {
+            if (typeof val === 'number') {
+              totalConsumptionKwh += val;
+              billCount++;
+            }
+          }
+        }
+      }
+      
+      // Calculate annual and monthly averages
+      const averageMonthlyKwh = billCount > 0 ? totalConsumptionKwh / billCount : 0;
+      const annualKwh = billCount >= 12 ? totalConsumptionKwh : averageMonthlyKwh * 12;
+      const annualMWh = annualKwh / 1000;
+      const averageMonthlyMWh = averageMonthlyKwh / 1000;
+      
+      // Determine eligibility based on consumption
+      let eligibilityType = 'NOT_ELIGIBLE_YET';
+      if (annualMWh >= 500) {
+        eligibilityType = 'ACL_DIRECT'; // >= 500 MWh/year = direct ACL eligible
+      } else if (annualMWh >= 50) {
+        eligibilityType = 'ACL_VAREJISTA'; // >= 50 MWh/year = can join via varejista
+      }
+      
+      // Determine connection type based on demand
+      const connectionType = totalDemandKw > 0 ? 'GROUP_A' : null;
+      
+      // Determine data sources
+      const dataSources: string[] = [];
+      if (verifiedBills.length > 0) dataSources.push('OCR');
+      if (profiles.length > 0) dataSources.push('CLIENT_CONFIRMATION');
+      if (dataSources.length === 0) dataSources.push('MANUAL');
+      
+      // Determine confidence score
+      let confidenceScore = 'LOW';
+      if (verifiedBills.length >= 6 || (profiles.length > 0 && verifiedBills.length >= 3)) {
+        confidenceScore = 'HIGH';
+      } else if (verifiedBills.length >= 3 || profiles.length > 0) {
+        confidenceScore = 'MEDIUM';
+      }
+      
+      // Determine submarket from distributor (basic mapping)
+      let submarket: string | null = null;
+      if (distributor) {
+        const distLower = distributor.toLowerCase();
+        if (distLower.includes('cemig') || distLower.includes('light') || distLower.includes('enel') || distLower.includes('cpfl')) {
+          submarket = 'SE/CO';
+        } else if (distLower.includes('copel') || distLower.includes('celesc') || distLower.includes('rge')) {
+          submarket = 'S';
+        } else if (distLower.includes('coelba') || distLower.includes('celpe') || distLower.includes('cosern')) {
+          submarket = 'NE';
+        } else if (distLower.includes('celpa') || distLower.includes('eletrobras')) {
+          submarket = 'N';
+        }
+      }
+      
+      const dossierData = {
+        clientId,
+        legalName: client.companyName,
+        tradeName: null,
+        cnpj: client.cnpj || '',
+        distributor,
+        submarket,
+        connectionType,
+        eligibilityType,
+        annualConsumptionMWh: annualMWh > 0 ? annualMWh.toFixed(2) : null,
+        averageMonthlyMWh: averageMonthlyMWh > 0 ? averageMonthlyMWh.toFixed(2) : null,
+        peakDemandKW: totalDemandKw > 0 ? totalDemandKw.toFixed(2) : null,
+        numberOfUCs: ucCodes.size || 1,
+        tariffClass: null,
+        dataSources,
+        confidenceScore,
+        opsNotes: `Auto-generated from ${verifiedBills.length} bills and ${profiles.length} consumption profiles.`,
+        createdBy: userId,
+        updatedBy: userId,
+      };
+      
+      const dossier = await storage.createClientDossier(dossierData);
+      
+      // Audit log
+      await storage.logAdminAction({
+        action: 'DOSSIER_AUTO_GENERATED',
+        entityType: 'client_dossier',
+        entityId: dossier.id,
+        actor: userId,
+        detailsJson: { 
+          clientId, 
+          billsUsed: verifiedBills.length, 
+          profilesUsed: profiles.length,
+          confidenceScore 
+        },
+      });
+      
+      res.json({ 
+        success: true, 
+        dossier,
+        generationStats: {
+          billsAnalyzed: verifiedBills.length,
+          profilesAnalyzed: profiles.length,
+          ucsDetected: ucCodes.size,
+          confidenceScore
+        }
+      });
+    } catch (error: any) {
+      console.error("Error generating dossier:", error);
+      res.status(500).json({ success: false, error: "Failed to generate dossier" });
+    }
+  });
+
   // Update client dossier
   app.patch("/api/dossiers/:id", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
