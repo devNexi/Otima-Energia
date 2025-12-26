@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -23,7 +25,8 @@ import {
   Globe,
   Eye,
   Timer,
-  AlertTriangle
+  AlertTriangle,
+  DollarSign
 } from "lucide-react";
 
 interface BlindAuctionPanelProps {
@@ -52,6 +55,14 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   const [previewDispatch, setPreviewDispatch] = useState<any>(null);
   const [customMessage, setCustomMessage] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string>("EMAIL");
+  const [quoteIntakeDispatch, setQuoteIntakeDispatch] = useState<any>(null);
+  const [quoteForm, setQuoteForm] = useState({
+    pricePerMwh: "",
+    priceStructure: "FIXED",
+    termMonths: "12",
+    validUntil: "",
+    notes: ""
+  });
 
   const { data: auctionData, isLoading, refetch } = useQuery({
     queryKey: [`/api/deals/${dealId}/blind-auction`],
@@ -127,6 +138,38 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
       if (data.success) {
         toast({ title: "Follow-up logged", description: `Total follow-ups: ${data.dispatch.followupCount}` });
         queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/blind-auction`] });
+      }
+    }
+  });
+
+  const recordQuoteMutation = useMutation({
+    mutationFn: async (data: { supplierId: number; dispatchId: number }) => {
+      const res = await fetch(`/api/deals/${dealId}/quotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplierId: data.supplierId,
+          rfqDispatchId: data.dispatchId,
+          pricePerMwh: parseFloat(quoteForm.pricePerMwh),
+          priceStructure: quoteForm.priceStructure,
+          termMonths: parseInt(quoteForm.termMonths),
+          validUntil: quoteForm.validUntil || null,
+          internalNotes: quoteForm.notes || null,
+          receivedVia: "RFQ_DISPATCH"
+        })
+      });
+      return res.json();
+    },
+    onSuccess: async (data, variables) => {
+      if (data.success) {
+        await markRespondedMutation.mutateAsync(variables.dispatchId);
+        toast({ title: "Quote recorded", description: "Quote saved and dispatch marked as responded" });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/blind-auction`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+        setQuoteIntakeDispatch(null);
+        setQuoteForm({ pricePerMwh: "", priceStructure: "FIXED", termMonths: "12", validUntil: "", notes: "" });
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
       }
     }
   });
@@ -482,12 +525,11 @@ Best regards,
                           <Button 
                             size="sm"
                             variant="default"
-                            onClick={() => markRespondedMutation.mutate(dispatch.id)}
-                            disabled={markRespondedMutation.isPending}
-                            data-testid={`button-mark-responded-${dispatch.id}`}
+                            onClick={() => setQuoteIntakeDispatch(dispatch)}
+                            data-testid={`button-record-quote-${dispatch.id}`}
                           >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Quote Received
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            Record Quote
                           </Button>
                         </>
                       )}
@@ -543,6 +585,113 @@ Best regards,
             >
               <Send className="h-4 w-4 mr-1" />
               Mark as Sent
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!quoteIntakeDispatch} onOpenChange={() => setQuoteIntakeDispatch(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Record Quote - {quoteIntakeDispatch?.supplier?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Enter the quote details received from this supplier
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="pricePerMwh">Price per MWh (R$)</Label>
+                <Input 
+                  id="pricePerMwh"
+                  type="number"
+                  step="0.01"
+                  placeholder="250.00"
+                  value={quoteForm.pricePerMwh}
+                  onChange={(e) => setQuoteForm(prev => ({ ...prev, pricePerMwh: e.target.value }))}
+                  data-testid="input-quote-price"
+                />
+              </div>
+              <div>
+                <Label htmlFor="termMonths">Term (Months)</Label>
+                <Select 
+                  value={quoteForm.termMonths} 
+                  onValueChange={(v) => setQuoteForm(prev => ({ ...prev, termMonths: v }))}
+                >
+                  <SelectTrigger id="termMonths">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">12 months</SelectItem>
+                    <SelectItem value="24">24 months</SelectItem>
+                    <SelectItem value="36">36 months</SelectItem>
+                    <SelectItem value="48">48 months</SelectItem>
+                    <SelectItem value="60">60 months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="priceStructure">Price Structure</Label>
+                <Select 
+                  value={quoteForm.priceStructure} 
+                  onValueChange={(v) => setQuoteForm(prev => ({ ...prev, priceStructure: v }))}
+                >
+                  <SelectTrigger id="priceStructure">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIXED">Fixed Price</SelectItem>
+                    <SelectItem value="INDEXED">Indexed (IPCA)</SelectItem>
+                    <SelectItem value="HYBRID">Hybrid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="validUntil">Valid Until</Label>
+                <Input 
+                  id="validUntil"
+                  type="date"
+                  value={quoteForm.validUntil}
+                  onChange={(e) => setQuoteForm(prev => ({ ...prev, validUntil: e.target.value }))}
+                  data-testid="input-quote-valid-until"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="notes">Internal Notes</Label>
+              <Textarea 
+                id="notes"
+                placeholder="Any additional notes about this quote..."
+                value={quoteForm.notes}
+                onChange={(e) => setQuoteForm(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+                data-testid="input-quote-notes"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuoteIntakeDispatch(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => recordQuoteMutation.mutate({
+                supplierId: quoteIntakeDispatch.supplierId,
+                dispatchId: quoteIntakeDispatch.id
+              })}
+              disabled={!quoteForm.pricePerMwh || recordQuoteMutation.isPending}
+              data-testid="button-save-quote"
+            >
+              {recordQuoteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Quote
             </Button>
           </DialogFooter>
         </DialogContent>
