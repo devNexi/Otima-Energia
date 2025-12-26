@@ -31,8 +31,10 @@ import {
   Send,
   Check,
   Info,
-  Shield
+  Shield,
+  FolderOpen
 } from "lucide-react";
+import { ClientDossierTab } from "../dossier/ClientDossierTab";
 
 interface ClientEnergyProfileProps {
   client: {
@@ -373,6 +375,10 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
               <TabsTrigger value="reports" className="flex items-center gap-2" data-testid="tab-reports">
                 <BarChart3 className="w-4 h-4" />
                 {language === "pt" ? "Relatórios" : "Reports"}
+              </TabsTrigger>
+              <TabsTrigger value="dossier" className="flex items-center gap-2" data-testid="tab-dossier">
+                <FolderOpen className="w-4 h-4" />
+                {language === "pt" ? "Dossiê" : "Dossier"}
               </TabsTrigger>
             </TabsList>
 
@@ -1007,6 +1013,10 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="dossier">
+              <ClientDossierTab clientId={client.id} clientName={client.companyName} />
             </TabsContent>
           </Tabs>
         </div>
