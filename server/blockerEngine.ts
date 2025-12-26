@@ -53,7 +53,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkSendRfq(dealId: number): Promise<BlockerResult> {
+  async checkSendRfq(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -92,7 +92,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkRecordQuotes(dealId: number): Promise<BlockerResult> {
+  async checkRecordQuotes(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -120,7 +120,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkGenerateProposal(dealId: number): Promise<BlockerResult> {
+  async checkGenerateProposal(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -148,7 +148,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkAdvanceToOfferSelected(dealId: number): Promise<BlockerResult> {
+  async checkAdvanceToOfferSelected(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -186,7 +186,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkAdvanceToOnboarding(dealId: number): Promise<BlockerResult> {
+  async checkAdvanceToOnboarding(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -214,7 +214,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkAdvanceToContractSigned(dealId: number): Promise<BlockerResult> {
+  async checkAdvanceToContractSigned(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
@@ -254,7 +254,7 @@ export class BlockerEngine {
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
   }
 
-  async checkAdvanceToSupplyLive(dealId: number): Promise<BlockerResult> {
+  async checkAdvanceToSupplyLive(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
 
     const deal = await this.storage.getDeal(String(dealId));
