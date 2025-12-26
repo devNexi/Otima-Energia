@@ -3131,6 +3131,208 @@ export async function registerRoutes(
     }
   });
 
+  // --- Client Dossiers ---
+
+  // Get client dossier
+  app.get("/api/clients/:id/dossier", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const clientId = parseInt(req.params.id);
+      const dossier = await storage.getClientDossier(clientId);
+      
+      if (!dossier) {
+        return res.json({ success: true, dossier: null });
+      }
+      
+      // Get snapshots if any
+      const snapshots = await storage.getDossierSnapshots(dossier.id);
+      
+      res.json({ success: true, dossier, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching dossier:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dossier" });
+    }
+  });
+
+  // Create client dossier
+  app.post("/api/clients/:id/dossier", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const clientId = parseInt(req.params.id);
+      const userId = await getSessionUserId(req) || 'system';
+      
+      // Check if dossier already exists
+      const existing = await storage.getClientDossier(clientId);
+      if (existing) {
+        return res.status(400).json({ success: false, error: "Dossier already exists for this client" });
+      }
+      
+      // Get client info
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+      
+      const dossierData = {
+        clientId,
+        legalName: req.body.legalName || client.companyName,
+        tradeName: req.body.tradeName || null,
+        cnpj: req.body.cnpj || client.cnpj || '',
+        distributor: req.body.distributor || null,
+        submarket: req.body.submarket || null,
+        connectionType: req.body.connectionType || null,
+        eligibilityType: req.body.eligibilityType || 'NOT_ELIGIBLE_YET',
+        annualConsumptionMWh: req.body.annualConsumptionMWh || null,
+        averageMonthlyMWh: req.body.averageMonthlyMWh || null,
+        peakDemandKW: req.body.peakDemandKW || null,
+        numberOfUCs: req.body.numberOfUCs || 1,
+        tariffClass: req.body.tariffClass || null,
+        dataSources: req.body.dataSources || ['MANUAL'],
+        confidenceScore: req.body.confidenceScore || 'LOW',
+        opsNotes: req.body.opsNotes || null,
+        createdBy: userId,
+        updatedBy: userId,
+      };
+      
+      const dossier = await storage.createClientDossier(dossierData);
+      
+      // Audit log
+      await storage.logAdminAction({
+        action: 'DOSSIER_CREATED',
+        entityType: 'client_dossier',
+        entityId: dossier.id,
+        actor: userId,
+        detailsJson: { clientId },
+      });
+      
+      res.json({ success: true, dossier });
+    } catch (error: any) {
+      console.error("Error creating dossier:", error);
+      res.status(500).json({ success: false, error: "Failed to create dossier" });
+    }
+  });
+
+  // Update client dossier
+  app.patch("/api/dossiers/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dossierId = parseInt(req.params.id);
+      const userId = await getSessionUserId(req) || 'system';
+      
+      const dossier = await storage.getDossierById(dossierId);
+      if (!dossier) {
+        return res.status(404).json({ success: false, error: "Dossier not found" });
+      }
+      
+      if (dossier.status === 'LOCKED') {
+        return res.status(400).json({ success: false, error: "Cannot edit a locked dossier" });
+      }
+      
+      // Extract allowed fields
+      const allowedFields = [
+        'legalName', 'tradeName', 'cnpj', 'distributor', 'submarket', 
+        'connectionType', 'eligibilityType', 'annualConsumptionMWh',
+        'averageMonthlyMWh', 'peakDemandKW', 'numberOfUCs', 'tariffClass',
+        'dataSources', 'confidenceScore', 'opsNotes'
+      ];
+      
+      const updateData: any = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
+      const updated = await storage.updateClientDossier(dossierId, updateData, userId);
+      
+      if (!updated) {
+        return res.status(400).json({ success: false, error: "Failed to update dossier" });
+      }
+      
+      // Audit log
+      await storage.logAdminAction({
+        action: 'DOSSIER_UPDATED',
+        entityType: 'client_dossier',
+        entityId: dossierId,
+        actor: userId,
+        detailsJson: { changes: updateData },
+      });
+      
+      res.json({ success: true, dossier: updated });
+    } catch (error: any) {
+      console.error("Error updating dossier:", error);
+      res.status(500).json({ success: false, error: "Failed to update dossier" });
+    }
+  });
+
+  // Mark dossier as ready
+  app.post("/api/dossiers/:id/mark-ready", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dossierId = parseInt(req.params.id);
+      const userId = await getSessionUserId(req) || 'system';
+      
+      const dossier = await storage.getDossierById(dossierId);
+      if (!dossier) {
+        return res.status(404).json({ success: false, error: "Dossier not found" });
+      }
+      
+      if (dossier.status === 'LOCKED') {
+        return res.status(400).json({ success: false, error: "Dossier is already locked" });
+      }
+      
+      // Validate required fields for READY status
+      const requiredFields = ['legalName', 'cnpj', 'distributor', 'eligibilityType', 'annualConsumptionMWh'];
+      const missing = requiredFields.filter(field => !dossier[field as keyof typeof dossier]);
+      
+      if (missing.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Missing required fields: ${missing.join(', ')}`,
+          missing 
+        });
+      }
+      
+      const updated = await storage.markDossierReady(dossierId, userId);
+      
+      if (!updated) {
+        return res.status(400).json({ success: false, error: "Failed to mark dossier as ready" });
+      }
+      
+      // Audit log
+      await storage.logAdminAction({
+        action: 'DOSSIER_MARKED_READY',
+        entityType: 'client_dossier',
+        entityId: dossierId,
+        actor: userId,
+        detailsJson: {},
+      });
+      
+      res.json({ success: true, dossier: updated });
+    } catch (error: any) {
+      console.error("Error marking dossier ready:", error);
+      res.status(500).json({ success: false, error: "Failed to mark dossier as ready" });
+    }
+  });
+
+  // Get dossier snapshot
+  app.get("/api/dossier-snapshots/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshotId = parseInt(req.params.id);
+      const snapshot = await storage.getDossierSnapshot(snapshotId);
+      
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "Snapshot not found" });
+      }
+      
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      console.error("Error fetching dossier snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch snapshot" });
+    }
+  });
+
   // --- Deal Registry ---
 
   // Get all deals
