@@ -2722,6 +2722,194 @@ export const partnerReferralsRelations = relations(partnerReferrals, ({ one }) =
 
 // ============== END PARTNER REFERRAL PROGRAM ==============
 
+// ============== SUPPLIER RFQ ADAPTER LAYER ==============
+
+export const adapterStatusEnum = ["ACTIVE", "RETIRED"] as const;
+export type AdapterStatus = typeof adapterStatusEnum[number];
+
+export const packetStatusEnum = ["DRAFT", "READY", "SENT", "FAILED"] as const;
+export type PacketStatus = typeof packetStatusEnum[number];
+
+export const sendMethodEnum = ["EMAIL", "WHATSAPP", "PORTAL", "MANUAL"] as const;
+export type SendMethod = typeof sendMethodEnum[number];
+
+// Supplier RFQ Adapters - Configuration for how to request quotes from each supplier
+export const supplierRfqAdapters = pgTable("supplier_rfq_adapters", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  version: integer("version").notNull().default(1),
+  status: text("status").default("ACTIVE").notNull(), // ACTIVE, RETIRED
+  name: text("name").notNull(), // e.g. "Default RFQ Method"
+  
+  // Submission Channels Configuration
+  submissionChannels: jsonb("submission_channels").default({
+    email: { enabled: true },
+    whatsapp: { enabled: false },
+    portal: { enabled: false },
+    excelTemplate: { enabled: false }
+  }),
+  
+  // Email Configuration
+  emailConfig: jsonb("email_config").default({
+    to: [],
+    cc: [],
+    subjectTemplate: "RFQ #{{RFO_NUMBER}} - {{CLIENT_NAME}} - Solicitação de Cotação",
+    bodyTemplate: "Prezado(a) {{CONTACT_NAME}},\n\nSolicitamos cotação para o cliente {{CLIENT_NAME}} (CNPJ: {{CNPJ}}).\n\nConsumo anual: {{ANNUAL_MWH}} MWh\nInício do suprimento: {{START_DATE}}\nPrazo para resposta: {{DEADLINE_HOURS}} horas\n\nAtenciosamente,\n{{OTIMA_CONTACT}}"
+  }),
+  
+  // WhatsApp Configuration
+  whatsappConfig: jsonb("whatsapp_config").default({
+    messageTemplate: "Olá {{CONTACT_NAME}}, tudo bem?\n\nEnvio RFQ #{{RFO_NUMBER}} para {{CLIENT_NAME}}.\nConsumo: {{ANNUAL_MWH}} MWh/ano\nInício: {{START_DATE}}\n\nPrazo: {{DEADLINE_HOURS}}h\n\nObrigado!"
+  }),
+  
+  // Portal Configuration
+  portalConfig: jsonb("portal_config").default({
+    url: "",
+    instructions: ""
+  }),
+  
+  // Required Fields Schema - What data must be provided for this supplier
+  requiredFieldsSchema: jsonb("required_fields_schema").default([
+    { key: "client_company_name", label: "Razão Social", type: "text", required: true },
+    { key: "cnpj", label: "CNPJ", type: "text", required: true },
+    { key: "ucs", label: "UC(s)", type: "list", required: true, minItems: 1 },
+    { key: "annual_mwh", label: "Consumo Anual (MWh)", type: "number", required: true },
+    { key: "start_date", label: "Início do Suprimento", type: "date", required: true }
+  ]),
+  
+  // Required Attachments Schema
+  requiredAttachmentsSchema: jsonb("required_attachments_schema").default([
+    { key: "bill_pdf_last_12_months", label: "Últimas 12 faturas (PDF)", required: true },
+    { key: "load_dossier_pdf", label: "Dossiê de Consumo (PDF)", required: false },
+    { key: "credit_docs", label: "Documentos de Crédito (se aplicável)", required: false }
+  ]),
+  
+  // Response Format Hints
+  responseFormatHints: jsonb("response_format_hints").default({
+    expected: "EMAIL_PDF_OR_EXCEL",
+    notes: ""
+  }),
+  
+  // Internal Notes
+  internalNotes: text("internal_notes"),
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  retiredAt: timestamp("retired_at"),
+  retiredBy: varchar("retired_by").references(() => users.id),
+});
+
+export const insertSupplierRfqAdapterSchema = createInsertSchema(supplierRfqAdapters).omit({
+  id: true,
+  version: true,
+  status: true,
+  createdAt: true,
+  retiredAt: true,
+  retiredBy: true,
+});
+
+export type InsertSupplierRfqAdapter = z.infer<typeof insertSupplierRfqAdapterSchema>;
+export type SupplierRfqAdapter = typeof supplierRfqAdapters.$inferSelect;
+
+// RFQ Packets - Generated RFQ packet per supplier per RFO (immutable snapshot)
+export const rfqPackets = pgTable("rfq_packets", {
+  id: serial("id").primaryKey(),
+  rfoRequestId: integer("rfo_request_id").references(() => rfoRequests.id).notNull(),
+  dealId: varchar("deal_id").references(() => deals.id), // nullable - some RFOs are from deals
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  adapterId: integer("adapter_id").references(() => supplierRfqAdapters.id).notNull(),
+  adapterVersion: integer("adapter_version").notNull(),
+  
+  // Status
+  packetStatus: text("packet_status").default("DRAFT").notNull(), // DRAFT, READY, SENT, FAILED
+  
+  // Generated Payload - snapshot of resolved tokens and compiled content
+  generatedPayload: jsonb("generated_payload").default({
+    email: { to: [], cc: [], subject: "", body: "" },
+    whatsapp: { message: "" },
+    portal: { url: "", instructions: "" },
+    requiredFields: {},
+    attachments: []
+  }),
+  
+  // Missing Requirements
+  missingRequirements: jsonb("missing_requirements").default([]),
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  sentAt: timestamp("sent_at"),
+  sentBy: varchar("sent_by").references(() => users.id),
+  sendMethodUsed: text("send_method_used"), // EMAIL, WHATSAPP, PORTAL, MANUAL
+  
+  // Communication Log Link
+  communicationLogId: integer("communication_log_id").references(() => communicationLog.id),
+});
+
+export const insertRfqPacketSchema = createInsertSchema(rfqPackets).omit({
+  id: true,
+  packetStatus: true,
+  createdAt: true,
+  sentAt: true,
+  sentBy: true,
+  sendMethodUsed: true,
+  communicationLogId: true,
+});
+
+export type InsertRfqPacket = z.infer<typeof insertRfqPacketSchema>;
+export type RfqPacket = typeof rfqPackets.$inferSelect;
+
+// Relations
+export const supplierRfqAdaptersRelations = relations(supplierRfqAdapters, ({ one, many }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierRfqAdapters.supplierId],
+    references: [suppliers.id],
+  }),
+  createdByUser: one(users, {
+    fields: [supplierRfqAdapters.createdBy],
+    references: [users.id],
+  }),
+  retiredByUser: one(users, {
+    fields: [supplierRfqAdapters.retiredBy],
+    references: [users.id],
+  }),
+  packets: many(rfqPackets),
+}));
+
+export const rfqPacketsRelations = relations(rfqPackets, ({ one }) => ({
+  rfoRequest: one(rfoRequests, {
+    fields: [rfqPackets.rfoRequestId],
+    references: [rfoRequests.id],
+  }),
+  deal: one(deals, {
+    fields: [rfqPackets.dealId],
+    references: [deals.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [rfqPackets.supplierId],
+    references: [suppliers.id],
+  }),
+  adapter: one(supplierRfqAdapters, {
+    fields: [rfqPackets.adapterId],
+    references: [supplierRfqAdapters.id],
+  }),
+  createdByUser: one(users, {
+    fields: [rfqPackets.createdBy],
+    references: [users.id],
+  }),
+  sentByUser: one(users, {
+    fields: [rfqPackets.sentBy],
+    references: [users.id],
+  }),
+  communicationLogEntry: one(communicationLog, {
+    fields: [rfqPackets.communicationLogId],
+    references: [communicationLog.id],
+  }),
+}));
+
+// ============== END SUPPLIER RFQ ADAPTER LAYER ==============
+
 // ============== END COMMISSION OS SCHEMA ==============
 
 // ============== END DEAL OS SCHEMA ==============

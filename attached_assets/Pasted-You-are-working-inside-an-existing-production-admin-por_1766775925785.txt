@@ -1,0 +1,402 @@
+You are working inside an existing production admin portal for Ótima Energia (/admin). The stack is React + TypeScript + Tailwind + shadcn/ui, Node/Express + TypeScript, Postgres + Drizzle.
+
+This system already includes:
+
+RBAC roles: admin / ops / sales
+
+SupplierPlaybooks with versioning
+
+RFO Requests system: rfoRequests, rfoSupplierTracking, rfoTemplates, suppliers, supplierContacts, supplierPortals
+
+Deal OS state machine + compliance gating + communication logs
+
+Goal
+
+Build a Supplier RFQ Adapter Layer so Ops can configure each supplier’s RFQ requirements once, and the system can generate “RFQ Packets” per supplier (email/WhatsApp/portal) without forcing suppliers to change their process.
+
+This MUST be:
+
+simple UX for Ops
+
+flexible schema (supplier-specific variance)
+
+enforceable (blocks sending RFQ if required fields/docs missing)
+
+auditable (snapshots of adapter rules tied to RFQs/deals)
+
+1) DATA MODEL CHANGES (DB)
+1.1 New Table: supplier_rfq_adapters
+
+Stores the “how to request quotes from this supplier” configuration, versioned like playbooks.
+
+Fields (minimum):
+
+id (pk)
+
+supplierId (fk suppliers.id, indexed)
+
+version (int, increment per supplier)
+
+status (ACTIVE | RETIRED)
+
+name (text) e.g. “Default RFQ Method”
+
+submissionChannels (jsonb)
+Example:
+{
+"email": {"enabled": true},
+"whatsapp": {"enabled": true},
+"portal": {"enabled": false},
+"excelTemplate": {"enabled": false}
+}
+
+emailConfig (jsonb)
+
+to: string[] (default from supplierContacts tagged RFQ)
+
+cc: string[]
+
+subjectTemplate: string (supports tokens)
+
+bodyTemplate: string (supports tokens)
+
+whatsappConfig (jsonb)
+
+messageTemplate: string (supports tokens)
+
+portalConfig (jsonb)
+
+url: string
+
+instructions: string
+
+requiredFieldsSchema (jsonb)
+Array of required RFQ input fields and validation rules:
+Example:
+[
+{
+"key": "client_company_name",
+"label": "Razão Social",
+"type": "text",
+"required": true
+},
+{
+"key": "cnpj",
+"label": "CNPJ",
+"type": "text",
+"required": true,
+"validation": {"regex": "^[0-9]{14}$"}
+},
+{
+"key": "ucs",
+"label": "UC(s)",
+"type": "list",
+"required": true,
+"minItems": 1
+},
+{
+"key": "annual_mwh",
+"label": "Consumo Anual (MWh)",
+"type": "number",
+"required": true
+},
+{
+"key": "start_date",
+"label": "Início do Suprimento",
+"type": "date",
+"required": true
+}
+]
+
+requiredAttachmentsSchema (jsonb)
+Example:
+[
+{"key":"bill_pdf_last_12_months","label":"Últimas 12 faturas (PDF)","required":true},
+{"key":"load_dossier_pdf","label":"Dossiê de Consumo (PDF)","required":false},
+{"key":"credit_docs","label":"Documentos de Crédito (se aplicável)","required":false}
+]
+
+responseFormatHints (jsonb)
+Example:
+{"expected":"EMAIL_PDF_OR_EXCEL","notes":"Preferem Excel; aceitam PDF"}
+
+internalNotes (text)
+
+createdAt, createdBy
+
+retiredAt, retiredBy
+
+Constraint:
+
+Only one ACTIVE adapter per supplier at a time.
+
+1.2 New Table: rfq_packets
+
+Represents a generated RFQ Packet per supplier per RFO (immutable snapshot).
+
+Fields:
+
+id (pk)
+
+rfoRequestId (fk)
+
+dealId (nullable fk deals.id) — because some RFOs are from deals
+
+supplierId (fk)
+
+adapterId (fk supplier_rfq_adapters.id)
+
+adapterVersion (int)
+
+packetStatus (DRAFT | READY | SENT | FAILED)
+
+generatedPayload (jsonb) — snapshot of resolved tokens and compiled content:
+{
+"email": {"to":[...], "cc":[...], "subject":"...", "body":"..."},
+"whatsapp": {"message":"..."},
+"portal": {"url":"...", "instructions":"..."},
+"requiredFields": {...resolved values...},
+"attachments": [{"docId":..., "type":...}]
+}
+
+missingRequirements (jsonb) — list of missing field keys / attachment keys
+
+createdAt, createdBy
+
+sentAt, sentBy
+
+sendMethodUsed (EMAIL | WHATSAPP | PORTAL | MANUAL)
+
+2) TOKEN SYSTEM (TEMPLATING)
+
+Implement a simple token replacement utility used by email/whatsapp templates.
+
+Supported tokens (minimum):
+
+{{CLIENT_NAME}}
+
+{{CNPJ}}
+
+{{UCS}}
+
+{{DISTRIBUTOR}}
+
+{{SUBMARKET}}
+
+{{ANNUAL_MWH}}
+
+{{MONTHLY_MWH}}
+
+{{DEMAND_KW}}
+
+{{PRODUCT_TYPE}} (convencional / incentivada / etc. from Deal or RFO)
+
+{{START_DATE}}
+
+{{TERM_MONTHS}}
+
+{{DEADLINE_HOURS}} (default 48 unless specified)
+
+{{RFO_NUMBER}}
+
+{{DEAL_ID}}
+
+{{CONTACT_NAME}} (supplier contact if available)
+
+{{OTIMA_CONTACT}} (fixed from env/config)
+
+If a token is missing data, leave it blank but include it in missingRequirements if the corresponding field is required.
+
+3) BACKEND (API + LOGIC)
+3.1 Supplier RFQ Adapter CRUD
+
+Routes (ops/admin only):
+
+GET /api/suppliers/:id/rfq-adapters (list versions)
+
+POST /api/suppliers/:id/rfq-adapters (create new version; auto-retire previous ACTIVE)
+
+PATCH /api/rfq-adapters/:id (edit only if status=DRAFT or allow “clone+new version” approach)
+
+POST /api/rfq-adapters/:id/retire
+
+3.2 Packet Generation
+
+Routes (ops/admin only):
+
+POST /api/rfo/:rfoId/generate-packets
+Behavior:
+
+For each supplier selected on that RFO:
+
+find ACTIVE adapter
+
+compile resolved payload using token system
+
+check requiredFieldsSchema + requiredAttachmentsSchema against available data
+
+create rfq_packets row with packetStatus:
+
+READY if nothing missing
+
+DRAFT if missing
+
+store missingRequirements
+
+GET /api/rfo/:rfoId/packets
+
+POST /api/rfq-packets/:packetId/mark-sent
+Inputs: sendMethodUsed, optional notes, optional communicationLogId
+Behavior:
+
+set packetStatus=SENT, sentAt, sentBy
+
+update rfoSupplierTracking status accordingly (sent)
+
+if the RFO is linked to a Deal and Deal state is DRAFT, allow transition to RFQ_SENT (or ensure it already happens elsewhere)
+
+3.3 Attachment resolution
+
+Use existing deal_documents / billUploads / proposal docs.
+Packet generation should try to attach:
+
+bill PDFs last 12 months if present
+
+dossier PDF if exists (if not exists, still allow, but mark missing if required)
+Do NOT build dossier generation here; just integrate with what exists and leave gaps flagged.
+
+4) FRONTEND (UX)
+
+Add a new section inside Revenue → Playbooks OR create a sibling sub-tab under Revenue called RFQ Adapters (preferred: inside Playbooks as a second tab).
+
+4.1 Supplier RFQ Adapter Editor (Ops/Admin)
+
+Screen: “Supplier RFQ Adapter”
+
+Supplier selector (or accessed from supplier detail)
+
+Shows current ACTIVE adapter version + history list
+
+“Create New Version” button (clones previous config)
+
+Form sections:
+
+Submission Channels (toggles)
+
+Email Template
+
+To/CC (default contacts picker from supplierContacts)
+
+Subject template
+
+Body template
+
+“Preview” panel (with live token preview using sample data)
+
+WhatsApp Template
+
+message template
+
+preview panel
+
+Portal Submission
+
+URL + instructions
+
+Required Fields (builder UI)
+
+Add field (key/label/type/required/validation)
+
+Types supported: text, number, date, dropdown, list
+
+Required Attachments (builder UI)
+
+Add attachment requirement (key/label/required)
+
+Response Format Hints
+
+Internal Notes
+
+Must be extremely fast to edit and not fragile.
+
+4.2 RFO Detail View Enhancement: “RFQ Packets”
+
+On RFO detail page add a tab or section “Packets”:
+
+List each supplier row:
+
+Supplier name
+
+Adapter version
+
+Status badge: DRAFT/READY/SENT/FAILED
+
+Missing items count
+
+Buttons:
+
+“View Packet”
+
+“Copy WhatsApp”
+
+“Copy Email Subject/Body”
+
+“Mark as Sent”
+
+If DRAFT due to missing:
+
+show checklist of missing requirements with clear actions:
+
+“Upload bill PDFs” → deep link to client portal uploads or deal docs
+
+“Add UC / start date / term” → deep link to deal commercial tab (or RFO fields)
+
+4.3 Guardrails
+
+Sales role cannot access RFQ Adapter configuration.
+
+Only ops/admin.
+
+5) AUDITABILITY / COMPLIANCE
+
+Every create/update/retire adapter version logs to adminAuditLog
+
+Packet generation logs an audit event
+
+“Mark as sent” creates/links a communicationLog entry (optional but recommended)
+
+rfq_packets stores immutable snapshot of the exact email/whatsapp/portal instructions used at time of send.
+
+6) ACCEPTANCE TESTS (DO THESE)
+
+Create an adapter for a supplier with email+whatsapp enabled, required fields UC + start_date.
+
+Create RFO with that supplier but missing start_date → packet shows DRAFT with missing start_date.
+
+Add start_date → regenerate packets → becomes READY.
+
+Copy email subject/body and mark as SENT.
+
+Confirm rfoSupplierTracking updated and audit log entry created.
+
+Confirm RBAC prevents sales users from accessing adapter screens.
+
+7) NON-GOALS (DO NOT BUILD NOW)
+
+Do not implement AI parsing of supplier replies.
+
+Do not implement sending emails programmatically.
+
+Do not implement dossier generation (handled later).
+
+Do not change Deal OS state machine beyond connecting RFQ_SENT where appropriate.
+
+Deliverable:
+
+Working adapter configuration UI
+
+Packet generation + readiness validation
+
+RFQ packet list on RFO with “copy + mark sent”
+
+Fully audited and RBAC safe
