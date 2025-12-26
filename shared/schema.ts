@@ -2930,6 +2930,145 @@ export const rfqPacketsRelations = relations(rfqPackets, ({ one }) => ({
 
 // ============== END SUPPLIER RFQ ADAPTER LAYER ==============
 
+// ============== CLIENT DOSSIER v2 ==============
+
+// Dossier Status
+export const DOSSIER_STATUS = ['DRAFT', 'READY', 'LOCKED'] as const;
+export type DossierStatus = typeof DOSSIER_STATUS[number];
+
+// Connection Type
+export const CONNECTION_TYPE = ['GROUP_A', 'GROUP_B'] as const;
+export type ConnectionType = typeof CONNECTION_TYPE[number];
+
+// Eligibility Type
+export const ELIGIBILITY_TYPE = ['ACL_DIRECT', 'ACL_VAREJISTA', 'NOT_ELIGIBLE_YET'] as const;
+export type EligibilityType = typeof ELIGIBILITY_TYPE[number];
+
+// Submarket
+export const SUBMARKET = ['SE/CO', 'S', 'NE', 'N'] as const;
+export type Submarket = typeof SUBMARKET[number];
+
+// Confidence Score
+export const CONFIDENCE_SCORE = ['LOW', 'MEDIUM', 'HIGH'] as const;
+export type ConfidenceScore = typeof CONFIDENCE_SCORE[number];
+
+// Client Dossiers - Canonical energy profile for each client
+export const clientDossiers = pgTable("client_dossiers", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull().unique(),
+  
+  // Identification
+  legalName: text("legal_name").notNull(),
+  tradeName: text("trade_name"),
+  cnpj: text("cnpj").notNull(),
+  
+  // Energy Structure
+  distributor: text("distributor"),
+  submarket: text("submarket"), // SE/CO, S, NE, N
+  connectionType: text("connection_type"), // GROUP_A, GROUP_B
+  eligibilityType: text("eligibility_type"), // ACL_DIRECT, ACL_VAREJISTA, NOT_ELIGIBLE_YET
+  
+  // Consumption Profile
+  annualConsumptionMWh: decimal("annual_consumption_mwh", { precision: 12, scale: 2 }),
+  averageMonthlyMWh: decimal("average_monthly_mwh", { precision: 12, scale: 2 }),
+  peakDemandKW: decimal("peak_demand_kw", { precision: 10, scale: 2 }),
+  numberOfUCs: integer("number_of_ucs").default(1),
+  tariffClass: text("tariff_class"), // A4, A3, A2, etc.
+  
+  // Source & Confidence
+  dataSources: jsonb("data_sources").default([]), // ['OCR', 'MANUAL', 'CLIENT_CONFIRMATION']
+  confidenceScore: text("confidence_score").default("LOW"), // LOW, MEDIUM, HIGH
+  lastValidatedAt: timestamp("last_validated_at"),
+  validatedBy: varchar("validated_by").references(() => users.id),
+  
+  // Operational Status
+  status: text("status").default("DRAFT").notNull(), // DRAFT, READY, LOCKED
+  lockedAt: timestamp("locked_at"),
+  lockedBy: varchar("locked_by").references(() => users.id),
+  
+  // Notes
+  opsNotes: text("ops_notes"),
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
+export const insertClientDossierSchema = createInsertSchema(clientDossiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lockedAt: true,
+  lockedBy: true,
+  lastValidatedAt: true,
+});
+
+export type InsertClientDossier = z.infer<typeof insertClientDossierSchema>;
+export type ClientDossier = typeof clientDossiers.$inferSelect;
+
+// Client Dossier Snapshots - Immutable snapshots for RFQ attachment
+export const clientDossierSnapshots = pgTable("client_dossier_snapshots", {
+  id: serial("id").primaryKey(),
+  clientDossierId: integer("client_dossier_id").references(() => clientDossiers.id).notNull(),
+  dealId: varchar("deal_id").references(() => deals.id),
+  rfoRequestId: integer("rfo_request_id").references(() => rfoRequests.id),
+  
+  // Full snapshot data
+  snapshotData: jsonb("snapshot_data").notNull(), // Full dossier JSON
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const insertClientDossierSnapshotSchema = createInsertSchema(clientDossierSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertClientDossierSnapshot = z.infer<typeof insertClientDossierSnapshotSchema>;
+export type ClientDossierSnapshot = typeof clientDossierSnapshots.$inferSelect;
+
+// Relations
+export const clientDossiersRelations = relations(clientDossiers, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [clientDossiers.clientId],
+    references: [clients.id],
+  }),
+  validatedByUser: one(users, {
+    fields: [clientDossiers.validatedBy],
+    references: [users.id],
+  }),
+  lockedByUser: one(users, {
+    fields: [clientDossiers.lockedBy],
+    references: [users.id],
+  }),
+  snapshots: many(clientDossierSnapshots),
+}));
+
+export const clientDossierSnapshotsRelations = relations(clientDossierSnapshots, ({ one }) => ({
+  dossier: one(clientDossiers, {
+    fields: [clientDossierSnapshots.clientDossierId],
+    references: [clientDossiers.id],
+  }),
+  deal: one(deals, {
+    fields: [clientDossierSnapshots.dealId],
+    references: [deals.id],
+  }),
+  rfoRequest: one(rfoRequests, {
+    fields: [clientDossierSnapshots.rfoRequestId],
+    references: [rfoRequests.id],
+  }),
+  createdByUser: one(users, {
+    fields: [clientDossierSnapshots.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// ============== END CLIENT DOSSIER ==============
+
 // ============== END COMMISSION OS SCHEMA ==============
 
 // ============== END DEAL OS SCHEMA ==============
