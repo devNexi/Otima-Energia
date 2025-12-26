@@ -1,0 +1,327 @@
+CLIENT DOSSIER v2 (ÓTIMA — CORE OPERATIONAL OBJECT)
+
+You are working inside an existing production admin portal for Ótima Energia, a Brazilian B2B energy brokerage operating in the Free Contracting Environment (ACL).
+
+This system already includes:
+
+Leads & Clients CRM
+
+Bill upload + OCR extraction
+
+ECOS snapshots
+
+RFO / RFQ tooling
+
+Deal OS (state machine)
+
+Supplier RFQ Adapter (Build #1 in progress)
+
+Your task now is to build Client Dossier v2.
+
+This is a P0 foundational build.
+The Client Dossier is NOT just admin data — it is a formal, canonical object used to:
+
+Feed RFQs to suppliers
+
+Standardize supplier interactions
+
+Enforce operational workflow
+
+Signal professionalism and credibility to comercializadoras
+
+No RFQ may be sent without a completed dossier.
+
+🎯 BUSINESS OBJECTIVE
+
+Create a single source of truth for each client’s energy profile that is:
+
+Automatically generated from existing data (OCR, client records)
+
+Manually reviewable and correctable by Ops
+
+Exportable as:
+
+A clean PDF (supplier-facing)
+
+A structured JSON (system-facing)
+
+Hard-gated into the deal workflow
+
+Think of the dossier as:
+
+“The standardized energy load file that Ótima sends to the market.”
+
+1️⃣ CLIENT DOSSIER ENTITY (NEW CORE OBJECT)
+New Database Table: clientDossiers
+
+Required fields:
+
+Identification
+
+id
+
+clientId (FK)
+
+legalName
+
+tradeName
+
+cnpj
+
+Energy Structure
+
+distributor
+
+submarket (SE/CO, S, NE, N)
+
+connectionType (GROUP_A / GROUP_B)
+
+eligibilityType (ACL_DIRECT / ACL_VAREJISTA / NOT_ELIGIBLE_YET)
+
+Consumption Profile
+
+annualConsumptionMWh
+
+averageMonthlyMWh
+
+peakDemandKW (nullable)
+
+numberOfUCs
+
+tariffClass
+
+Source & Confidence
+
+dataSources (JSON array: OCR, MANUAL, CLIENT_CONFIRMATION)
+
+confidenceScore (LOW / MEDIUM / HIGH)
+
+lastValidatedAt
+
+validatedBy
+
+Operational Status
+
+status (DRAFT / READY / LOCKED)
+
+lockedAt
+
+lockedBy
+
+Notes
+
+opsNotes (free text, internal only)
+
+2️⃣ DOSSIER GENERATION LOGIC
+Automatic Population
+
+When a client has:
+
+At least 1 verified bill upload OR
+
+A completed consumption profile
+
+The system must:
+
+Aggregate last 12 months where available
+
+Calculate:
+
+Annual MWh
+
+Average monthly MWh
+
+Average price (R$/MWh)
+
+Auto-assign eligibility type based on rules
+
+Manual Review & Override
+
+Ops users must be able to:
+
+Edit any calculated field
+
+Add missing values (e.g. demand kW)
+
+Adjust eligibility classification
+
+Add internal notes
+
+All manual overrides must be logged in audit trail.
+
+3️⃣ DOSSIER STATUS & HARD GATES
+Status Definitions
+
+DRAFT — incomplete or unvalidated
+
+READY — reviewed and approved for RFQ use
+
+LOCKED — frozen and attached to a Deal / RFQ
+
+Enforcement Rules (CRITICAL)
+
+RFQ cannot be sent unless dossier = READY
+
+When RFQ is sent:
+
+Dossier becomes LOCKED
+
+Snapshot is created (immutable)
+
+Any change requires creating a new dossier version
+
+No silent edits.
+
+4️⃣ DOSSIER SNAPSHOTS (IMMUTABILITY)
+New Table: clientDossierSnapshots
+
+Fields:
+
+id
+
+clientDossierId
+
+dealId (nullable)
+
+rfqId (nullable)
+
+snapshotData (full JSON)
+
+createdAt
+
+createdBy
+
+Every RFQ must reference a snapshot, not the live dossier.
+
+This ensures:
+
+Auditability
+
+Supplier dispute protection
+
+Historical accuracy
+
+5️⃣ PDF EXPORT (SUPPLIER-FACING)
+Generate a 1-Page PDF:
+
+Title:
+“Perfil de Consumo — Cliente Ótima Energia”
+
+Sections:
+
+Client Identification
+
+Energy & Distributor Info
+
+Consumption Summary (table)
+
+Eligibility Classification
+
+Notes (optional)
+
+Constraints:
+
+Portuguese (BR)
+
+Clean, neutral formatting
+
+No pricing
+
+No ECOS language
+
+Looks professional and standardized
+
+This PDF is attached automatically to RFQs.
+
+6️⃣ UI REQUIREMENTS (ADMIN)
+Client Profile → New Tab: Dossiê Energético
+
+Displays:
+
+Status badge (Draft / Ready / Locked)
+
+Summary cards (MWh, eligibility, distributor)
+
+Editable form fields
+
+Validation checklist
+
+“Mark as READY” action (Ops/Admin only)
+
+Visual Indicators
+
+Warnings when data confidence is LOW
+
+Clear message explaining why RFQ is blocked
+
+7️⃣ WORKFLOW INTEGRATION (MANDATORY)
+RFQ Flow Changes
+
+Before sending RFQ:
+
+System checks dossier status
+
+If not READY → block and explain
+
+When RFQ is sent:
+
+Auto-lock dossier
+
+Create snapshot
+
+Attach snapshot to RFQ record
+
+8️⃣ API ENDPOINTS
+
+Required endpoints:
+
+GET /api/clients/:id/dossier
+
+POST /api/clients/:id/dossier
+
+PATCH /api/dossiers/:id
+
+POST /api/dossiers/:id/mark-ready
+
+GET /api/dossiers/:id/pdf
+
+GET /api/dossier-snapshots/:id
+
+All endpoints must enforce RBAC.
+
+9️⃣ ACCEPTANCE CRITERIA (NON-NEGOTIABLE)
+
+Before marking complete, verify:
+
+A dossier can be generated from OCR data
+
+Ops can review and correct data
+
+RFQ is blocked if dossier is not READY
+
+Sending RFQ locks dossier + creates snapshot
+
+Snapshot is immutable
+
+PDF exports correctly
+
+Audit logs capture all changes
+
+This build must reduce Ops friction, standardize supplier inputs, and enforce linear workflow.
+
+No cosmetic-only changes.
+This is a structural, operational core feature.
+
+🔒 FINAL NOTE
+
+Do not build:
+
+Client-facing views
+
+Advanced analytics
+
+Forecasting
+
+AI optimization
+
+This is about clean inputs, discipline, and scale readiness.

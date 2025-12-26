@@ -53,6 +53,13 @@ interface RequiredAttachment {
   required: boolean;
 }
 
+interface ResponseBehavior {
+  preferred_channel: string | null;
+  best_hours: string | null;
+  format_preference: string | null;
+  notes: string | null;
+}
+
 interface SupplierRfqAdapter {
   id: number;
   supplierId: number;
@@ -66,6 +73,9 @@ interface SupplierRfqAdapter {
   requiredFieldsSchema: RequiredField[];
   requiredAttachmentsSchema: RequiredAttachment[];
   responseFormatHints: { expected: string; notes: string };
+  relationshipNotes: string | null;
+  preferredContactId: number | null;
+  responseBehavior: ResponseBehavior;
   internalNotes: string | null;
   createdAt: string;
   createdBy: string | null;
@@ -188,6 +198,14 @@ Obrigado!`,
       expected: "EMAIL_PDF_OR_EXCEL",
       notes: "",
     },
+    relationshipNotes: "",
+    preferredContactId: null as number | null,
+    responseBehavior: {
+      preferred_channel: null as string | null,
+      best_hours: null as string | null,
+      format_preference: null as string | null,
+      notes: null as string | null,
+    },
     internalNotes: "",
   });
 
@@ -240,6 +258,14 @@ Obrigado!`,
       requiredFieldsSchema: adapter.requiredFieldsSchema,
       requiredAttachmentsSchema: adapter.requiredAttachmentsSchema,
       responseFormatHints: adapter.responseFormatHints,
+      relationshipNotes: adapter.relationshipNotes || "",
+      preferredContactId: adapter.preferredContactId,
+      responseBehavior: adapter.responseBehavior || {
+        preferred_channel: null,
+        best_hours: null,
+        format_preference: null,
+        notes: null,
+      },
       internalNotes: adapter.internalNotes || "",
     });
     setShowCreateModal(true);
@@ -434,11 +460,12 @@ Obrigado!`,
           </DialogHeader>
 
           <Tabs defaultValue="channels" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="channels">Channels</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
               <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
               <TabsTrigger value="fields">Fields</TabsTrigger>
+              <TabsTrigger value="relationship">Relationship</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
 
@@ -649,6 +676,101 @@ Obrigado!`,
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="relationship" className="space-y-4 pt-4">
+              <div>
+                <Label htmlFor="relationshipNotes">Relationship Notes</Label>
+                <Textarea
+                  id="relationshipNotes"
+                  value={formData.relationshipNotes}
+                  onChange={(e) => setFormData({ ...formData, relationshipNotes: e.target.value })}
+                  className="mt-1"
+                  placeholder="Notes about the relationship with this supplier (e.g., key contacts, history, preferences)..."
+                  data-testid="input-relationship-notes"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="preferredChannel">Preferred Channel</Label>
+                  <Select
+                    value={formData.responseBehavior.preferred_channel || ""}
+                    onValueChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        responseBehavior: { ...formData.responseBehavior, preferred_channel: val || null },
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-1" data-testid="select-preferred-channel">
+                      <SelectValue placeholder="Select channel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EMAIL">Email</SelectItem>
+                      <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                      <SelectItem value="PHONE">Phone</SelectItem>
+                      <SelectItem value="PORTAL">Portal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="bestHours">Best Hours to Contact</Label>
+                  <Input
+                    id="bestHours"
+                    value={formData.responseBehavior.best_hours || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        responseBehavior: { ...formData.responseBehavior, best_hours: e.target.value || null },
+                      })
+                    }
+                    placeholder="e.g., 14:00–18:00"
+                    className="mt-1"
+                    data-testid="input-best-hours"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="formatPreference">Response Format Preference</Label>
+                <Select
+                  value={formData.responseBehavior.format_preference || ""}
+                  onValueChange={(val) =>
+                    setFormData({
+                      ...formData,
+                      responseBehavior: { ...formData.responseBehavior, format_preference: val || null },
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1" data-testid="select-format-preference">
+                    <SelectValue placeholder="Select format..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXCEL">Excel</SelectItem>
+                    <SelectItem value="PDF">PDF</SelectItem>
+                    <SelectItem value="EMAIL_BODY">Email Body</SelectItem>
+                    <SelectItem value="WHATSAPP">WhatsApp Message</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="behaviorNotes">Response Behavior Notes</Label>
+                <Textarea
+                  id="behaviorNotes"
+                  value={formData.responseBehavior.notes || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      responseBehavior: { ...formData.responseBehavior, notes: e.target.value || null },
+                    })
+                  }
+                  className="mt-1"
+                  placeholder="Additional notes about how this supplier typically responds (e.g., usually takes 2 days, always sends PDF)..."
+                  data-testid="input-behavior-notes"
+                />
               </div>
             </TabsContent>
 
