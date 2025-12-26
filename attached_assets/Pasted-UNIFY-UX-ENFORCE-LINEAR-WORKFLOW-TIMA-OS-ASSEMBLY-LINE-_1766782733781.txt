@@ -1,0 +1,418 @@
+UNIFY UX + ENFORCE LINEAR WORKFLOW (ÓTIMA OS “ASSEMBLY LINE”)
+
+You are working inside an existing production admin portal for Ótima Energia, a Brazilian B2B energy brokerage.
+
+The portal already includes:
+
+RBAC auth (admin / ops / sales)
+
+Leads & Clients CRM
+
+Bill upload + OCR
+
+ECOS
+
+Deal OS state machine + compliance gating
+
+RFO/RFQ system + supplier tracking
+
+Proposal system
+
+Commission OS (Usage / Playbooks / Reconciliation / Cases)
+
+Ops dashboard + notifications
+
+Audit Trail
+
+Now we need to unify the operational model so the system behaves like a single linear assembly line, not “a bunch of tabs”.
+
+Goal: Sales + Ops can run 100 deals with zero chaos because the UI enforces the correct sequence and makes the next action obvious.
+
+This build is primarily:
+
+UX structure
+
+Workflow enforcement
+
+Guardrails
+
+“Next actions” guidance
+
+Reduced cognitive load
+
+0️⃣ NON-NEGOTIABLE PRINCIPLES
+
+One system, one flow
+Users should feel: Lead → Client → Dossier → Deal → RFQ → Quotes → Proposal → Contract → Supply → Revenue.
+
+You cannot skip steps
+If a prerequisite is missing, the system must:
+
+block the action,
+
+explain why,
+
+deep-link to fix it.
+
+Role-based simplicity
+Sales sees what they need to close.
+Ops sees what they need to execute.
+Admin sees everything.
+
+No duplicate data entry
+Where possible, auto-propagate:
+Lead → Client → Dossier → Deal → RFQ → Proposal.
+
+1️⃣ NAVIGATION & IA (INFORMATION ARCHITECTURE)
+A) Top-level sections (rename + regroup)
+
+Implement a clean navigation structure:
+
+Sales Area
+
+ECOS
+
+Leads
+
+Clients
+
+RFQs (read-only or “mine”)
+
+Deals (sales view: “my deals only”, limited actions)
+
+Office Area (Ops)
+
+Ops Dashboard (“Today’s Work Engine”)
+
+Deals (full)
+
+Revenue (Usage / Playbooks / Reconciliation / Cases)
+
+Compliance (if separate tab exists; if not, keep inside Deal Detail)
+
+Admin
+
+Audit Trail
+
+Settings
+
+Users
+
+System configs
+
+B) Enforce role-based entry points
+
+sales login → default landing = Sales Dashboard
+
+ops login → default landing = Ops Dashboard
+
+admin login → default landing = Admin Overview (or choose last visited)
+
+C) Prevent URL access bypass
+
+You already have partial guards. Ensure consistency:
+
+If a sales user hits /admin?tab=revenue or any hidden area, they must see:
+
+“Access denied” + redirect to Sales Dashboard.
+
+2️⃣ SALES DASHBOARD (LOW FRICTION, HIGH CLARITY)
+
+Create a new Sales Dashboard page (or tab) that shows:
+
+KPIs
+
+New leads (last 7 days)
+
+Leads awaiting response
+
+Clients awaiting dossier/bill upload
+
+Deals waiting on client decision (proposal sent)
+
+Sales Worklist (“Today”)
+
+A table with rows that represent “next best action”:
+
+Lead: “Call / WhatsApp now”
+
+Client: “Request bill / UC”
+
+Deal: “Send RFQ” (only if allowed) OR “Waiting on quotes”
+
+Proposal: “Follow-up”
+
+Each row must have:
+
+entity type (Lead/Client/Deal/Proposal)
+
+name
+
+status
+
+blocker reason (if blocked)
+
+one-click action button
+
+This must reduce Sales tab hopping.
+
+3️⃣ OFFICE (OPS) DASHBOARD — SINGLE WORK ENGINE
+
+You already have Ops Dashboard with clickable KPIs.
+Now upgrade it into a true “work engine”:
+
+A) Four prioritized queues (tabs or sections)
+
+Blocked Deals
+
+blocked by compliance gates
+
+show missing checklist count
+
+deep link to deal → Compliance tab
+
+Supplier SLA breaches
+
+show supplier + breach age
+
+deep link to the specific RFQ/RFO tracking item
+
+Revenue overdue
+
+overdue commission events + amount
+
+deep link to reconciliation / deal commission events
+
+Awaiting supplier quotes
+
+RFQs/RFOs sent > X hours/days without response
+
+deep link to RFQ tracker + “Send follow-up” action
+
+B) Standard “Next Action” buttons
+
+Each row must have one “primary action”:
+
+“Complete checklist”
+
+“Chase supplier”
+
+“Raise dispute”
+
+“Mark resolved”
+
+“Send follow-up email”
+
+No hunting.
+
+4️⃣ LINEAR WORKFLOW ENFORCEMENT (“ASSEMBLY LINE”)
+
+Create a single canonical checklist of prerequisites for key steps and enforce them system-wide.
+
+A) Define prerequisites for these actions:
+
+Create Deal from Client
+
+Send RFQ/RFO to supplier(s)
+
+Mark QUOTES_RECEIVED
+
+Generate Proposal
+
+Move to OFFER_SELECTED
+
+Move to ONBOARDING_PENDING
+
+Move to CONTRACT_SIGNED
+
+Move to SUPPLY_LIVE
+
+Start Revenue tracking (commission events + usage periods)
+
+B) Global blocker engine (shared helper)
+
+Implement a backend helper that returns:
+
+isBlocked: boolean
+
+blockers: [{ code, title, description, deepLink }]
+
+So UI can render:
+
+red blocker banner
+
+“Fix now” deep links
+
+C) Blocker UI pattern (standardized)
+
+Whenever blocked:
+
+show a clear banner at top
+
+list blockers in order
+
+each has a “Go fix” button
+
+NEVER silent failure
+
+5️⃣ “NEXT BEST ACTION” ON EVERY ENTITY
+A) Client page: add “Next step” widget
+
+On each Client profile show:
+
+dossier status (draft/ready/locked)
+
+missing bills / OCR confidence
+
+button: “Request bills link” or “Mark dossier ready” (RBAC)
+
+B) Deal detail: add “Next step” widget
+
+Show:
+
+current deal state
+
+required next state
+
+list of blockers if any
+
+primary CTA button:
+
+“Send RFQ”
+
+“Record quote”
+
+“Generate proposal”
+
+“Advance state”
+
+etc.
+
+Make it impossible to be confused.
+
+6️⃣ UNIFY TERMS / LABELS (NO “DEAL OS” / “COMMISSION OS”)
+
+Ensure naming across UI matches:
+
+“Deals”
+
+“Revenue”
+
+“Ops Dashboard”
+
+“Sales Dashboard”
+
+Remove:
+
+“Deal OS”
+
+“Commission OS”
+from user-facing labels.
+
+Internally can stay, but not in UI.
+
+7️⃣ AUTOMATIC HANDOFFS (REDUCE DUPLICATE ENTRY)
+
+Implement these auto-propagations:
+
+When Lead converts to Client:
+
+carry across: company name, contact, email, phone, notes
+
+When Client dossier becomes READY:
+
+allow “Create Deal” with prefilled:
+
+clientId
+
+submarket
+
+consumption MWh
+
+distributor
+
+eligibilityType
+
+When RFQ created from Deal:
+
+auto-attach dossier snapshot PDF
+
+prefill RFQ fields from Deal + Dossier
+
+When Quote selected:
+
+auto-create Proposal draft (template)
+
+prefill offer table
+
+When CONTRACT_SIGNED:
+
+auto-create initial commission schedule (if playbook exists)
+
+lock commission terms snapshot
+
+create first usage period tracking row
+
+8️⃣ ACCEPTANCE CRITERIA (MUST PASS)
+
+Before you mark Build #3 complete:
+
+✅ Sales user:
+
+lands on Sales Dashboard
+
+cannot see Revenue/Compliance/Ops areas
+
+can complete full flow:
+Lead → Client → Request bills → Create deal → Send RFQ (if allowed) → follow-ups
+
+✅ Ops user:
+
+lands on Ops Dashboard
+
+sees work queues with real data
+
+can process:
+RFQ → quotes → proposal → onboarding → contract signed → supply live → revenue tracking
+
+✅ Admin:
+
+sees everything
+
+✅ Blocker engine:
+
+prevents skipping steps
+
+provides clear reasons + deep links
+
+used consistently across UI
+
+✅ No duplication of entry:
+
+common fields propagate automatically
+
+9️⃣ DO NOT BUILD (OUT OF SCOPE)
+
+Client-facing portal expansion
+
+Monte Carlo simulator
+
+Advanced charts (unless minimal for dashboards)
+
+Any new external integrations
+
+This build is about workflow usability and discipline, not extra features.
+
+Deliverables
+
+Updated navigation + dashboards
+
+Blocker engine + consistent UI banners
+
+Next-best-action widgets on Client + Deal
+
+Auto-propagation hooks between entities
+
+RBAC verified with no bypass
+
+Build this with minimal visual changes: keep existing design system (Tailwind + shadcn/ui). Focus on clarity, speed, and correctness.

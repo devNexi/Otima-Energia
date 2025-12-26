@@ -5683,5 +5683,289 @@ export async function registerRoutes(
     }
   });
 
+  // ============== DASHBOARD & WORKFLOW ENDPOINTS ==============
+  
+  // Sales Dashboard KPIs
+  app.get("/api/sales/kpis", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      // Get leads from last 7 days
+      const allLeads = await storage.getLeads();
+      const newLeads = allLeads.filter((l: any) => 
+        l.createdAt && new Date(l.createdAt) >= sevenDaysAgo
+      ).length;
+      
+      // Leads without portal sent (no response yet)
+      const leadsAwaitingResponse = allLeads.filter((l: any) => 
+        !l.portalSentAt
+      ).length;
+      
+      // Clients without ready dossier
+      const allClients = await storage.getClients();
+      let clientsAwaitingDossier = 0;
+      for (const client of allClients) {
+        const dossier = await storage.getClientDossier(client.id);
+        if (!dossier || dossier.status === 'DRAFT') {
+          clientsAwaitingDossier++;
+        }
+      }
+      
+      // Proposals sent waiting for decision
+      const proposals = await storage.getProposals();
+      const proposalsSent = proposals.filter((p: any) => 
+        p.status === 'sent' || p.status === 'pending_response'
+      ).length;
+      
+      res.json({
+        success: true,
+        newLeads,
+        leadsAwaitingResponse,
+        clientsAwaitingDossier,
+        proposalsSent
+      });
+    } catch (error: any) {
+      console.error("Error fetching sales KPIs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch KPIs" });
+    }
+  });
+  
+  // Sales Worklist (next best actions)
+  app.get("/api/sales/worklist", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      
+      const items: any[] = [];
+      
+      // Get leads needing action
+      const leads = await storage.getLeads();
+      for (const lead of leads.slice(0, 10)) {
+        if (!lead.portalSentAt) {
+          items.push({
+            id: lead.id,
+            entityType: 'lead',
+            name: lead.companyName || lead.name || `Lead #${lead.id}`,
+            status: 'new',
+            nextAction: 'Novo lead - fazer primeiro contato',
+            actionLabel: 'Ligar / WhatsApp',
+            priority: 'high',
+            deepLink: `/admin/sales/leads?leadId=${lead.id}`
+          });
+        }
+      }
+      
+      // Get clients needing dossier
+      const clients = await storage.getClients();
+      for (const client of clients.slice(0, 10)) {
+        const nextAction = await blockerEngine.getClientNextAction(client.id);
+        if (nextAction.action === 'create_dossier' || nextAction.action === 'complete_dossier') {
+          items.push({
+            id: client.id,
+            entityType: 'client',
+            name: client.companyName,
+            status: nextAction.action,
+            nextAction: nextAction.blockers[0]?.description || 'Completar dossiê',
+            actionLabel: nextAction.actionLabel,
+            blocker: nextAction.blockers[0]?.title,
+            priority: 'high',
+            deepLink: nextAction.deepLink
+          });
+        }
+      }
+      
+      // Sort by priority
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      items.sort((a, b) => priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder]);
+      
+      res.json({ success: true, items: items.slice(0, 20) });
+    } catch (error: any) {
+      console.error("Error fetching sales worklist:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch worklist" });
+    }
+  });
+  
+  // Ops Dashboard Queues
+  app.get("/api/ops/queues", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      // Blocked deals (by compliance gates)
+      const allDeals = await storage.getDeals();
+      const blockedDeals: any[] = [];
+      
+      for (const deal of allDeals) {
+        if (deal.status === 'ONBOARDING_PENDING') {
+          const checklist = await storage.getDealChecklistItems(deal.id);
+          const incompleteCount = checklist.filter((item: any) => !item.completed).length;
+          if (incompleteCount > 0) {
+            const client = await storage.getClient(deal.clientId);
+            blockedDeals.push({
+              id: deal.id,
+              dealNumber: `DEAL-${deal.id}`,
+              clientName: client?.companyName || `Cliente #${deal.clientId}`,
+              status: deal.status,
+              blockerReason: `${incompleteCount} item(s) do checklist pendente(s)`,
+              deepLink: `/admin/ops/deals?dealId=${deal.id}&tab=compliance`
+            });
+          }
+        }
+      }
+      
+      // Supplier SLA breaches - check pending SLA items
+      const breachItems: any[] = [];
+      // Note: SLA tracking is handled per-deal, so we skip this for now
+      
+      // Revenue overdue - check deals with pending commission
+      const overdueRevenue: any[] = [];
+      for (const deal of allDeals.slice(0, 50)) {
+        const events = await storage.getDealCommissionEvents(deal.id);
+        for (const e of events) {
+          if (e.status === 'PENDING' && e.dueDate && new Date(e.dueDate) < new Date()) {
+            overdueRevenue.push({
+              id: e.id,
+              dealId: deal.id,
+              amountR: e.amountR,
+              dueDate: e.dueDate,
+              deepLink: `/admin/ops/revenue?eventId=${e.id}`
+            });
+          }
+        }
+      }
+      
+      // Awaiting quotes (RFQs sent > 48h without response)
+      const rfoRequests = await storage.getRfoRequests();
+      const awaitingQuotes = rfoRequests
+        .filter((r: any) => r.status === 'sent' && r.responseCount === 0)
+        .map((r: any) => {
+          const sentAt = r.createdAt;
+          const ageHours = sentAt ? Math.floor((Date.now() - new Date(sentAt).getTime()) / (1000 * 60 * 60)) : 0;
+          return {
+            id: r.id,
+            rfoNumber: r.rfoNumber,
+            clientId: r.clientId,
+            ageHours,
+            deepLink: `/admin/ops/rfqs?rfoId=${r.id}`
+          };
+        })
+        .filter((r: any) => r.ageHours > 48);
+      
+      res.json({
+        success: true,
+        blockedDeals,
+        slaBreaches: breachItems,
+        overdueRevenue,
+        awaitingQuotes
+      });
+    } catch (error: any) {
+      console.error("Error fetching ops queues:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch queues" });
+    }
+  });
+  
+  // Blocker Engine API
+  app.get("/api/blockers/create-deal/:clientId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      const result = await blockerEngine.checkCreateDeal(clientId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error checking blockers:", error);
+      res.status(500).json({ success: false, error: "Failed to check blockers" });
+    }
+  });
+  
+  app.get("/api/blockers/send-rfq/:dealId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dealId = parseInt(req.params.dealId);
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      const result = await blockerEngine.checkSendRfq(dealId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error checking blockers:", error);
+      res.status(500).json({ success: false, error: "Failed to check blockers" });
+    }
+  });
+  
+  app.get("/api/blockers/advance-deal/:dealId/:targetState", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dealId = parseInt(req.params.dealId);
+      const targetState = req.params.targetState;
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      
+      let result;
+      switch (targetState) {
+        case 'QUOTES_RECEIVED':
+          result = await blockerEngine.checkRecordQuotes(dealId);
+          break;
+        case 'OFFER_SELECTED':
+          result = await blockerEngine.checkAdvanceToOfferSelected(dealId);
+          break;
+        case 'ONBOARDING_PENDING':
+          result = await blockerEngine.checkAdvanceToOnboarding(dealId);
+          break;
+        case 'CONTRACT_SIGNED':
+          result = await blockerEngine.checkAdvanceToContractSigned(dealId);
+          break;
+        case 'SUPPLY_LIVE':
+          result = await blockerEngine.checkAdvanceToSupplyLive(dealId);
+          break;
+        default:
+          result = { isBlocked: false, blockers: [] };
+      }
+      
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error checking blockers:", error);
+      res.status(500).json({ success: false, error: "Failed to check blockers" });
+    }
+  });
+  
+  // Next action for entity
+  app.get("/api/next-action/client/:clientId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const clientId = parseInt(req.params.clientId);
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      const result = await blockerEngine.getClientNextAction(clientId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error getting next action:", error);
+      res.status(500).json({ success: false, error: "Failed to get next action" });
+    }
+  });
+  
+  app.get("/api/next-action/deal/:dealId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dealId = parseInt(req.params.dealId);
+      const { BlockerEngine } = await import("./blockerEngine");
+      const blockerEngine = new BlockerEngine(storage);
+      const result = await blockerEngine.getDealNextAction(dealId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error getting next action:", error);
+      res.status(500).json({ success: false, error: "Failed to get next action" });
+    }
+  });
+
   return httpServer;
 }
