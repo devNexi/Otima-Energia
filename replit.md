@@ -225,3 +225,47 @@ Email notification infrastructure for operational alerts. Queues notifications f
 
 ### Analytics API
 - `GET /api/analytics/lost-deals`: Aggregated views by reason, supplier, stage, user
+
+## Supplier RFQ Adapter Layer
+
+Multi-channel RFQ automation system for configuring per-supplier quote request methods with templated messages.
+
+### Database Tables
+- `supplier_rfq_adapters`: Versioned adapter configurations with ACTIVE/RETIRED status tracking
+- `rfq_packets`: Immutable, pre-rendered packets with DRAFT/READY/SENT/FAILED states
+
+### Token System (16 tokens)
+Supports template replacement for email/WhatsApp/portal messages:
+- `CLIENT_NAME`, `CNPJ`, `UCS`, `DISTRIBUTOR`
+- `ANNUAL_MWH`, `MONTHLY_MWH`, `RFO_NUMBER`
+- `CONTACT_NAME`, `START_DATE`, `DEADLINE_HOURS`, `DEADLINE_DATE`
+- `RFO_NOTES`, `PRIORITY`, `OTIMA_CONTACT`, `OTIMA_EMAIL`, `OTIMA_PHONE`
+
+### Submission Channels
+- **Email**: Subject/body templates with token replacement
+- **WhatsApp**: Message template with token replacement
+- **Portal**: URL and instructions for manual submission
+- **Excel Template**: Future support for structured file uploads
+
+### API Endpoints
+**RFQ Adapters:**
+- `GET /api/supplier-rfq-adapters` - List all adapters
+- `GET/POST /api/suppliers/:id/rfq-adapters` - Get or create adapter for supplier
+- `POST /api/rfq-adapters/:id/retire` - Retire an adapter version
+
+**RFQ Packets:**
+- `GET /api/rfq-packets` - List all packets
+- `GET /api/rfo/:rfoId/packets` - Get packets for an RFO
+- `POST /api/rfo/:rfoId/generate-packets` - Generate packets from adapters
+- `POST /api/rfq-packets/:id/mark-sent` - Mark packet as sent
+
+### Frontend Components
+- `RFQAdaptersTab`: Multi-tab editor for channels, email, WhatsApp, fields configuration (5th tab in RevenueTab)
+- `RFODetailDialog`: View RFO details with RFQ Packets section for copy/mark-sent actions
+
+### Design Principles
+1. **Versioning**: Creating new adapter auto-retires previous ACTIVE version
+2. **Token Validation**: Missing token detection before packet generation
+3. **Immutable Packets**: Once generated, packets are snapshots that can only be marked sent
+4. **Audit Logging**: All adapter changes and packet actions logged via logAdminAction
+5. **Role-Based Access**: Only admin/ops can manage adapters and packets
