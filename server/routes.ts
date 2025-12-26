@@ -1,7 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage, db } from "./storage";
-import { eq } from "drizzle-orm";
+import { storage } from "./storage";
 import { 
   insertLeadSchema, 
   insertClientSchema, 
@@ -32,7 +31,6 @@ import {
   insertCommissionReconciliationRunSchema,
   insertCommissionReconciliationLineSchema,
   insertDealCaseSchema,
-  rfqDispatches,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState
@@ -6324,63 +6322,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res)) return;
     
     try {
-      const suppliers = await storage.getSuppliers();
-      
-      const scorecards = await Promise.all(suppliers.map(async (supplier) => {
-        // Get all quotes from this supplier
-        const quotes = await storage.getDealQuotes(0); // All quotes
-        const supplierQuotes = quotes.filter(q => q.supplierId === supplier.id);
-        
-        // Get all dispatches to this supplier
-        const allDispatches = await db.select().from(rfqDispatches).where(eq(rfqDispatches.supplierId, supplier.id));
-        
-        // Calculate metrics
-        const totalRfqsSent = allDispatches.filter(d => d.status !== 'DRAFT').length;
-        const rfqsResponded = allDispatches.filter(d => d.status === 'RESPONDED').length;
-        const responseRate = totalRfqsSent > 0 ? Math.round((rfqsResponded / totalRfqsSent) * 100) : 0;
-        
-        // Calculate average response time (hours)
-        const respondedWithTimes = allDispatches.filter(d => d.sentAt && d.respondedAt);
-        let avgResponseHours = 0;
-        if (respondedWithTimes.length > 0) {
-          const totalHours = respondedWithTimes.reduce((sum, d) => {
-            const sent = new Date(d.sentAt!).getTime();
-            const responded = new Date(d.respondedAt!).getTime();
-            return sum + (responded - sent) / (1000 * 60 * 60);
-          }, 0);
-          avgResponseHours = Math.round(totalHours / respondedWithTimes.length);
-        }
-        
-        // Win rate (deals with this supplier in WON state)
-        const deals = await storage.getDeals();
-        const wonDeals = deals.filter(d => d.status === 'WON' && supplierQuotes.some(q => q.dealId === d.id && q.isWinner));
-        const dealsQuoted = new Set(supplierQuotes.map(q => q.dealId)).size;
-        const winRate = dealsQuoted > 0 ? Math.round((wonDeals.length / dealsQuoted) * 100) : 0;
-        
-        // Average price 
-        const avgPrice = supplierQuotes.length > 0 
-          ? Math.round(supplierQuotes.reduce((sum, q) => sum + Number(q.pricePerMwh || 0), 0) / supplierQuotes.length)
-          : 0;
-        
-        return {
-          supplier,
-          totalRfqsSent,
-          rfqsResponded,
-          responseRate,
-          avgResponseHours,
-          totalQuotes: supplierQuotes.length,
-          wonDeals: wonDeals.length,
-          winRate,
-          avgPrice
-        };
-      }));
-      
-      // Sort by response rate, then win rate
-      scorecards.sort((a, b) => {
-        if (b.responseRate !== a.responseRate) return b.responseRate - a.responseRate;
-        return b.winRate - a.winRate;
-      });
-      
+      const scorecards = await storage.getSupplierScorecard();
       res.json({ success: true, scorecards });
     } catch (error: any) {
       console.error("Error generating supplier scorecard:", error);

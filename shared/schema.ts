@@ -1654,6 +1654,7 @@ export const dealQuotes = pgTable("deal_quotes", {
   receivedFromEmail: text("received_from_email"), // Contact email
   receivedFromPhone: text("received_from_phone"), // Contact phone
   attachmentDocIds: jsonb("attachment_doc_ids"), // Array of deal_documents.id references
+  rfqDispatchId: integer("rfq_dispatch_id").references(() => rfqDispatches.id), // Link to RFQ dispatch if quote came from blind auction
   
   // Normalized fields (parsed from raw)
   energyType: text("energy_type"),

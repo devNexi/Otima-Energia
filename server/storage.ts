@@ -542,6 +542,19 @@ export interface IStorage {
   // Deal Transition Overrides
   createDealTransitionOverride(data: InsertDealTransitionOverride): Promise<DealTransitionOverride>;
   getDealTransitionOverrides(dealId: string): Promise<DealTransitionOverride[]>;
+  
+  // Supplier Scorecard
+  getSupplierScorecard(): Promise<Array<{
+    supplier: Supplier;
+    totalRfqsSent: number;
+    rfqsResponded: number;
+    responseRate: number;
+    avgResponseHours: number;
+    totalQuotes: number;
+    wonDeals: number;
+    winRate: number;
+    avgPrice: number;
+  }>>;
 }
 
 export class Storage implements IStorage {
@@ -3110,6 +3123,84 @@ export class Storage implements IStorage {
     return await db.select().from(dealTransitionOverrides)
       .where(eq(dealTransitionOverrides.dealId, dealId))
       .orderBy(desc(dealTransitionOverrides.overriddenAt));
+  }
+  
+  async getSupplierScorecard(): Promise<Array<{
+    supplier: Supplier;
+    totalRfqsSent: number;
+    rfqsResponded: number;
+    responseRate: number;
+    avgResponseHours: number;
+    totalQuotes: number;
+    wonDeals: number;
+    winRate: number;
+    avgPrice: number;
+  }>> {
+    const allSuppliers = await this.getSuppliers();
+    
+    // Get dispatch stats aggregated by SQL
+    const dispatchStats = await db
+      .select({
+        supplierId: rfqDispatches.supplierId,
+        totalSent: sql<number>`COUNT(CASE WHEN ${rfqDispatches.status} != 'DRAFT' THEN 1 END)`,
+        totalResponded: sql<number>`COUNT(CASE WHEN ${rfqDispatches.status} = 'RESPONDED' THEN 1 END)`,
+        avgResponseHours: sql<number>`AVG(EXTRACT(EPOCH FROM (${rfqDispatches.respondedAt} - ${rfqDispatches.sentAt})) / 3600)`
+      })
+      .from(rfqDispatches)
+      .groupBy(rfqDispatches.supplierId);
+    
+    // Get quote stats aggregated by SQL  
+    const quoteStats = await db
+      .select({
+        supplierId: dealQuotes.supplierId,
+        totalQuotes: sql<number>`COUNT(*)`,
+        avgPrice: sql<number>`AVG(CAST(${dealQuotes.baseEnergyPriceRmwh} AS DECIMAL))`,
+        wonDeals: sql<number>`COUNT(CASE WHEN ${dealQuotes.isSelected} = true THEN 1 END)`,
+        uniqueDeals: sql<number>`COUNT(DISTINCT ${dealQuotes.dealId})`
+      })
+      .from(dealQuotes)
+      .groupBy(dealQuotes.supplierId);
+    
+    // Build lookup maps
+    const dispatchMap = new Map(dispatchStats.map(d => [d.supplierId, d]));
+    const quoteMap = new Map(quoteStats.map(q => [q.supplierId, q]));
+    
+    // Combine into scorecards
+    const scorecards = allSuppliers.map(supplier => {
+      const dispatch = dispatchMap.get(supplier.id) || { totalSent: 0, totalResponded: 0, avgResponseHours: null };
+      const quote = quoteMap.get(supplier.id) || { totalQuotes: 0, avgPrice: null, wonDeals: 0, uniqueDeals: 0 };
+      
+      const totalRfqsSent = Number(dispatch.totalSent) || 0;
+      const rfqsResponded = Number(dispatch.totalResponded) || 0;
+      const responseRate = totalRfqsSent > 0 ? Math.round((rfqsResponded / totalRfqsSent) * 100) : 0;
+      const avgResponseHours = Math.round(Number(dispatch.avgResponseHours) || 0);
+      
+      const totalQuotes = Number(quote.totalQuotes) || 0;
+      const wonDeals = Number(quote.wonDeals) || 0;
+      const uniqueDeals = Number(quote.uniqueDeals) || 0;
+      const winRate = uniqueDeals > 0 ? Math.round((wonDeals / uniqueDeals) * 100) : 0;
+      const avgPrice = Math.round(Number(quote.avgPrice) || 0);
+      
+      return {
+        supplier,
+        totalRfqsSent,
+        rfqsResponded,
+        responseRate,
+        avgResponseHours,
+        totalQuotes,
+        wonDeals,
+        winRate,
+        avgPrice
+      };
+    });
+    
+    // Sort by response rate, then win rate
+    scorecards.sort((a, b) => {
+      if (b.responseRate !== a.responseRate) return b.responseRate - a.responseRate;
+      return b.winRate - a.winRate;
+    });
+    
+    return scorecards;
   }
 }
 
