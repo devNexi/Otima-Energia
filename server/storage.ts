@@ -49,6 +49,8 @@ import {
   type NotificationQueue, type InsertNotificationQueue,
   type Partner, type InsertPartner,
   type PartnerReferral, type InsertPartnerReferral,
+  type SupplierRfqAdapter, type InsertSupplierRfqAdapter,
+  type RfqPacket, type InsertRfqPacket,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -60,7 +62,8 @@ import {
   clientUsagePeriods, supplierPlaybooks, supplierReportImports,
   commissionReconciliationRuns, commissionReconciliationLines, dealCases,
   complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue,
-  partners, partnerReferrals
+  partners, partnerReferrals,
+  supplierRfqAdapters, rfqPackets
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -473,6 +476,20 @@ export interface IStorage {
   getPartner(id: number): Promise<Partner | undefined>;
   getPartnerByEmail(email: string): Promise<Partner | undefined>;
   updatePartner(id: number, data: Partial<InsertPartner & { status?: string; approvedAt?: Date; approvedBy?: string; rejectedAt?: Date; rejectedReason?: string; referralCode?: string }>): Promise<Partner | undefined>;
+  
+  // Supplier RFQ Adapters
+  createSupplierRfqAdapter(data: InsertSupplierRfqAdapter): Promise<SupplierRfqAdapter>;
+  getSupplierRfqAdapters(supplierId: number): Promise<SupplierRfqAdapter[]>;
+  getActiveSupplierRfqAdapter(supplierId: number): Promise<SupplierRfqAdapter | undefined>;
+  getSupplierRfqAdapter(id: number): Promise<SupplierRfqAdapter | undefined>;
+  retireSupplierRfqAdapter(id: number, retiredBy: string): Promise<SupplierRfqAdapter | undefined>;
+  
+  // RFQ Packets
+  createRfqPacket(data: InsertRfqPacket): Promise<RfqPacket>;
+  getRfqPacketsForRfo(rfoRequestId: number): Promise<RfqPacket[]>;
+  getRfqPacket(id: number): Promise<RfqPacket | undefined>;
+  updateRfqPacket(id: number, data: Partial<RfqPacket>): Promise<RfqPacket | undefined>;
+  markRfqPacketSent(id: number, sentBy: string, sendMethod: string, communicationLogId?: number): Promise<RfqPacket | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -2657,6 +2674,114 @@ export class Storage implements IStorage {
 
   async updatePartner(id: number, data: Partial<InsertPartner & { status?: string; approvedAt?: Date; approvedBy?: string; rejectedAt?: Date; rejectedReason?: string; referralCode?: string }>): Promise<Partner | undefined> {
     const result = await db.update(partners).set(data).where(eq(partners.id, id)).returning();
+    return result[0];
+  }
+  
+  // Supplier RFQ Adapters
+  async createSupplierRfqAdapter(data: InsertSupplierRfqAdapter): Promise<SupplierRfqAdapter> {
+    // First, retire any existing ACTIVE adapter for this supplier
+    const existing = await db.select().from(supplierRfqAdapters)
+      .where(and(
+        eq(supplierRfqAdapters.supplierId, data.supplierId),
+        eq(supplierRfqAdapters.status, 'ACTIVE')
+      ));
+    
+    if (existing.length > 0) {
+      await db.update(supplierRfqAdapters)
+        .set({ 
+          status: 'RETIRED', 
+          retiredAt: new Date(),
+          retiredBy: data.createdBy 
+        })
+        .where(eq(supplierRfqAdapters.id, existing[0].id));
+    }
+    
+    // Get next version for this supplier
+    const maxVersion = await db.select({ max: sql<number>`COALESCE(MAX(version), 0)` })
+      .from(supplierRfqAdapters)
+      .where(eq(supplierRfqAdapters.supplierId, data.supplierId));
+    
+    const nextVersion = (maxVersion[0]?.max || 0) + 1;
+    
+    const result = await db.insert(supplierRfqAdapters).values({
+      ...data,
+      version: nextVersion,
+      status: 'ACTIVE',
+    }).returning();
+    
+    return result[0];
+  }
+  
+  async getSupplierRfqAdapters(supplierId: number): Promise<SupplierRfqAdapter[]> {
+    return await db.select().from(supplierRfqAdapters)
+      .where(eq(supplierRfqAdapters.supplierId, supplierId))
+      .orderBy(desc(supplierRfqAdapters.version));
+  }
+  
+  async getActiveSupplierRfqAdapter(supplierId: number): Promise<SupplierRfqAdapter | undefined> {
+    const result = await db.select().from(supplierRfqAdapters)
+      .where(and(
+        eq(supplierRfqAdapters.supplierId, supplierId),
+        eq(supplierRfqAdapters.status, 'ACTIVE')
+      ));
+    return result[0];
+  }
+  
+  async getSupplierRfqAdapter(id: number): Promise<SupplierRfqAdapter | undefined> {
+    const result = await db.select().from(supplierRfqAdapters)
+      .where(eq(supplierRfqAdapters.id, id));
+    return result[0];
+  }
+  
+  async retireSupplierRfqAdapter(id: number, retiredBy: string): Promise<SupplierRfqAdapter | undefined> {
+    const result = await db.update(supplierRfqAdapters)
+      .set({ 
+        status: 'RETIRED', 
+        retiredAt: new Date(),
+        retiredBy 
+      })
+      .where(eq(supplierRfqAdapters.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // RFQ Packets
+  async createRfqPacket(data: InsertRfqPacket): Promise<RfqPacket> {
+    const result = await db.insert(rfqPackets).values(data).returning();
+    return result[0];
+  }
+  
+  async getRfqPacketsForRfo(rfoRequestId: number): Promise<RfqPacket[]> {
+    return await db.select().from(rfqPackets)
+      .where(eq(rfqPackets.rfoRequestId, rfoRequestId))
+      .orderBy(rfqPackets.supplierId);
+  }
+  
+  async getRfqPacket(id: number): Promise<RfqPacket | undefined> {
+    const result = await db.select().from(rfqPackets)
+      .where(eq(rfqPackets.id, id));
+    return result[0];
+  }
+  
+  async updateRfqPacket(id: number, data: Partial<RfqPacket>): Promise<RfqPacket | undefined> {
+    const result = await db.update(rfqPackets)
+      .set(data)
+      .where(eq(rfqPackets.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async markRfqPacketSent(id: number, sentBy: string, sendMethod: string, communicationLogId?: number): Promise<RfqPacket | undefined> {
+    const result = await db.update(rfqPackets)
+      .set({ 
+        packetStatus: 'SENT',
+        sentAt: new Date(),
+        sentBy,
+        sendMethodUsed: sendMethod,
+        communicationLogId: communicationLogId || null
+      })
+      .where(eq(rfqPackets.id, id))
+      .returning();
     return result[0];
   }
 }
