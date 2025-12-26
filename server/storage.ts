@@ -51,6 +51,8 @@ import {
   type PartnerReferral, type InsertPartnerReferral,
   type SupplierRfqAdapter, type InsertSupplierRfqAdapter,
   type RfqPacket, type InsertRfqPacket,
+  type ClientDossier, type InsertClientDossier,
+  type ClientDossierSnapshot, type InsertClientDossierSnapshot,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -63,7 +65,8 @@ import {
   commissionReconciliationRuns, commissionReconciliationLines, dealCases,
   complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue,
   partners, partnerReferrals,
-  supplierRfqAdapters, rfqPackets
+  supplierRfqAdapters, rfqPackets,
+  clientDossiers, clientDossierSnapshots
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -491,6 +494,19 @@ export interface IStorage {
   updateRfqPacket(id: number, data: Partial<RfqPacket>): Promise<RfqPacket | undefined>;
   markRfqPacketSent(id: number, sentBy: string, sendMethod: string, communicationLogId?: number): Promise<RfqPacket | undefined>;
   recordManualSend(rfoRequestId: number, supplierId: number, userId: string, channel: string, notes: string): Promise<RfqPacket>;
+  
+  // Client Dossiers
+  getClientDossier(clientId: number): Promise<ClientDossier | undefined>;
+  getDossierById(id: number): Promise<ClientDossier | undefined>;
+  createClientDossier(data: InsertClientDossier): Promise<ClientDossier>;
+  updateClientDossier(id: number, data: Partial<InsertClientDossier>, userId: string): Promise<ClientDossier | undefined>;
+  markDossierReady(id: number, userId: string): Promise<ClientDossier | undefined>;
+  lockDossier(id: number, userId: string): Promise<ClientDossier | undefined>;
+  
+  // Client Dossier Snapshots
+  createDossierSnapshot(data: InsertClientDossierSnapshot): Promise<ClientDossierSnapshot>;
+  getDossierSnapshot(id: number): Promise<ClientDossierSnapshot | undefined>;
+  getDossierSnapshots(dossierId: number): Promise<ClientDossierSnapshot[]>;
 }
 
 export class Storage implements IStorage {
@@ -2804,6 +2820,90 @@ export class Storage implements IStorage {
       missingRequirements: []
     }).returning();
     return result[0];
+  }
+  
+  // Client Dossiers
+  async getClientDossier(clientId: number): Promise<ClientDossier | undefined> {
+    const result = await db.select().from(clientDossiers)
+      .where(eq(clientDossiers.clientId, clientId));
+    return result[0];
+  }
+  
+  async getDossierById(id: number): Promise<ClientDossier | undefined> {
+    const result = await db.select().from(clientDossiers)
+      .where(eq(clientDossiers.id, id));
+    return result[0];
+  }
+  
+  async createClientDossier(data: InsertClientDossier): Promise<ClientDossier> {
+    const result = await db.insert(clientDossiers).values(data).returning();
+    return result[0];
+  }
+  
+  async updateClientDossier(id: number, data: Partial<InsertClientDossier>, userId: string): Promise<ClientDossier | undefined> {
+    const dossier = await this.getDossierById(id);
+    if (!dossier || dossier.status === 'LOCKED') {
+      return undefined;
+    }
+    const result = await db.update(clientDossiers)
+      .set({ ...data, updatedAt: new Date(), updatedBy: userId })
+      .where(eq(clientDossiers.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async markDossierReady(id: number, userId: string): Promise<ClientDossier | undefined> {
+    const dossier = await this.getDossierById(id);
+    if (!dossier || dossier.status === 'LOCKED') {
+      return undefined;
+    }
+    const result = await db.update(clientDossiers)
+      .set({ 
+        status: 'READY', 
+        lastValidatedAt: new Date(), 
+        validatedBy: userId,
+        updatedAt: new Date(),
+        updatedBy: userId
+      })
+      .where(eq(clientDossiers.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async lockDossier(id: number, userId: string): Promise<ClientDossier | undefined> {
+    const dossier = await this.getDossierById(id);
+    if (!dossier || dossier.status !== 'READY') {
+      return undefined;
+    }
+    const result = await db.update(clientDossiers)
+      .set({ 
+        status: 'LOCKED', 
+        lockedAt: new Date(), 
+        lockedBy: userId,
+        updatedAt: new Date(),
+        updatedBy: userId
+      })
+      .where(eq(clientDossiers.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // Client Dossier Snapshots
+  async createDossierSnapshot(data: InsertClientDossierSnapshot): Promise<ClientDossierSnapshot> {
+    const result = await db.insert(clientDossierSnapshots).values(data).returning();
+    return result[0];
+  }
+  
+  async getDossierSnapshot(id: number): Promise<ClientDossierSnapshot | undefined> {
+    const result = await db.select().from(clientDossierSnapshots)
+      .where(eq(clientDossierSnapshots.id, id));
+    return result[0];
+  }
+  
+  async getDossierSnapshots(dossierId: number): Promise<ClientDossierSnapshot[]> {
+    return await db.select().from(clientDossierSnapshots)
+      .where(eq(clientDossierSnapshots.clientDossierId, dossierId))
+      .orderBy(desc(clientDossierSnapshots.createdAt));
   }
 }
 
