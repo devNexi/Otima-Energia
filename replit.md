@@ -258,9 +258,23 @@ Supports template replacement for email/WhatsApp/portal messages:
 - `GET /api/rfo/:rfoId/packets` - Get packets for an RFO
 - `POST /api/rfo/:rfoId/generate-packets` - Generate packets from adapters
 - `POST /api/rfq-packets/:id/mark-sent` - Mark packet as sent
+- `POST /api/rfo/:rfoId/record-manual-send` - Record manual send outside system
+
+### Relationship Intelligence
+Track supplier communication preferences and response behavior:
+- `relationshipNotes`: Free-form notes about supplier relationship
+- `preferredContactId`: FK to preferred contact in supplier_contacts
+- `responseBehavior`: JSONB with `preferred_channel`, `best_hours`, `format_preference`, `notes`
+
+### Manual Send Override
+Support RFQ sends outside the system with full audit trail:
+- `isManualSend`: Boolean flag for packets sent manually
+- `manualSendNotes`: What was sent, to whom, details
+- `manualSendChannel`: EMAIL, WHATSAPP, PHONE, PORTAL, OTHER
+- Nullable `adapterId`/`adapterVersion` for manual packets
 
 ### Frontend Components
-- `RFQAdaptersTab`: Multi-tab editor for channels, email, WhatsApp, fields configuration (5th tab in RevenueTab)
+- `RFQAdaptersTab`: Multi-tab editor for channels, email, WhatsApp, fields, relationship configuration (5th tab in RevenueTab)
 - `RFODetailDialog`: View RFO details with RFQ Packets section for copy/mark-sent actions
 
 ### Design Principles
@@ -269,3 +283,4 @@ Supports template replacement for email/WhatsApp/portal messages:
 3. **Immutable Packets**: Once generated, packets are snapshots that can only be marked sent
 4. **Audit Logging**: All adapter changes and packet actions logged via logAdminAction
 5. **Role-Based Access**: Only admin/ops can manage adapters and packets
+6. **Manual Override**: Support for tracking RFQs sent via other channels with full logging
