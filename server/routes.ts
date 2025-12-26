@@ -3931,7 +3931,9 @@ export async function registerRoutes(
       const { 
         toState, triggeredBy, triggeredByType, reason, notes, requiresApproval,
         // LOST transition fields (required when transitioning to LOST)
-        lostReasonCategory, lostSupplierId, lostNotes
+        lostReasonCategory, lostSupplierId, lostNotes,
+        // Admin override fields (only admins can use)
+        adminOverride, overrideConfirmation, overrideReason
       } = req.body;
       
       if (!toState || !triggeredBy || !triggeredByType) {
@@ -3988,7 +3990,7 @@ export async function registerRoutes(
       }
       
       // HARD COMPLIANCE CHECK: No bypass allowed except for system transitions
-      // Admin override requires explicit audit trail entry
+      // Admin can override with typed confirmation + justification
       if (triggeredByType !== 'system') {
         const compliance = await storage.validateTransitionCompliance(
           req.params.id,
@@ -3997,12 +3999,72 @@ export async function registerRoutes(
         );
         
         if (!compliance.canTransition) {
-          return res.status(400).json({ 
-            success: false, 
-            error: "Cannot proceed. The following compliance items are missing.",
-            complianceBlocked: true,
-            missingRequirements: compliance.missingRequirements
-          });
+          // Check for admin override
+          if (adminOverride) {
+            // Validate admin role
+            if (!user || user.role !== 'admin') {
+              return res.status(403).json({ 
+                success: false, 
+                error: "Only admins can override compliance checks" 
+              });
+            }
+            
+            // Require typed confirmation "OVERRIDE"
+            if (overrideConfirmation !== 'OVERRIDE') {
+              return res.status(400).json({ 
+                success: false, 
+                error: "Must type 'OVERRIDE' to confirm bypass of compliance checks" 
+              });
+            }
+            
+            // Require justification reason
+            if (!overrideReason || overrideReason.length < 10) {
+              return res.status(400).json({ 
+                success: false, 
+                error: "Override reason must be at least 10 characters" 
+              });
+            }
+            
+            // Log the override to audit table
+            await storage.createDealTransitionOverride({
+              dealId: req.params.id,
+              fromState: deal.status,
+              toState,
+              blockersOverridden: compliance.missingRequirements,
+              overrideReason,
+              typedConfirmation: overrideConfirmation,
+              overriddenBy: user.id
+            });
+            
+            // Log audit event for override
+            await logAuditEvent({
+              actor: user.username,
+              actorRole: user.role,
+              actorIp: req.ip || null,
+              userAgent: req.get("User-Agent") || null,
+              action: "DEAL_TRANSITION_OVERRIDE",
+              entityType: "deal",
+              entityId: null,
+              dealId: req.params.id,
+              details: { 
+                fromState: deal.status, 
+                toState, 
+                overrideReason,
+                blockersOverridden: compliance.missingRequirements 
+              }
+            });
+            
+            // Proceed with transition despite blockers
+          } else {
+            // No override - return the blocking errors
+            return res.status(400).json({ 
+              success: false, 
+              error: "Cannot proceed. The following compliance items are missing.",
+              complianceBlocked: true,
+              missingRequirements: compliance.missingRequirements,
+              canOverride: user?.role === 'admin'
+            });
+          }
         }
       }
       
@@ -5964,6 +6026,371 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error getting next action:", error);
       res.status(500).json({ success: false, error: "Failed to get next action" });
+    }
+  });
+  
+  // ============== SUPPLIER RFQ ADAPTER ==============
+  
+  // --- Supplier RFQ Playbooks ---
+  app.get("/api/supplier-rfq-playbooks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const playbooks = await storage.getAllActivePlaybooks();
+      res.json({ success: true, playbooks });
+    } catch (error: any) {
+      console.error("Error fetching playbooks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbooks" });
+    }
+  });
+  
+  app.get("/api/suppliers/:supplierId/rfq-playbook", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const playbook = await storage.getActivePlaybookForSupplier(supplierId);
+      res.json({ success: true, playbook: playbook || null });
+    } catch (error: any) {
+      console.error("Error fetching playbook:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbook" });
+    }
+  });
+  
+  app.get("/api/suppliers/:supplierId/rfq-playbooks/history", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const playbooks = await storage.getSupplierRfqPlaybooks(supplierId);
+      res.json({ success: true, playbooks });
+    } catch (error: any) {
+      console.error("Error fetching playbook history:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbook history" });
+    }
+  });
+  
+  app.post("/api/suppliers/:supplierId/rfq-playbook", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: "Only admins can create playbooks" });
+      }
+      
+      const supplierId = parseInt(req.params.supplierId);
+      const { preferredChannel, requiredFields, emailConfig, whatsappConfig, portalConfig, slaConfig, internalNotes } = req.body;
+      
+      if (!preferredChannel || !['EMAIL', 'WHATSAPP', 'PORTAL', 'PHONE'].includes(preferredChannel)) {
+        return res.status(400).json({ success: false, error: "preferredChannel must be EMAIL, WHATSAPP, PORTAL, or PHONE" });
+      }
+      
+      const playbook = await storage.createSupplierRfqPlaybook({
+        supplierId,
+        preferredChannel,
+        requiredFields: requiredFields || [],
+        emailConfig: emailConfig || null,
+        whatsappConfig: whatsappConfig || null,
+        portalConfig: portalConfig || null,
+        slaConfig: slaConfig || { responseDaysDefault: 3, responseMaxDays: 5, followupIntervalHours: 24 },
+        internalNotes: internalNotes || null,
+        createdBy: user.id
+      });
+      
+      res.json({ success: true, playbook });
+    } catch (error: any) {
+      console.error("Error creating playbook:", error);
+      res.status(500).json({ success: false, error: "Failed to create playbook" });
+    }
+  });
+  
+  // --- RFQ Dispatches ---
+  app.get("/api/deals/:dealId/rfq-dispatches", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dispatches = await storage.getRfqDispatchesForDeal(req.params.dealId);
+      
+      // Enrich with supplier info
+      const enriched = await Promise.all(dispatches.map(async (d) => {
+        const supplier = await storage.getSupplier(d.supplierId);
+        const playbook = d.supplierRfqPlaybookId ? await storage.getSupplierRfqPlaybook(d.supplierRfqPlaybookId) : null;
+        return { ...d, supplier, playbook };
+      }));
+      
+      res.json({ success: true, dispatches: enriched });
+    } catch (error: any) {
+      console.error("Error fetching dispatches:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dispatches" });
+    }
+  });
+  
+  app.post("/api/deals/:dealId/rfq-dispatches", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
+      const { supplierId, channelUsed, messageSubject, messageBody, attachments, localOverrides, overrideReason } = req.body;
+      
+      if (!supplierId || !channelUsed) {
+        return res.status(400).json({ success: false, error: "supplierId and channelUsed are required" });
+      }
+      
+      // Get playbook if exists
+      const playbook = await storage.getActivePlaybookForSupplier(supplierId);
+      
+      // Get deal's dossier snapshot if locked
+      const deal = await storage.getDeal(req.params.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const dossier = await storage.getClientDossier(deal.clientId);
+      let snapshotId = null;
+      
+      // If dossier is READY, auto-lock it and create snapshot before sending RFQ
+      if (dossier && dossier.status === 'READY') {
+        await storage.lockDossier(dossier.id, user?.id || 'system');
+        const snapshot = await storage.createDossierSnapshot({
+          clientDossierId: dossier.id,
+          snapshotVersion: 1,
+          snapshotData: {
+            dossier,
+            snapshotReason: 'RFQ_SENT',
+            dealId: req.params.dealId
+          },
+          createdBy: user?.id || null,
+          snapshotReason: 'RFQ_SENT'
+        });
+        snapshotId = snapshot.id;
+      } else if (dossier && dossier.status === 'LOCKED') {
+        // Get latest snapshot
+        const snapshots = await storage.getDossierSnapshots(dossier.id);
+        if (snapshots.length > 0) {
+          snapshotId = snapshots[0].id;
+        }
+      }
+      
+      const dispatch = await storage.createRfqDispatch({
+        dealId: req.params.dealId,
+        supplierId,
+        supplierRfqPlaybookId: playbook?.id || null,
+        playbookVersion: playbook?.version || null,
+        dossierSnapshotId: snapshotId,
+        channelUsed,
+        status: 'DRAFT',
+        messageSubject: messageSubject || null,
+        messageBody: messageBody || null,
+        attachments: attachments || [],
+        localOverrides: localOverrides || null,
+        overrideReason: overrideReason || null,
+        createdBy: user?.id || null,
+        assignedToUserId: user?.id || null
+      });
+      
+      res.json({ success: true, dispatch });
+    } catch (error: any) {
+      console.error("Error creating dispatch:", error);
+      res.status(500).json({ success: false, error: "Failed to create dispatch" });
+    }
+  });
+  
+  // Mark dispatch as sent (starts SLA timer)
+  app.post("/api/rfq-dispatches/:id/mark-sent", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const id = parseInt(req.params.id);
+      const { responseDueDays } = req.body;
+      
+      const dispatch = await storage.getRfqDispatch(id);
+      if (!dispatch) {
+        return res.status(404).json({ success: false, error: "Dispatch not found" });
+      }
+      
+      // Calculate due date based on playbook SLA or provided value
+      const playbook = dispatch.supplierRfqPlaybookId 
+        ? await storage.getSupplierRfqPlaybook(dispatch.supplierRfqPlaybookId) 
+        : null;
+      
+      const slaConfig = playbook?.slaConfig as { responseDaysDefault?: number } | null;
+      const daysUntilDue = responseDueDays || slaConfig?.responseDaysDefault || 3;
+      const dueAt = new Date();
+      dueAt.setDate(dueAt.getDate() + daysUntilDue);
+      
+      const updated = await storage.markRfqDispatchSent(id, dueAt);
+      
+      res.json({ success: true, dispatch: updated });
+    } catch (error: any) {
+      console.error("Error marking dispatch sent:", error);
+      res.status(500).json({ success: false, error: "Failed to mark dispatch sent" });
+    }
+  });
+  
+  // Mark dispatch as responded
+  app.post("/api/rfq-dispatches/:id/mark-responded", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.markRfqDispatchResponded(id);
+      
+      if (!updated) {
+        return res.status(404).json({ success: false, error: "Dispatch not found" });
+      }
+      
+      res.json({ success: true, dispatch: updated });
+    } catch (error: any) {
+      console.error("Error marking dispatch responded:", error);
+      res.status(500).json({ success: false, error: "Failed to mark dispatch responded" });
+    }
+  });
+  
+  // Log follow-up sent
+  app.post("/api/rfq-dispatches/:id/followup", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.incrementFollowupCount(id);
+      
+      if (!updated) {
+        return res.status(404).json({ success: false, error: "Dispatch not found" });
+      }
+      
+      res.json({ success: true, dispatch: updated });
+    } catch (error: any) {
+      console.error("Error logging followup:", error);
+      res.status(500).json({ success: false, error: "Failed to log followup" });
+    }
+  });
+  
+  // Get overdue dispatches (for Ops dashboard)
+  app.get("/api/rfq-dispatches/overdue", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dispatches = await storage.getOverdueRfqDispatches();
+      
+      // Enrich with supplier and deal info
+      const enriched = await Promise.all(dispatches.map(async (d) => {
+        const supplier = await storage.getSupplier(d.supplierId);
+        const deal = await storage.getDeal(d.dealId);
+        const client = deal ? await storage.getClient(deal.clientId) : null;
+        return { ...d, supplier, deal, client };
+      }));
+      
+      res.json({ success: true, dispatches: enriched });
+    } catch (error: any) {
+      console.error("Error fetching overdue dispatches:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch overdue dispatches" });
+    }
+  });
+  
+  // Get awaiting response dispatches
+  app.get("/api/rfq-dispatches/awaiting", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dispatches = await storage.getAwaitingResponseDispatches();
+      
+      // Enrich with supplier and deal info
+      const enriched = await Promise.all(dispatches.map(async (d) => {
+        const supplier = await storage.getSupplier(d.supplierId);
+        const deal = await storage.getDeal(d.dealId);
+        const client = deal ? await storage.getClient(deal.clientId) : null;
+        const hoursRemaining = d.dueAt ? Math.round((new Date(d.dueAt).getTime() - Date.now()) / (1000 * 60 * 60)) : null;
+        return { ...d, supplier, deal, client, hoursRemaining, isOverdue: hoursRemaining !== null && hoursRemaining < 0 };
+      }));
+      
+      res.json({ success: true, dispatches: enriched });
+    } catch (error: any) {
+      console.error("Error fetching awaiting dispatches:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch awaiting dispatches" });
+    }
+  });
+  
+  // --- Dossier Edit Logs ---
+  app.get("/api/dossiers/:dossierId/edit-logs", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const dossierId = parseInt(req.params.dossierId);
+      const logs = await storage.getDossierEditLogs(dossierId);
+      res.json({ success: true, logs });
+    } catch (error: any) {
+      console.error("Error fetching edit logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch edit logs" });
+    }
+  });
+  
+  // --- Deal Transition Overrides ---
+  app.get("/api/deals/:dealId/transition-overrides", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const overrides = await storage.getDealTransitionOverrides(req.params.dealId);
+      res.json({ success: true, overrides });
+    } catch (error: any) {
+      console.error("Error fetching overrides:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch overrides" });
+    }
+  });
+  
+  // --- Blind Auction Summary for Deal ---
+  app.get("/api/deals/:dealId/blind-auction", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const deal = await storage.getDeal(req.params.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const dispatches = await storage.getRfqDispatchesForDeal(req.params.dealId);
+      const client = await storage.getClient(deal.clientId);
+      const dossier = client ? await storage.getClientDossier(client.id) : null;
+      
+      // Get all suppliers with active playbooks
+      const allPlaybooks = await storage.getAllActivePlaybooks();
+      const supplierIds = allPlaybooks.map(p => p.supplierId);
+      const suppliers = await Promise.all(supplierIds.map(id => storage.getSupplier(id)));
+      
+      // Check dossier readiness
+      const dossierReady = dossier?.status === 'READY' || dossier?.status === 'LOCKED';
+      
+      // Stats
+      const sent = dispatches.filter(d => d.status === 'SENT' || d.status === 'RESPONDED').length;
+      const responded = dispatches.filter(d => d.status === 'RESPONDED').length;
+      const overdue = dispatches.filter(d => d.status === 'SENT' && d.dueAt && new Date(d.dueAt) < new Date()).length;
+      const awaitingResponse = dispatches.filter(d => d.status === 'SENT').length;
+      
+      res.json({
+        success: true,
+        deal,
+        client,
+        dossier: dossier ? { id: dossier.id, status: dossier.status } : null,
+        dossierReady,
+        dispatches,
+        availableSuppliers: suppliers.filter(Boolean),
+        stats: {
+          totalSuppliers: suppliers.length,
+          sent,
+          responded,
+          overdue,
+          awaitingResponse
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching blind auction data:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch blind auction data" });
     }
   });
 
