@@ -87,6 +87,15 @@ interface Supplier {
   status: string;
 }
 
+interface SupplierContact {
+  id: number;
+  supplierId: number;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
 const SAMPLE_TOKEN_DATA = {
   CLIENT_NAME: "Empresa ABC Ltda",
   CNPJ: "12.345.678/0001-90",
@@ -140,8 +149,20 @@ export function RFQAdaptersTab() {
     enabled: !!selectedSupplierId && !!sessionId,
   });
 
+  const { data: contactsData } = useQuery({
+    queryKey: ["/api/suppliers", selectedSupplierId, "contacts"],
+    queryFn: async () => {
+      if (!selectedSupplierId) return { contacts: [] };
+      const res = await fetch(`/api/suppliers/${selectedSupplierId}/contacts`, { headers: authHeaders });
+      if (!res.ok) throw new Error("Failed to fetch contacts");
+      return res.json();
+    },
+    enabled: !!selectedSupplierId && !!sessionId,
+  });
+
   const suppliers: Supplier[] = suppliersData?.suppliers || [];
   const adapters: SupplierRfqAdapter[] = adaptersData?.adapters || [];
+  const supplierContacts: SupplierContact[] = contactsData?.contacts || [];
   const activeAdapter = adapters.find(a => a.status === "ACTIVE");
 
   const [formData, setFormData] = useState({
@@ -680,6 +701,35 @@ Obrigado!`,
             </TabsContent>
 
             <TabsContent value="relationship" className="space-y-4 pt-4">
+              <div>
+                <Label htmlFor="preferredContact">Preferred Contact</Label>
+                <Select
+                  value={formData.preferredContactId?.toString() || ""}
+                  onValueChange={(val) =>
+                    setFormData({
+                      ...formData,
+                      preferredContactId: val ? parseInt(val) : null,
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1" data-testid="select-preferred-contact">
+                    <SelectValue placeholder="Select preferred contact..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supplierContacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id.toString()}>
+                        {contact.name} {contact.role ? `(${contact.role})` : ""} {contact.email ? `- ${contact.email}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {supplierContacts.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No contacts registered for this supplier. Add contacts in Supplier Management.
+                  </p>
+                )}
+              </div>
+              
               <div>
                 <Label htmlFor="relationshipNotes">Relationship Notes</Label>
                 <Textarea
