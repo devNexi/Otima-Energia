@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { BillUploadSection } from "@/components/BillUploadSection";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
+import { RFODetailDialog } from "@/components/rfo/RFODetailDialog";
 import { ClientEnergyProfile } from "@/components/ecos/ClientEnergyProfile";
 import { EcosDashboard } from "@/components/ecos/EcosDashboard";
 import { DealRegistry } from "@/components/deals/DealRegistry";
@@ -88,6 +89,15 @@ export default function Admin() {
   const [snapshotLead, setSnapshotLead] = useState<{ id: number; name: string } | null>(null);
   const [snapshotViewMode, setSnapshotViewMode] = useState<"create" | "view">("create");
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  const [selectedRfo, setSelectedRfo] = useState<{
+    id: number;
+    rfoNumber: string;
+    clientId: number;
+    status: string;
+    responseDeadline: string;
+    sentCount: number;
+    responseCount: number;
+  } | null>(null);
   
   const getDefaultTab = (role: string | undefined) => {
     if (role === "ops") return "ops-dashboard";
@@ -1146,7 +1156,20 @@ export default function Admin() {
                                 {t("rfo.tracker.responses")}: {rfo.responseCount || 0}/{rfo.sentCount || 0}
                               </div>
                             </div>
-                            <Button size="sm" variant="outline" data-testid={`button-rfo-details-${rfo.id}`}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setSelectedRfo({
+                                id: rfo.id,
+                                rfoNumber: rfo.rfoNumber,
+                                clientId: rfo.clientId,
+                                status: rfo.status,
+                                responseDeadline: rfo.responseDeadline,
+                                sentCount: rfo.sentCount || 0,
+                                responseCount: rfo.responseCount || 0,
+                              })}
+                              data-testid={`button-rfo-details-${rfo.id}`}
+                            >
                               {t("rfo.view_details")}
                             </Button>
                           </div>
@@ -1199,6 +1222,14 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </div>
+
+              {selectedRfo && (
+                <RFODetailDialog
+                  rfo={selectedRfo}
+                  open={!!selectedRfo}
+                  onOpenChange={(open) => !open && setSelectedRfo(null)}
+                />
+              )}
             </TabsContent>
           )}
 
