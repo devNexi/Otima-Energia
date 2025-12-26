@@ -14,6 +14,7 @@ import { useI18n } from "@/lib/i18n";
 import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
 import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChecklistTab";
 import { NextActionWidget } from "@/components/widgets/NextActionWidget";
+import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -33,7 +34,8 @@ import {
   Check,
   X,
   Briefcase,
-  ShieldCheck
+  ShieldCheck,
+  Send
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -305,6 +307,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <FileText className="w-4 h-4" />
             {language === "pt" ? "Visão Geral" : "Overview"}
           </TabsTrigger>
+          <TabsTrigger value="rfq" className="flex items-center gap-2" data-testid="tab-rfq">
+            <Send className="w-4 h-4" />
+            {language === "pt" ? "RFQ" : "RFQ"}
+          </TabsTrigger>
           <TabsTrigger value="quotes" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
             {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
@@ -330,6 +336,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             {language === "pt" ? "Conformidade" : "Compliance"}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="rfq">
+          <BlindAuctionPanel dealId={dealId} />
+        </TabsContent>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
