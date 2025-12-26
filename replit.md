@@ -1,7 +1,7 @@
 # Ótima Energia
 
 ## Overview
-Ótima Energia is a tech-driven energy brokerage platform for the Brazilian free electricity market. It functions as both a marketing website and a CRM-lite system, managing client leads, bill uploads, and quote requests. The platform supports inbound and outbound client acquisition through a unique portal link system for document uploads. Key capabilities include the ECOS™ system for AI-driven contract analysis and optimization, and Deal OS for revenue control and deal execution.
+Ótima Energia is a technology-driven energy brokerage platform for the Brazilian free electricity market. It combines a marketing website with a CRM-lite system, managing client leads, bill uploads, and quote requests. The platform facilitates client acquisition through a unique portal for document uploads and features the ECOS™ system for AI-driven contract analysis and optimization. Deal OS, a revenue control and deal execution system, ensures transparent deal progression and commission tracking.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -11,276 +11,53 @@ Language: English only (the website is in Portuguese, but communicate with user 
 
 ### Frontend
 - **Framework**: React 18 with TypeScript
-- **Routing**: Wouter
 - **State Management**: TanStack React Query
 - **Styling**: Tailwind CSS v4 with shadcn/ui (New York style)
-- **Animations**: Framer Motion
 - **Forms**: React Hook Form with Zod validation
 - **File Uploads**: Uppy with AWS S3 integration
 
 ### Backend
 - **Runtime**: Node.js with Express
 - **Language**: TypeScript with ESM modules
-- **Build**: esbuild (server), Vite (client)
 - **API Pattern**: RESTful endpoints (`/api/*`)
 
 ### SEO & Prerendering
-- **Static HTML Generation**: Puppeteer-based prerendering at build time
-- **Script Location**: `script/prerender.ts`
-- **Public Routes**: All marketing pages are prerendered to static HTML for crawlers and AI tools
-- **Skip Prerendering**: Set `SKIP_PRERENDER=true` to skip during development builds
-- **System Dependencies**: Requires glib, nss, X11 libs, gtk3, mesa, libxkbcommon for Puppeteer
+- **Static HTML Generation**: Puppeteer-based prerendering for marketing pages.
 
 ### Database
 - **ORM**: Drizzle ORM with PostgreSQL dialect
 - **Schema Location**: `shared/schema.ts`
-- **Migrations**: Drizzle Kit (`npm run db:push`)
+- **Migrations**: Drizzle Kit
 
 ### Key Features
-- **Portal System**: Token-based access for clients to upload energy bills, with optional access codes for added security.
-- **Data Models**: Leads, Clients, Upload Sessions, Consumption Profiles, Quote Requests, Supplier Quotes, RFO Requests, RFO Supplier Tracking, Supplier Contacts.
-- **ECOS™ System**: Proprietary AI for contract analysis and optimization, including lead snapshots, renewal tracking, benchmark review, audit trails, and client energy profiles.
-- **Deal OS**: Revenue-control and deal-execution system with an explicit state machine for deal progression, full auditability, commission tracking, immutable quote records, and detailed party structure tracking.
-
-### Path Aliases
-- `@/*` → `./client/src/*`
-- `@shared/*` → `./shared/*`
-- `@assets` → `./attached_assets/`
+- **Portal System**: Token-based access for client document uploads.
+- **Data Models**: Comprehensive models for leads, clients, upload sessions, consumption profiles, and various quote/RFO processes.
+- **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.
+- **Deal OS**: Revenue-control and deal-execution system with an explicit state machine, auditability, commission tracking, and immutable records.
+- **Client Dossier**: Canonical energy profile for each client, serving as the foundational data for RFQ workflows, with status gates and immutability after RFQ.
+- **RFQ Adapter Layer**: Multi-channel RFQ automation with templated messages and token replacement for various communication channels.
+- **Commission OS**: Usage tracking, reconciliation, and case management built on Deal OS, with detailed database tables and API endpoints for financial operations.
+- **Notification System**: Email notification infrastructure for operational alerts (e.g., `DEAL_BLOCKED`, `SLA_BREACH`), utilizing a queue-based approach.
+- **Lost Deal Intelligence**: Structured taxonomy for tracking reasons for lost deals, including client, supplier, competitive, and process categories, with analytics API.
 
 ### Authentication & Authorization
 - **Role-Based Access Control**: `admin`, `ops`, `sales` roles.
-- **Auth Flow**: Session-based authentication via localStorage for `/admin` routes.
-- **API Endpoints**: Login, logout, register, current user info, setup check.
+- **Auth Flow**: Session-based authentication.
 
 ## External Dependencies
 
 ### Cloud Services
-- **Google Cloud Storage**: For file uploads via `@google-cloud/storage`.
-- **Replit Object Storage**: Alternative storage with custom ACL.
+- **Google Cloud Storage**: For file uploads.
+- **Replit Object Storage**: Alternative storage.
 
 ### Database
 - **PostgreSQL**: Primary database.
-- **connect-pg-simple**: For session storage in PostgreSQL.
+- **connect-pg-simple**: For session storage.
 
 ### Key npm Packages
 - **UI Components**: Radix UI.
-- **Email**: Nodemailer for sending portal links.
+- **Email**: Nodemailer.
 - **Authentication**: Passport.js with passport-local strategy.
-- **Payments**: Stripe integration (future use).
-- **Data Processing**: xlsx, nanoid/uuid.
-
-### Environment Variables
-- `DATABASE_URL`
-- `PUBLIC_OBJECT_SEARCH_PATHS`
-- `PRIVATE_OBJECT_DIR`
-
-## Deal OS (Revenue Control System)
-
-Deal OS is the authoritative source of financial truth for Ótima Energia - separate from CRM.
-
-### Design Principles
-1. **Explicit State Machine**: 10 states with validated transitions
-2. **Full Auditability**: Every state change recorded with timestamp, actor, reason
-3. **Commission Tracking**: FUTURE → PENDING → INVOICED → PAID with explicit state machine
-4. **Immutable Records**: Quote SHA-256 hashes, commission snapshots locked at CONTRACT_SIGNED
-5. **Party Structure**: Legal entities, brands, intermediaries, commission payers
-6. **Accrual Basis**: contracted_volume | actual_consumption | hybrid
-
-### Deal States
-DRAFT → RFQ_SENT → QUOTES_RECEIVED → OFFER_SELECTED → ONBOARDING_PENDING → CONTRACT_SIGNED → SUPPLY_LIVE → CONTRACT_ENDED → CLOSED
-(LOST is terminal, reachable from pre-signature states)
-
-### New API Endpoints (Commission OS Ready)
-**Commission Terms Snapshots:**
-- `GET/POST /api/deals/:id/commission-snapshots`
-- `GET /api/deals/:id/commission-snapshots/active`
-- `POST /api/deals/:dealId/commission-snapshots/:snapshotId/supersede`
-
-**Deal Disputes:**
-- `GET /api/disputes` (filter by ?status=)
-- `GET/POST /api/deals/:id/disputes`
-- `PATCH /api/disputes/:id`
-- `POST /api/disputes/:id/resolve`
-
-**Checklist Requirements:**
-- `GET/POST /api/deal-checklist-requirements`
-- `PATCH/DELETE /api/deal-checklist-requirements/:id`
-
-**Supplier SLA Tracking:**
-- `GET /api/supplier-sla/breaches`
-- `GET /api/deals/:id/sla-tracking`
-- `GET /api/suppliers/:id/sla-tracking`
-- `POST /api/supplier-sla`
-- `POST /api/supplier-sla/:id/response`
-
-## Commission OS (Phase 1)
-
-Commission OS is the usage tracking, reconciliation, and case management system built on top of Deal OS.
-
-### Database Tables
-- `client_usage_periods`: Monthly energy consumption tracking per client/deal
-- `supplier_playbooks`: Supplier configuration with versioning (payment cadence, SLA targets, rules)
-- `supplier_report_imports`: Batch import tracking for supplier commission reports
-- `commission_reconciliation_runs`: Monthly/ad-hoc reconciliation runs
-- `commission_reconciliation_lines`: Line-by-line expected vs reported vs paid tracking
-- `deal_cases`: Issue/blocker tracking with SLA and convert-to-lost capability
-
-### Key Enums
-- `usage_source_type`: BILL_OCR, CLIENT_CSV, SUPPLIER_REPORT, MANUAL
-- `usage_status`: DRAFT, VERIFIED, INVALID
-- `payment_cadence`: UPFRONT, MONTHLY, QUARTERLY, MIXED
-- `reconciliation_run_type`: MONTHLY_CLOSE, ADHOC
-- `reconciliation_run_status`: OPEN, FINALIZED
-- `reconciliation_line_status`: OPEN, MATCHED, DISPUTED, RECONCILED
-- `case_type`: RETURNED, STUCK, CREDIT_REJECTED, METERING_DELAY, DOCS_PENDING, etc.
-- `case_severity`: LOW, MED, HIGH
-- `case_status`: OPEN, IN_PROGRESS, ESCALATED, RESOLVED, CONVERTED_TO_LOST
-
-### API Endpoints
-**Usage Tracking:**
-- `GET/POST /api/usage` (filter by clientId, dealId)
-- `GET/PATCH/DELETE /api/usage/:id`
-- `POST /api/usage/:id/verify`
-
-**Supplier Playbooks:**
-- `GET /api/supplier-playbooks`
-- `GET/POST /api/suppliers/:id/playbook`
-- `GET /api/suppliers/:id/playbook/versions`
-
-**Report Imports:**
-- `GET/POST /api/supplier-report-imports`
-- `GET/PATCH /api/supplier-report-imports/:id`
-
-**Reconciliation:**
-- `GET/POST /api/reconciliation-runs`
-- `GET /api/reconciliation-runs/:id` (includes lines)
-- `POST /api/reconciliation-runs/:id/finalize`
-- `POST /api/reconciliation-runs/:runId/generate-lines`
-- `GET/POST /api/reconciliation-lines`
-- `GET/PATCH /api/reconciliation-lines/:id`
-- `POST /api/reconciliation-lines/:id/raise-dispute`
-
-**Deal Cases:**
-- `GET /api/cases` (filter by dealId, status, severity)
-- `GET/POST /api/deals/:id/cases`
-- `GET/PATCH /api/cases/:id`
-- `POST /api/cases/:id/convert-to-lost`
-
-### Frontend Components
-- `UsageTab`: Energy consumption tracking with verify workflow
-- `PlaybooksTab`: Supplier configuration with version history
-- `ReconciliationTab`: Monthly/ad-hoc runs with variance dashboard
-- `DealCasesTab`: Per-deal case management with convert-to-lost
-
-### Design Principles
-1. **Verification Workflow**: Usage periods start as DRAFT, require manual VERIFIED status
-2. **Automatic Versioning**: Creating new playbook auto-retires previous active version
-3. **Reconciliation Lines**: One line per deal per period, tracks expected/reported/paid/variance
-4. **Case → LOST**: Cases can trigger deal state machine transition to LOST terminal state
-5. **No Automation Logic**: All tables are clean CRUD - ready for future orchestration layer
-
-## Notification System
-
-### Overview
-Email notification infrastructure for operational alerts. Queues notifications for delivery via SendGrid or Resend when configured.
-
-### Notification Types
-- `DEAL_BLOCKED`: Deals blocked by incomplete compliance requirements
-- `SLA_BREACH`: Cases that have exceeded their SLA deadline
-- `COMMISSION_OVERDUE`: Commission events past their expected date
-
-### Database Table
-- `notification_queue`: Stores pending, sent, and failed notifications with full audit trail
-
-### API Endpoints
-- `POST /api/notifications/check` (Admin only): Triggers notification generation and processing
-- `GET /api/notifications/pending` (Admin/Ops): View pending notification queue
-
-### Environment Variables
-- `OPS_NOTIFICATION_EMAIL` or `ADMIN_EMAIL`: Recipient for notification emails
-- `SENDGRID_API_KEY` or `RESEND_API_KEY`: Email service credentials (when configured)
-
-### Design Principles
-1. **Queue-Based**: Notifications are queued first, processed separately
-2. **Configurable Recipients**: Uses environment variable for notification email
-3. **Graceful Degradation**: Without email service configured, logs notification intent
-4. **Role-Guarded**: Endpoints protected by appropriate role checks
-
-## Lost Deal Intelligence
-
-### Structured Reason Taxonomy (20+ categories)
-**Client Reasons**: CLIENT_NO_RESPONSE, CLIENT_PRICE_SENSITIVE, CLIENT_INTERNAL_CHANGE, CLIENT_RELOCATED, CLIENT_CLOSED
-**Supplier Reasons**: SUPPLIER_REJECTED_CREDIT, SUPPLIER_VOLUME_MINIMUM, SUPPLIER_NO_QUOTE, SUPPLIER_CONTRACT_TERMS
-**Competitive Reasons**: LOST_TO_COMPETITOR, INCUMBENT_RETENTION, PRICE_NOT_COMPETITIVE
-**Process Reasons**: PROCESS_TIMEOUT, DOCS_NOT_PROVIDED, MIGRATION_FAILED, REGULATORY_BLOCK
-**Other**: OTHER (requires notes)
-
-### Tracking Fields
-- `lost_reason_category`: Structured category from taxonomy
-- `lost_supplier_id`: If lost to specific supplier
-- `lost_stage`: Deal state when lost
-- `lost_by_user_id`: User who marked deal as LOST
-- `lost_at`: Timestamp of LOST transition
-- `lost_notes`: Mandatory if reason is OTHER
-
-### Analytics API
-- `GET /api/analytics/lost-deals`: Aggregated views by reason, supplier, stage, user
-
-## Supplier RFQ Adapter Layer
-
-Multi-channel RFQ automation system for configuring per-supplier quote request methods with templated messages.
-
-### Database Tables
-- `supplier_rfq_adapters`: Versioned adapter configurations with ACTIVE/RETIRED status tracking
-- `rfq_packets`: Immutable, pre-rendered packets with DRAFT/READY/SENT/FAILED states
-
-### Token System (16 tokens)
-Supports template replacement for email/WhatsApp/portal messages:
-- `CLIENT_NAME`, `CNPJ`, `UCS`, `DISTRIBUTOR`
-- `ANNUAL_MWH`, `MONTHLY_MWH`, `RFO_NUMBER`
-- `CONTACT_NAME`, `START_DATE`, `DEADLINE_HOURS`, `DEADLINE_DATE`
-- `RFO_NOTES`, `PRIORITY`, `OTIMA_CONTACT`, `OTIMA_EMAIL`, `OTIMA_PHONE`
-
-### Submission Channels
-- **Email**: Subject/body templates with token replacement
-- **WhatsApp**: Message template with token replacement
-- **Portal**: URL and instructions for manual submission
-- **Excel Template**: Future support for structured file uploads
-
-### API Endpoints
-**RFQ Adapters:**
-- `GET /api/supplier-rfq-adapters` - List all adapters
-- `GET/POST /api/suppliers/:id/rfq-adapters` - Get or create adapter for supplier
-- `POST /api/rfq-adapters/:id/retire` - Retire an adapter version
-
-**RFQ Packets:**
-- `GET /api/rfq-packets` - List all packets
-- `GET /api/rfo/:rfoId/packets` - Get packets for an RFO
-- `POST /api/rfo/:rfoId/generate-packets` - Generate packets from adapters
-- `POST /api/rfq-packets/:id/mark-sent` - Mark packet as sent
-- `POST /api/rfo/:rfoId/record-manual-send` - Record manual send outside system
-
-### Relationship Intelligence
-Track supplier communication preferences and response behavior:
-- `relationshipNotes`: Free-form notes about supplier relationship
-- `preferredContactId`: FK to preferred contact in supplier_contacts
-- `responseBehavior`: JSONB with `preferred_channel`, `best_hours`, `format_preference`, `notes`
-
-### Manual Send Override
-Support RFQ sends outside the system with full audit trail:
-- `isManualSend`: Boolean flag for packets sent manually
-- `manualSendNotes`: What was sent, to whom, details
-- `manualSendChannel`: EMAIL, WHATSAPP, PHONE, PORTAL, OTHER
-- Nullable `adapterId`/`adapterVersion` for manual packets
-
-### Frontend Components
-- `RFQAdaptersTab`: Multi-tab editor for channels, email, WhatsApp, fields, relationship configuration (5th tab in RevenueTab)
-- `RFODetailDialog`: View RFO details with RFQ Packets section for copy/mark-sent actions
-
-### Design Principles
-1. **Versioning**: Creating new adapter auto-retires previous ACTIVE version
-2. **Token Validation**: Missing token detection before packet generation
-3. **Immutable Packets**: Once generated, packets are snapshots that can only be marked sent
-4. **Audit Logging**: All adapter changes and packet actions logged via logAdminAction
-5. **Role-Based Access**: Only admin/ops can manage adapters and packets
-6. **Manual Override**: Support for tracking RFQs sent via other channels with full logging
+- **Payments**: Stripe (future use).
+- **Data Processing**: xlsx.
+```
