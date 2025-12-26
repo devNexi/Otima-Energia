@@ -2820,6 +2820,23 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Client not found" });
       }
       
+      // DOSSIER GATE: Check if client has a READY or LOCKED dossier
+      const dossier = await storage.getClientDossier(rfo.clientId);
+      if (!dossier) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Client dossier is required before generating RFQ packets. Please create and complete the client dossier first.",
+          errorCode: "DOSSIER_REQUIRED"
+        });
+      }
+      if (dossier.status === 'DRAFT') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Client dossier must be marked as READY before generating RFQ packets. Please review and mark the dossier as ready.",
+          errorCode: "DOSSIER_NOT_READY"
+        });
+      }
+      
       // Get suppliers on this RFO
       const supplierTracking = await storage.getRfoSupplierTracking(rfoId);
       
@@ -3037,6 +3054,34 @@ export async function registerRoutes(
       // Mark packet as sent
       const updatedPacket = await storage.markRfqPacketSent(packetId, userId, sendMethodUsed, communicationLogId);
       
+      // DOSSIER LOCK & SNAPSHOT: Lock dossier on first send, create snapshot for every RFQ send
+      const rfo = await storage.getRfoRequest(packet.rfoRequestId);
+      if (rfo) {
+        const dossier = await storage.getClientDossier(rfo.clientId);
+        if (dossier) {
+          // Lock the dossier if not already locked
+          if (dossier.status !== 'LOCKED') {
+            await storage.lockClientDossier(dossier.id, userId);
+            
+            // Audit log for first lock
+            await storage.logAdminAction({
+              action: 'DOSSIER_LOCKED_FOR_RFQ',
+              entityType: 'client_dossier',
+              entityId: dossier.id,
+              actor: userId,
+              detailsJson: { 
+                clientId: rfo.clientId,
+                rfoRequestId: packet.rfoRequestId,
+                packetId 
+              },
+            });
+          }
+          
+          // Always create immutable snapshot for every RFQ send (audit trail)
+          await storage.createDossierSnapshot(dossier.id, 'RFQ', packet.rfoRequestId, userId);
+        }
+      }
+      
       // Update RFO supplier tracking status
       const rfoTracking = await storage.getRfoSupplierTracking(packet.rfoRequestId);
       const tracking = rfoTracking.find(t => t.supplierId === packet.supplierId);
@@ -3096,8 +3141,47 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Supplier not found" });
       }
       
+      // DOSSIER GATE: Check if client has a READY or LOCKED dossier
+      const dossier = await storage.getClientDossier(rfo.clientId);
+      if (!dossier) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Client dossier is required before sending RFQ. Please create and complete the client dossier first.",
+          errorCode: "DOSSIER_REQUIRED"
+        });
+      }
+      if (dossier.status === 'DRAFT') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Client dossier must be marked as READY before sending RFQ. Please review and mark the dossier as ready.",
+          errorCode: "DOSSIER_NOT_READY"
+        });
+      }
+      
       // Create manual send packet
       const packet = await storage.recordManualSend(rfoId, supplierId, userId, channel, notes);
+      
+      // DOSSIER LOCK & SNAPSHOT: Lock dossier on first send, create snapshot for every RFQ send
+      if (dossier.status !== 'LOCKED') {
+        // Lock the dossier
+        await storage.lockClientDossier(dossier.id, userId);
+        
+        // Audit log for first lock
+        await storage.logAdminAction({
+          action: 'DOSSIER_LOCKED_FOR_RFQ',
+          entityType: 'client_dossier',
+          entityId: dossier.id,
+          actor: userId,
+          detailsJson: { 
+            clientId: rfo.clientId,
+            rfoRequestId: rfoId,
+            packetId: packet.id 
+          },
+        });
+      }
+      
+      // Always create immutable snapshot for every RFQ send (audit trail)
+      await storage.createDossierSnapshot(dossier.id, 'RFQ', rfoId, userId);
       
       // Update RFO supplier tracking status
       const rfoTracking = await storage.getRfoSupplierTracking(rfoId);
