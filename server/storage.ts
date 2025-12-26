@@ -53,6 +53,10 @@ import {
   type RfqPacket, type InsertRfqPacket,
   type ClientDossier, type InsertClientDossier,
   type ClientDossierSnapshot, type InsertClientDossierSnapshot,
+  type SupplierRfqPlaybook, type InsertSupplierRfqPlaybook,
+  type RfqDispatch, type InsertRfqDispatch,
+  type DossierEditLog, type InsertDossierEditLog,
+  type DealTransitionOverride, type InsertDealTransitionOverride,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -66,7 +70,8 @@ import {
   complianceChecklistRequirements, dealChecklistItems, communicationLog, playbookDealSnapshots, notificationQueue,
   partners, partnerReferrals,
   supplierRfqAdapters, rfqPackets,
-  clientDossiers, clientDossierSnapshots
+  clientDossiers, clientDossierSnapshots,
+  supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -507,6 +512,35 @@ export interface IStorage {
   createDossierSnapshot(data: InsertClientDossierSnapshot): Promise<ClientDossierSnapshot>;
   getDossierSnapshot(id: number): Promise<ClientDossierSnapshot | undefined>;
   getDossierSnapshots(dossierId: number): Promise<ClientDossierSnapshot[]>;
+  
+  // ============== SUPPLIER RFQ ADAPTER ==============
+  // Supplier RFQ Playbooks
+  createSupplierRfqPlaybook(data: InsertSupplierRfqPlaybook): Promise<SupplierRfqPlaybook>;
+  getSupplierRfqPlaybook(id: number): Promise<SupplierRfqPlaybook | undefined>;
+  getActivePlaybookForSupplier(supplierId: number): Promise<SupplierRfqPlaybook | undefined>;
+  getSupplierRfqPlaybooks(supplierId: number): Promise<SupplierRfqPlaybook[]>;
+  getAllActivePlaybooks(): Promise<SupplierRfqPlaybook[]>;
+  retirePlaybook(id: number, userId: string): Promise<SupplierRfqPlaybook | undefined>;
+  
+  // RFQ Dispatches
+  createRfqDispatch(data: InsertRfqDispatch): Promise<RfqDispatch>;
+  getRfqDispatch(id: number): Promise<RfqDispatch | undefined>;
+  getRfqDispatchesForDeal(dealId: string): Promise<RfqDispatch[]>;
+  getRfqDispatchesForSupplier(supplierId: number): Promise<RfqDispatch[]>;
+  updateRfqDispatch(id: number, data: Partial<InsertRfqDispatch>): Promise<RfqDispatch | undefined>;
+  markRfqDispatchSent(id: number, dueAt: Date): Promise<RfqDispatch | undefined>;
+  markRfqDispatchResponded(id: number): Promise<RfqDispatch | undefined>;
+  getOverdueRfqDispatches(): Promise<RfqDispatch[]>;
+  getAwaitingResponseDispatches(): Promise<RfqDispatch[]>;
+  incrementFollowupCount(id: number): Promise<RfqDispatch | undefined>;
+  
+  // Dossier Edit Logs
+  createDossierEditLog(data: InsertDossierEditLog): Promise<DossierEditLog>;
+  getDossierEditLogs(dossierId: number): Promise<DossierEditLog[]>;
+  
+  // Deal Transition Overrides
+  createDealTransitionOverride(data: InsertDealTransitionOverride): Promise<DealTransitionOverride>;
+  getDealTransitionOverrides(dealId: string): Promise<DealTransitionOverride[]>;
 }
 
 export class Storage implements IStorage {
@@ -2904,6 +2938,177 @@ export class Storage implements IStorage {
     return await db.select().from(clientDossierSnapshots)
       .where(eq(clientDossierSnapshots.clientDossierId, dossierId))
       .orderBy(desc(clientDossierSnapshots.createdAt));
+  }
+  
+  // ============== SUPPLIER RFQ ADAPTER ==============
+  
+  // Supplier RFQ Playbooks
+  async createSupplierRfqPlaybook(data: InsertSupplierRfqPlaybook): Promise<SupplierRfqPlaybook> {
+    // Auto-retire previous active version
+    const existing = await this.getActivePlaybookForSupplier(data.supplierId);
+    if (existing) {
+      await this.retirePlaybook(existing.id, data.createdBy || '');
+    }
+    
+    // Get next version number
+    const allPlaybooks = await this.getSupplierRfqPlaybooks(data.supplierId);
+    const nextVersion = allPlaybooks.length > 0 ? Math.max(...allPlaybooks.map(p => p.version)) + 1 : 1;
+    
+    const result = await db.insert(supplierRfqPlaybooks).values({
+      ...data,
+      version: nextVersion,
+      status: 'ACTIVE'
+    }).returning();
+    return result[0];
+  }
+  
+  async getSupplierRfqPlaybook(id: number): Promise<SupplierRfqPlaybook | undefined> {
+    const result = await db.select().from(supplierRfqPlaybooks)
+      .where(eq(supplierRfqPlaybooks.id, id));
+    return result[0];
+  }
+  
+  async getActivePlaybookForSupplier(supplierId: number): Promise<SupplierRfqPlaybook | undefined> {
+    const result = await db.select().from(supplierRfqPlaybooks)
+      .where(and(
+        eq(supplierRfqPlaybooks.supplierId, supplierId),
+        eq(supplierRfqPlaybooks.status, 'ACTIVE')
+      ));
+    return result[0];
+  }
+  
+  async getSupplierRfqPlaybooks(supplierId: number): Promise<SupplierRfqPlaybook[]> {
+    return await db.select().from(supplierRfqPlaybooks)
+      .where(eq(supplierRfqPlaybooks.supplierId, supplierId))
+      .orderBy(desc(supplierRfqPlaybooks.version));
+  }
+  
+  async getAllActivePlaybooks(): Promise<SupplierRfqPlaybook[]> {
+    return await db.select().from(supplierRfqPlaybooks)
+      .where(eq(supplierRfqPlaybooks.status, 'ACTIVE'));
+  }
+  
+  async retirePlaybook(id: number, userId: string): Promise<SupplierRfqPlaybook | undefined> {
+    const result = await db.update(supplierRfqPlaybooks)
+      .set({ 
+        status: 'RETIRED', 
+        retiredAt: new Date(), 
+        retiredBy: userId 
+      })
+      .where(eq(supplierRfqPlaybooks.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // RFQ Dispatches
+  async createRfqDispatch(data: InsertRfqDispatch): Promise<RfqDispatch> {
+    const result = await db.insert(rfqDispatches).values(data).returning();
+    return result[0];
+  }
+  
+  async getRfqDispatch(id: number): Promise<RfqDispatch | undefined> {
+    const result = await db.select().from(rfqDispatches)
+      .where(eq(rfqDispatches.id, id));
+    return result[0];
+  }
+  
+  async getRfqDispatchesForDeal(dealId: string): Promise<RfqDispatch[]> {
+    return await db.select().from(rfqDispatches)
+      .where(eq(rfqDispatches.dealId, dealId))
+      .orderBy(desc(rfqDispatches.createdAt));
+  }
+  
+  async getRfqDispatchesForSupplier(supplierId: number): Promise<RfqDispatch[]> {
+    return await db.select().from(rfqDispatches)
+      .where(eq(rfqDispatches.supplierId, supplierId))
+      .orderBy(desc(rfqDispatches.createdAt));
+  }
+  
+  async updateRfqDispatch(id: number, data: Partial<InsertRfqDispatch>): Promise<RfqDispatch | undefined> {
+    const result = await db.update(rfqDispatches)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(rfqDispatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async markRfqDispatchSent(id: number, dueAt: Date): Promise<RfqDispatch | undefined> {
+    const result = await db.update(rfqDispatches)
+      .set({ 
+        status: 'SENT', 
+        sentAt: new Date(), 
+        dueAt,
+        updatedAt: new Date() 
+      })
+      .where(eq(rfqDispatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async markRfqDispatchResponded(id: number): Promise<RfqDispatch | undefined> {
+    const result = await db.update(rfqDispatches)
+      .set({ 
+        status: 'RESPONDED', 
+        respondedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(rfqDispatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async getOverdueRfqDispatches(): Promise<RfqDispatch[]> {
+    return await db.select().from(rfqDispatches)
+      .where(and(
+        eq(rfqDispatches.status, 'SENT'),
+        lte(rfqDispatches.dueAt, new Date())
+      ))
+      .orderBy(rfqDispatches.dueAt);
+  }
+  
+  async getAwaitingResponseDispatches(): Promise<RfqDispatch[]> {
+    return await db.select().from(rfqDispatches)
+      .where(eq(rfqDispatches.status, 'SENT'))
+      .orderBy(rfqDispatches.dueAt);
+  }
+  
+  async incrementFollowupCount(id: number): Promise<RfqDispatch | undefined> {
+    const dispatch = await this.getRfqDispatch(id);
+    if (!dispatch) return undefined;
+    
+    const result = await db.update(rfqDispatches)
+      .set({ 
+        followupCount: (dispatch.followupCount || 0) + 1,
+        lastFollowupAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(rfqDispatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // Dossier Edit Logs
+  async createDossierEditLog(data: InsertDossierEditLog): Promise<DossierEditLog> {
+    const result = await db.insert(dossierEditLogs).values(data).returning();
+    return result[0];
+  }
+  
+  async getDossierEditLogs(dossierId: number): Promise<DossierEditLog[]> {
+    return await db.select().from(dossierEditLogs)
+      .where(eq(dossierEditLogs.dossierId, dossierId))
+      .orderBy(desc(dossierEditLogs.editedAt));
+  }
+  
+  // Deal Transition Overrides
+  async createDealTransitionOverride(data: InsertDealTransitionOverride): Promise<DealTransitionOverride> {
+    const result = await db.insert(dealTransitionOverrides).values(data).returning();
+    return result[0];
+  }
+  
+  async getDealTransitionOverrides(dealId: string): Promise<DealTransitionOverride[]> {
+    return await db.select().from(dealTransitionOverrides)
+      .where(eq(dealTransitionOverrides.dealId, dealId))
+      .orderBy(desc(dealTransitionOverrides.overriddenAt));
   }
 }
 

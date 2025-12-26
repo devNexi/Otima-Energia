@@ -1,0 +1,403 @@
+Dossier status workflow (draft → ready → locked)
+
+Tell Replit:
+
+Yes, but with strict rules:
+
+DRAFT: editable (OCR corrections + manual fields)
+
+READY: “complete enough to RFQ” — still editable but only via an explicit “Edit dossier” action (logs who/why) so we preserve integrity
+
+LOCKED: immutable snapshot that was used for RFQ/quotes (or at CONTRACT_SIGNED).
+
+LOCKED should be created automatically when:
+
+RFQ is sent (lock the snapshot used), OR
+
+when the deal hits CONTRACT_SIGNED (lock final, too)
+
+UI must show:
+
+“This RFQ used Dossier vX (LOCKED at timestamp by user)”
+
+ability to compare “current draft” vs “locked snapshot used”
+
+B) Blocker checks in deal transition endpoints?
+
+Yes. 100% do it.
+If blockers only exist in the UI, users will bypass them accidentally or via edge routes. Backend must enforce gates, period.
+
+But: clarify one nuance:
+
+Deal state transitions should enforce Compliance checklist gates (already) plus the new Workflow blocker engine gates.
+
+Provide an admin-only override with:
+
+required reason
+
+typed confirmation (“OVERRIDE”)
+
+audit log entry
+
+So your answer to Replit is:
+
+“Yes, integrate blocker checks into the deal transition endpoints and enforce workflow gates server-side. Add admin override with mandatory reason + audit log.”
+
+2) What we build next (Build #4 focus)
+
+Build #4 should now be: Blind Auction + Supplier RFQ Adapter (the moat)
+Because:
+
+you already have Deals + RFQs + Dossier
+
+now you need the “submit exactly how each supplier wants, forever” layer
+
+That’s the real system that turns your ops into a factory.
+
+✅ BUILD #4 — REPLIT SUPER PROMPT
+SUPPLIER RFQ ADAPTER + BLIND AUCTION ENGINE (ÓTIMA OS)
+
+You are working inside the existing Ótima Energia admin portal.
+
+Current system already includes:
+
+Client Dossier v2 (draft → ready → locked)
+
+Deals state machine + compliance + blocker engine
+
+RFQ/RFO system (requests, templates, supplier tracking)
+
+Supplier database + contacts
+
+Proposal system
+
+Revenue tracking + playbooks + reconciliation
+
+Now build the Supplier RFQ Adapter, which allows Ótima to request quotes from any comercializadora using their preferred method/format without forcing them to change anything.
+
+This module is the operational foundation for scaling the “Blind Auction” process.
+
+0️⃣ CONCEPTUAL REQUIREMENT
+
+Brazilian suppliers are workflow-fragmented:
+
+some want email with Excel attached
+
+some want WhatsApp message template
+
+some want portal upload
+
+some want specific subject lines and data formats
+
+Ótima must adapt to them, not the reverse.
+
+So we need:
+
+a per-supplier RFQ Playbook (RFQ-specific) (not commission playbooks)
+
+an engine to generate RFQ payloads exactly as required
+
+tracking + SLA timers + follow-up automation drafts
+
+evidence logging + auditability
+
+1️⃣ DATA MODEL (ADD TABLES / FIELDS)
+A) Supplier RFQ Playbooks (new)
+
+Create table: supplier_rfq_playbooks
+
+Fields:
+
+id
+
+supplierId (FK)
+
+version (integer, autoincrement per supplier)
+
+status (ACTIVE/RETIRED)
+
+preferredChannel (EMAIL / WHATSAPP / PORTAL / OTHER)
+
+requiredFields (JSONB)
+Example keys: ucCodes, distributor, submarket, demandKw, monthlyMwh, startDate, termMonths, energyType, flexibility, guarantees, creditDocs, signerName, signerRole
+
+emailConfig (JSONB)
+
+toEmails[]
+
+ccEmails[]
+
+subjectTemplate
+
+bodyTemplate (supports variables)
+
+attachmentsRequired[] (e.g., DOSSIER_PDF, BILL_PDFS, EXCEL_LOAD_PROFILE)
+
+whatsappConfig (JSONB)
+
+phoneNumbers[]
+
+messageTemplate
+
+portalConfig (JSONB)
+
+portalUrl
+
+loginNotes
+
+uploadSteps (array)
+
+slaConfig (JSONB)
+
+quoteDueHours (e.g. 48)
+
+followupCadenceHours (e.g. [24, 48, 72])
+
+internalNotes (text) ← “Talk to Maria not general inbox”
+
+createdBy, createdAt
+
+retiredAt
+
+Rules:
+
+only one ACTIVE version per supplier
+
+creating new version auto-retires previous
+
+B) RFQ Dispatch Records (new)
+
+Create table: rfq_dispatches
+
+Fields:
+
+id
+
+dealId (FK)
+
+rfqRequestId (FK if exists)
+
+supplierId (FK)
+
+supplierRfqPlaybookId + version snapshot
+
+dossierSnapshotId (or store JSON snapshot inline)
+
+channelUsed (EMAIL/WHATSAPP/PORTAL)
+
+status (DRAFT → SENT → DELIVERED? → RESPONDED → CLOSED)
+(DELIVERED optional; if not track as SENT)
+
+sentAt
+
+dueAt
+
+lastFollowupAt
+
+followupCount
+
+assignedToUserId (ops owner)
+
+messageSubject
+
+messageBody
+
+attachments (JSONB list of doc ids)
+
+evidenceCommunicationLogId (FK to communicationLog)
+
+createdAt
+
+C) Quote intake linkage (extend existing)
+
+When a quote is received, link it to:
+
+rfqDispatchId
+
+receivedVia (EMAIL/WHATSAPP/PORTAL/MANUAL)
+
+receivedFrom (email/phone text)
+
+receivedAt
+
+(If this already exists, ensure it is wired end-to-end in UI.)
+
+2️⃣ UI: “BLIND AUCTION” FLOW (ONE CLICK, MANY SUPPLIERS)
+A) Deal Detail: new tab or panel “Blind Auction”
+
+Only show when Deal is in RFQ_SENT or earlier.
+
+Steps:
+
+Select suppliers (multi-select from supplier list)
+
+System checks prerequisites:
+
+Deal has required fields
+
+Dossier is READY (or will lock snapshot)
+
+Each supplier has ACTIVE RFQ playbook
+If missing:
+
+show blockers:
+
+“Supplier X missing RFQ playbook”
+
+“Dossier not ready”
+
+“Start date missing”
+with “Fix” deep links
+
+Preview per-supplier RFQ payload (IMPORTANT)
+For each supplier row:
+
+channel + subject/body preview
+
+required attachments checklist
+
+“Edit for this dispatch only” (local override, logged)
+
+Click “Send RFQs”
+On send:
+
+lock a DOSSIER snapshot (LOCKED) and attach to dispatch
+
+create rfq_dispatches rows
+
+create communicationLog entry per dispatch (even if sending is manual)
+
+3️⃣ SENDING MECHANISMS (LOW COST, NO OVERBUILD)
+
+We need pragmatic sending with 2 modes:
+
+Mode A: Manual-but-tracked (default)
+
+System generates:
+
+email subject/body + attachments list + “Copy” buttons
+
+WhatsApp message + “Copy” buttons
+
+portal checklist steps
+User manually sends using Gmail/WhatsApp/portal.
+Then clicks “Mark as Sent” → logs evidence.
+
+This avoids costly integrations early.
+
+Mode B: Email send via SMTP (optional now)
+
+Implement email sending behind a feature flag:
+
+if SMTP configured, allow “Send via system”
+
+otherwise fallback to copy/manual
+
+4️⃣ SLA TIMERS + FOLLOW-UP DRAFTS
+
+For each rfq_dispatch:
+
+compute dueAt = sentAt + quoteDueHours
+
+system auto-flags overdue
+
+show “Follow-up” button that generates:
+
+follow-up email/whatsapp message draft (pre-filled)
+
+increment followupCount
+
+logs communication entry when marked sent
+
+Ops dashboard should surface:
+
+“Awaiting supplier response” queue (by dueAt)
+
+“Overdue quotes” queue
+
+5️⃣ QUOTE INTAKE: FAST NORMALIZATION
+
+Create a streamlined intake UI:
+
+select rfqDispatch
+
+upload quote file OR paste email text
+
+record headline numbers quickly:
+
+price R$/MWh
+
+structure (fixed/indexed)
+
+term
+
+start
+
+notes
+
+attach evidence file
+
+auto-create SHA-256 hash if your system supports it
+
+Do not attempt full AI parsing yet.
+Just make the workflow incredibly fast and auditable.
+
+6️⃣ REPORTING: SUPPLIER PERFORMANCE SCORECARD
+
+Add a basic supplier performance view (Ops/Admin):
+Per supplier:
+
+avg response time (hours)
+
+% quotes delivered within SLA
+
+win rate (selected quotes / quotes received)
+
+disputes frequency (if relevant)
+
+“notes”
+
+This becomes negotiation ammo later.
+
+7️⃣ ACCEPTANCE TESTS
+
+Must be possible for 1 ops user to:
+
+open a Deal
+
+select 5 suppliers
+
+generate 5 supplier-specific RFQs
+
+send via copy/manual
+
+mark sent
+
+see timers running
+
+chase overdue suppliers with drafted follow-ups
+
+attach quotes to dispatches
+
+select winning quote
+
+proceed in workflow with full evidence trail
+
+No dead buttons, no missing links, no silent failures.
+
+8️⃣ DO NOT BUILD
+
+full supplier portal integrations beyond simple links/checklists
+
+AI extraction of quotes
+
+automated WhatsApp sending
+
+Keep it pragmatic, fast, and auditable.
+
+FINAL NOTE
+
+This module must feel like:
+“One click to run a market-wide auction, without forcing suppliers to change.”
+
+Build it now.

@@ -3130,3 +3130,197 @@ export const leadEcosSnapshotsRelations = relations(leadEcosSnapshots, ({ one })
     references: [marketPriceBenchmarks.id],
   }),
 }));
+
+// ============== SUPPLIER RFQ ADAPTER ==============
+
+// Supplier RFQ Playbooks - per-supplier RFQ preferences and templates
+export const supplierRfqPlaybooks = pgTable("supplier_rfq_playbooks", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  version: integer("version").default(1).notNull(),
+  status: text("status").default("ACTIVE").notNull(), // ACTIVE, RETIRED
+  
+  // Channel preference
+  preferredChannel: text("preferred_channel").notNull(), // EMAIL, WHATSAPP, PORTAL, OTHER
+  
+  // Required data fields for RFQ
+  requiredFields: jsonb("required_fields").default([]), // ['ucCodes', 'demandKw', 'monthlyMwh', ...]
+  
+  // Email configuration
+  emailConfig: jsonb("email_config"), // { toEmails[], ccEmails[], subjectTemplate, bodyTemplate, attachmentsRequired[] }
+  
+  // WhatsApp configuration  
+  whatsappConfig: jsonb("whatsapp_config"), // { phoneNumbers[], messageTemplate }
+  
+  // Portal configuration
+  portalConfig: jsonb("portal_config"), // { portalUrl, loginNotes, uploadSteps[] }
+  
+  // SLA configuration
+  slaConfig: jsonb("sla_config"), // { quoteDueHours, followupCadenceHours[] }
+  
+  // Internal notes
+  internalNotes: text("internal_notes"),
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  retiredAt: timestamp("retired_at"),
+  retiredBy: varchar("retired_by").references(() => users.id),
+});
+
+export const insertSupplierRfqPlaybookSchema = createInsertSchema(supplierRfqPlaybooks).omit({
+  id: true,
+  createdAt: true,
+  retiredAt: true,
+});
+
+export type InsertSupplierRfqPlaybook = z.infer<typeof insertSupplierRfqPlaybookSchema>;
+export type SupplierRfqPlaybook = typeof supplierRfqPlaybooks.$inferSelect;
+
+// RFQ Dispatches - individual RFQ sends to suppliers
+export const rfqDispatches = pgTable("rfq_dispatches", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  rfqRequestId: integer("rfq_request_id").references(() => rfoRequests.id),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Playbook snapshot
+  supplierRfqPlaybookId: integer("supplier_rfq_playbook_id").references(() => supplierRfqPlaybooks.id),
+  playbookVersion: integer("playbook_version"),
+  
+  // Dossier snapshot reference
+  dossierSnapshotId: integer("dossier_snapshot_id").references(() => clientDossierSnapshots.id),
+  
+  // Channel and status
+  channelUsed: text("channel_used").notNull(), // EMAIL, WHATSAPP, PORTAL, MANUAL
+  status: text("status").default("DRAFT").notNull(), // DRAFT, PENDING, SENT, DELIVERED, RESPONDED, CLOSED
+  
+  // Timing
+  sentAt: timestamp("sent_at"),
+  dueAt: timestamp("due_at"),
+  respondedAt: timestamp("responded_at"),
+  
+  // Follow-up tracking
+  lastFollowupAt: timestamp("last_followup_at"),
+  followupCount: integer("followup_count").default(0),
+  
+  // Assignment
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
+  
+  // Message content
+  messageSubject: text("message_subject"),
+  messageBody: text("message_body"),
+  attachments: jsonb("attachments").default([]), // [{ fileName, fileUrl, docType }]
+  
+  // Local overrides (edits for this dispatch only)
+  localOverrides: jsonb("local_overrides"), // { subject, body, attachments }
+  overrideReason: text("override_reason"),
+  
+  // Evidence
+  evidenceCommunicationLogId: integer("evidence_communication_log_id"),
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRfqDispatchSchema = createInsertSchema(rfqDispatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentAt: true,
+  respondedAt: true,
+});
+
+export type InsertRfqDispatch = z.infer<typeof insertRfqDispatchSchema>;
+export type RfqDispatch = typeof rfqDispatches.$inferSelect;
+
+// Dossier Edit Audit Log - tracks edits after READY status
+export const dossierEditLogs = pgTable("dossier_edit_logs", {
+  id: serial("id").primaryKey(),
+  dossierId: integer("dossier_id").references(() => clientDossiers.id).notNull(),
+  
+  // Edit details
+  editedFields: jsonb("edited_fields").notNull(), // [{ field, oldValue, newValue }]
+  editReason: text("edit_reason").notNull(),
+  
+  // Audit
+  editedBy: varchar("edited_by").references(() => users.id).notNull(),
+  editedAt: timestamp("edited_at").defaultNow().notNull(),
+});
+
+export const insertDossierEditLogSchema = createInsertSchema(dossierEditLogs).omit({
+  id: true,
+  editedAt: true,
+});
+
+export type InsertDossierEditLog = z.infer<typeof insertDossierEditLogSchema>;
+export type DossierEditLog = typeof dossierEditLogs.$inferSelect;
+
+// Deal Transition Override Logs - admin overrides of blockers
+export const dealTransitionOverrides = pgTable("deal_transition_overrides", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  
+  // Transition details
+  fromState: text("from_state").notNull(),
+  toState: text("to_state").notNull(),
+  
+  // Blockers overridden
+  blockersOverridden: jsonb("blockers_overridden").notNull(), // [{ code, title, description }]
+  
+  // Override justification
+  overrideReason: text("override_reason").notNull(),
+  typedConfirmation: text("typed_confirmation").notNull(), // Must be "OVERRIDE"
+  
+  // Audit
+  overriddenBy: varchar("overridden_by").references(() => users.id).notNull(),
+  overriddenAt: timestamp("overridden_at").defaultNow().notNull(),
+});
+
+export const insertDealTransitionOverrideSchema = createInsertSchema(dealTransitionOverrides).omit({
+  id: true,
+  overriddenAt: true,
+});
+
+export type InsertDealTransitionOverride = z.infer<typeof insertDealTransitionOverrideSchema>;
+export type DealTransitionOverride = typeof dealTransitionOverrides.$inferSelect;
+
+// Supplier RFQ Playbook Relations
+export const supplierRfqPlaybooksRelations = relations(supplierRfqPlaybooks, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierRfqPlaybooks.supplierId],
+    references: [suppliers.id],
+  }),
+  createdByUser: one(users, {
+    fields: [supplierRfqPlaybooks.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// RFQ Dispatch Relations
+export const rfqDispatchesRelations = relations(rfqDispatches, ({ one }) => ({
+  deal: one(deals, {
+    fields: [rfqDispatches.dealId],
+    references: [deals.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [rfqDispatches.supplierId],
+    references: [suppliers.id],
+  }),
+  playbook: one(supplierRfqPlaybooks, {
+    fields: [rfqDispatches.supplierRfqPlaybookId],
+    references: [supplierRfqPlaybooks.id],
+  }),
+  dossierSnapshot: one(clientDossierSnapshots, {
+    fields: [rfqDispatches.dossierSnapshotId],
+    references: [clientDossierSnapshots.id],
+  }),
+  assignedUser: one(users, {
+    fields: [rfqDispatches.assignedToUserId],
+    references: [users.id],
+  }),
+}));
+
+// ============== END SUPPLIER RFQ ADAPTER ==============
