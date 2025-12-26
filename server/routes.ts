@@ -1639,6 +1639,372 @@ export async function registerRoutes(
     }
   });
 
+  // ============== SUPPLIER RFQ ADAPTER ENDPOINTS ==============
+  
+  // Get all RFQ adapters for a supplier (includes version history)
+  app.get("/api/suppliers/:id/rfq-adapters", validateDealOsSession(['admin', 'ops']), async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const adapters = await storage.getSupplierRfqAdapters(supplierId);
+      res.json({ success: true, adapters });
+    } catch (error: any) {
+      console.error("Error fetching RFQ adapters:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch adapters" });
+    }
+  });
+  
+  // Create new RFQ adapter version for a supplier (auto-retires previous ACTIVE)
+  app.post("/api/suppliers/:id/rfq-adapters", validateDealOsSession(['admin', 'ops']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const userId = req.dealOsUser?.id;
+      
+      const adapterData = {
+        ...req.body,
+        supplierId,
+        createdBy: userId,
+      };
+      
+      const adapter = await storage.createSupplierRfqAdapter(adapterData);
+      
+      // Audit log
+      await storage.createAuditLog({
+        action: 'RFQ_ADAPTER_CREATED',
+        entityType: 'supplier_rfq_adapter',
+        entityId: adapter.id.toString(),
+        userId: userId || 'system',
+        details: { supplierId, version: adapter.version, name: adapter.name },
+      });
+      
+      res.json({ success: true, adapter });
+    } catch (error: any) {
+      console.error("Error creating RFQ adapter:", error);
+      res.status(500).json({ success: false, error: "Failed to create adapter" });
+    }
+  });
+  
+  // Get single RFQ adapter
+  app.get("/api/rfq-adapters/:id", validateDealOsSession(['admin', 'ops']), async (req, res) => {
+    try {
+      const adapter = await storage.getSupplierRfqAdapter(parseInt(req.params.id));
+      if (!adapter) {
+        return res.status(404).json({ success: false, error: "Adapter not found" });
+      }
+      res.json({ success: true, adapter });
+    } catch (error: any) {
+      console.error("Error fetching RFQ adapter:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch adapter" });
+    }
+  });
+  
+  // Retire RFQ adapter
+  app.post("/api/rfq-adapters/:id/retire", validateDealOsSession(['admin', 'ops']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const adapterId = parseInt(req.params.id);
+      const userId = req.dealOsUser?.id || 'system';
+      
+      const adapter = await storage.retireSupplierRfqAdapter(adapterId, userId);
+      if (!adapter) {
+        return res.status(404).json({ success: false, error: "Adapter not found" });
+      }
+      
+      // Audit log
+      await storage.createAuditLog({
+        action: 'RFQ_ADAPTER_RETIRED',
+        entityType: 'supplier_rfq_adapter',
+        entityId: adapterId.toString(),
+        userId,
+        details: { supplierId: adapter.supplierId, version: adapter.version },
+      });
+      
+      res.json({ success: true, adapter });
+    } catch (error: any) {
+      console.error("Error retiring RFQ adapter:", error);
+      res.status(500).json({ success: false, error: "Failed to retire adapter" });
+    }
+  });
+
+  // ============== RFQ PACKET ENDPOINTS ==============
+  
+  // Generate RFQ packets for all suppliers on an RFO
+  app.post("/api/rfo/:rfoId/generate-packets", validateDealOsSession(['admin', 'ops']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const rfoId = parseInt(req.params.rfoId);
+      const userId = req.dealOsUser?.id;
+      
+      // Get RFO details
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (!rfo) {
+        return res.status(404).json({ success: false, error: "RFO not found" });
+      }
+      
+      // Get client details
+      const client = await storage.getClient(rfo.clientId);
+      if (!client) {
+        return res.status(404).json({ success: false, error: "Client not found" });
+      }
+      
+      // Get suppliers on this RFO
+      const supplierTracking = await storage.getRfoSupplierTracking(rfoId);
+      
+      // Import token utilities
+      const { replaceTokens, buildTokenContext, validateRequiredFields, validateRequiredAttachments } = await import('./rfqTokens');
+      
+      const packets: any[] = [];
+      const errors: any[] = [];
+      
+      for (const tracking of supplierTracking) {
+        try {
+          // Get active adapter for this supplier
+          const adapter = await storage.getActiveSupplierRfqAdapter(tracking.supplierId);
+          
+          if (!adapter) {
+            errors.push({ 
+              supplierId: tracking.supplierId, 
+              error: 'No active RFQ adapter configured for this supplier' 
+            });
+            continue;
+          }
+          
+          // Get supplier contact
+          const supplierContact = await storage.getPrimarySupplierContact(tracking.supplierId);
+          
+          // Build token context
+          const tokenContext = buildTokenContext({
+            client: {
+              companyName: client.companyName || undefined,
+              cnpj: client.cnpj || undefined,
+            },
+            rfo: {
+              rfoNumber: rfo.rfoNumber,
+              snapshotConsumptionKwh: rfo.snapshotConsumptionKwh || undefined,
+              snapshotDemandaKw: rfo.snapshotDemandaKw || undefined,
+              snapshotUc: rfo.snapshotUc || undefined,
+              snapshotDistribuidora: rfo.snapshotDistribuidora || undefined,
+              snapshotContractEnd: rfo.snapshotContractEnd || undefined,
+              responseDeadline: rfo.responseDeadline,
+            },
+            supplierContact: {
+              name: supplierContact?.name,
+            },
+          });
+          
+          // Get adapter configs
+          const emailConfig = adapter.emailConfig as any || {};
+          const whatsappConfig = adapter.whatsappConfig as any || {};
+          const portalConfig = adapter.portalConfig as any || {};
+          const requiredFieldsSchema = adapter.requiredFieldsSchema as any[] || [];
+          const requiredAttachmentsSchema = adapter.requiredAttachmentsSchema as any[] || [];
+          
+          // Build resolved payload
+          const generatedPayload = {
+            email: {
+              to: emailConfig.to || (supplierContact?.email ? [supplierContact.email] : []),
+              cc: emailConfig.cc || [],
+              subject: replaceTokens(emailConfig.subjectTemplate || '', tokenContext),
+              body: replaceTokens(emailConfig.bodyTemplate || '', tokenContext),
+            },
+            whatsapp: {
+              message: replaceTokens(whatsappConfig.messageTemplate || '', tokenContext),
+            },
+            portal: {
+              url: portalConfig.url || '',
+              instructions: replaceTokens(portalConfig.instructions || '', tokenContext),
+            },
+            requiredFields: {
+              client_company_name: client.companyName,
+              cnpj: client.cnpj,
+              ucs: rfo.snapshotUc ? [rfo.snapshotUc] : [],
+              annual_mwh: rfo.snapshotConsumptionKwh ? parseFloat(String(rfo.snapshotConsumptionKwh)) * 12 / 1000 : null,
+              start_date: rfo.snapshotContractEnd,
+            },
+            attachments: [], // TODO: integrate with deal_documents / billUploads
+          };
+          
+          // Validate required fields
+          const fieldValidation = validateRequiredFields(requiredFieldsSchema, generatedPayload.requiredFields);
+          const attachmentValidation = validateRequiredAttachments(requiredAttachmentsSchema, generatedPayload.attachments);
+          
+          const missingRequirements = [
+            ...fieldValidation.missing.map(key => ({ type: 'field', key })),
+            ...attachmentValidation.missing.map(key => ({ type: 'attachment', key })),
+          ];
+          
+          const packetStatus = missingRequirements.length === 0 ? 'READY' : 'DRAFT';
+          
+          // Check if packet already exists for this RFO + supplier
+          const existingPackets = await storage.getRfqPacketsForRfo(rfoId);
+          const existingPacket = existingPackets.find(p => p.supplierId === tracking.supplierId);
+          
+          let packet;
+          if (existingPacket) {
+            // Update existing packet
+            packet = await storage.updateRfqPacket(existingPacket.id, {
+              adapterId: adapter.id,
+              adapterVersion: adapter.version,
+              packetStatus,
+              generatedPayload,
+              missingRequirements,
+            });
+          } else {
+            // Create new packet
+            packet = await storage.createRfqPacket({
+              rfoRequestId: rfoId,
+              supplierId: tracking.supplierId,
+              adapterId: adapter.id,
+              adapterVersion: adapter.version,
+              generatedPayload,
+              missingRequirements,
+              createdBy: userId,
+            });
+            
+            // Update status based on validation
+            if (packetStatus !== 'DRAFT') {
+              packet = await storage.updateRfqPacket(packet.id, { packetStatus });
+            }
+          }
+          
+          packets.push(packet);
+        } catch (err: any) {
+          errors.push({ 
+            supplierId: tracking.supplierId, 
+            error: err.message 
+          });
+        }
+      }
+      
+      // Audit log
+      await storage.createAuditLog({
+        action: 'RFQ_PACKETS_GENERATED',
+        entityType: 'rfo_request',
+        entityId: rfoId.toString(),
+        userId: userId || 'system',
+        details: { 
+          packetsCreated: packets.length, 
+          errors: errors.length,
+          supplierIds: packets.map(p => p?.supplierId) 
+        },
+      });
+      
+      res.json({ success: true, packets, errors });
+    } catch (error: any) {
+      console.error("Error generating RFQ packets:", error);
+      res.status(500).json({ success: false, error: "Failed to generate packets" });
+    }
+  });
+  
+  // Get RFQ packets for an RFO
+  app.get("/api/rfo/:rfoId/packets", validateDealOsSession(['admin', 'ops', 'sales']), async (req, res) => {
+    try {
+      const rfoId = parseInt(req.params.rfoId);
+      const packets = await storage.getRfqPacketsForRfo(rfoId);
+      
+      // Enrich with supplier names
+      const enrichedPackets = await Promise.all(packets.map(async (packet) => {
+        const supplier = await storage.getSupplier(packet.supplierId);
+        return {
+          ...packet,
+          supplierName: supplier?.name || 'Unknown',
+        };
+      }));
+      
+      res.json({ success: true, packets: enrichedPackets });
+    } catch (error: any) {
+      console.error("Error fetching RFQ packets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch packets" });
+    }
+  });
+  
+  // Get single RFQ packet
+  app.get("/api/rfq-packets/:id", validateDealOsSession(['admin', 'ops', 'sales']), async (req, res) => {
+    try {
+      const packet = await storage.getRfqPacket(parseInt(req.params.id));
+      if (!packet) {
+        return res.status(404).json({ success: false, error: "Packet not found" });
+      }
+      
+      // Enrich with supplier name
+      const supplier = await storage.getSupplier(packet.supplierId);
+      
+      res.json({ 
+        success: true, 
+        packet: {
+          ...packet,
+          supplierName: supplier?.name || 'Unknown',
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching RFQ packet:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch packet" });
+    }
+  });
+  
+  // Mark RFQ packet as sent
+  app.post("/api/rfq-packets/:packetId/mark-sent", validateDealOsSession(['admin', 'ops']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const packetId = parseInt(req.params.packetId);
+      const userId = req.dealOsUser?.id || 'system';
+      const { sendMethodUsed, notes, communicationLogId } = req.body;
+      
+      if (!sendMethodUsed || !['EMAIL', 'WHATSAPP', 'PORTAL', 'MANUAL'].includes(sendMethodUsed)) {
+        return res.status(400).json({ success: false, error: "Invalid sendMethodUsed" });
+      }
+      
+      const packet = await storage.getRfqPacket(packetId);
+      if (!packet) {
+        return res.status(404).json({ success: false, error: "Packet not found" });
+      }
+      
+      // Mark packet as sent
+      const updatedPacket = await storage.markRfqPacketSent(packetId, userId, sendMethodUsed, communicationLogId);
+      
+      // Update RFO supplier tracking status
+      const rfoTracking = await storage.getRfoSupplierTracking(packet.rfoRequestId);
+      const tracking = rfoTracking.find(t => t.supplierId === packet.supplierId);
+      if (tracking) {
+        await storage.updateRfoSupplierTracking(tracking.id, {
+          sentStatus: 'sent',
+          sentDate: new Date(),
+          sentMethod: sendMethodUsed.toLowerCase(),
+        });
+      }
+      
+      // Create communication log entry if not provided
+      if (!communicationLogId && notes) {
+        const rfo = await storage.getRfoRequest(packet.rfoRequestId);
+        if (rfo) {
+          await storage.createCommunicationLog({
+            entityType: 'rfo',
+            entityId: rfo.id.toString(),
+            direction: 'OUTBOUND',
+            channel: sendMethodUsed,
+            subject: `RFQ Packet Sent - ${rfo.rfoNumber}`,
+            content: notes,
+            createdBy: userId,
+          });
+        }
+      }
+      
+      // Audit log
+      await storage.createAuditLog({
+        action: 'RFQ_PACKET_SENT',
+        entityType: 'rfq_packet',
+        entityId: packetId.toString(),
+        userId,
+        details: { 
+          sendMethodUsed, 
+          rfoRequestId: packet.rfoRequestId,
+          supplierId: packet.supplierId 
+        },
+      });
+      
+      res.json({ success: true, packet: updatedPacket });
+    } catch (error: any) {
+      console.error("Error marking packet as sent:", error);
+      res.status(500).json({ success: false, error: "Failed to mark packet as sent" });
+    }
+  });
+
   // ============== PROPOSAL ENDPOINTS ==============
 
   // Create proposal from client + quote data
