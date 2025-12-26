@@ -1,0 +1,176 @@
+Create a full “Sandbox / Demo Mode” dataset so we can test the Blind Auction + Quote Intake + SLA + Winner selection + Deal progression end-to-end with fake data.
+
+1) Add “Demo Data Seeder” (admin-only)
+
+Create an admin-only action in Settings (or Ops Dashboard) called:
+
+“Seed Demo Data (Sandbox)”
+
+When clicked:
+
+Create a batch of fake records with obvious names so nobody confuses them with real data.
+
+Everything should include a prefix like:
+[DEMO] or TEST-
+
+Example naming conventions:
+
+Clients: TEST Client 01 - Padaria, TEST Client 02 - Hospital, TEST Client 03 - Shopping
+
+Deals: TEST Deal 01 - 24m Fixed, etc.
+
+Suppliers: TEST Supplier 01 - Email, TEST Supplier 02 - WhatsApp, TEST Supplier 03 - Portal
+
+Contacts: test.supplier01@otimaenergia.com.br etc.
+
+UC codes: TESTUC0001, TESTUC0002
+
+CNPJ: use a clearly fake placeholder like 00.000.000/0001-00 (or generate valid-format dummy numbers, but still labelled TEST)
+
+Important: Tag all seeded records with a boolean:
+
+isDemo = true
+
+2) Ensure seeded data covers the full workflow
+
+Seeder must create at minimum:
+
+Clients
+
+3 clients, each with a Dossiê in different states:
+
+Client A: DRAFT
+
+Client B: READY
+
+Client C: LOCKED
+
+Deals
+
+3 deals:
+
+Deal 1 in DRAFT
+
+Deal 2 in RFQ_SENT
+
+Deal 3 in QUOTES_RECEIVED
+
+Suppliers + Playbooks
+
+6 suppliers with different RFQ requirements:
+
+Email-only (requires attachment)
+
+Email-only (requires specific subject format + fields)
+
+WhatsApp-only (requires message template)
+
+WhatsApp + Email fallback
+
+Portal submission (URL field required)
+
+“Manual phone call” (forces internal task only)
+
+Each supplier must have:
+
+Active playbook version
+
+SLA target (24h / 48h / 72h mix)
+
+Required RFQ fields (simulate painful variety)
+
+RFO / Dispatch rows
+
+Create at least one RFO linked to Deal 2
+
+Create dispatch tracking rows across 5 suppliers
+
+Some marked:
+
+SENT
+
+VIEWED
+
+RESPONDED
+
+OVERDUE
+
+Quotes
+
+Create 5 quotes across suppliers with varied formats:
+
+One “paste email quote”
+
+One with a dummy “PDF” attachment (can be a generated placeholder PDF)
+
+One “Excel-like” attachment (CSV is fine)
+
+Include different quote structures so normalization is tested
+
+SLA breaches + Cases
+
+At least:
+
+1 SLA breach flagged
+
+1 deal case created (CREDIT_REJECTED)
+
+1 deal case created (DOCS_PENDING)
+
+Commission + Usage
+
+Create:
+
+1 deal with commission events in FUTURE
+
+1 deal with a commission event OVERDUE
+
+2 usage periods:
+
+one DRAFT
+
+one VERIFIED
+
+3) Add a “Demo Mode Banner” + filters
+
+If a user is viewing demo records, show a banner:
+“DEMO DATA — NOT REAL CLIENTS”
+
+Add filters in lists:
+
+Show Demo Only
+
+Hide Demo
+
+4) Add a “Nuke Demo Data” button
+
+Admin-only:
+“Delete all Demo Data”
+
+Deletes everything where isDemo = true
+
+Must be safe, fast, and reversible only via re-seed.
+
+5) Provide a guided test path in the UI
+
+After seeding, show a modal:
+“Run the Demo in 6 steps”
+With clickable deep-links:
+
+Open Deal 2 (RFQ_SENT)
+
+Open Dispatch table
+
+Record a quote using paste intake
+
+Record a quote with attachment
+
+Select winner
+
+Advance deal state
+
+One extra thing I strongly recommend
+
+Add environment = "sandbox" | "production" in app config, so if you ever move to production:
+
+Demo seeding is disabled unless sandbox.

@@ -66,6 +66,7 @@ export const clients = pgTable("clients", {
   segment: text("segment"), // 'SME', 'Industrial' - for ECOS benchmark matching
   region: text("region"), // 'Sudeste', 'Sul', 'Nordeste', 'Norte', 'Centro-Oeste' - for ECOS benchmark matching
   zohoId: text("zoho_id"), // Zoho CRM Contact ID for future sync
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,6 +74,7 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
   createdAt: true,
   zohoId: true,
+  isDemo: true,
 });
 
 export type InsertClient = z.infer<typeof insertClientSchema>;
@@ -164,12 +166,14 @@ export const suppliers = pgTable("suppliers", {
   website: text("website"),
   commissionTerms: text("commission_terms"), // Standard terms with this supplier
   isActive: boolean("is_active").default(true),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   id: true,
   createdAt: true,
+  isDemo: true,
 });
 
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
@@ -1586,12 +1590,14 @@ export const deals = pgTable("deals", {
   lostStage: text("lost_stage"), // Stage at which deal was lost (from DEAL_STATES)
   lostByUserId: text("lost_by_user_id"), // Sales user who was handling the deal
   lostNotes: text("lost_notes"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
 });
 
 export const insertDealSchema = createInsertSchema(deals).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  isDemo: true,
 });
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
@@ -1692,6 +1698,7 @@ export const dealQuotes = pgTable("deal_quotes", {
   receivedAt: timestamp("received_at").defaultNow().notNull(),
   normalizedBy: text("normalized_by"), // 'ai', 'user:xxx'
   normalizedAt: timestamp("normalized_at"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -1746,6 +1753,7 @@ export const dealCommissionEvents = pgTable("deal_commission_events", {
   
   // Notes
   notes: text("notes"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -1755,6 +1763,7 @@ export const insertDealCommissionEventSchema = createInsertSchema(dealCommission
   id: true,
   createdAt: true,
   updatedAt: true,
+  isDemo: true,
 });
 
 export type InsertDealCommissionEvent = z.infer<typeof insertDealCommissionEventSchema>;
@@ -2200,6 +2209,7 @@ export const clientUsagePeriods = pgTable("client_usage_periods", {
   verifiedByUserId: varchar("verified_by_user_id").references(() => users.id),
   verifiedAt: timestamp("verified_at"),
   notes: text("notes"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -2209,6 +2219,7 @@ export const insertClientUsagePeriodSchema = createInsertSchema(clientUsagePerio
   createdAt: true,
   updatedAt: true,
   verifiedAt: true,
+  isDemo: true,
 });
 export type InsertClientUsagePeriod = z.infer<typeof insertClientUsagePeriodSchema>;
 export type ClientUsagePeriod = typeof clientUsagePeriods.$inferSelect;
@@ -2337,6 +2348,7 @@ export const dealCases = pgTable("deal_cases", {
   slaDueDate: date("sla_due_date"),
   rootCause: text("root_cause"),
   resolutionSummary: text("resolution_summary"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -2345,6 +2357,7 @@ export const insertDealCaseSchema = createInsertSchema(dealCases).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  isDemo: true,
 });
 export type InsertDealCase = z.infer<typeof insertDealCaseSchema>;
 export type DealCase = typeof dealCases.$inferSelect;
@@ -2989,6 +3002,7 @@ export const clientDossiers = pgTable("client_dossiers", {
   
   // Notes
   opsNotes: text("ops_notes"),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   
   // Audit
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -3004,6 +3018,7 @@ export const insertClientDossierSchema = createInsertSchema(clientDossiers).omit
   lockedAt: true,
   lockedBy: true,
   lastValidatedAt: true,
+  isDemo: true,
 });
 
 export type InsertClientDossier = z.infer<typeof insertClientDossierSchema>;
@@ -3167,12 +3182,14 @@ export const supplierRfqPlaybooks = pgTable("supplier_rfq_playbooks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   retiredAt: timestamp("retired_at"),
   retiredBy: varchar("retired_by").references(() => users.id),
+  isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
 });
 
 export const insertSupplierRfqPlaybookSchema = createInsertSchema(supplierRfqPlaybooks).omit({
   id: true,
   createdAt: true,
   retiredAt: true,
+  isDemo: true,
 });
 
 export type InsertSupplierRfqPlaybook = z.infer<typeof insertSupplierRfqPlaybookSchema>;
@@ -3220,6 +3237,9 @@ export const rfqDispatches = pgTable("rfq_dispatches", {
   // Evidence
   evidenceCommunicationLogId: integer("evidence_communication_log_id"),
   
+  // Demo flag
+  isDemo: boolean("is_demo").default(false),
+  
   // Audit
   createdAt: timestamp("created_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
@@ -3230,6 +3250,7 @@ export const insertRfqDispatchSchema = createInsertSchema(rfqDispatches).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  isDemo: true,
   sentAt: true,
   respondedAt: true,
 });
