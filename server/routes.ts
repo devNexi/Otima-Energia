@@ -3500,6 +3500,164 @@ export async function registerRoutes(
     }
   });
 
+  // Export dossier as PDF (supplier-facing)
+  app.get("/api/dossiers/:id/pdf", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dossierId = parseInt(req.params.id);
+      const dossier = await storage.getDossierById(dossierId);
+      
+      if (!dossier) {
+        return res.status(404).json({ success: false, error: "Dossier not found" });
+      }
+      
+      // Map eligibility types to Portuguese labels
+      const eligibilityLabels: Record<string, string> = {
+        'ACL_DIRECT': 'Elegível para ACL (Consumidor Livre)',
+        'ACL_VAREJISTA': 'Elegível para ACL via Varejista',
+        'NOT_ELIGIBLE_YET': 'Não elegível / Em análise'
+      };
+      
+      const submarketLabels: Record<string, string> = {
+        'SE/CO': 'Sudeste/Centro-Oeste',
+        'S': 'Sul',
+        'NE': 'Nordeste',
+        'N': 'Norte'
+      };
+      
+      const connectionLabels: Record<string, string> = {
+        'GROUP_A': 'Grupo A (Alta/Média Tensão)',
+        'GROUP_B': 'Grupo B (Baixa Tensão)'
+      };
+      
+      // Generate HTML for PDF
+      const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Perfil de Consumo — Cliente Ótima Energia</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 40px; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0066cc; padding-bottom: 20px; }
+    .header h1 { color: #0066cc; font-size: 24px; margin-bottom: 5px; }
+    .header p { color: #666; font-size: 12px; }
+    .section { margin-bottom: 25px; }
+    .section-title { font-size: 14px; font-weight: bold; color: #0066cc; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    .row { display: flex; margin-bottom: 8px; }
+    .label { width: 200px; color: #666; font-size: 12px; }
+    .value { flex: 1; font-size: 12px; font-weight: 500; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+    th { background: #f5f5f5; color: #333; font-weight: 600; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .badge-eligible { background: #e6f7e6; color: #2e7d32; }
+    .badge-varejista { background: #fff3e0; color: #ef6c00; }
+    .badge-pending { background: #fce4ec; color: #c62828; }
+    .footer { margin-top: 40px; text-align: center; color: #999; font-size: 10px; border-top: 1px solid #ddd; padding-top: 20px; }
+    .logo-placeholder { font-size: 20px; font-weight: bold; color: #0066cc; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-placeholder">ÓTIMA ENERGIA</div>
+    <h1>Perfil de Consumo</h1>
+    <p>Documento gerado para fins de cotação no Mercado Livre de Energia</p>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Identificação do Cliente</div>
+    <div class="row"><span class="label">Razão Social:</span><span class="value">${dossier.legalName}</span></div>
+    ${dossier.tradeName ? `<div class="row"><span class="label">Nome Fantasia:</span><span class="value">${dossier.tradeName}</span></div>` : ''}
+    <div class="row"><span class="label">CNPJ:</span><span class="value">${dossier.cnpj || 'Não informado'}</span></div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Estrutura Energética</div>
+    <div class="row"><span class="label">Distribuidora:</span><span class="value">${dossier.distributor || 'Não informado'}</span></div>
+    <div class="row"><span class="label">Submercado:</span><span class="value">${dossier.submarket ? submarketLabels[dossier.submarket] || dossier.submarket : 'Não informado'}</span></div>
+    <div class="row"><span class="label">Tipo de Conexão:</span><span class="value">${dossier.connectionType ? connectionLabels[dossier.connectionType] || dossier.connectionType : 'Não informado'}</span></div>
+    <div class="row"><span class="label">Classe Tarifária:</span><span class="value">${dossier.tariffClass || 'Não informado'}</span></div>
+    <div class="row"><span class="label">Número de UCs:</span><span class="value">${dossier.numberOfUCs || 1}</span></div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Perfil de Consumo</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Métrica</th>
+          <th>Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Consumo Anual</td>
+          <td><strong>${dossier.annualConsumptionMWh ? parseFloat(dossier.annualConsumptionMWh.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' MWh' : 'Não calculado'}</strong></td>
+        </tr>
+        <tr>
+          <td>Consumo Médio Mensal</td>
+          <td>${dossier.averageMonthlyMWh ? parseFloat(dossier.averageMonthlyMWh.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' MWh' : 'Não calculado'}</td>
+        </tr>
+        <tr>
+          <td>Demanda de Pico</td>
+          <td>${dossier.peakDemandKW ? parseFloat(dossier.peakDemandKW.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' kW' : 'Não informado'}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Classificação de Elegibilidade</div>
+    <div class="row">
+      <span class="label">Status:</span>
+      <span class="value">
+        <span class="badge ${dossier.eligibilityType === 'ACL_DIRECT' ? 'badge-eligible' : dossier.eligibilityType === 'ACL_VAREJISTA' ? 'badge-varejista' : 'badge-pending'}">
+          ${eligibilityLabels[dossier.eligibilityType || 'NOT_ELIGIBLE_YET']}
+        </span>
+      </span>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>Documento gerado automaticamente pela plataforma Ótima Energia</p>
+    <p>Data de geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+    <p>Este documento é válido apenas para fins de cotação e não constitui proposta comercial.</p>
+  </div>
+</body>
+</html>
+      `;
+      
+      // Use puppeteer to generate PDF
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' }
+      });
+      
+      await browser.close();
+      
+      // Set headers for PDF download
+      const filename = `dossie_${dossier.legalName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+      
+    } catch (error: any) {
+      console.error("Error generating dossier PDF:", error);
+      res.status(500).json({ success: false, error: "Failed to generate PDF" });
+    }
+  });
+
   // --- Deal Registry ---
 
   // Get all deals
