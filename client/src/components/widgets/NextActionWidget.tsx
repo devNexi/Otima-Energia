@@ -13,7 +13,7 @@ import {
 
 interface NextActionWidgetProps {
   entityType: 'client' | 'deal';
-  entityId: number;
+  entityId: number | string;
   compact?: boolean;
 }
 

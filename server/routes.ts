@@ -5956,7 +5956,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res)) return;
     
     try {
-      const dealId = parseInt(req.params.dealId);
+      const dealId = req.params.dealId;
       const { BlockerEngine } = await import("./blockerEngine");
       const blockerEngine = new BlockerEngine(storage);
       const result = await blockerEngine.getDealNextAction(dealId);

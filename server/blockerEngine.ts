@@ -345,7 +345,7 @@ export class BlockerEngine {
     };
   }
 
-  async getDealNextAction(dealId: number): Promise<{ action: string; actionLabel: string; deepLink: string; blockers: Blocker[] }> {
+  async getDealNextAction(dealId: number | string): Promise<{ action: string; actionLabel: string; deepLink: string; blockers: Blocker[] }> {
     const deal = await this.storage.getDeal(String(dealId));
     if (!deal) {
       return {
