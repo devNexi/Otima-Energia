@@ -27,6 +27,7 @@ import TermosParcerias from "@/pages/TermosParcerias";
 import SupplierManager from "@/pages/SupplierManager";
 import ProposalTracker from "@/pages/ProposalTracker";
 import BenchmarkManager from "@/pages/BenchmarkManager";
+import AdminSettings from "@/pages/AdminSettings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/admin/suppliers" component={SupplierManager} />
       <Route path="/admin/proposals" component={ProposalTracker} />
       <Route path="/admin/benchmarks" component={BenchmarkManager} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -43,6 +43,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
+import { seedDemoData, nukeDemoData, getDemoDataStats } from "./demoSeeder";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -6404,6 +6405,87 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching blind auction data:", error);
       res.status(500).json({ success: false, error: "Failed to fetch blind auction data" });
+    }
+  });
+
+  // --- Demo Data Seeder (Admin Only) ---
+  app.get("/api/admin/demo/stats", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      const stats = await getDemoDataStats();
+      res.json({ success: true, stats });
+    } catch (error: any) {
+      console.error("Error fetching demo stats:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch demo stats" });
+    }
+  });
+  
+  app.post("/api/admin/demo/seed", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      const result = await seedDemoData();
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEMO_DATA_SEEDED",
+        entityType: "demo",
+        entityId: null,
+        detailsJson: result.summary
+      });
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error seeding demo data:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed demo data" });
+    }
+  });
+  
+  app.post("/api/admin/demo/nuke", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      const result = await nukeDemoData();
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEMO_DATA_NUKED",
+        entityType: "demo",
+        entityId: null,
+        detailsJson: result.deleted
+      });
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error nuking demo data:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to nuke demo data" });
     }
   });
 
