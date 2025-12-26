@@ -490,6 +490,7 @@ export interface IStorage {
   getRfqPacket(id: number): Promise<RfqPacket | undefined>;
   updateRfqPacket(id: number, data: Partial<RfqPacket>): Promise<RfqPacket | undefined>;
   markRfqPacketSent(id: number, sentBy: string, sendMethod: string, communicationLogId?: number): Promise<RfqPacket | undefined>;
+  recordManualSend(rfoRequestId: number, supplierId: number, userId: string, channel: string, notes: string): Promise<RfqPacket>;
 }
 
 export class Storage implements IStorage {
@@ -2782,6 +2783,26 @@ export class Storage implements IStorage {
       })
       .where(eq(rfqPackets.id, id))
       .returning();
+    return result[0];
+  }
+  
+  async recordManualSend(rfoRequestId: number, supplierId: number, userId: string, channel: string, notes: string): Promise<RfqPacket> {
+    const result = await db.insert(rfqPackets).values({
+      rfoRequestId,
+      supplierId,
+      adapterId: null,
+      adapterVersion: null,
+      packetStatus: 'MANUAL_SENT',
+      isManualSend: true,
+      manualSendNotes: notes,
+      manualSendChannel: channel,
+      createdBy: userId,
+      sentAt: new Date(),
+      sentBy: userId,
+      sendMethodUsed: 'MANUAL',
+      generatedPayload: { manual: true, notes },
+      missingRequirements: []
+    }).returning();
     return result[0];
   }
 }

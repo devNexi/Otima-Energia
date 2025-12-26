@@ -3067,6 +3067,69 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Failed to mark packet as sent" });
     }
   });
+  
+  // Record manual send for RFQ (sent outside system)
+  app.post("/api/rfo/:rfoId/record-manual-send", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const rfoId = parseInt(req.params.rfoId);
+      const userId = await getSessionUserId(req) || 'system';
+      const { supplierId, channel, notes } = req.body;
+      
+      if (!supplierId) {
+        return res.status(400).json({ success: false, error: "supplierId is required" });
+      }
+      if (!channel || !['EMAIL', 'WHATSAPP', 'PHONE', 'PORTAL', 'OTHER'].includes(channel)) {
+        return res.status(400).json({ success: false, error: "channel must be EMAIL, WHATSAPP, PHONE, PORTAL, or OTHER" });
+      }
+      if (!notes || notes.trim().length === 0) {
+        return res.status(400).json({ success: false, error: "notes are required for manual sends" });
+      }
+      
+      const rfo = await storage.getRfoRequest(rfoId);
+      if (!rfo) {
+        return res.status(404).json({ success: false, error: "RFO not found" });
+      }
+      
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(404).json({ success: false, error: "Supplier not found" });
+      }
+      
+      // Create manual send packet
+      const packet = await storage.recordManualSend(rfoId, supplierId, userId, channel, notes);
+      
+      // Update RFO supplier tracking status
+      const rfoTracking = await storage.getRfoSupplierTracking(rfoId);
+      const tracking = rfoTracking.find(t => t.supplierId === supplierId);
+      if (tracking) {
+        await storage.updateRfoSupplierTracking(tracking.id, {
+          sentStatus: 'sent',
+          sentDate: new Date(),
+          sentMethod: 'manual',
+        });
+      }
+      
+      // Audit log
+      await storage.logAdminAction({
+        action: 'RFQ_MANUAL_SEND',
+        entityType: 'rfq_packet',
+        entityId: packet.id,
+        actor: userId,
+        detailsJson: { 
+          rfoRequestId: rfoId,
+          supplierId,
+          channel,
+          notes 
+        },
+      });
+      
+      res.json({ success: true, packet });
+    } catch (error: any) {
+      console.error("Error recording manual send:", error);
+      res.status(500).json({ success: false, error: "Failed to record manual send" });
+    }
+  });
 
   // --- Deal Registry ---
 
