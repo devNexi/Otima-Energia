@@ -2790,6 +2790,16 @@ export const supplierRfqAdapters = pgTable("supplier_rfq_adapters", {
     notes: ""
   }),
   
+  // Relationship Intelligence
+  relationshipNotes: text("relationship_notes"), // Free-form notes about supplier relationship
+  preferredContactId: integer("preferred_contact_id").references(() => supplierContacts.id), // FK to preferred contact
+  responseBehavior: jsonb("response_behavior").default({
+    preferred_channel: null,
+    best_hours: null,
+    format_preference: null,
+    notes: null
+  }), // { preferred_channel: "WHATSAPP", best_hours: "14:00–18:00", format_preference: "EXCEL", notes: "..." }
+  
   // Internal Notes
   internalNotes: text("internal_notes"),
   
@@ -2813,16 +2823,22 @@ export type InsertSupplierRfqAdapter = z.infer<typeof insertSupplierRfqAdapterSc
 export type SupplierRfqAdapter = typeof supplierRfqAdapters.$inferSelect;
 
 // RFQ Packets - Generated RFQ packet per supplier per RFO (immutable snapshot)
+// Supports both adapter-generated packets AND manual sends outside the system
 export const rfqPackets = pgTable("rfq_packets", {
   id: serial("id").primaryKey(),
   rfoRequestId: integer("rfo_request_id").references(() => rfoRequests.id).notNull(),
   dealId: varchar("deal_id").references(() => deals.id), // nullable - some RFOs are from deals
   supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
-  adapterId: integer("adapter_id").references(() => supplierRfqAdapters.id).notNull(),
-  adapterVersion: integer("adapter_version").notNull(),
+  adapterId: integer("adapter_id").references(() => supplierRfqAdapters.id), // nullable for manual sends
+  adapterVersion: integer("adapter_version"), // nullable for manual sends
   
   // Status
-  packetStatus: text("packet_status").default("DRAFT").notNull(), // DRAFT, READY, SENT, FAILED
+  packetStatus: text("packet_status").default("DRAFT").notNull(), // DRAFT, READY, SENT, FAILED, MANUAL_SENT
+  
+  // Manual Send Flag - true if sent outside the system
+  isManualSend: boolean("is_manual_send").default(false).notNull(),
+  manualSendNotes: text("manual_send_notes"), // What was sent, how, to whom
+  manualSendChannel: text("manual_send_channel"), // EMAIL, WHATSAPP, PHONE, PORTAL, OTHER
   
   // Generated Payload - snapshot of resolved tokens and compiled content
   generatedPayload: jsonb("generated_payload").default({
@@ -2865,6 +2881,10 @@ export const supplierRfqAdaptersRelations = relations(supplierRfqAdapters, ({ on
   supplier: one(suppliers, {
     fields: [supplierRfqAdapters.supplierId],
     references: [suppliers.id],
+  }),
+  preferredContact: one(supplierContacts, {
+    fields: [supplierRfqAdapters.preferredContactId],
+    references: [supplierContacts.id],
   }),
   createdByUser: one(users, {
     fields: [supplierRfqAdapters.createdBy],
