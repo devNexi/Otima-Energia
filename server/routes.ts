@@ -6409,7 +6409,17 @@ export async function registerRoutes(
   });
 
   // --- Demo Data Seeder (Admin Only) ---
+  // Check if demo mode is enabled via environment variable
+  const isDemoModeEnabled = () => process.env.ENABLE_DEMO_MODE === 'true';
+  
+  app.get("/api/admin/demo/enabled", async (req, res) => {
+    res.json({ success: true, enabled: isDemoModeEnabled() });
+  });
+  
   app.get("/api/admin/demo/stats", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled. Set ENABLE_DEMO_MODE=true to enable." });
+    }
     if (!await validateDealOsSession(req, res)) return;
     
     const sessionId = req.headers["x-session-id"] as string;
@@ -6430,6 +6440,9 @@ export async function registerRoutes(
   });
   
   app.post("/api/admin/demo/seed", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled. Set ENABLE_DEMO_MODE=true to enable." });
+    }
     if (!await validateDealOsSession(req, res)) return;
     
     const sessionId = req.headers["x-session-id"] as string;
@@ -6460,6 +6473,9 @@ export async function registerRoutes(
   });
   
   app.post("/api/admin/demo/nuke", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled. Set ENABLE_DEMO_MODE=true to enable." });
+    }
     if (!await validateDealOsSession(req, res)) return;
     
     const sessionId = req.headers["x-session-id"] as string;
