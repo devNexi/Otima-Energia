@@ -19,28 +19,52 @@ function generateDemoId(prefix: string, index: number): string {
   return `${DEMO_PREFIX}${prefix}_${String(index).padStart(3, '0')}`;
 }
 
+function generateScenarioId(scenario: string, prefix: string, index: number): string {
+  return `${DEMO_PREFIX}${scenario}_${prefix}_${String(index).padStart(3, '0')}`;
+}
+
+// Scenario pack types
+export type ScenarioPack = 
+  | 'FULL_DATASET'
+  | 'HAPPY_PATH'
+  | 'SLA_BREACH'
+  | 'CREDIT_REJECTED'
+  | 'WRONG_SIGNER'
+  | 'COMMISSION_DISPUTE'
+  | 'OVERDUE_PAYMENT';
+
+export const SCENARIO_PACK_LABELS: Record<ScenarioPack, string> = {
+  FULL_DATASET: 'Full Demo Dataset',
+  HAPPY_PATH: 'Happy Path Deal',
+  SLA_BREACH: 'Supplier Silent / SLA Breach',
+  CREDIT_REJECTED: 'Credit Rejected After Selection',
+  WRONG_SIGNER: 'Wrong Signer Risk',
+  COMMISSION_DISPUTE: 'Commission Dispute',
+  OVERDUE_PAYMENT: 'Overdue Payment Recovery',
+};
+
 const brazilianCompanyNames = [
-  "Indústria Metalúrgica São Paulo",
-  "Têxteis Brasil Ltda",
-  "Agroindústria Norte",
-  "Plásticos do Sul",
-  "Construtora Horizonte",
-  "Supermercados União",
-  "Química Verde Industrial",
-  "Frigorífico Bovinos",
-  "Cerâmica Minas",
-  "Papel e Celulose Amazônia"
+  "TEST - Indústria Metalúrgica São Paulo",
+  "TEST - Têxteis Brasil Ltda",
+  "TEST - Agroindústria Norte",
+  "TEST - Plásticos do Sul",
+  "TEST - Construtora Horizonte",
+  "TEST - Supermercados União",
+  "TEST - Química Verde Industrial",
+  "TEST - Frigorífico Bovinos",
+  "TEST - Cerâmica Minas",
+  "TEST - Papel e Celulose Amazônia"
 ];
 
 const supplierNames = [
-  "Eneva Energia",
-  "Comerc ESCO",
-  "Âmbar Energia",
-  "Atlas Energia",
-  "Prime Energy",
-  "Tradener",
-  "Omega Energia",
-  "CPFL Soluções"
+  "DEMO - Eneva Energia",
+  "DEMO - Comerc ESCO",
+  "DEMO - Âmbar Energia",
+  "DEMO - Atlas Energia",
+  "DEMO - Prime Energy",
+  "DEMO - Tradener",
+  "DEMO - Omega Energia",
+  "DEMO - CPFL Soluções"
 ];
 
 const submarkets = ["SE/CO", "S", "NE", "N"];
@@ -49,310 +73,1125 @@ const tariffClasses = ["A4", "A3", "A2", "AS"];
 const eligibilityTypes = ["ACL_DIRECT", "ACL_VAREJISTA", "NOT_ELIGIBLE_YET"];
 const channels = ["EMAIL", "WHATSAPP", "PORTAL", "MANUAL"];
 
-export async function seedDemoData(): Promise<{ success: boolean; summary: Record<string, number> }> {
+// Helper to create base client
+async function createDemoClient(name: string, index: number) {
+  const [client] = await db.insert(clients).values({
+    companyName: name,
+    cnpj: `${10 + index}.${100 + index * 3}.${200 + index * 5}/0001-${50 + index}`,
+    contactPerson: `Contato ${index + 1}`,
+    email: `contato${index + 1}@demo-company.com.br`,
+    phone: `+55 11 9${String(1000 + index * 111).padStart(4, '0')}-${String(2000 + index * 222).padStart(4, '0')}`,
+    status: "prospect",
+    ucCode: `UC${1000 + index}`,
+    segment: ["SME", "Industrial"][index % 2],
+    region: ["Sudeste", "Sul", "Nordeste", "Norte", "Centro-Oeste"][index % 5],
+    avgConsumptionKwh: 80000 + index * 20000,
+    isDemo: true,
+  }).returning();
+  return client;
+}
+
+// Helper to create base supplier
+async function createDemoSupplier(name: string, index: number) {
+  const [supplier] = await db.insert(suppliers).values({
+    name,
+    shortCode: `DEMO_${name.replace(/DEMO - /, '').substring(0, 4).toUpperCase()}${index}`,
+    category: ["large", "medium", "renewable"][index % 3],
+    contactEmail: `comercial@${name.toLowerCase().replace(/demo - |\s+/g, '')}.com.br`,
+    contactPhone: `+55 21 9${String(3000 + index * 100).padStart(4, '0')}-${String(4000 + index * 100).padStart(4, '0')}`,
+    isActive: true,
+    isDemo: true,
+  }).returning();
+  return supplier;
+}
+
+// Helper to create playbook
+async function createDemoPlaybook(supplierId: number, index: number) {
+  const [playbook] = await db.insert(supplierRfqPlaybooks).values({
+    supplierId,
+    version: 1,
+    status: "ACTIVE" as const,
+    preferredChannel: channels[index % channels.length],
+    requiredFields: ["ucCodes", "demandKw", "monthlyMwh", "contractMonths"],
+    emailConfig: {
+      toEmails: [`supplier${index}@demo.com`],
+      subjectTemplate: "RFQ - {{clientName}} - {{volume}}MWh/mês",
+      bodyTemplate: "Solicitamos cotação para:\n- Cliente: {{clientName}}\n- Volume: {{volume}} MWh/mês",
+    },
+    slaConfig: { quoteDueHours: 48, followupCadenceHours: [24, 48] },
+    internalNotes: `Demo playbook ${index}`,
+    isDemo: true,
+  }).returning();
+  return playbook;
+}
+
+// ========== SCENARIO: HAPPY PATH ==========
+async function seedHappyPath(): Promise<Record<string, number>> {
   const summary: Record<string, number> = {};
   
-  try {
-    const demoClients = [];
-    for (let i = 0; i < 10; i++) {
-      const client = {
-        companyName: brazilianCompanyNames[i],
-        cnpj: `${10 + i}.${100 + i * 3}.${200 + i * 5}/0001-${50 + i}`,
-        contactPerson: `Contato ${i + 1}`,
-        email: `contato${i + 1}@demo-company.com.br`,
-        phone: `+55 11 9${String(1000 + i * 111).padStart(4, '0')}-${String(2000 + i * 222).padStart(4, '0')}`,
-        status: ["prospect", "awaiting_quote", "negotiating", "active"][i % 4],
-        ucCode: `UC${1000 + i}`,
-        segment: ["SME", "Industrial"][i % 2],
-        region: ["Sudeste", "Sul", "Nordeste", "Norte", "Centro-Oeste"][i % 5],
-        avgConsumptionKwh: 80000 + i * 20000,
-        isDemo: true,
-      };
-      demoClients.push(client);
-    }
+  // Create client
+  const client = await createDemoClient("TEST - Happy Path Corp", 100);
+  summary.clients = 1;
+  
+  // Create 3 suppliers
+  const supplierList = [];
+  for (let i = 0; i < 3; i++) {
+    const supplier = await createDemoSupplier(`DEMO - Supplier Happy ${i + 1}`, 100 + i);
+    supplierList.push(supplier);
+    await createDemoPlaybook(supplier.id, 100 + i);
+  }
+  summary.suppliers = 3;
+  summary.playbooks = 3;
+  
+  // Create dossier (LOCKED - ready for RFQ)
+  const [dossier] = await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "Happy Path",
+    cnpj: client.cnpj!,
+    distributor: "CPFL",
+    submarket: "SE/CO",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 1200,
+    averageMonthlyMWh: 100,
+    peakDemandKW: 250,
+    numberOfUCs: 1,
+    tariffClass: "A4",
+    confidenceScore: "HIGH",
+    status: "LOCKED",
+    isDemo: true,
+  }).returning();
+  summary.dossiers = 1;
+  
+  // Create deal in CLOSED_WON state
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("HP", "DEAL", 1),
+    clientId: client.id,
+    status: "CLOSED_WON",
+    volumeMwhYear: 1200,
+    volumeMwhMonth: 100,
+    contractTermMonths: 36,
+    contractStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "convencional",
+    submarket: "SE/CO",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create RFQ dispatches with responses
+  for (let i = 0; i < 3; i++) {
+    const supplier = supplierList[i];
+    const [dispatch] = await db.insert(rfqDispatches).values({
+      dealId: deal.id,
+      supplierId: supplier.id,
+      channelUsed: "EMAIL",
+      status: "RESPONDED",
+      sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      respondedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      messageSubject: `RFQ - Happy Path - 100MWh/mês`,
+      isDemo: true,
+    }).returning();
     
-    const insertedClients = await db.insert(clients).values(demoClients).returning();
-    summary.clients = insertedClients.length;
-
-    const demoSuppliers = [];
-    for (let i = 0; i < supplierNames.length; i++) {
-      const supplier = {
-        name: supplierNames[i],
-        shortCode: `DEMO_${supplierNames[i].substring(0, 4).toUpperCase()}${i}`,
-        category: ["large", "medium", "renewable"][i % 3],
-        contactEmail: `comercial@${supplierNames[i].toLowerCase().replace(/\s+/g, '')}.com.br`,
-        contactPhone: `+55 21 9${String(3000 + i * 100).padStart(4, '0')}-${String(4000 + i * 100).padStart(4, '0')}`,
-        isActive: true,
-        isDemo: true,
-      };
-      demoSuppliers.push(supplier);
+    // Create quotes (winner is first supplier)
+    await db.insert(dealQuotes).values({
+      dealId: deal.id,
+      supplierId: supplier.id,
+      rfqDispatchId: dispatch.id,
+      rawQuoteJson: { pricePerMwh: 180 + i * 10, term: 36 },
+      baseEnergyPriceRmwh: parseFloat((180 + i * 10).toFixed(2)),
+      energyType: "convencional",
+      priceStructure: "fixed",
+      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      quoteNotes: i === 0 ? "WINNER - Best price" : "Competitive quote",
+      isNormalized: true,
+      normalizationConfidence: 0.95,
+      isDemo: true,
+    });
+  }
+  summary.dispatches = 3;
+  summary.quotes = 3;
+  
+  // Create commission events
+  await db.insert(dealCommissionEvents).values([
+    {
+      dealId: deal.id,
+      eventType: "UPFRONT" as const,
+      eventIndex: 0,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 10000, volume_mwh: 1200 },
+      amountBrl: 10000,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PENDING" as const,
+      notes: "Happy path upfront commission",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 1,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 100, rate_rmwh: 3.0 },
+      amountBrl: 300,
+      isEstimated: true,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "FUTURE" as const,
+      notes: "Monthly commission month 1",
+      isDemo: true,
     }
-    
-    const insertedSuppliers = await db.insert(suppliers).values(demoSuppliers).returning();
-    summary.suppliers = insertedSuppliers.length;
+  ]);
+  summary.commissionEvents = 2;
+  
+  return summary;
+}
 
-    const dealStatuses = [
-      { status: "DRAFT", label: "Draft" },
-      { status: "PROSPECTING", label: "Early Stage" },
-      { status: "QUALIFICATION", label: "Qualifying" },
-      { status: "DOC_COLLECTION", label: "Documents" },
-      { status: "RFQ_PREP", label: "RFQ Ready" },
-      { status: "RFQ_SENT", label: "Quotes Pending" },
-      { status: "QUOTE_ANALYSIS", label: "Analyzing" },
-      { status: "PROPOSAL", label: "Proposal Sent" },
-      { status: "CLOSED_WON", label: "Won Deal" },
-      { status: "CLOSED_LOST", label: "Lost Deal" },
-    ];
+// ========== SCENARIO: SLA BREACH ==========
+async function seedSlaBreach(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  const client = await createDemoClient("TEST - SLA Breach Client", 200);
+  summary.clients = 1;
+  
+  // Create 3 suppliers - one will be silent
+  const supplierList = [];
+  for (let i = 0; i < 3; i++) {
+    const supplier = await createDemoSupplier(`DEMO - Supplier SLA ${i + 1}`, 200 + i);
+    supplierList.push(supplier);
+    await createDemoPlaybook(supplier.id, 200 + i);
+  }
+  summary.suppliers = 3;
+  summary.playbooks = 3;
+  
+  // Create dossier
+  const [dossier] = await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "SLA Test",
+    cnpj: client.cnpj!,
+    distributor: "Cemig",
+    submarket: "SE/CO",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 800,
+    averageMonthlyMWh: 66.67,
+    peakDemandKW: 180,
+    numberOfUCs: 1,
+    tariffClass: "A4",
+    confidenceScore: "MEDIUM",
+    status: "LOCKED",
+    isDemo: true,
+  }).returning();
+  summary.dossiers = 1;
+  
+  // Create deal in RFQ_SENT state
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("SLA", "DEAL", 1),
+    clientId: client.id,
+    status: "RFQ_SENT",
+    volumeMwhYear: 800,
+    volumeMwhMonth: parseFloat((800 / 12).toFixed(2)),
+    contractTermMonths: 24,
+    contractStartDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "incentivada_50",
+    submarket: "SE/CO",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create RFQ dispatches - supplier 0 is OVERDUE (SLA breach)
+  for (let i = 0; i < 3; i++) {
+    const supplier = supplierList[i];
+    const isOverdue = i === 0;
+    await db.insert(rfqDispatches).values({
+      dealId: deal.id,
+      supplierId: supplier.id,
+      channelUsed: "EMAIL",
+      status: isOverdue ? "SENT" : "RESPONDED",
+      sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      respondedAt: isOverdue ? null : new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      dueAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // PAST DUE
+      followupCount: isOverdue ? 2 : 0,
+      messageSubject: `RFQ - SLA Test - ${Math.round(800/12)}MWh/mês`,
+      isDemo: true,
+    });
+  }
+  summary.dispatches = 3;
+  
+  // Create case for SLA breach
+  await db.insert(dealCases).values({
+    dealId: deal.id,
+    caseType: "SUPPLIER_ISSUE",
+    severity: "HIGH",
+    status: "OPEN",
+    nextActionDate: new Date().toISOString().split('T')[0],
+    slaDueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    rootCause: "Supplier not responding - SLA breach",
+    isDemo: true,
+  });
+  summary.cases = 1;
+  
+  return summary;
+}
 
-    const demoDeals = [];
-    for (let i = 0; i < 10; i++) {
-      const clientIndex = i % insertedClients.length;
-      const statusInfo = dealStatuses[i];
-      const deal = {
-        id: generateDemoId("DEAL", i + 1),
-        clientId: insertedClients[clientIndex].id,
-        status: statusInfo.status,
-        volumeMwhYear: 1000 + i * 500,
-        volumeMwhMonth: parseFloat(((1000 + i * 500) / 12).toFixed(2)),
-        contractTermMonths: [12, 24, 36, 48, 60][i % 5],
-        contractStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 * (i + 1)).toISOString().split('T')[0],
-        energyType: ["convencional", "incentivada_50", "incentivada_100"][i % 3],
-        submarket: submarkets[i % 4],
-        internalOwner: "Renan",
-        isDemo: true,
-      };
-      demoDeals.push(deal);
+// ========== SCENARIO: CREDIT REJECTED ==========
+async function seedCreditRejected(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  const client = await createDemoClient("TEST - Credit Rejected Corp", 300);
+  summary.clients = 1;
+  
+  const supplier = await createDemoSupplier("DEMO - Supplier Credit", 300);
+  await createDemoPlaybook(supplier.id, 300);
+  summary.suppliers = 1;
+  summary.playbooks = 1;
+  
+  // Create dossier
+  await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "Credit Test",
+    cnpj: client.cnpj!,
+    distributor: "Light",
+    submarket: "SE/CO",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 600,
+    averageMonthlyMWh: 50,
+    peakDemandKW: 120,
+    numberOfUCs: 1,
+    tariffClass: "A4",
+    confidenceScore: "LOW",
+    status: "LOCKED",
+    isDemo: true,
+  });
+  summary.dossiers = 1;
+  
+  // Create deal - blocked at PROPOSAL due to credit rejection
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("CR", "DEAL", 1),
+    clientId: client.id,
+    status: "PROPOSAL",
+    volumeMwhYear: 600,
+    volumeMwhMonth: 50,
+    contractTermMonths: 12,
+    contractStartDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "convencional",
+    submarket: "SE/CO",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create dispatch and quote
+  const [dispatch] = await db.insert(rfqDispatches).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    channelUsed: "EMAIL",
+    status: "RESPONDED",
+    sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    respondedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    dueAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+    messageSubject: "RFQ - Credit Test",
+    isDemo: true,
+  }).returning();
+  summary.dispatches = 1;
+  
+  await db.insert(dealQuotes).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    rfqDispatchId: dispatch.id,
+    rawQuoteJson: { pricePerMwh: 195, term: 12 },
+    baseEnergyPriceRmwh: 195,
+    energyType: "convencional",
+    priceStructure: "fixed",
+    validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    quoteNotes: "Selected quote - pending credit approval",
+    isNormalized: true,
+    normalizationConfidence: 0.92,
+    isDemo: true,
+  });
+  summary.quotes = 1;
+  
+  // Create case for credit rejection
+  await db.insert(dealCases).values({
+    dealId: deal.id,
+    caseType: "DOCUMENTATION_MISSING",
+    severity: "CRITICAL",
+    status: "IN_PROGRESS",
+    nextActionDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    slaDueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    rootCause: "Client credit rejected by supplier - requires guarantee or upfront payment",
+    isDemo: true,
+  });
+  summary.cases = 1;
+  
+  return summary;
+}
+
+// ========== SCENARIO: WRONG SIGNER ==========
+async function seedWrongSigner(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  const client = await createDemoClient("TEST - Wrong Signer Ltd", 400);
+  summary.clients = 1;
+  
+  const supplier = await createDemoSupplier("DEMO - Supplier Signer", 400);
+  await createDemoPlaybook(supplier.id, 400);
+  summary.suppliers = 1;
+  summary.playbooks = 1;
+  
+  // Create dossier with missing authority verification
+  await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "Signer Test",
+    cnpj: client.cnpj!,
+    distributor: "Energisa",
+    submarket: "NE",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 900,
+    averageMonthlyMWh: 75,
+    peakDemandKW: 200,
+    numberOfUCs: 2,
+    tariffClass: "A3",
+    confidenceScore: "MEDIUM",
+    status: "DRAFT", // Still DRAFT because signer verification missing
+    isDemo: true,
+  });
+  summary.dossiers = 1;
+  
+  // Create deal - blocked at DOC_COLLECTION
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("WS", "DEAL", 1),
+    clientId: client.id,
+    status: "DOC_COLLECTION",
+    volumeMwhYear: 900,
+    volumeMwhMonth: 75,
+    contractTermMonths: 36,
+    contractStartDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "incentivada_100",
+    submarket: "NE",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create case for wrong signer risk
+  await db.insert(dealCases).values({
+    dealId: deal.id,
+    caseType: "DOCUMENTATION_MISSING",
+    severity: "HIGH",
+    status: "OPEN",
+    nextActionDate: new Date().toISOString().split('T')[0],
+    slaDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    rootCause: "Signer authority not verified - need power of attorney or board resolution",
+    isDemo: true,
+  });
+  summary.cases = 1;
+  
+  return summary;
+}
+
+// ========== SCENARIO: COMMISSION DISPUTE ==========
+async function seedCommissionDispute(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  const client = await createDemoClient("TEST - Commission Dispute Inc", 500);
+  summary.clients = 1;
+  
+  const supplier = await createDemoSupplier("DEMO - Supplier Commission", 500);
+  await createDemoPlaybook(supplier.id, 500);
+  summary.suppliers = 1;
+  summary.playbooks = 1;
+  
+  // Create dossier
+  await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "Commission Test",
+    cnpj: client.cnpj!,
+    distributor: "COPEL",
+    submarket: "S",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 1500,
+    averageMonthlyMWh: 125,
+    peakDemandKW: 320,
+    numberOfUCs: 3,
+    tariffClass: "A4",
+    confidenceScore: "HIGH",
+    status: "LOCKED",
+    isDemo: true,
+  });
+  summary.dossiers = 1;
+  
+  // Create closed won deal
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("CD", "DEAL", 1),
+    clientId: client.id,
+    status: "CLOSED_WON",
+    volumeMwhYear: 1500,
+    volumeMwhMonth: 125,
+    contractTermMonths: 48,
+    contractStartDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "convencional",
+    submarket: "S",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create dispatch and quote
+  const [dispatch] = await db.insert(rfqDispatches).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    channelUsed: "EMAIL",
+    status: "RESPONDED",
+    sentAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
+    respondedAt: new Date(Date.now() - 115 * 24 * 60 * 60 * 1000),
+    isDemo: true,
+  }).returning();
+  summary.dispatches = 1;
+  
+  await db.insert(dealQuotes).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    rfqDispatchId: dispatch.id,
+    rawQuoteJson: { pricePerMwh: 175, term: 48 },
+    baseEnergyPriceRmwh: 175,
+    energyType: "convencional",
+    priceStructure: "fixed",
+    validUntil: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    quoteNotes: "Winner quote",
+    isNormalized: true,
+    normalizationConfidence: 0.98,
+    isDemo: true,
+  });
+  summary.quotes = 1;
+  
+  // Create commission events with disputed one
+  await db.insert(dealCommissionEvents).values([
+    {
+      dealId: deal.id,
+      eventType: "UPFRONT" as const,
+      eventIndex: 0,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 15000 },
+      amountBrl: 15000,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      expectedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PAID" as const,
+      paidDate: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: "Upfront paid",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 1,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 125, rate_rmwh: 2.8 },
+      amountBrl: 350,
+      isEstimated: false,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "DISPUTED" as const,
+      notes: "DISPUTED - Supplier claims lower volume consumed (112 MWh vs 125 MWh contracted)",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 2,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 125, rate_rmwh: 2.8 },
+      amountBrl: 350,
+      isEstimated: true,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date().toISOString().split('T')[0],
+      status: "PENDING" as const,
+      notes: "Pending month 2",
+      isDemo: true,
     }
+  ]);
+  summary.commissionEvents = 3;
+  
+  // Create case for dispute
+  await db.insert(dealCases).values({
+    dealId: deal.id,
+    caseType: "PRICING_DISPUTE",
+    severity: "MED",
+    status: "IN_PROGRESS",
+    nextActionDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    slaDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    rootCause: "Supplier disputes consumed volume - need usage data reconciliation",
+    isDemo: true,
+  });
+  summary.cases = 1;
+  
+  // Create usage periods for reconciliation
+  for (let month = 0; month < 3; month++) {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - month - 1);
+    startDate.setDate(1);
     
-    const insertedDeals = await db.insert(deals).values(demoDeals).returning();
-    summary.deals = insertedDeals.length;
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+    endDate.setDate(0);
+    
+    await db.insert(clientUsagePeriods).values({
+      clientId: client.id,
+      ucCode: `UC${client.id}001`,
+      periodStartDate: startDate.toISOString().split('T')[0],
+      periodEndDate: endDate.toISOString().split('T')[0],
+      energyKwh: parseFloat((110000 + Math.random() * 30000).toFixed(2)),
+      demandKw: parseFloat((280 + Math.random() * 40).toFixed(2)),
+      billedAmountBrl: parseFloat((20000 + Math.random() * 5000).toFixed(2)),
+      sourceType: "EXTRACTED" as const,
+      status: month === 1 ? "DRAFT" : "VERIFIED",
+      notes: month === 1 ? "Disputed period - needs verification" : "Verified usage",
+      isDemo: true,
+    });
+  }
+  summary.usagePeriods = 3;
+  
+  return summary;
+}
 
-    const demoDossiers = [];
-    for (let i = 0; i < 5; i++) {
-      const clientIndex = i % insertedClients.length;
-      const client = insertedClients[clientIndex];
-      const dossier = {
-        clientId: client.id,
-        legalName: client.companyName,
-        tradeName: client.companyName.split(' ')[0],
-        cnpj: client.cnpj!,
-        distributor: distributors[i % distributors.length],
-        submarket: submarkets[i % submarkets.length],
-        connectionType: ["GROUP_A", "GROUP_B"][i % 2],
-        eligibilityType: eligibilityTypes[i % eligibilityTypes.length],
-        annualConsumptionMWh: 500 + i * 200,
-        averageMonthlyMWh: parseFloat(((500 + i * 200) / 12).toFixed(2)),
-        peakDemandKW: 100 + i * 50,
-        numberOfUCs: 1 + (i % 4),
-        tariffClass: tariffClasses[i % tariffClasses.length],
-        confidenceScore: ["LOW", "MEDIUM", "HIGH"][i % 3],
-        status: ["DRAFT", "READY", "LOCKED"][i % 3],
-        isDemo: true,
-      };
-      demoDossiers.push(dossier);
+// ========== SCENARIO: OVERDUE PAYMENT ==========
+async function seedOverduePayment(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  const client = await createDemoClient("TEST - Overdue Payment SA", 600);
+  summary.clients = 1;
+  
+  const supplier = await createDemoSupplier("DEMO - Supplier Overdue", 600);
+  await createDemoPlaybook(supplier.id, 600);
+  summary.suppliers = 1;
+  summary.playbooks = 1;
+  
+  // Create dossier
+  await db.insert(clientDossiers).values({
+    clientId: client.id,
+    legalName: client.companyName,
+    tradeName: "Overdue Test",
+    cnpj: client.cnpj!,
+    distributor: "RGE",
+    submarket: "S",
+    connectionType: "GROUP_A",
+    eligibilityType: "ACL_DIRECT",
+    annualConsumptionMWh: 1000,
+    averageMonthlyMWh: 83.33,
+    peakDemandKW: 220,
+    numberOfUCs: 1,
+    tariffClass: "A4",
+    confidenceScore: "HIGH",
+    status: "LOCKED",
+    isDemo: true,
+  });
+  summary.dossiers = 1;
+  
+  // Create closed won deal (older)
+  const [deal] = await db.insert(deals).values({
+    id: generateScenarioId("OP", "DEAL", 1),
+    clientId: client.id,
+    status: "CLOSED_WON",
+    volumeMwhYear: 1000,
+    volumeMwhMonth: 83.33,
+    contractTermMonths: 24,
+    contractStartDate: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    energyType: "convencional",
+    submarket: "S",
+    internalOwner: "Renan",
+    isDemo: true,
+  }).returning();
+  summary.deals = 1;
+  
+  // Create dispatch and quote
+  const [dispatch] = await db.insert(rfqDispatches).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    channelUsed: "EMAIL",
+    status: "RESPONDED",
+    sentAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
+    respondedAt: new Date(Date.now() - 195 * 24 * 60 * 60 * 1000),
+    isDemo: true,
+  }).returning();
+  summary.dispatches = 1;
+  
+  await db.insert(dealQuotes).values({
+    dealId: deal.id,
+    supplierId: supplier.id,
+    rfqDispatchId: dispatch.id,
+    rawQuoteJson: { pricePerMwh: 185, term: 24 },
+    baseEnergyPriceRmwh: 185,
+    energyType: "convencional",
+    priceStructure: "fixed",
+    validUntil: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    quoteNotes: "Winner quote",
+    isNormalized: true,
+    normalizationConfidence: 0.96,
+    isDemo: true,
+  });
+  summary.quotes = 1;
+  
+  // Create commission events with OVERDUE ones
+  await db.insert(dealCommissionEvents).values([
+    {
+      dealId: deal.id,
+      eventType: "UPFRONT" as const,
+      eventIndex: 0,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 8000 },
+      amountBrl: 8000,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      expectedDate: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PAID" as const,
+      paidDate: new Date(Date.now() - 145 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: "Upfront paid on time",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 1,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
+      amountBrl: 207.50,
+      isEstimated: false,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PAID" as const,
+      paidDate: new Date(Date.now() - 115 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: "Month 1 paid",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 2,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
+      amountBrl: 207.50,
+      isEstimated: false,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "OVERDUE" as const,
+      notes: "OVERDUE - Month 2 not paid (90 days overdue)",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 3,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
+      amountBrl: 207.50,
+      isEstimated: false,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "OVERDUE" as const,
+      notes: "OVERDUE - Month 3 not paid (60 days overdue)",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MONTHLY" as const,
+      eventIndex: 4,
+      calcType: "per_mwh",
+      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
+      amountBrl: 207.50,
+      isEstimated: false,
+      dueCondition: "MONTHLY",
+      expectedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "OVERDUE" as const,
+      notes: "OVERDUE - Month 4 not paid (30 days overdue)",
+      isDemo: true,
     }
-    
-    const insertedDossiers = await db.insert(clientDossiers).values(demoDossiers).onConflictDoNothing().returning();
-    summary.dossiers = insertedDossiers.length;
+  ]);
+  summary.commissionEvents = 5;
+  
+  // Create case for overdue recovery
+  await db.insert(dealCases).values({
+    dealId: deal.id,
+    caseType: "CONTRACT_DELAY",
+    severity: "CRITICAL",
+    status: "IN_PROGRESS",
+    nextActionDate: new Date().toISOString().split('T')[0],
+    slaDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    rootCause: "3 months of commission payments overdue - total R$ 622.50 outstanding",
+    isDemo: true,
+  });
+  summary.cases = 1;
+  
+  return summary;
+}
 
-    const demoPlaybooks = [];
-    for (let i = 0; i < insertedSuppliers.length; i++) {
-      const supplier = insertedSuppliers[i];
-      const playbook = {
+// ========== FULL DATASET (Original) ==========
+async function seedFullDataset(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  // Create clients
+  const demoClients = [];
+  for (let i = 0; i < 10; i++) {
+    const client = {
+      companyName: brazilianCompanyNames[i],
+      cnpj: `${10 + i}.${100 + i * 3}.${200 + i * 5}/0001-${50 + i}`,
+      contactPerson: `Contato ${i + 1}`,
+      email: `contato${i + 1}@demo-company.com.br`,
+      phone: `+55 11 9${String(1000 + i * 111).padStart(4, '0')}-${String(2000 + i * 222).padStart(4, '0')}`,
+      status: ["prospect", "awaiting_quote", "negotiating", "active"][i % 4],
+      ucCode: `UC${1000 + i}`,
+      segment: ["SME", "Industrial"][i % 2],
+      region: ["Sudeste", "Sul", "Nordeste", "Norte", "Centro-Oeste"][i % 5],
+      avgConsumptionKwh: 80000 + i * 20000,
+      isDemo: true,
+    };
+    demoClients.push(client);
+  }
+  
+  const insertedClients = await db.insert(clients).values(demoClients).returning();
+  summary.clients = insertedClients.length;
+
+  // Create suppliers
+  const demoSuppliers = [];
+  for (let i = 0; i < supplierNames.length; i++) {
+    const supplier = {
+      name: supplierNames[i],
+      shortCode: `DEMO_${supplierNames[i].replace(/DEMO - /, '').substring(0, 4).toUpperCase()}${i}`,
+      category: ["large", "medium", "renewable"][i % 3],
+      contactEmail: `comercial@${supplierNames[i].toLowerCase().replace(/demo - |\s+/g, '')}.com.br`,
+      contactPhone: `+55 21 9${String(3000 + i * 100).padStart(4, '0')}-${String(4000 + i * 100).padStart(4, '0')}`,
+      isActive: true,
+      isDemo: true,
+    };
+    demoSuppliers.push(supplier);
+  }
+  
+  const insertedSuppliers = await db.insert(suppliers).values(demoSuppliers).returning();
+  summary.suppliers = insertedSuppliers.length;
+
+  // Create deals across all states
+  const dealStatuses = [
+    { status: "DRAFT", label: "Draft" },
+    { status: "PROSPECTING", label: "Early Stage" },
+    { status: "QUALIFICATION", label: "Qualifying" },
+    { status: "DOC_COLLECTION", label: "Documents" },
+    { status: "RFQ_PREP", label: "RFQ Ready" },
+    { status: "RFQ_SENT", label: "Quotes Pending" },
+    { status: "QUOTE_ANALYSIS", label: "Analyzing" },
+    { status: "PROPOSAL", label: "Proposal Sent" },
+    { status: "CLOSED_WON", label: "Won Deal" },
+    { status: "CLOSED_LOST", label: "Lost Deal" },
+  ];
+
+  const demoDeals = [];
+  for (let i = 0; i < 10; i++) {
+    const clientIndex = i % insertedClients.length;
+    const statusInfo = dealStatuses[i];
+    const deal = {
+      id: generateDemoId("DEAL", i + 1),
+      clientId: insertedClients[clientIndex].id,
+      status: statusInfo.status,
+      volumeMwhYear: 1000 + i * 500,
+      volumeMwhMonth: parseFloat(((1000 + i * 500) / 12).toFixed(2)),
+      contractTermMonths: [12, 24, 36, 48, 60][i % 5],
+      contractStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 * (i + 1)).toISOString().split('T')[0],
+      energyType: ["convencional", "incentivada_50", "incentivada_100"][i % 3],
+      submarket: submarkets[i % 4],
+      internalOwner: "Renan",
+      isDemo: true,
+    };
+    demoDeals.push(deal);
+  }
+  
+  const insertedDeals = await db.insert(deals).values(demoDeals).returning();
+  summary.deals = insertedDeals.length;
+
+  // Create dossiers
+  const demoDossiers = [];
+  for (let i = 0; i < 5; i++) {
+    const clientIndex = i % insertedClients.length;
+    const client = insertedClients[clientIndex];
+    const dossier = {
+      clientId: client.id,
+      legalName: client.companyName,
+      tradeName: client.companyName.split(' ')[0],
+      cnpj: client.cnpj!,
+      distributor: distributors[i % distributors.length],
+      submarket: submarkets[i % submarkets.length],
+      connectionType: ["GROUP_A", "GROUP_B"][i % 2],
+      eligibilityType: eligibilityTypes[i % eligibilityTypes.length],
+      annualConsumptionMWh: 500 + i * 200,
+      averageMonthlyMWh: parseFloat(((500 + i * 200) / 12).toFixed(2)),
+      peakDemandKW: 100 + i * 50,
+      numberOfUCs: 1 + (i % 4),
+      tariffClass: tariffClasses[i % tariffClasses.length],
+      confidenceScore: ["LOW", "MEDIUM", "HIGH"][i % 3],
+      status: ["DRAFT", "READY", "LOCKED"][i % 3],
+      isDemo: true,
+    };
+    demoDossiers.push(dossier);
+  }
+  
+  const insertedDossiers = await db.insert(clientDossiers).values(demoDossiers).onConflictDoNothing().returning();
+  summary.dossiers = insertedDossiers.length;
+
+  // Create playbooks
+  const demoPlaybooks = [];
+  for (let i = 0; i < insertedSuppliers.length; i++) {
+    const supplier = insertedSuppliers[i];
+    const playbook = {
+      supplierId: supplier.id,
+      version: 1,
+      status: "ACTIVE" as const,
+      preferredChannel: channels[i % channels.length],
+      requiredFields: ["ucCodes", "demandKw", "monthlyMwh", "contractMonths"],
+      emailConfig: {
+        toEmails: [supplier.contactEmail],
+        subjectTemplate: "RFQ - {{clientName}} - {{volume}}MWh/mês",
+        bodyTemplate: "Prezados,\n\nSolicitamos cotação para:\n- Cliente: {{clientName}}\n- Volume: {{volume}} MWh/mês\n- Prazo: {{term}} meses\n\nAtenciosamente,\nÓtima Energia",
+      },
+      slaConfig: {
+        quoteDueHours: 48,
+        followupCadenceHours: [24, 48],
+      },
+      internalNotes: `Demo playbook for ${supplier.name}`,
+      isDemo: true,
+    };
+    demoPlaybooks.push(playbook);
+  }
+  
+  const insertedPlaybooks = await db.insert(supplierRfqPlaybooks).values(demoPlaybooks).returning();
+  summary.playbooks = insertedPlaybooks.length;
+
+  // Create RFQ dispatches
+  const rfqDeals = insertedDeals.filter(d => 
+    ["RFQ_SENT", "QUOTE_ANALYSIS", "PROPOSAL", "NEGOTIATION", "CLOSED_WON"].includes(d.status)
+  );
+  
+  const demoDispatches = [];
+  for (const deal of rfqDeals) {
+    for (let i = 0; i < 3; i++) {
+      const supplierIndex = (rfqDeals.indexOf(deal) + i) % insertedSuppliers.length;
+      const supplier = insertedSuppliers[supplierIndex];
+      const playbook = insertedPlaybooks.find(p => p.supplierId === supplier.id);
+      
+      const dispatch = {
+        dealId: deal.id,
         supplierId: supplier.id,
-        version: 1,
-        status: "ACTIVE" as const,
-        preferredChannel: channels[i % channels.length],
-        requiredFields: ["ucCodes", "demandKw", "monthlyMwh", "contractMonths"],
-        emailConfig: {
-          toEmails: [supplier.contactEmail],
-          subjectTemplate: "RFQ - {{clientName}} - {{volume}}MWh/mês",
-          bodyTemplate: "Prezados,\n\nSolicitamos cotação para:\n- Cliente: {{clientName}}\n- Volume: {{volume}} MWh/mês\n- Prazo: {{term}} meses\n\nAtenciosamente,\nÓtima Energia",
-        },
-        slaConfig: {
-          quoteDueHours: 48,
-          followupCadenceHours: [24, 48],
-        },
-        internalNotes: `Demo playbook for ${supplier.name}`,
+        supplierRfqPlaybookId: playbook?.id,
+        playbookVersion: 1,
+        channelUsed: channels[i % channels.length],
+        status: ["SENT", "DELIVERED", "RESPONDED", "CLOSED"][i % 4],
+        sentAt: new Date(Date.now() - (7 - i) * 24 * 60 * 60 * 1000),
+        dueAt: new Date(Date.now() + (3 + i) * 24 * 60 * 60 * 1000),
+        respondedAt: i > 0 ? new Date(Date.now() - (5 - i) * 24 * 60 * 60 * 1000) : null,
+        followupCount: i,
+        messageSubject: `RFQ - Demo Client - ${100 + rfqDeals.indexOf(deal) * 50}MWh/mês`,
+        messageBody: `Cotação demo para teste de workflow`,
         isDemo: true,
       };
-      demoPlaybooks.push(playbook);
+      demoDispatches.push(dispatch);
     }
-    
-    const insertedPlaybooks = await db.insert(supplierRfqPlaybooks).values(demoPlaybooks).returning();
-    summary.playbooks = insertedPlaybooks.length;
+  }
+  
+  const insertedDispatches = await db.insert(rfqDispatches).values(demoDispatches).returning();
+  summary.dispatches = insertedDispatches.length;
 
-    const rfqDeals = insertedDeals.filter(d => 
-      ["RFQ_SENT", "QUOTE_ANALYSIS", "PROPOSAL", "NEGOTIATION", "CLOSED_WON"].includes(d.status)
-    );
+  // Create quotes
+  const quotableDeals = insertedDeals.filter(d => 
+    ["QUOTE_ANALYSIS", "PROPOSAL", "NEGOTIATION", "CLOSED_WON"].includes(d.status)
+  );
+  
+  const demoQuotes = [];
+  for (const deal of quotableDeals) {
+    const relatedDispatches = insertedDispatches.filter(d => d.dealId === deal.id);
     
-    const demoDispatches = [];
-    for (const deal of rfqDeals) {
-      for (let i = 0; i < 3; i++) {
-        const supplierIndex = (rfqDeals.indexOf(deal) + i) % insertedSuppliers.length;
-        const supplier = insertedSuppliers[supplierIndex];
-        const playbook = insertedPlaybooks.find(p => p.supplierId === supplier.id);
-        
-        const dispatch = {
-          dealId: deal.id,
-          supplierId: supplier.id,
-          supplierRfqPlaybookId: playbook?.id,
-          playbookVersion: 1,
-          channelUsed: channels[i % channels.length],
-          status: ["SENT", "DELIVERED", "RESPONDED", "CLOSED"][i % 4],
-          sentAt: new Date(Date.now() - (7 - i) * 24 * 60 * 60 * 1000),
-          dueAt: new Date(Date.now() + (3 + i) * 24 * 60 * 60 * 1000),
-          respondedAt: i > 0 ? new Date(Date.now() - (5 - i) * 24 * 60 * 60 * 1000) : null,
-          followupCount: i,
-          messageSubject: `RFQ - Demo Client - ${100 + rfqDeals.indexOf(deal) * 50}MWh/mês`,
-          messageBody: `Cotação demo para teste de workflow`,
-          isDemo: true,
-        };
-        demoDispatches.push(dispatch);
-      }
-    }
-    
-    const insertedDispatches = await db.insert(rfqDispatches).values(demoDispatches).returning();
-    summary.dispatches = insertedDispatches.length;
-
-    const quotableDeals = insertedDeals.filter(d => 
-      ["QUOTE_ANALYSIS", "PROPOSAL", "NEGOTIATION", "CLOSED_WON"].includes(d.status)
-    );
-    
-    const demoQuotes = [];
-    for (const deal of quotableDeals) {
-      const relatedDispatches = insertedDispatches.filter(d => d.dealId === deal.id);
-      
-      for (let i = 0; i < Math.min(3, relatedDispatches.length); i++) {
-        const dispatch = relatedDispatches[i];
-        const pricePerMwh = 180 + Math.random() * 60;
-        const quote = {
-          dealId: deal.id,
-          supplierId: dispatch.supplierId,
-          rfqDispatchId: dispatch.id,
-          rawQuoteJson: {
-            pricePerMwh,
-            term: deal.contractTermMonths || 24,
-            structure: ["FIXED", "FLEX", "I5"][i % 3],
-            receivedAt: new Date().toISOString(),
-            source: "demo_seeder",
-          },
-          baseEnergyPriceRmwh: parseFloat(pricePerMwh.toFixed(2)),
-          energyType: ["convencional", "incentivada_50", "incentivada_100"][i % 3],
-          priceStructure: ["fixed", "indexed_ipca", "indexed_igpm"][i % 3],
-          validUntil: new Date(Date.now() + (7 + i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          quoteNotes: `Demo quote ${i + 1} for testing`,
-          isNormalized: true,
-          normalizationConfidence: parseFloat((0.85 + Math.random() * 0.15).toFixed(2)),
-          isDemo: true,
-        };
-        demoQuotes.push(quote);
-      }
-    }
-    
-    const insertedQuotes = await db.insert(dealQuotes).values(demoQuotes).returning();
-    summary.quotes = insertedQuotes.length;
-
-    const wonDeals = insertedDeals.filter(d => d.status === "CLOSED_WON");
-    const demoCommissionEvents = [];
-    
-    for (const deal of wonDeals) {
-      const upfrontEvent = {
+    for (let i = 0; i < Math.min(3, relatedDispatches.length); i++) {
+      const dispatch = relatedDispatches[i];
+      const pricePerMwh = 180 + Math.random() * 60;
+      const quote = {
         dealId: deal.id,
-        eventType: "UPFRONT" as const,
-        eventIndex: 0,
-        calcType: "fixed_amount",
-        calcInputs: { base_amount: 5000, volume_mwh: 100 },
-        amountBrl: 5000.00,
-        isEstimated: false,
-        dueCondition: "SUPPLY_LIVE",
-        expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: "PENDING" as const,
-        notes: "Demo upfront commission",
+        supplierId: dispatch.supplierId,
+        rfqDispatchId: dispatch.id,
+        rawQuoteJson: {
+          pricePerMwh,
+          term: deal.contractTermMonths || 24,
+          structure: ["FIXED", "FLEX", "I5"][i % 3],
+          receivedAt: new Date().toISOString(),
+          source: "demo_seeder",
+        },
+        baseEnergyPriceRmwh: parseFloat(pricePerMwh.toFixed(2)),
+        energyType: ["convencional", "incentivada_50", "incentivada_100"][i % 3],
+        priceStructure: ["fixed", "indexed_ipca", "indexed_igpm"][i % 3],
+        validUntil: new Date(Date.now() + (7 + i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        quoteNotes: `Demo quote ${i + 1} for testing`,
+        isNormalized: true,
+        normalizationConfidence: parseFloat((0.85 + Math.random() * 0.15).toFixed(2)),
         isDemo: true,
       };
-      demoCommissionEvents.push(upfrontEvent);
-
-      for (let month = 1; month <= 3; month++) {
-        const monthlyEvent = {
-          dealId: deal.id,
-          eventType: "MONTHLY" as const,
-          eventIndex: month,
-          calcType: "per_mwh",
-          calcInputs: { volume_mwh: 100, rate_rmwh: 2.5 },
-          amountBrl: 250.00,
-          isEstimated: true,
-          dueCondition: "MONTHLY",
-          expectedDate: new Date(Date.now() + (30 * month + 45) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          status: "FUTURE" as const,
-          notes: `Demo monthly commission - month ${month}`,
-          isDemo: true,
-        };
-        demoCommissionEvents.push(monthlyEvent);
-      }
+      demoQuotes.push(quote);
     }
-    
-    const insertedCommissionEvents = await db.insert(dealCommissionEvents).values(demoCommissionEvents).returning();
-    summary.commissionEvents = insertedCommissionEvents.length;
+  }
+  
+  const insertedQuotes = await db.insert(dealQuotes).values(demoQuotes).returning();
+  summary.quotes = insertedQuotes.length;
 
-    const demoCases = [];
-    for (let i = 0; i < 5; i++) {
-      const dealIndex = i % insertedDeals.length;
-      const deal = insertedDeals[dealIndex];
-      const caseTypes = ["DOCUMENTATION_MISSING", "CLIENT_UNRESPONSIVE", "PRICING_DISPUTE", "CONTRACT_DELAY", "SUPPLIER_ISSUE"];
-      const severities = ["LOW", "MED", "HIGH", "CRITICAL"];
-      const statuses = ["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED"];
-      
-      const dealCase = {
+  // Create commission events
+  const wonDeals = insertedDeals.filter(d => d.status === "CLOSED_WON");
+  const demoCommissionEvents = [];
+  
+  for (const deal of wonDeals) {
+    const upfrontEvent = {
+      dealId: deal.id,
+      eventType: "UPFRONT" as const,
+      eventIndex: 0,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 5000, volume_mwh: 100 },
+      amountBrl: 5000.00,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PENDING" as const,
+      notes: "Demo upfront commission",
+      isDemo: true,
+    };
+    demoCommissionEvents.push(upfrontEvent);
+
+    for (let month = 1; month <= 3; month++) {
+      const monthlyEvent = {
         dealId: deal.id,
-        caseType: caseTypes[i % caseTypes.length],
-        severity: severities[i % severities.length],
-        status: statuses[i % statuses.length],
-        nextActionDate: new Date(Date.now() + (i + 1) * 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        slaDueDate: new Date(Date.now() + (i + 3) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        rootCause: `Demo case root cause ${i + 1}`,
+        eventType: "MONTHLY" as const,
+        eventIndex: month,
+        calcType: "per_mwh",
+        calcInputs: { volume_mwh: 100, rate_rmwh: 2.5 },
+        amountBrl: 250.00,
+        isEstimated: true,
+        dueCondition: "MONTHLY",
+        expectedDate: new Date(Date.now() + (30 * month + 45) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: "FUTURE" as const,
+        notes: `Demo monthly commission - month ${month}`,
         isDemo: true,
       };
-      demoCases.push(dealCase);
+      demoCommissionEvents.push(monthlyEvent);
     }
-    
-    const insertedCases = await db.insert(dealCases).values(demoCases).returning();
-    summary.cases = insertedCases.length;
+  }
+  
+  const insertedCommissionEvents = await db.insert(dealCommissionEvents).values(demoCommissionEvents).returning();
+  summary.commissionEvents = insertedCommissionEvents.length;
 
-    const activeClients = insertedClients.filter((_, i) => i < 3);
-    const demoUsagePeriods = [];
+  // Create cases
+  const demoCases = [];
+  for (let i = 0; i < 5; i++) {
+    const dealIndex = i % insertedDeals.length;
+    const deal = insertedDeals[dealIndex];
+    const caseTypes = ["DOCUMENTATION_MISSING", "CLIENT_UNRESPONSIVE", "PRICING_DISPUTE", "CONTRACT_DELAY", "SUPPLIER_ISSUE"];
+    const severities = ["LOW", "MED", "HIGH", "CRITICAL"];
+    const statuses = ["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED"];
     
-    for (const client of activeClients) {
-      for (let month = 0; month < 6; month++) {
-        const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - month - 1);
-        startDate.setDate(1);
-        
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + 1);
-        endDate.setDate(0);
-        
-        const usagePeriod = {
-          clientId: client.id,
-          ucCode: `UC${client.id}001`,
-          periodStartDate: startDate.toISOString().split('T')[0],
-          periodEndDate: endDate.toISOString().split('T')[0],
-          energyKwh: parseFloat((80000 + Math.random() * 40000).toFixed(2)),
-          demandKw: parseFloat((150 + Math.random() * 50).toFixed(2)),
-          billedAmountBrl: parseFloat((15000 + Math.random() * 10000).toFixed(2)),
-          sourceType: "EXTRACTED" as const,
-          status: ["DRAFT", "VERIFIED", "CONFIRMED"][month % 3] as "DRAFT" | "VERIFIED" | "CONFIRMED",
-          notes: `Demo usage period for testing`,
-          isDemo: true,
-        };
-        demoUsagePeriods.push(usagePeriod);
+    const dealCase = {
+      dealId: deal.id,
+      caseType: caseTypes[i % caseTypes.length],
+      severity: severities[i % severities.length],
+      status: statuses[i % statuses.length],
+      nextActionDate: new Date(Date.now() + (i + 1) * 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      slaDueDate: new Date(Date.now() + (i + 3) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      rootCause: `Demo case root cause ${i + 1}`,
+      isDemo: true,
+    };
+    demoCases.push(dealCase);
+  }
+  
+  const insertedCases = await db.insert(dealCases).values(demoCases).returning();
+  summary.cases = insertedCases.length;
+
+  // Create usage periods
+  const activeClients = insertedClients.filter((_, i) => i < 3);
+  const demoUsagePeriods = [];
+  
+  for (const client of activeClients) {
+    for (let month = 0; month < 6; month++) {
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - month - 1);
+      startDate.setDate(1);
+      
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+      endDate.setDate(0);
+      
+      const usagePeriod = {
+        clientId: client.id,
+        ucCode: `UC${client.id}001`,
+        periodStartDate: startDate.toISOString().split('T')[0],
+        periodEndDate: endDate.toISOString().split('T')[0],
+        energyKwh: parseFloat((80000 + Math.random() * 40000).toFixed(2)),
+        demandKw: parseFloat((150 + Math.random() * 50).toFixed(2)),
+        billedAmountBrl: parseFloat((15000 + Math.random() * 10000).toFixed(2)),
+        sourceType: "EXTRACTED" as const,
+        status: ["DRAFT", "VERIFIED", "CONFIRMED"][month % 3] as "DRAFT" | "VERIFIED" | "CONFIRMED",
+        notes: `Demo usage period for testing`,
+        isDemo: true,
+      };
+      demoUsagePeriods.push(usagePeriod);
+    }
+  }
+  
+  const insertedUsagePeriods = await db.insert(clientUsagePeriods).values(demoUsagePeriods).returning();
+  summary.usagePeriods = insertedUsagePeriods.length;
+
+  return summary;
+}
+
+// ========== MAIN SEEDER FUNCTION ==========
+export async function seedDemoData(scenarioPacks?: ScenarioPack[]): Promise<{ success: boolean; summary: Record<string, number> }> {
+  const packs = scenarioPacks && scenarioPacks.length > 0 ? scenarioPacks : ['FULL_DATASET' as ScenarioPack];
+  const combinedSummary: Record<string, number> = {};
+  
+  try {
+    for (const pack of packs) {
+      let packSummary: Record<string, number> = {};
+      
+      switch (pack) {
+        case 'FULL_DATASET':
+          packSummary = await seedFullDataset();
+          break;
+        case 'HAPPY_PATH':
+          packSummary = await seedHappyPath();
+          break;
+        case 'SLA_BREACH':
+          packSummary = await seedSlaBreach();
+          break;
+        case 'CREDIT_REJECTED':
+          packSummary = await seedCreditRejected();
+          break;
+        case 'WRONG_SIGNER':
+          packSummary = await seedWrongSigner();
+          break;
+        case 'COMMISSION_DISPUTE':
+          packSummary = await seedCommissionDispute();
+          break;
+        case 'OVERDUE_PAYMENT':
+          packSummary = await seedOverduePayment();
+          break;
+      }
+      
+      // Combine summaries
+      for (const [key, value] of Object.entries(packSummary)) {
+        combinedSummary[key] = (combinedSummary[key] || 0) + value;
       }
     }
     
-    const insertedUsagePeriods = await db.insert(clientUsagePeriods).values(demoUsagePeriods).returning();
-    summary.usagePeriods = insertedUsagePeriods.length;
-
-    return { success: true, summary };
+    return { success: true, summary: combinedSummary };
   } catch (error) {
     console.error("Error seeding demo data:", error);
     throw error;
@@ -428,4 +1267,36 @@ export async function getDemoDataStats(): Promise<Record<string, number>> {
   stats.usagePeriods = Number(usageCount[0]?.count || 0);
   
   return stats;
+}
+
+// Get list of demo deals with their scenarios for tours
+export async function getDemoDeals(): Promise<Array<{ id: string; clientName: string; status: string; scenario?: string }>> {
+  const demoDeals = await db.select({
+    id: deals.id,
+    status: deals.status,
+    clientId: deals.clientId
+  }).from(deals).where(eq(deals.isDemo, true));
+  
+  const result = [];
+  for (const deal of demoDeals) {
+    const client = await db.select({ companyName: clients.companyName }).from(clients).where(eq(clients.id, deal.clientId!)).limit(1);
+    
+    // Determine scenario from deal ID prefix
+    let scenario: string | undefined;
+    if (deal.id.includes('_HP_')) scenario = 'Happy Path';
+    else if (deal.id.includes('_SLA_')) scenario = 'SLA Breach';
+    else if (deal.id.includes('_CR_')) scenario = 'Credit Rejected';
+    else if (deal.id.includes('_WS_')) scenario = 'Wrong Signer';
+    else if (deal.id.includes('_CD_')) scenario = 'Commission Dispute';
+    else if (deal.id.includes('_OP_')) scenario = 'Overdue Payment';
+    
+    result.push({
+      id: deal.id,
+      clientName: client[0]?.companyName || 'Unknown',
+      status: deal.status,
+      scenario
+    });
+  }
+  
+  return result;
 }

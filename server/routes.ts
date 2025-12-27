@@ -43,7 +43,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
-import { seedDemoData, nukeDemoData, getDemoDataStats } from "./demoSeeder";
+import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -6454,7 +6454,8 @@ export async function registerRoutes(
     }
     
     try {
-      const result = await seedDemoData();
+      const { scenarioPacks } = req.body as { scenarioPacks?: ScenarioPack[] };
+      const result = await seedDemoData(scenarioPacks);
       await logAuditEvent({
         actor: user?.username || "system",
         actorRole: user?.role || null,
@@ -6502,6 +6503,30 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error nuking demo data:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to nuke demo data" });
+    }
+  });
+  
+  // Get available scenario packs
+  app.get("/api/admin/demo/scenario-packs", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled." });
+    }
+    res.json({ success: true, packs: SCENARIO_PACK_LABELS });
+  });
+  
+  // Get demo deals for tours
+  app.get("/api/admin/demo/deals", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled." });
+    }
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const deals = await getDemoDeals();
+      res.json({ success: true, deals });
+    } catch (error: any) {
+      console.error("Error fetching demo deals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch demo deals" });
     }
   });
 
