@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle, Package } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { GuidedTestModal } from "./GuidedTestModal";
 
@@ -29,11 +31,52 @@ interface NukeResult {
   deleted: Record<string, number>;
 }
 
+type ScenarioPack = 
+  | 'FULL_DATASET'
+  | 'HAPPY_PATH'
+  | 'SLA_BREACH'
+  | 'CREDIT_REJECTED'
+  | 'WRONG_SIGNER'
+  | 'COMMISSION_DISPUTE'
+  | 'OVERDUE_PAYMENT';
+
+const SCENARIO_DESCRIPTIONS: Record<ScenarioPack, { label: string; description: string }> = {
+  FULL_DATASET: { 
+    label: 'Full Demo Dataset', 
+    description: '10 clients, 8 suppliers, deals across all stages' 
+  },
+  HAPPY_PATH: { 
+    label: 'Happy Path Deal', 
+    description: 'Complete CLOSED_WON deal with RFQ, quotes, commissions' 
+  },
+  SLA_BREACH: { 
+    label: 'Supplier Silent / SLA Breach', 
+    description: 'Deal with overdue RFQ response' 
+  },
+  CREDIT_REJECTED: { 
+    label: 'Credit Rejected', 
+    description: 'Deal blocked at PROPOSAL due to credit check' 
+  },
+  WRONG_SIGNER: { 
+    label: 'Wrong Signer Risk', 
+    description: 'Deal blocked at DOC_COLLECTION for signer verification' 
+  },
+  COMMISSION_DISPUTE: { 
+    label: 'Commission Dispute', 
+    description: 'CLOSED_WON with DISPUTED commission event' 
+  },
+  OVERDUE_PAYMENT: { 
+    label: 'Overdue Payment Recovery', 
+    description: 'Deal with 3 OVERDUE commission payments' 
+  }
+};
+
 export function DemoDataPanel() {
   const queryClient = useQueryClient();
   const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [nukeResult, setNukeResult] = useState<NukeResult | null>(null);
   const [guidedTestOpen, setGuidedTestOpen] = useState(false);
+  const [selectedPacks, setSelectedPacks] = useState<ScenarioPack[]>(['HAPPY_PATH', 'SLA_BREACH', 'COMMISSION_DISPUTE']);
 
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery<{ stats: DemoStats }>({
     queryKey: ["/api/admin/demo/stats"],
@@ -41,8 +84,8 @@ export function DemoDataPanel() {
   });
 
   const seedMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/demo/seed");
+    mutationFn: async (packs: ScenarioPack[]) => {
+      const response = await apiRequest("POST", "/api/admin/demo/seed", { scenarioPacks: packs });
       return response.json();
     },
     onSuccess: (data) => {
@@ -52,6 +95,7 @@ export function DemoDataPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/deals"] });
     },
   });
 
@@ -67,8 +111,25 @@ export function DemoDataPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/deals"] });
     },
   });
+
+  const togglePack = (pack: ScenarioPack) => {
+    setSelectedPacks(prev => 
+      prev.includes(pack) 
+        ? prev.filter(p => p !== pack)
+        : [...prev, pack]
+    );
+  };
+
+  const selectAllScenarios = () => {
+    setSelectedPacks(['HAPPY_PATH', 'SLA_BREACH', 'CREDIT_REJECTED', 'WRONG_SIGNER', 'COMMISSION_DISPUTE', 'OVERDUE_PAYMENT']);
+  };
+
+  const selectRecommended = () => {
+    setSelectedPacks(['HAPPY_PATH', 'SLA_BREACH', 'COMMISSION_DISPUTE']);
+  };
 
   const stats = statsData?.stats;
   const totalDemoRecords = stats 
@@ -83,7 +144,7 @@ export function DemoDataPanel() {
           Demo Data Manager
         </CardTitle>
         <CardDescription>
-          Seed comprehensive test data covering the full Deal OS workflow lifecycle, or clear all demo records.
+          Seed targeted scenario packs for QA testing and sales demos. All demo data is clearly labeled (TEST -, DEMO_).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -98,16 +159,29 @@ export function DemoDataPanel() {
               )}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetchStats()}
-            disabled={statsLoading}
-            data-testid="button-refresh-stats"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchStats()}
+              disabled={statsLoading}
+              data-testid="button-refresh-stats"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            {totalDemoRecords > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGuidedTestOpen(true)}
+                data-testid="button-guided-test"
+              >
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Open Tours
+              </Button>
+            )}
+          </div>
         </div>
 
         {stats && totalDemoRecords > 0 && (
@@ -123,9 +197,51 @@ export function DemoDataPanel() {
           </div>
         )}
 
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              <span className="font-medium">Scenario Packs</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={selectRecommended} data-testid="button-recommended-packs">
+                Recommended
+              </Button>
+              <Button variant="ghost" size="sm" onClick={selectAllScenarios} data-testid="button-all-scenarios">
+                All Scenarios
+              </Button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {(Object.entries(SCENARIO_DESCRIPTIONS) as [ScenarioPack, typeof SCENARIO_DESCRIPTIONS[ScenarioPack]][]).map(([pack, info]) => (
+              <div 
+                key={pack} 
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedPacks.includes(pack) 
+                    ? 'bg-primary/5 border-primary/30' 
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => togglePack(pack)}
+              >
+                <Checkbox 
+                  checked={selectedPacks.includes(pack)}
+                  onClick={(e) => e.stopPropagation()}
+                  onCheckedChange={() => togglePack(pack)}
+                  data-testid={`checkbox-pack-${pack}`}
+                />
+                <div className="flex-1 min-w-0">
+                  <Label className="font-medium cursor-pointer">{info.label}</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">{info.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-3">
           <Button
-            onClick={() => seedMutation.mutate()}
+            onClick={() => seedMutation.mutate(selectedPacks.length > 0 ? selectedPacks : ['FULL_DATASET'])}
             disabled={seedMutation.isPending || nukeMutation.isPending}
             data-testid="button-seed-demo"
           >
@@ -134,19 +250,8 @@ export function DemoDataPanel() {
             ) : (
               <Database className="h-4 w-4 mr-2" />
             )}
-            Seed Demo Data
+            Seed {selectedPacks.length} Scenario{selectedPacks.length !== 1 ? 's' : ''}
           </Button>
-
-          {totalDemoRecords > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setGuidedTestOpen(true)}
-              data-testid="button-guided-test"
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Start Guided Tour
-            </Button>
-          )}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -218,19 +323,6 @@ export function DemoDataPanel() {
             </div>
           </div>
         )}
-
-        <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-          <p className="font-medium mb-2">Demo Data Includes:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>10 clients across various industries and statuses</li>
-            <li>8 energy suppliers with RFQ playbooks</li>
-            <li>10 deals spanning all lifecycle stages (Draft → Closed)</li>
-            <li>Client dossiers with consumption profiles</li>
-            <li>RFQ dispatches and supplier quotes</li>
-            <li>Commission events and usage periods</li>
-            <li>Deal cases for exception handling testing</li>
-          </ul>
-        </div>
       </CardContent>
 
       <GuidedTestModal open={guidedTestOpen} onOpenChange={setGuidedTestOpen} />
