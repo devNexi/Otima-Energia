@@ -3177,6 +3177,44 @@ export const supplierRfqPlaybooks = pgTable("supplier_rfq_playbooks", {
   // Internal notes
   internalNotes: text("internal_notes"),
   
+  // ============== OPERATIONAL DIFFERENTIATORS (VAREJISTA PLAYBOOK) ==============
+  
+  // A) Onboarding SLA + Response Behavior
+  onboardingSlaDays: integer("onboarding_sla_days"), // Days to complete onboarding
+  quoteResponseSlaHours: integer("quote_response_sla_hours"), // Hours expected for quote response
+  relationshipNotes: text("relationship_notes"), // "Falar com Maria, responde depois das 15h"
+  
+  // B) Products Quoted
+  productsSupported: text("products_supported").array(), // ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100']
+  
+  // C) Submarkets Covered
+  submarketsCovered: text("submarkets_covered").array(), // ['SE_CO', 'S', 'NE', 'N']
+  
+  // D) RFQ Intake Format
+  rfqIntakeMethod: text("rfq_intake_method"), // EMAIL, PORTAL, WHATSAPP, OTHER
+  rfqTemplateRequired: boolean("rfq_template_required").default(false),
+  rfqTemplateId: text("rfq_template_id"), // Link to template doc
+  rfqRequiredFields: jsonb("rfq_required_fields").default([]), // Checklist of required fields
+  rfqAttachmentRequirements: jsonb("rfq_attachment_requirements").default([]), // ['bills', 'UC list', 'contrato atual']
+  
+  // E) Required Docs / Guarantees / Credit Turnaround
+  docsRequired: jsonb("docs_required").default([]), // Required documents for onboarding
+  guaranteesSupported: text("guarantees_supported").array(), // ['none', 'deposito', 'fiança', 'seguro_garantia']
+  creditTurnaroundDays: integer("credit_turnaround_days"), // Days for credit approval
+  commonCreditRejectReasons: jsonb("common_credit_reject_reasons").default([]), // Common rejection reasons
+  
+  // F) Commission Reporting
+  commissionReportFormat: text("commission_report_format"), // PDF, EXCEL, CSV, PORTAL, EMAIL_BODY
+  commissionReportFrequency: text("commission_report_frequency"), // MONTHLY, QUARTERLY, UPFRONT, MIXED
+  commissionReportFieldsExpected: jsonb("commission_report_fields_expected").default([]), // Expected fields
+  
+  // G) Consumption Variance Treatment
+  varianceMethod: text("variance_method"), // TRUE_UP, CLAWBACK, OFFSET, OTHER
+  varianceFrequency: text("variance_frequency"), // MONTHLY, QUARTERLY, ANNUAL
+  varianceNotes: text("variance_notes"), // "faz compensação no mês seguinte"
+  
+  // ============== END OPERATIONAL DIFFERENTIATORS ==============
+  
   // Audit
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -3346,3 +3384,179 @@ export const rfqDispatchesRelations = relations(rfqDispatches, ({ one }) => ({
 }));
 
 // ============== END SUPPLIER RFQ ADAPTER ==============
+
+// ============== OPS GUARDRAILS SYSTEM ==============
+
+// User Tooltip State - tracks which tooltips user has dismissed
+export const userTooltipState = pgTable("user_tooltip_state", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  tooltipKey: text("tooltip_key").notNull(), // unique identifier like 'dossier.first_open', 'rfq.send_warning'
+  dismissedAt: timestamp("dismissed_at").defaultNow().notNull(),
+}, (table) => [
+  unique().on(table.userId, table.tooltipKey),
+]);
+
+export const insertUserTooltipStateSchema = createInsertSchema(userTooltipState).omit({
+  id: true,
+  dismissedAt: true,
+});
+
+export type InsertUserTooltipState = z.infer<typeof insertUserTooltipStateSchema>;
+export type UserTooltipState = typeof userTooltipState.$inferSelect;
+
+// Ops Checklists - checklist templates per deal stage
+export const opsChecklists = pgTable("ops_checklists", {
+  id: serial("id").primaryKey(),
+  dealStage: text("deal_stage").notNull(), // DRAFT, PROSPECTING, QUALIFICATION, etc.
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertOpsChecklistSchema = createInsertSchema(opsChecklists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOpsChecklist = z.infer<typeof insertOpsChecklistSchema>;
+export type OpsChecklist = typeof opsChecklists.$inferSelect;
+
+// Ops Checklist Items - individual items within a checklist
+export const opsChecklistItems = pgTable("ops_checklist_items", {
+  id: serial("id").primaryKey(),
+  checklistId: integer("checklist_id").references(() => opsChecklists.id).notNull(),
+  itemKey: text("item_key").notNull(), // unique key like 'dossier_verified', 'bills_uploaded'
+  label: text("label").notNull(), // "Dossiê verificado e completo"
+  description: text("description"), // Why this matters
+  helpText: text("help_text"), // How to complete this
+  isBlocking: boolean("is_blocking").default(false).notNull(), // If true, blocks deal transition
+  requiresEvidence: boolean("requires_evidence").default(false), // If true, needs file upload
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOpsChecklistItemSchema = createInsertSchema(opsChecklistItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOpsChecklistItem = z.infer<typeof insertOpsChecklistItemSchema>;
+export type OpsChecklistItem = typeof opsChecklistItems.$inferSelect;
+
+// Deal Checklist Completions - tracks completion of checklist items per deal
+export const dealChecklistCompletions = pgTable("deal_checklist_completions", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id).notNull(),
+  checklistItemId: integer("checklist_item_id").references(() => opsChecklistItems.id).notNull(),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  notes: text("notes"),
+  evidenceDocId: integer("evidence_doc_id"), // Reference to uploaded evidence
+  evidenceUrl: text("evidence_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique().on(table.dealId, table.checklistItemId),
+]);
+
+export const insertDealChecklistCompletionSchema = createInsertSchema(dealChecklistCompletions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealChecklistCompletion = z.infer<typeof insertDealChecklistCompletionSchema>;
+export type DealChecklistCompletion = typeof dealChecklistCompletions.$inferSelect;
+
+// Ops Playbooks - error scenarios with actions ("If X → Do Y")
+export const opsPlaybooks = pgTable("ops_playbooks", {
+  id: serial("id").primaryKey(),
+  scenarioKey: text("scenario_key").notNull().unique(), // 'supplier_no_response', 'quote_incoherent', etc.
+  title: text("title").notNull(), // "Varejista não respondeu"
+  description: text("description"), // Longer explanation
+  triggerConditions: jsonb("trigger_conditions").default([]), // Conditions that trigger this playbook
+  severity: text("severity").default("MEDIUM"), // LOW, MEDIUM, HIGH, CRITICAL
+  applicableStages: text("applicable_stages").array(), // ['RFQ_SENT', 'QUOTE_ANALYSIS']
+  actionSteps: jsonb("action_steps").default([]), // [{ order, action, description, dueHours }]
+  escalationPath: jsonb("escalation_path"), // { afterHours, escalateTo, method }
+  isActive: boolean("is_active").default(true).notNull(),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertOpsPlaybookSchema = createInsertSchema(opsPlaybooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOpsPlaybook = z.infer<typeof insertOpsPlaybookSchema>;
+export type OpsPlaybook = typeof opsPlaybooks.$inferSelect;
+
+// Ops Error Events - tracks mistakes/failures for heatmap and metrics
+export const opsErrorEvents = pgTable("ops_error_events", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id").references(() => deals.id),
+  userId: varchar("user_id").references(() => users.id),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  errorType: text("error_type").notNull(), // 'CHECKLIST_FAILURE', 'SLA_BREACH', 'DEAL_REVERSAL', 'RFQ_RESTART', 'DISPUTE'
+  errorCategory: text("error_category"), // 'DOCUMENTATION', 'COMMUNICATION', 'PROCESS', 'DATA_QUALITY'
+  dealStage: text("deal_stage"), // Stage when error occurred
+  severity: text("severity").default("MEDIUM"), // LOW, MEDIUM, HIGH, CRITICAL
+  description: text("description"),
+  rootCause: text("root_cause"),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  metadata: jsonb("metadata"), // Additional context
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOpsErrorEventSchema = createInsertSchema(opsErrorEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOpsErrorEvent = z.infer<typeof insertOpsErrorEventSchema>;
+export type OpsErrorEvent = typeof opsErrorEvents.$inferSelect;
+
+// Ops Performance Snapshots - daily/weekly aggregated metrics per user
+export const opsPerformanceSnapshots = pgTable("ops_performance_snapshots", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  periodType: text("period_type").notNull(), // 'DAILY', 'WEEKLY', 'MONTHLY'
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  dealsHandled: integer("deals_handled").default(0),
+  dealsWon: integer("deals_won").default(0),
+  dealsLost: integer("deals_lost").default(0),
+  avgDealDurationDays: decimal("avg_deal_duration_days", { precision: 10, scale: 2 }),
+  avgRfqResponseHours: decimal("avg_rfq_response_hours", { precision: 10, scale: 2 }),
+  slaBreachCount: integer("sla_breach_count").default(0),
+  checklistRetries: integer("checklist_retries").default(0),
+  rfqRestarts: integer("rfq_restarts").default(0),
+  errorCount: integer("error_count").default(0),
+  disputeCount: integer("dispute_count").default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  unique().on(table.userId, table.periodType, table.periodStart),
+]);
+
+export const insertOpsPerformanceSnapshotSchema = createInsertSchema(opsPerformanceSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOpsPerformanceSnapshot = z.infer<typeof insertOpsPerformanceSnapshotSchema>;
+export type OpsPerformanceSnapshot = typeof opsPerformanceSnapshots.$inferSelect;
+
+// ============== END OPS GUARDRAILS SYSTEM ==============

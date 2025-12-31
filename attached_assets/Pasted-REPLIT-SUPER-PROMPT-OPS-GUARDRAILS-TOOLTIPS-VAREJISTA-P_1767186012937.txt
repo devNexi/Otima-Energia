@@ -1,0 +1,545 @@
+REPLIT SUPER PROMPT — OPS GUARDRAILS, TOOLTIPS & VAREJISTA PLAYBOOK UPGRADE (ÓTIMA OS)
+
+You are working inside the existing Ótima Energia admin portal.
+This system is already production-grade and includes:
+
+Leads & Clients CRM
+
+Bill OCR & Client Dossiê
+
+ECOS analysis
+
+RFQ + Blind Auction tooling
+
+Deal OS (state machine)
+
+Revenue / Commission OS (usage, reconciliation)
+
+Compliance + audit logging
+
+Demo/Sandbox mode
+
+✅ IMPORTANT OPERATIONAL FACTS (DO NOT IGNORE)
+
+Ótima does not:
+
+perform credit checks
+
+approve credit
+
+define guarantees
+
+execute the migration operationally inside CCEE/market steps
+
+Instead:
+
+Varejistas do credit approval, guarantees, and execute onboarding/migration steps.
+
+Ótima’s job is origination + orchestration:
+
+collect docs correctly
+
+keep client moving
+
+enforce checklist + evidence
+
+prevent drop-offs
+
+protect varejista ops teams from mess and rework
+
+ensure RFQs and onboarding are submitted exactly in their required format
+
+This build is about making the portal:
+
+idiot-proof for non-expert Ops users
+
+auditable (defensive compliance)
+
+scalable as an “assembly line”
+
+aligned to how varejistas actually differentiate
+
+🎯 CORE OBJECTIVES
+
+Reduce Ops mistakes to near-zero
+
+Eliminate tribal knowledge
+
+Train new Ops users in-product (Renan-level clarity)
+
+Make blockers actionable and step-by-step
+
+Capture supplier (varejista) operational preferences accurately
+
+Ensure “RFQ → onboarding → revenue” is repeatable without chaos
+
+1️⃣ IN-PORTAL CONTEXTUAL TOOLTIPS SYSTEM (TO TRAIN USERS)
+Purpose
+
+Explain what, why, and risk at the moment of action — assuming the user has zero energy market knowledge.
+
+Technical Requirements
+
+Create a reusable tooltip system:
+
+Database table
+user_tooltip_state
+
+id
+
+user_id
+
+tooltip_key
+
+dismissed_at
+
+Rules
+
+show on first interaction
+
+“Got it” permanently dismisses
+
+admin can reset tooltips per user
+
+tooltips support:
+
+hover
+
+click
+
+blocking modal for irreversible actions
+
+Tooltip Coverage (MANDATORY)
+
+Ops Dashboard
+
+Blocked Deals KPI
+“Esses negócios não podem avançar. Corrigir bloqueios é sempre prioridade #1.”
+
+Client → Dossiê
+
+first open
+“O Dossiê é a base de toda cotação. Dado errado aqui = proposta errada.”
+
+Upload Bills
+
+“Envie o máximo de faturas possível. OCR ajuda, mas você é responsável pela precisão.”
+
+Mark Dossiê as READY
+
+blocking tooltip + checkbox
+“Ao marcar como pronto, você confirma que os dados estão coerentes. Mudanças depois do RFQ geram retrabalho e desgaste com o varejista.”
+
+Lock Dossiê
+
+strong warning modal
+“Trava o perfil para proteger a confiança do varejista. Destravar deve ser raro e exige justificativa.”
+
+Send RFQ
+
+IMPORTANT: RFQs must follow varejista format
+“RFQ deve ser enviado no formato exigido pelo varejista. O sistema vai sugerir o formato correto conforme o Playbook do fornecedor.”
+
+Add Supplier Quote
+
+“Registre exatamente o que foi recebido. Não ajuste preço ou termo. Se estiver confuso, anexe o arquivo original e abra um caso.”
+
+Select Winning Quote
+
+blocking modal
+“Você está escolhendo o fornecedor que será o contraparte contratual do cliente. Confirme preço, prazo, submercado e produto antes de avançar.”
+
+Compliance Tab
+
+“Se não está marcado, não aconteceu. Isso protege a Ótima em caso de disputa ou reclamação.”
+
+Authority Verification (Decision Maker)
+
+“Confirme quem decide e quem pode assinar. Isso evita cancelamentos e dores de cabeça depois.”
+
+2️⃣ MANDATORY OPS CHECKLISTS (HARD GATES)
+Purpose
+
+no improviso
+
+no pular etapas
+
+nada “achei que alguém fez”
+
+System Behavior
+
+checklists são obrigatórios para desbloquear o negócio
+
+sem override (exceto admin + justificativa)
+
+todo item registra:
+
+completion
+
+timestamp
+
+user
+
+notes
+
+optional evidence attachment
+
+Enhance Checklist Engine
+
+Add table:
+
+checklist_blockers
+
+deal_id
+
+checklist_item_id
+
+is_blocking
+
+resolved_at
+
+Enforcement
+
+Deal transitions must:
+
+fail if blocking checklist items exist
+
+show missing items inline
+
+show “why blocked” with exact action list
+
+3️⃣ OPS ERROR PLAYBOOKS (“IF X → DO Y”) — IN-PORTAL
+Purpose
+
+Remove decision paralysis. Every failure mode becomes a repeatable protocol.
+
+Where it lives
+
+Help → “Ops Playbook” tab
+
+Inline alert appears when trigger condition happens
+
+REQUIRED ERROR SCENARIOS
+
+❌ Varejista não respondeu
+Trigger:
+
+RFQ sent + no response after SLA from playbook
+Actions:
+
+send reminder using preferred channel (email/WhatsApp)
+
+log communication
+
+escalate to named contact
+
+dispatch to backup varejista(s)
+
+❌ Cotação incoerente
+Trigger:
+
+price deviates from benchmarks by > X% OR missing fields
+Actions:
+
+verify dossier locked
+
+verify product type + submarket
+
+request clarification using required format
+
+attach original file
+
+log note
+
+❌ Cliente mudou dado depois do RFQ
+Trigger:
+
+dossier changed post RFQ_SENT
+Actions:
+
+pause deal
+
+notify all varejistas involved
+
+decide: restart RFQ or proceed
+
+document decision
+
+❌ Faltando documento
+Trigger:
+
+onboarding cannot move because docs missing
+Actions:
+
+open checklist missing docs list
+
+request docs via portal + WhatsApp
+
+log contact + set due date
+
+❌ Comissão divergente
+Trigger:
+
+reconciliation variance
+Actions:
+
+verify usage source + period
+
+verify playbook snapshot
+
+check supplier report format
+
+open dispute + SLA
+
+❌ Deal travado tempo demais
+Trigger:
+
+deal idle > X days
+Actions:
+
+identify blocker
+
+create/assign case
+
+set SLA
+
+notify admin if overdue
+
+4️⃣ “ASSEMBLY LINE” WORKFLOW GATES (MAKE IT IMPOSSIBLE TO DO IT WRONG)
+Enhancement
+
+Convert current guidance into enforced workflow gates.
+
+Rules
+
+A deal cannot:
+
+send RFQ
+
+select quote
+
+advance to onboarding stages
+
+progress states
+…until required checklist items are complete.
+
+UI Requirements
+
+Inline “Next Steps” widget on deal screen
+
+Missing requirements highlighted
+
+“Why blocked?” always visible
+
+Provide exact buttons to fix blockers (not just text)
+
+5️⃣ SUPPLIER PLAYBOOK UPGRADE (REMOVE “VAREJISTA? Y/N” — ADD REAL DIFFERENTIATORS)
+IMPORTANT
+
+Your internal language can treat the whole 126 list as “varejistas”.
+So do NOT store “Varejista: Y/N”.
+
+Instead store operational differentiators that make them distinct.
+
+Required new Supplier Playbook fields
+
+Add these fields to supplierPlaybooks (or create supplierPlaybookOperational JSONB if you prefer):
+
+A) Onboarding SLA + Response Behavior
+
+onboarding_sla_days (number)
+
+quote_response_sla_hours (number)
+
+preferred_contact_channel (EMAIL / WHATSAPP / PORTAL)
+
+relationship_notes (free text: “Falar com Maria, responde depois das 15h”)
+
+B) Products Quoted
+
+products_supported (array):
+
+CONVENCIONAL
+
+INCENTIVADA_50
+
+INCENTIVADA_100
+
+OTHER (free text)
+
+C) Submarkets Covered
+
+submarkets_supported (array):
+
+SE_CO
+
+S
+
+NE
+
+N
+
+D) RFQ Intake Format
+
+rfq_intake_method (EMAIL / PORTAL / WHATSAPP / OTHER)
+
+rfq_template_required (boolean)
+
+rfq_template_id (optional link to template)
+
+rfq_required_fields (checklist array)
+
+rfq_attachment_requirements (array: bills, UC list, contrato atual, etc)
+
+E) Required Docs / Guarantees / Credit Turnaround
+
+docs_required (array)
+
+guarantees_supported (array: none / deposito / fiança / seguro garantia / outras)
+
+credit_turnaround_days (number)
+
+common_credit_reject_reasons (array)
+
+F) Commission Reporting
+
+commission_report_format (PDF / EXCEL / CSV / PORTAL / EMAIL_BODY)
+
+commission_report_frequency (MONTHLY / QUARTERLY / UPFRONT / MIXED)
+
+commission_report_fields_expected (array)
+
+G) Consumption Variance Treatment
+
+variance_method (TRUE_UP / CLAWBACK / OFFSET / OTHER)
+
+variance_frequency (MONTHLY / QUARTERLY / ANNUAL)
+
+variance_notes (free text: “faz compensação no mês seguinte”)
+
+UI Requirements
+
+In Playbooks tab:
+
+show these fields in a clear “Operational Preferences” section
+
+add tooltips explaining why each matters
+
+allow versioning (already exists) but ensure these fields are included in version snapshots
+
+6️⃣ COMMON MISTAKES HEATMAP (TRAINING + PROCESS FIXES)
+Data Sources
+
+checklist failures
+
+SLA breaches
+
+deal reversals
+
+lost reasons
+
+disputes
+
+RFQ restarts
+
+Dashboard Widgets
+
+Top 5 recurring mistakes
+
+Mistakes by Ops user
+
+Mistakes by deal stage
+
+Mistakes by supplier
+
+Example:
+“32% dos atrasos acontecem em ONBOARDING_PENDING por documentos incompletos.”
+
+7️⃣ OPS PERFORMANCE METRICS (MEASURABLE EXECUTION)
+Required Metrics (per Ops user)
+
+Avg deal duration
+
+Avg RFQ response time
+
+SLA breaches count
+
+Error rate (checklist retries / RFQ restarts)
+
+Deals handled
+
+System Metrics
+
+Avg time per deal stage
+
+Conversion rate DRAFT → CONTRACT_SIGNED
+
+% deals blocked by compliance
+
+% commissions disputed
+
+UI
+
+Ops Performance Dashboard (Admin + Ops lead)
+
+time filters
+
+user filters
+
+8️⃣ UX PRINCIPLES (DO NOT IGNORE)
+
+no long documents
+
+no walls of text
+
+everything action-oriented
+
+assume user has zero energy market knowledge
+
+explain why, not just what
+
+every blocker has a button to fix it
+
+✅ ACCEPTANCE CRITERIA
+
+Before marking complete:
+
+A brand-new Ops user can:
+
+process a deal end-to-end with no external training
+
+understand exactly why something is blocked
+
+fix blockers step-by-step in the UI
+
+System guarantees:
+
+no deal advances with missing required items
+
+supplier playbooks capture real operational differences
+
+audit + evidence is searchable and defensible
+
+Admin can see:
+
+where mistakes happen
+
+who needs training
+
+what stage causes the most rework
+
+🧠 PHILOSOPHY (IMPORTANT)
+
+This is not “extra features.”
+This is how Ótima scales without chaos:
+
+Protect supplier trust
+
+Prevent onboarding drop-offs
+
+Create consistent RFQ quality
+
+Make Ops a competitive advantage
+
+You are building an energy deal assembly line.
+This layer makes it impossible to misuse.
