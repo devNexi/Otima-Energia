@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, and, or, ilike } from "drizzle-orm";
 import { 
   insertLeadSchema, 
   insertClientSchema, 
@@ -33,10 +33,14 @@ import {
   insertCommissionReconciliationRunSchema,
   insertCommissionReconciliationLineSchema,
   insertDealCaseSchema,
+  zohoIntakeEvents,
+  clients,
+  deals,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState
 } from "@shared/schema";
+import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import multer from "multer";
@@ -6531,6 +6535,298 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching demo deals:", error);
       res.status(500).json({ success: false, error: "Failed to fetch demo deals" });
+    }
+  });
+
+  // ============== ZOHO INTAKE ==============
+
+  const zohoIntakeSchema = z.object({
+    zohoLeadId: z.string().min(1, "zohoLeadId is required"),
+    companyName: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    cnpj: z.string().optional(),
+    brMarket: z.enum(["ACL", "ACR", "Unknown"]).default("Unknown"),
+    brGroup: z.enum(["A", "B", "Unknown"]).default("Unknown"),
+    dmName: z.string().optional(),
+    dmRole: z.enum(["Owner", "Finance", "Admin", "Operations", "Procurement", "Other", "Unknown"]).default("Unknown"),
+    dmDirectPhone: z.string().optional(),
+    dmAvailability: z.string().optional(),
+    sourceAgent: z.enum(["Clara", "Sophia", "Unknown"]).default("Unknown"),
+    outcome: z.enum(["Hotkey", "Warm", "Tepid"]),
+    quickNote: z.string().optional(),
+    callbackDateTime: z.string().optional()
+  });
+
+  async function logZohoIntakeEvent(
+    zohoLeadId: string,
+    payload: any,
+    resultStatus: "CREATED" | "EXISTING" | "REJECTED" | "ERROR",
+    portalDealId: string | null,
+    portalClientId: number | null,
+    errorMessage: string | null,
+    ipAddress: string | null,
+    userAgent: string | null
+  ) {
+    try {
+      await db.insert(zohoIntakeEvents).values({
+        zohoLeadId,
+        payloadJson: payload,
+        resultStatus,
+        portalDealId,
+        portalClientId,
+        errorMessage,
+        ipAddress,
+        userAgent
+      });
+    } catch (dbError: any) {
+      console.error("Failed to log Zoho intake event:", dbError);
+    }
+  }
+
+  app.post("/api/intake/zoho/deal", async (req, res) => {
+    const ipAddress = req.ip || req.headers["x-forwarded-for"]?.toString() || null;
+    const userAgent = req.get("User-Agent") || null;
+    
+    const intakeKey = req.headers["x-zoho-intake-key"];
+    const expectedKey = process.env.ZOHO_INTAKE_KEY;
+    
+    if (!expectedKey || intakeKey !== expectedKey) {
+      await logZohoIntakeEvent(
+        req.body?.zohoLeadId || "unknown",
+        req.body,
+        "REJECTED",
+        null,
+        null,
+        "Invalid or missing x-zoho-intake-key header",
+        ipAddress,
+        userAgent
+      );
+      await logAuditEvent({
+        actor: "zoho_intake",
+        actorRole: "system",
+        actorIp: ipAddress,
+        userAgent,
+        action: "ZOHO_INTAKE_REJECTED",
+        entityType: "intake",
+        entityId: null,
+        detailsJson: { reason: "Invalid or missing intake key" }
+      });
+      return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing x-zoho-intake-key" });
+    }
+    
+    const parseResult = zohoIntakeSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errorMsg = fromError(parseResult.error).toString();
+      await logZohoIntakeEvent(
+        req.body?.zohoLeadId || "unknown",
+        req.body,
+        "REJECTED",
+        null,
+        null,
+        errorMsg,
+        ipAddress,
+        userAgent
+      );
+      await logAuditEvent({
+        actor: "zoho_intake",
+        actorRole: "system",
+        actorIp: ipAddress,
+        userAgent,
+        action: "ZOHO_INTAKE_REJECTED",
+        entityType: "intake",
+        entityId: null,
+        detailsJson: { reason: "Validation failed", error: errorMsg }
+      });
+      return res.status(400).json({ success: false, error: errorMsg });
+    }
+    
+    const payload = parseResult.data;
+    
+    try {
+      const existingDeal = await db.select().from(deals).where(eq(deals.zohoLeadId, payload.zohoLeadId)).limit(1);
+      
+      if (existingDeal.length > 0) {
+        const deal = existingDeal[0];
+        await logZohoIntakeEvent(
+          payload.zohoLeadId,
+          payload,
+          "EXISTING",
+          deal.id,
+          deal.clientId,
+          null,
+          ipAddress,
+          userAgent
+        );
+        await logAuditEvent({
+          actor: "zoho_intake",
+          actorRole: "system",
+          actorIp: ipAddress,
+          userAgent,
+          action: "ZOHO_INTAKE_IDEMPOTENT",
+          entityType: "deal",
+          entityId: deal.id,
+          detailsJson: { zohoLeadId: payload.zohoLeadId, message: "Deal already exists" }
+        });
+        
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : process.env.REPLIT_DOMAINS?.split(",")[0] 
+            ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+            : "https://otimaenergia.replit.app";
+        
+        return res.json({
+          portalDealId: deal.id,
+          portalClientId: deal.clientId,
+          portalDealUrl: `${baseUrl}/admin?tab=deals&deal=${deal.id}`,
+          status: "EXISTING"
+        });
+      }
+      
+      let client = null;
+      
+      if (payload.cnpj) {
+        const cnpjNormalized = payload.cnpj.replace(/\D/g, "");
+        const existingByCnpj = await db.select().from(clients)
+          .where(sql`REGEXP_REPLACE(${clients.cnpj}, '[^0-9]', '', 'g') = ${cnpjNormalized}`)
+          .limit(1);
+        if (existingByCnpj.length > 0) {
+          client = existingByCnpj[0];
+        }
+      }
+      
+      if (!client && payload.companyName && payload.email) {
+        const existingByNameEmail = await db.select().from(clients)
+          .where(and(
+            ilike(clients.companyName, payload.companyName),
+            ilike(clients.email, payload.email)
+          ))
+          .limit(1);
+        if (existingByNameEmail.length > 0) {
+          client = existingByNameEmail[0];
+        }
+      }
+      
+      let clientCreated = false;
+      if (!client) {
+        const newClient = await storage.createClient({
+          companyName: payload.companyName || `Lead ${payload.zohoLeadId}`,
+          email: payload.email || null,
+          phone: payload.phone || null,
+          cnpj: payload.cnpj || null,
+          status: "prospect",
+          contactPerson: payload.dmName || null
+        });
+        client = newClient;
+        clientCreated = true;
+        
+        await logAuditEvent({
+          actor: "zoho_intake",
+          actorRole: "system",
+          actorIp: ipAddress,
+          userAgent,
+          action: "ZOHO_INTAKE_CLIENT_CREATED",
+          entityType: "client",
+          entityId: client.id,
+          detailsJson: { zohoLeadId: payload.zohoLeadId, companyName: client.companyName }
+        });
+      }
+      
+      let dealOwner = "Callum";
+      if (payload.brGroup === "B") {
+        dealOwner = "Callum";
+      } else if (payload.outcome === "Hotkey") {
+        dealOwner = "Renan";
+      }
+      
+      const demoMode = process.env.ENABLE_DEMO_MODE === "true";
+      
+      const newDeal = await storage.createDeal({
+        clientId: client.id,
+        internalOwner: dealOwner,
+        status: "DRAFT",
+        zohoLeadId: payload.zohoLeadId,
+        zohoLeadSourceAgent: payload.sourceAgent,
+        zohoLeadOutcome: payload.outcome,
+        zohoCallbackAt: payload.callbackDateTime ? new Date(payload.callbackDateTime) : null,
+        zohoQuickNote: payload.quickNote || null,
+        brMarket: payload.brMarket,
+        brGroup: payload.brGroup,
+        dmName: payload.dmName || null,
+        dmRole: payload.dmRole,
+        dmDirectPhone: payload.dmDirectPhone || null,
+        dmAvailability: payload.dmAvailability || null
+      });
+      
+      if (demoMode) {
+        await db.update(deals).set({ isDemo: true }).where(eq(deals.id, newDeal.id));
+      }
+      
+      await logZohoIntakeEvent(
+        payload.zohoLeadId,
+        payload,
+        "CREATED",
+        newDeal.id,
+        client.id,
+        null,
+        ipAddress,
+        userAgent
+      );
+      
+      await logAuditEvent({
+        actor: "zoho_intake",
+        actorRole: "system",
+        actorIp: ipAddress,
+        userAgent,
+        action: "ZOHO_INTAKE_DEAL_CREATED",
+        entityType: "deal",
+        dealId: newDeal.id,
+        detailsJson: {
+          zohoLeadId: payload.zohoLeadId,
+          clientId: client.id,
+          clientCreated,
+          owner: dealOwner,
+          outcome: payload.outcome,
+          sourceAgent: payload.sourceAgent
+        }
+      });
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.REPLIT_DOMAINS?.split(",")[0] 
+          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+          : "https://otimaenergia.replit.app";
+      
+      return res.json({
+        portalDealId: newDeal.id,
+        portalClientId: client.id,
+        portalDealUrl: `${baseUrl}/admin?tab=deals&deal=${newDeal.id}`,
+        status: "CREATED"
+      });
+      
+    } catch (error: any) {
+      console.error("Zoho intake error:", error);
+      await logZohoIntakeEvent(
+        payload.zohoLeadId,
+        payload,
+        "ERROR",
+        null,
+        null,
+        error.message || "Internal error",
+        ipAddress,
+        userAgent
+      );
+      await logAuditEvent({
+        actor: "zoho_intake",
+        actorRole: "system",
+        actorIp: ipAddress,
+        userAgent,
+        action: "ZOHO_INTAKE_ERROR",
+        entityType: "intake",
+        entityId: null,
+        detailsJson: { zohoLeadId: payload.zohoLeadId, error: error.message }
+      });
+      return res.status(500).json({ success: false, error: "Internal server error" });
     }
   });
 
