@@ -44,6 +44,34 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Role-Based Access Control**: `admin`, `ops`, `sales` roles.
 - **Auth Flow**: Session-based authentication.
 
+### Zoho CRM Integration Architecture
+**System of Record Rules:**
+- **Zoho CRM**: System of record for **Leads only**
+- **Ótima Portal**: System of record for **Deals, Dossiers, RFQs, Quotes, Compliance, and Commission**
+- After Lead → Deal conversion, Zoho is treated as read-only context; all operational state changes happen only in Portal
+
+**Zoho → Portal (Intake):**
+- Zoho may create a Deal via `POST /api/intake/zoho/deal` endpoint
+- Passes canonical Brazil fields: `BR_Market`, `BR_Group`, `BR_Outcome`, DM info, callback, quick notes
+- Zoho must NOT update deal stage after creation or overwrite dossier/RFQ/quote/compliance data
+- Authentication via `x-zoho-intake-key` header
+- Idempotency: Duplicate `zohoLeadId` returns existing deal (HTTP 200, status: EXISTING)
+
+**Portal → Zoho (Future - Not Implemented):**
+- Light sync only: Deal Created timestamp + Portal Deal ID, Final Outcome (Closed Won/Lost)
+- No mid-pipeline syncing required
+- Sync logic kept modular for future: RFQ_SENT, CONTRACT_SIGNED status pushback
+
+**Data Model Safeguards:**
+- `zohoLeadId` stored on Portal deals (unique constraint)
+- All Zoho-originated events logged in audit trail with `source = zoho_intake`
+- UI displays read-only banner: "Originated from Zoho • Operational control lives in Ótima"
+
+**Deal Ownership Assignment:**
+- Default: Callum
+- Group B: Always Callum
+- Hotkey outcome (non-Group B): Renan
+
 ## External Dependencies
 
 ### Cloud Services

@@ -221,6 +221,30 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </div>
       </div>
 
+      {/* Zoho Origin Banner - Read-only notice */}
+      {deal.zohoLeadId && (
+        <div 
+          className="bg-gradient-to-r from-orange-100 to-amber-50 border border-orange-300 rounded-lg p-4 flex items-center gap-3"
+          data-testid="banner-zoho-origin"
+        >
+          <div className="bg-orange-200 p-2 rounded-full">
+            <Zap className="w-5 h-5 text-orange-700" />
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-orange-900">
+              {language === "pt" 
+                ? "Originado do Zoho CRM • Controle operacional no Ótima Portal" 
+                : "Originated from Zoho CRM • Operational control lives in Ótima Portal"}
+            </p>
+            <p className="text-sm text-orange-700">
+              {language === "pt"
+                ? "Dados do lead são somente leitura. Todas as alterações de estado e documentos são gerenciadas aqui."
+                : "Lead data is read-only. All state changes and documents are managed here."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Zoho Lead Summary Panel */}
       {deal.zohoLeadId && (
         <Card className="bg-orange-50 border-orange-200" data-testid="panel-zoho-lead-summary">
