@@ -58,6 +58,13 @@ import {
   type RfqDispatch, type InsertRfqDispatch,
   type DossierEditLog, type InsertDossierEditLog,
   type DealTransitionOverride, type InsertDealTransitionOverride,
+  type UserTooltipState, type InsertUserTooltipState,
+  type OpsChecklist, type InsertOpsChecklist,
+  type OpsChecklistItem, type InsertOpsChecklistItem,
+  type DealChecklistCompletion, type InsertDealChecklistCompletion,
+  type OpsPlaybook, type InsertOpsPlaybook,
+  type OpsErrorEvent, type InsertOpsErrorEvent,
+  type OpsPerformanceSnapshot, type InsertOpsPerformanceSnapshot,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -72,7 +79,9 @@ import {
   partners, partnerReferrals,
   supplierRfqAdapters, rfqPackets,
   clientDossiers, clientDossierSnapshots,
-  supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides
+  supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides,
+  userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
+  opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -555,6 +564,38 @@ export interface IStorage {
     winRate: number;
     avgPrice: number;
   }>>;
+  
+  // ============== OPS GUARDRAILS ==============
+  
+  // Tooltips
+  getDismissedTooltips(userId: string): Promise<UserTooltipState[]>;
+  dismissTooltip(userId: string, tooltipKey: string): Promise<UserTooltipState>;
+  resetTooltips(userId: string): Promise<void>;
+  
+  // Checklists
+  getChecklists(dealStage?: string): Promise<OpsChecklist[]>;
+  getChecklistItems(checklistId: number): Promise<OpsChecklistItem[]>;
+  getDealChecklistCompletions(dealId: string): Promise<DealChecklistCompletion[]>;
+  completeChecklistItem(data: InsertDealChecklistCompletion): Promise<DealChecklistCompletion>;
+  getBlockingItems(dealId: string, targetStage?: string): Promise<OpsChecklistItem[]>;
+  
+  // Playbooks
+  getPlaybooks(stage?: string, scenarioKey?: string): Promise<OpsPlaybook[]>;
+  getPlaybookByKey(scenarioKey: string): Promise<OpsPlaybook | undefined>;
+  createOpsPlaybook(data: InsertOpsPlaybook): Promise<OpsPlaybook>;
+  
+  // Checklists CRUD
+  createOpsChecklist(data: InsertOpsChecklist): Promise<OpsChecklist>;
+  createOpsChecklistItem(data: InsertOpsChecklistItem): Promise<OpsChecklistItem>;
+  
+  // Error Tracking
+  logOpsError(data: InsertOpsErrorEvent): Promise<OpsErrorEvent>;
+  getOpsErrors(filters: { dealId?: string; userId?: string; errorType?: string; limit?: number }): Promise<OpsErrorEvent[]>;
+  getErrorHeatmap(options: { groupBy: string; dateFrom?: Date; dateTo?: Date }): Promise<Array<{ key: string; count: number }>>;
+  
+  // Performance Snapshots
+  getPerformanceSnapshots(userId: string, periodType?: string): Promise<OpsPerformanceSnapshot[]>;
+  getAllPerformanceSnapshots(options: { periodType?: string; periodStart?: Date; limit?: number }): Promise<OpsPerformanceSnapshot[]>;
 }
 
 export class Storage implements IStorage {
@@ -3201,6 +3242,256 @@ export class Storage implements IStorage {
     });
     
     return scorecards;
+  }
+  
+  // ============== OPS GUARDRAILS ==============
+  
+  // Tooltips
+  async getDismissedTooltips(userId: string): Promise<UserTooltipState[]> {
+    return await db.select()
+      .from(userTooltipState)
+      .where(eq(userTooltipState.userId, userId));
+  }
+  
+  async dismissTooltip(userId: string, tooltipKey: string): Promise<UserTooltipState> {
+    const result = await db.insert(userTooltipState)
+      .values({ userId, tooltipKey })
+      .onConflictDoNothing()
+      .returning();
+    
+    if (result.length === 0) {
+      const existing = await db.select()
+        .from(userTooltipState)
+        .where(and(
+          eq(userTooltipState.userId, userId),
+          eq(userTooltipState.tooltipKey, tooltipKey)
+        ));
+      return existing[0];
+    }
+    return result[0];
+  }
+  
+  async resetTooltips(userId: string): Promise<void> {
+    await db.delete(userTooltipState)
+      .where(eq(userTooltipState.userId, userId));
+  }
+  
+  // Checklists
+  async getChecklists(dealStage?: string): Promise<OpsChecklist[]> {
+    if (dealStage) {
+      return await db.select()
+        .from(opsChecklists)
+        .where(and(
+          eq(opsChecklists.dealStage, dealStage),
+          eq(opsChecklists.isActive, true)
+        ))
+        .orderBy(opsChecklists.sortOrder);
+    }
+    return await db.select()
+      .from(opsChecklists)
+      .where(eq(opsChecklists.isActive, true))
+      .orderBy(opsChecklists.sortOrder);
+  }
+  
+  async getChecklistItems(checklistId: number): Promise<OpsChecklistItem[]> {
+    return await db.select()
+      .from(opsChecklistItems)
+      .where(and(
+        eq(opsChecklistItems.checklistId, checklistId),
+        eq(opsChecklistItems.isActive, true)
+      ))
+      .orderBy(opsChecklistItems.sortOrder);
+  }
+  
+  async getDealChecklistCompletions(dealId: string): Promise<DealChecklistCompletion[]> {
+    return await db.select()
+      .from(dealChecklistCompletions)
+      .where(eq(dealChecklistCompletions.dealId, dealId));
+  }
+  
+  async completeChecklistItem(data: InsertDealChecklistCompletion): Promise<DealChecklistCompletion> {
+    const result = await db.insert(dealChecklistCompletions)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [dealChecklistCompletions.dealId, dealChecklistCompletions.checklistItemId],
+        set: {
+          isCompleted: data.isCompleted,
+          completedAt: data.completedAt,
+          completedBy: data.completedBy,
+          notes: data.notes,
+          evidenceUrl: data.evidenceUrl,
+          updatedAt: new Date()
+        }
+      })
+      .returning();
+    return result[0];
+  }
+  
+  async getBlockingItems(dealId: string, targetStage?: string): Promise<OpsChecklistItem[]> {
+    const deal = await this.getDealById(dealId);
+    if (!deal) return [];
+    
+    const stage = targetStage || deal.stage;
+    const checklists = await this.getChecklists(stage);
+    
+    if (checklists.length === 0) return [];
+    
+    const completions = await this.getDealChecklistCompletions(dealId);
+    const completedItemIds = new Set(
+      completions.filter(c => c.isCompleted).map(c => c.checklistItemId)
+    );
+    
+    const blockers: OpsChecklistItem[] = [];
+    
+    for (const checklist of checklists) {
+      const items = await this.getChecklistItems(checklist.id);
+      for (const item of items) {
+        if (item.isBlocking && !completedItemIds.has(item.id)) {
+          blockers.push(item);
+        }
+      }
+    }
+    
+    return blockers;
+  }
+  
+  // Playbooks
+  async getPlaybooks(stage?: string, scenarioKey?: string): Promise<OpsPlaybook[]> {
+    let query = db.select().from(opsPlaybooks).where(eq(opsPlaybooks.isActive, true));
+    
+    const results = await query.orderBy(opsPlaybooks.sortOrder);
+    
+    return results.filter(p => {
+      if (scenarioKey && p.scenarioKey !== scenarioKey) return false;
+      if (stage && p.applicableStages && !p.applicableStages.includes(stage)) return false;
+      return true;
+    });
+  }
+  
+  async getPlaybookByKey(scenarioKey: string): Promise<OpsPlaybook | undefined> {
+    const result = await db.select()
+      .from(opsPlaybooks)
+      .where(eq(opsPlaybooks.scenarioKey, scenarioKey));
+    return result[0];
+  }
+  
+  async createOpsPlaybook(data: InsertOpsPlaybook): Promise<OpsPlaybook> {
+    const result = await db.insert(opsPlaybooks).values(data).returning();
+    return result[0];
+  }
+  
+  async createOpsChecklist(data: InsertOpsChecklist): Promise<OpsChecklist> {
+    const result = await db.insert(opsChecklists).values(data).returning();
+    return result[0];
+  }
+  
+  async createOpsChecklistItem(data: InsertOpsChecklistItem): Promise<OpsChecklistItem> {
+    const result = await db.insert(opsChecklistItems).values(data).returning();
+    return result[0];
+  }
+  
+  // Error Tracking
+  async logOpsError(data: InsertOpsErrorEvent): Promise<OpsErrorEvent> {
+    const result = await db.insert(opsErrorEvents).values(data).returning();
+    return result[0];
+  }
+  
+  async getOpsErrors(filters: { dealId?: string; userId?: string; errorType?: string; limit?: number }): Promise<OpsErrorEvent[]> {
+    const conditions = [];
+    
+    if (filters.dealId) conditions.push(eq(opsErrorEvents.dealId, filters.dealId));
+    if (filters.userId) conditions.push(eq(opsErrorEvents.userId, filters.userId));
+    if (filters.errorType) conditions.push(eq(opsErrorEvents.errorType, filters.errorType));
+    
+    let query = db.select().from(opsErrorEvents);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query
+      .orderBy(desc(opsErrorEvents.createdAt))
+      .limit(filters.limit || 100);
+  }
+  
+  async getErrorHeatmap(options: { groupBy: string; dateFrom?: Date; dateTo?: Date }): Promise<Array<{ key: string; count: number }>> {
+    const conditions = [];
+    
+    if (options.dateFrom) {
+      conditions.push(gte(opsErrorEvents.createdAt, options.dateFrom));
+    }
+    if (options.dateTo) {
+      conditions.push(lte(opsErrorEvents.createdAt, options.dateTo));
+    }
+    
+    let groupByField: any;
+    switch (options.groupBy) {
+      case 'stage':
+        groupByField = opsErrorEvents.dealStage;
+        break;
+      case 'type':
+        groupByField = opsErrorEvents.errorType;
+        break;
+      case 'category':
+        groupByField = opsErrorEvents.errorCategory;
+        break;
+      case 'user':
+        groupByField = opsErrorEvents.userId;
+        break;
+      default:
+        groupByField = opsErrorEvents.dealStage;
+    }
+    
+    let query = db.select({
+      key: groupByField,
+      count: sql<number>`COUNT(*)`
+    }).from(opsErrorEvents);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    const results = await query.groupBy(groupByField);
+    
+    return results.map(r => ({
+      key: r.key || 'unknown',
+      count: Number(r.count) || 0
+    }));
+  }
+  
+  // Performance Snapshots
+  async getPerformanceSnapshots(userId: string, periodType?: string): Promise<OpsPerformanceSnapshot[]> {
+    const conditions = [eq(opsPerformanceSnapshots.userId, userId)];
+    
+    if (periodType) {
+      conditions.push(eq(opsPerformanceSnapshots.periodType, periodType));
+    }
+    
+    return await db.select()
+      .from(opsPerformanceSnapshots)
+      .where(and(...conditions))
+      .orderBy(desc(opsPerformanceSnapshots.periodStart));
+  }
+  
+  async getAllPerformanceSnapshots(options: { periodType?: string; periodStart?: Date; limit?: number }): Promise<OpsPerformanceSnapshot[]> {
+    const conditions = [];
+    
+    if (options.periodType) {
+      conditions.push(eq(opsPerformanceSnapshots.periodType, options.periodType));
+    }
+    if (options.periodStart) {
+      conditions.push(gte(opsPerformanceSnapshots.periodStart, options.periodStart.toISOString().split('T')[0]));
+    }
+    
+    let query = db.select().from(opsPerformanceSnapshots);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query
+      .orderBy(desc(opsPerformanceSnapshots.periodStart))
+      .limit(options.limit || 50);
   }
 }
 

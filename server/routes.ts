@@ -44,6 +44,7 @@ import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
 import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
+import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -6527,6 +6528,331 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching demo deals:", error);
       res.status(500).json({ success: false, error: "Failed to fetch demo deals" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: SEED PLAYBOOKS ==============
+
+  app.post("/api/admin/ops/seed-playbooks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      const result = await seedOpsPlaybooks();
+      await logAuditEvent({
+        actor: user.username || "system",
+        actorRole: user.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "OPS_PLAYBOOKS_SEEDED",
+        entityType: "ops_playbooks",
+        entityId: null,
+        detailsJson: result
+      });
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error seeding ops playbooks:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed playbooks" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: TOOLTIPS ==============
+
+  app.get("/api/tooltips/dismissed", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    if (!session) return res.status(401).json({ success: false, error: "Unauthorized" });
+    
+    try {
+      const dismissed = await storage.getDismissedTooltips(session.userId);
+      res.json(dismissed.map(t => t.tooltipKey));
+    } catch (error: any) {
+      console.error("Error fetching dismissed tooltips:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch tooltips" });
+    }
+  });
+
+  app.post("/api/tooltips/dismiss", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    if (!session) return res.status(401).json({ success: false, error: "Unauthorized" });
+    
+    const { tooltipKey } = req.body;
+    if (!tooltipKey) {
+      return res.status(400).json({ success: false, error: "tooltipKey required" });
+    }
+    
+    try {
+      await storage.dismissTooltip(session.userId, tooltipKey);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error dismissing tooltip:", error);
+      res.status(500).json({ success: false, error: "Failed to dismiss tooltip" });
+    }
+  });
+
+  app.post("/api/tooltips/reset", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    if (!session) return res.status(401).json({ success: false, error: "Unauthorized" });
+    
+    try {
+      await storage.resetTooltips(session.userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error resetting tooltips:", error);
+      res.status(500).json({ success: false, error: "Failed to reset tooltips" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: CHECKLISTS ==============
+
+  app.get("/api/checklists", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { dealStage } = req.query;
+      const checklists = await storage.getChecklists(dealStage as string | undefined);
+      res.json({ success: true, checklists });
+    } catch (error: any) {
+      console.error("Error fetching checklists:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch checklists" });
+    }
+  });
+
+  app.get("/api/checklists/:checklistId/items", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const items = await storage.getChecklistItems(parseInt(req.params.checklistId));
+      res.json({ success: true, items });
+    } catch (error: any) {
+      console.error("Error fetching checklist items:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch items" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/checklist", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { dealId } = req.params;
+      const deal = await storage.getDealById(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const checklists = await storage.getChecklists(deal.stage);
+      const completions = await storage.getDealChecklistCompletions(dealId);
+      
+      const items: Record<number, any[]> = {};
+      for (const checklist of checklists) {
+        items[checklist.id] = await storage.getChecklistItems(checklist.id);
+      }
+      
+      res.json({ success: true, checklists, completions, items });
+    } catch (error: any) {
+      console.error("Error fetching deal checklist:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch checklist" });
+    }
+  });
+
+  app.post("/api/deals/:dealId/checklist/:itemId/complete", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    if (!session) return res.status(401).json({ success: false, error: "Unauthorized" });
+    
+    try {
+      const { dealId, itemId } = req.params;
+      const { notes, evidenceUrl } = req.body;
+      
+      const completion = await storage.completeChecklistItem({
+        dealId,
+        checklistItemId: parseInt(itemId),
+        isCompleted: true,
+        completedAt: new Date(),
+        completedBy: session.userId,
+        notes,
+        evidenceUrl
+      });
+      
+      await logAuditEvent({
+        actor: session.userId,
+        actorRole: null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "CHECKLIST_ITEM_COMPLETED",
+        entityType: "checklist_completion",
+        entityId: completion.id.toString(),
+        detailsJson: { dealId, itemId, notes }
+      });
+      
+      res.json({ success: true, completion });
+    } catch (error: any) {
+      console.error("Error completing checklist item:", error);
+      res.status(500).json({ success: false, error: "Failed to complete item" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/blocker-check", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { dealId } = req.params;
+      const { targetStage } = req.query;
+      
+      const blockers = await storage.getBlockingItems(dealId, targetStage as string);
+      const canTransition = blockers.length === 0;
+      
+      res.json({ 
+        success: true, 
+        canTransition, 
+        blockers: blockers.map(b => ({
+          itemKey: b.itemKey,
+          label: b.label,
+          description: b.description,
+          helpText: b.helpText
+        }))
+      });
+    } catch (error: any) {
+      console.error("Error checking blockers:", error);
+      res.status(500).json({ success: false, error: "Failed to check blockers" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: PLAYBOOKS ==============
+
+  app.get("/api/playbooks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { stage, scenarioKey } = req.query;
+      const playbooks = await storage.getPlaybooks(stage as string | undefined, scenarioKey as string | undefined);
+      res.json({ success: true, playbooks });
+    } catch (error: any) {
+      console.error("Error fetching playbooks:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbooks" });
+    }
+  });
+
+  app.get("/api/playbooks/:scenarioKey", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const playbook = await storage.getPlaybookByKey(req.params.scenarioKey);
+      if (!playbook) {
+        return res.status(404).json({ success: false, error: "Playbook not found" });
+      }
+      res.json({ success: true, playbook });
+    } catch (error: any) {
+      console.error("Error fetching playbook:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch playbook" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: ERROR TRACKING ==============
+
+  app.post("/api/ops/errors", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    if (!session) return res.status(401).json({ success: false, error: "Unauthorized" });
+    
+    try {
+      const event = await storage.logOpsError({
+        ...req.body,
+        userId: session.userId
+      });
+      res.json({ success: true, event });
+    } catch (error: any) {
+      console.error("Error logging ops error:", error);
+      res.status(500).json({ success: false, error: "Failed to log error" });
+    }
+  });
+
+  app.get("/api/ops/errors", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { dealId, userId, errorType, limit } = req.query;
+      const errors = await storage.getOpsErrors({
+        dealId: dealId as string | undefined,
+        userId: userId as string | undefined,
+        errorType: errorType as string | undefined,
+        limit: limit ? parseInt(limit as string) : 100
+      });
+      res.json({ success: true, errors });
+    } catch (error: any) {
+      console.error("Error fetching ops errors:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch errors" });
+    }
+  });
+
+  app.get("/api/ops/errors/heatmap", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { groupBy, dateFrom, dateTo } = req.query;
+      const heatmap = await storage.getErrorHeatmap({
+        groupBy: (groupBy as string) || 'stage',
+        dateFrom: dateFrom ? new Date(dateFrom as string) : undefined,
+        dateTo: dateTo ? new Date(dateTo as string) : undefined
+      });
+      res.json({ success: true, heatmap });
+    } catch (error: any) {
+      console.error("Error fetching error heatmap:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch heatmap" });
+    }
+  });
+
+  // ============== OPS GUARDRAILS: PERFORMANCE METRICS ==============
+
+  app.get("/api/ops/performance/:userId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { periodType } = req.query;
+      const snapshots = await storage.getPerformanceSnapshots(
+        req.params.userId,
+        periodType as string | undefined
+      );
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching performance:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch performance" });
+    }
+  });
+
+  app.get("/api/ops/performance", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { periodType, periodStart, limit } = req.query;
+      const snapshots = await storage.getAllPerformanceSnapshots({
+        periodType: periodType as string | undefined,
+        periodStart: periodStart ? new Date(periodStart as string) : undefined,
+        limit: limit ? parseInt(limit as string) : 50
+      });
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching performance:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch performance" });
     }
   });
 
