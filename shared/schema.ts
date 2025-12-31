@@ -1591,6 +1591,19 @@ export const deals = pgTable("deals", {
   lostByUserId: text("lost_by_user_id"), // Sales user who was handling the deal
   lostNotes: text("lost_notes"),
   isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
+  
+  // Zoho Lead Intake fields (populated when deal created from Zoho)
+  zohoLeadId: text("zoho_lead_id").unique(), // Unique nullable - Zoho lead ID
+  zohoLeadSourceAgent: text("zoho_lead_source_agent"), // 'Clara', 'Sophia', 'Unknown'
+  zohoLeadOutcome: text("zoho_lead_outcome"), // 'Hotkey', 'Warm', 'Tepid'
+  zohoCallbackAt: timestamp("zoho_callback_at"), // Requested callback time
+  zohoQuickNote: text("zoho_quick_note"), // Note from Zoho call
+  brMarket: text("br_market"), // 'ACL', 'ACR', 'Unknown'
+  brGroup: text("br_group"), // 'A', 'B', 'Unknown'
+  dmName: text("dm_name"), // Decision maker name
+  dmRole: text("dm_role"), // 'Owner', 'Finance', 'Admin', etc.
+  dmDirectPhone: text("dm_direct_phone"), // Decision maker phone
+  dmAvailability: text("dm_availability"), // When DM is available
 });
 
 export const insertDealSchema = createInsertSchema(deals).omit({
@@ -3560,3 +3573,28 @@ export type InsertOpsPerformanceSnapshot = z.infer<typeof insertOpsPerformanceSn
 export type OpsPerformanceSnapshot = typeof opsPerformanceSnapshots.$inferSelect;
 
 // ============== END OPS GUARDRAILS SYSTEM ==============
+
+// ============== ZOHO INTAKE EVENTS ==============
+
+export const zohoIntakeEvents = pgTable("zoho_intake_events", {
+  id: serial("id").primaryKey(),
+  zohoLeadId: text("zoho_lead_id").notNull(),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  payloadJson: jsonb("payload_json").notNull(), // Full intake payload for audit
+  resultStatus: text("result_status").notNull(), // 'CREATED', 'EXISTING', 'REJECTED', 'ERROR'
+  portalDealId: varchar("portal_deal_id", { length: 255 }),
+  portalClientId: integer("portal_client_id"),
+  errorMessage: text("error_message"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+});
+
+export const insertZohoIntakeEventSchema = createInsertSchema(zohoIntakeEvents).omit({
+  id: true,
+  receivedAt: true,
+});
+
+export type InsertZohoIntakeEvent = z.infer<typeof insertZohoIntakeEventSchema>;
+export type ZohoIntakeEvent = typeof zohoIntakeEvents.$inferSelect;
+
+// ============== END ZOHO INTAKE EVENTS ==============

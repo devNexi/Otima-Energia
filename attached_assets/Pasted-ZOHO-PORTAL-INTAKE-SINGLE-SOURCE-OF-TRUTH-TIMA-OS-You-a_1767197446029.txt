@@ -1,0 +1,308 @@
+ZOHO → PORTAL INTAKE + SINGLE SOURCE OF TRUTH (ÓTIMA OS)
+
+You are working inside the existing Ótima Energia admin portal (Ótima OS) built on Replit.
+
+Context (Do NOT ignore)
+
+We are integrating Zoho CRM where:
+
+Zoho holds LEADS only (worked by AI voice agents).
+
+Ótima OS holds DEALS only (worked by humans: Renan + Ops).
+
+After a lead is qualified, Zoho should create a Deal in Ótima OS and then become read-only for deal execution.
+
+We must avoid duplication:
+
+No “deal stage pipeline” in Zoho for Brazil execution.
+
+All operational stages (RFQ, quotes, onboarding, compliance, commissions) live in Ótima OS.
+
+Goal of this build
+
+Make the Zoho→Portal intake flow rock-solid and aligned with our pitch:
+“We operationalize deals with compliance-grade execution and zero friction for suppliers.”
+
+✅ REQUIRED OUTPUTS
+1) Add Zoho Intake API (Server)
+
+Create a new authenticated intake endpoint:
+
+Endpoint
+
+POST /api/intake/zoho/deal
+
+Auth
+
+Use a shared secret header:
+
+Header: x-zoho-intake-key: <ENV ZOHO_INTAKE_KEY>
+
+Reject if missing/invalid.
+
+Payload (minimum required)
+
+Expect JSON including at least:
+
+zohoLeadId (string, required)
+
+companyName (string)
+
+email (string)
+
+phone (string)
+
+cnpj (string, optional)
+
+brMarket (ACL / ACR / Unknown)
+
+brGroup (A / B / Unknown)
+
+dmName (string)
+
+dmRole (Owner/Finance/Admin/Operations/Procurement/Other/Unknown)
+
+dmDirectPhone (string)
+
+dmAvailability (string)
+
+sourceAgent (Clara / Sophia / Unknown)
+
+outcome (Hotkey / Warm / Tepid)
+
+quickNote (string)
+
+callbackDateTime (ISO string, optional)
+
+Behavior
+
+This endpoint should:
+
+Create or find a Client (clients table):
+
+Match priority:
+
+CNPJ exact match (if provided)
+
+Company name + email (fallback)
+
+If no match: create new client.
+
+Create a Deal using your existing deals system:
+
+Must store zohoLeadId on the deal record.
+
+Must store lead outcome + agent metadata.
+
+Must assign owner logic:
+
+If brGroup = B → owner = Callum (default), mark as deprioritized
+
+Else if outcome = Hotkey → owner = Renan
+
+Else → owner = Callum
+
+Return response:
+
+{
+  "portalDealId": "<id>",
+  "portalClientId": "<id>",
+  "portalDealUrl": "https://<app>/admin?tab=Deals&deal=<id>",
+  "status": "CREATED" | "EXISTING"
+}
+
+2) Idempotency (ABSOLUTE MUST)
+
+The endpoint must be retry-safe (Zoho may call twice).
+
+Rules:
+
+If a Deal already exists with the same zohoLeadId, return it instead of creating a new one.
+
+Implement a unique index/constraint on deals.zohoLeadId (nullable but unique when present).
+
+Log duplicate intake attempts in audit logs but do not create duplicates.
+
+3) Database changes (Schema)
+Add fields to deals table
+
+Add:
+
+zohoLeadId (text, unique nullable)
+
+zohoLeadSourceAgent (text)
+
+zohoLeadOutcome (text)
+
+zohoCallbackAt (timestamp nullable)
+
+zohoQuickNote (text)
+
+brMarket (text)
+
+brGroup (text)
+
+dmName (text)
+
+dmRole (text)
+
+dmDirectPhone (text)
+
+dmAvailability (text)
+
+If these fields already exist in other tables, do not duplicate—reuse or reference cleanly.
+
+Add a new table for intake events (auditability)
+
+Create:
+zoho_intake_events
+
+id
+
+zoho_lead_id
+
+received_at
+
+payload_json (jsonb)
+
+result_status (CREATED/EXISTING/REJECTED/ERROR)
+
+portal_deal_id
+
+portal_client_id
+
+error_message (nullable)
+
+This is needed for compliance + debugging.
+
+4) Portal UI changes (Pitch-perfect alignment)
+A) Deal badges + “Created from Zoho”
+
+On Deal Detail:
+
+Show a badge: “Criado via Zoho” / “Created via Zoho”
+
+Show:
+
+Zoho Lead ID
+
+Outcome (Hotkey/Warm/Tepid)
+
+Agent (Clara/Sophia)
+
+Callback time (if set)
+
+Quick Note
+
+B) Read-only “Lead Summary” panel
+
+Add a compact “Lead Summary” panel (non-editable) so Ops doesn’t rewrite lead info manually.
+
+C) Optional: Zoho deep link
+
+If we store Zoho record URL (optional future), show button:
+
+“Open in Zoho”
+For now, store only Lead ID and leave URL blank if not available.
+
+5) Hard separation of concerns (no duplication)
+
+We must not create a “Leads” workflow inside the portal.
+
+Rules:
+
+Portal does not manage lead calling cadence, attempts, etc.
+
+Portal begins at: Deal created → dossier → RFQ → quotes → compliance → contract → commissions
+
+The Zoho intake should place the deal in DRAFT (or your appropriate first deal state), but with clear tags from Zoho.
+
+6) Audit logging (must be complete)
+
+Any of the following must create an adminAuditLog entry:
+
+Zoho intake created a new client
+
+Zoho intake created a new deal
+
+Zoho intake was idempotent (existing deal returned)
+
+Intake rejected due to auth or invalid payload
+
+Log must include:
+
+IP address
+
+Zoho lead id
+
+created IDs
+
+7) Validation + Error handling (production standard)
+
+Validation requirements:
+
+Reject missing zohoLeadId
+
+Reject missing outcome
+
+Reject missing sourceAgent
+
+Normalize picklists to expected values, default Unknown
+
+Return proper status codes:
+
+401 unauthorized
+
+400 invalid payload
+
+200 created/existing
+
+500 internal error
+
+8) Demo mode compatibility
+
+If demo mode is enabled:
+
+Zoho intake should still work
+
+Mark created records isDemo=true if intake was called while demo mode is active
+
+Intake events should still log.
+
+✅ Acceptance Criteria (must pass)
+
+Calling POST /api/intake/zoho/deal twice with same zohoLeadId results in:
+
+1 client (not duplicated)
+
+1 deal (not duplicated)
+
+second call returns status EXISTING
+
+A deal created via Zoho shows a visible badge + lead summary panel in UI.
+
+All actions appear in audit trail and zoho_intake_events table.
+
+Ownership logic matches business rules.
+
+No new “lead pipeline” is created inside portal.
+
+🚫 Do NOT do
+
+Do NOT add new operational stages to Zoho.
+
+Do NOT make portal manage lead attempts/call workflows.
+
+Do NOT create duplicate client records if same CNPJ exists.
+
+Do NOT silently fail—log errors.
+
+Final Deliverable
+
+Implement the schema, endpoint, audit logging, and UI badges/panel, then provide:
+
+Example curl request
+
+Example response
+
+Notes on where in code it was added (routes + storage + schema + UI component path)
