@@ -30,6 +30,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Link } from "wouter";
+import { SupplierOpsProfile } from "@/components/suppliers/SupplierOpsProfile";
 
 type SupplierContact = {
   id: number;
@@ -397,6 +398,13 @@ export default function SupplierManager() {
                       {language === "pt" ? "Nenhum contato cadastrado" : "No contacts registered"}
                     </div>
                   )}
+                  
+                  <Separator className="my-4" />
+                  
+                  <SupplierOpsProfile 
+                    supplierId={supplier.id} 
+                    supplierName={supplier.name}
+                  />
                 </CardContent>
               </Card>
             ))}

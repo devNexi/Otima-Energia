@@ -15,6 +15,8 @@ import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
 import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChecklistTab";
 import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
+import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
+import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -241,15 +243,30 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           
           {validTransitions.length > 0 && (
             <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600 mb-2">
-                {language === "pt" ? "Próxima ação disponível:" : "Next available action:"}
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-gray-600">
+                  {language === "pt" ? "Próxima ação disponível:" : "Next available action:"}
+                </p>
+                <ChecklistDrawer dealId={dealId} dealStage={deal.status} />
+              </div>
               <Dialog open={transitionDialogOpen} onOpenChange={setTransitionDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-violet-600 hover:bg-violet-700" data-testid="button-advance-state">
-                    <ArrowRight className="w-4 h-4 mr-2" />
-                    {language === "pt" ? "Avançar para" : "Advance to"} {stateLabels[validTransitions[0] as DealState]?.[language as "en" | "pt"]}
-                  </Button>
+                  <ContextualTooltip
+                    tooltipKey={`stage_transition_${deal.status}`}
+                    title={language === "pt" ? "Avançar Estado do Deal" : "Advance Deal State"}
+                    content={language === "pt" 
+                      ? "Antes de avançar: verifique se todos os itens obrigatórios do checklist foram concluídos. Cada estágio tem requisitos específicos que devem ser atendidos."
+                      : "Before advancing: verify all mandatory checklist items are complete. Each stage has specific requirements that must be met."}
+                    whyMatters={language === "pt"
+                      ? "Avançar sem documentação adequada pode causar atrasos no contrato, problemas de compliance ou perda de comissão."
+                      : "Advancing without proper documentation can cause contract delays, compliance issues, or commission loss."}
+                    mode="hover"
+                  >
+                    <Button className="bg-violet-600 hover:bg-violet-700" data-testid="button-advance-state">
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      {language === "pt" ? "Avançar para" : "Advance to"} {stateLabels[validTransitions[0] as DealState]?.[language as "en" | "pt"]}
+                    </Button>
+                  </ContextualTooltip>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -307,14 +324,38 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <FileText className="w-4 h-4" />
             {language === "pt" ? "Visão Geral" : "Overview"}
           </TabsTrigger>
-          <TabsTrigger value="rfq" className="flex items-center gap-2" data-testid="tab-rfq">
-            <Send className="w-4 h-4" />
-            {language === "pt" ? "RFQ" : "RFQ"}
-          </TabsTrigger>
-          <TabsTrigger value="quotes" className="flex items-center gap-2">
-            <Receipt className="w-4 h-4" />
-            {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
-          </TabsTrigger>
+          <ContextualTooltip
+            tooltipKey="tab_rfq_overview"
+            title={language === "pt" ? "Solicitação de Cotação (RFQ)" : "Request for Quote (RFQ)"}
+            content={language === "pt" 
+              ? "Gerencie o envio de RFQs aos fornecedores. Cada fornecedor recebe uma solicitação cega - eles não veem ofertas concorrentes."
+              : "Manage RFQ dispatches to suppliers. Each supplier receives a blind request - they don't see competing offers."}
+            whyMatters={language === "pt"
+              ? "RFQs cegos garantem preços competitivos sem colusão entre fornecedores."
+              : "Blind RFQs ensure competitive pricing without supplier collusion."}
+            mode="hover"
+          >
+            <TabsTrigger value="rfq" className="flex items-center gap-2" data-testid="tab-rfq">
+              <Send className="w-4 h-4" />
+              {language === "pt" ? "RFQ" : "RFQ"}
+            </TabsTrigger>
+          </ContextualTooltip>
+          <ContextualTooltip
+            tooltipKey="tab_quotes_overview"
+            title={language === "pt" ? "Seleção de Cotação" : "Quote Selection"}
+            content={language === "pt" 
+              ? "Compare cotações recebidas e selecione a melhor oferta. Considere preço, termos e qualidade do fornecedor."
+              : "Compare received quotes and select the best offer. Consider price, terms, and supplier quality."}
+            whyMatters={language === "pt"
+              ? "A escolha da cotação determina a comissão e a relação de longo prazo do cliente."
+              : "Quote choice determines commission and client's long-term relationship."}
+            mode="hover"
+          >
+            <TabsTrigger value="quotes" className="flex items-center gap-2">
+              <Receipt className="w-4 h-4" />
+              {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
+            </TabsTrigger>
+          </ContextualTooltip>
           <TabsTrigger value="commission" className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             {language === "pt" ? "Comissões" : "Commissions"} ({deal.commissionEvents?.length || 0})
@@ -331,10 +372,22 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <Briefcase className="w-4 h-4" />
             {language === "pt" ? "Casos" : "Cases"}
           </TabsTrigger>
-          <TabsTrigger value="compliance" className="flex items-center gap-2" data-testid="tab-compliance">
-            <ShieldCheck className="w-4 h-4" />
-            {language === "pt" ? "Conformidade" : "Compliance"}
-          </TabsTrigger>
+          <ContextualTooltip
+            tooltipKey="tab_compliance_overview"
+            title={language === "pt" ? "Verificação de Conformidade" : "Compliance Check"}
+            content={language === "pt" 
+              ? "Valide que todos os documentos e requisitos regulatórios estão em ordem antes de avançar o deal."
+              : "Validate that all documents and regulatory requirements are in order before advancing the deal."}
+            whyMatters={language === "pt"
+              ? "Falhas de compliance podem invalidar contratos e bloquear comissões."
+              : "Compliance failures can invalidate contracts and block commissions."}
+            mode="hover"
+          >
+            <TabsTrigger value="compliance" className="flex items-center gap-2" data-testid="tab-compliance">
+              <ShieldCheck className="w-4 h-4" />
+              {language === "pt" ? "Conformidade" : "Compliance"}
+            </TabsTrigger>
+          </ContextualTooltip>
         </TabsList>
 
         <TabsContent value="rfq">

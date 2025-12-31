@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { 
   Loader2, 
   Send, 
@@ -318,13 +319,21 @@ Best regards,
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button 
-                disabled={selectedSuppliers.length === 0 || !dossierReady}
-                data-testid="button-prepare-rfqs"
+              <ContextualTooltip
+                tooltipKey="rfq_prepare_dispatch"
+                title="Preparar Envio de RFQs"
+                content="Selecione os fornecedores e configure a mensagem antes de enviar. Cada fornecedor receberá uma cópia da mensagem pelo canal escolhido."
+                whyMatters="Enviar RFQs incompletos ou incorretos atrasa o processo e pode prejudicar relações com fornecedores."
+                mode="hover"
               >
-                <Send className="h-4 w-4 mr-2" />
-                Prepare RFQs ({selectedSuppliers.length})
-              </Button>
+                <Button 
+                  disabled={selectedSuppliers.length === 0 || !dossierReady}
+                  data-testid="button-prepare-rfqs"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Prepare RFQs ({selectedSuppliers.length})
+                </Button>
+              </ContextualTooltip>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
