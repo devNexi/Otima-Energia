@@ -1,0 +1,326 @@
+PORTAL DICTIONARY + OPS INTELLIGENCE LAYER (ÓTIMA OS)
+
+You are working inside the existing Ótima Energia admin portal, which is already production-grade and includes:
+
+Leads & Clients CRM
+
+Bill OCR & Client Dossiê (v2 with status workflow)
+
+RFQ + Blind Auction tooling
+
+Deal OS (state machine)
+
+Commission OS (usage, reconciliation)
+
+Compliance & audit logging
+
+Ops Guardrails (tooltips, checklists, error playbooks)
+
+Demo / Sandbox mode
+
+⚠️ Do NOT add new business logic.
+This build is about clarity, training, error reduction, and scale.
+
+You are adding a Portal Dictionary + contextual intelligence layer so a non-energy Ops user can operate safely, confidently, and fast.
+
+🎯 CORE OBJECTIVES
+
+Eliminate confusion around energy terminology
+
+Reduce Ops errors caused by misunderstanding fields
+
+Train Ops users in-product, not via docs
+
+Support blocker resolution with definitions
+
+Institutionalize knowledge (no tribal memory)
+
+1️⃣ PORTAL DICTIONARY SYSTEM (NEW)
+Purpose
+
+A single source of truth for all operational terms used in the portal.
+
+This is not educational theory — it explains only what users must understand to do their job correctly.
+
+1.1 Dictionary Data Model (REQUIRED)
+
+Create database table:
+
+portal_dictionary_terms
+
+Fields:
+
+id
+
+key (slug, unique)
+
+category (ENUM)
+
+term_pt
+
+term_en
+
+short_def_pt
+
+short_def_en
+
+why_matters_pt
+
+why_matters_en
+
+example_pt (nullable)
+
+example_en (nullable)
+
+synonyms (array)
+
+related_keys (array)
+
+created_at
+
+updated_at
+
+Categories (ENUM):
+
+DOSSIER
+
+RFQ_QUOTES
+
+ONBOARDING_COMPLIANCE
+
+COMMISSION_REVENUE
+
+OPS_EXECUTION
+
+Admin must be able to edit terms without redeploy.
+
+1.2 Inline “(?)” Dictionary Tooltips (MANDATORY)
+
+Add a small (?) icon next to all critical terms across the portal
+
+Clicking opens a popover with:
+
+Term (PT + EN)
+
+Short definition
+
+Why it matters
+
+Example (if available)
+
+“Related terms” links
+
+Used in:
+
+Client Dossiê
+
+RFQ creation
+
+Quote intake
+
+Compliance checklists
+
+Deal blockers
+
+Commission reconciliation
+
+1.3 Global Dictionary Panel (MANDATORY)
+
+Add “Dicionário” inside Help menu (or header icon)
+
+Features:
+
+Search (term + synonym)
+
+Filter by category
+
+Click term → full definition
+
+“Used in” links to portal screens
+
+1.4 Error & Blocker Integration (MANDATORY)
+
+When a deal is blocked or an error is triggered:
+
+Show “Não sabe o que isso significa?”
+
+Link directly to the relevant dictionary term
+
+This must work inside:
+
+Checklist blockers
+
+Error playbooks
+
+Deal state transition failures
+
+2️⃣ DICTIONARY CONTENT — V1 (SEED DATA)
+
+Below is the required v1 dictionary content.
+Seed exactly these terms.
+
+📁 DOSSIÊ
+
+UC (Unidade Consumidora)
+PT: Código que identifica o ponto físico de consumo de energia do cliente.
+EN: Identifier for the client’s physical electricity consumption point.
+Why: Cotações e contratos são vinculados à UC correta.
+Example: “UC 123456789 – Loja SP Centro”
+
+Distribuidora
+PT: Empresa local que entrega a energia até o cliente final.
+EN: Local utility that delivers electricity to the client.
+Why: Define regras técnicas e cadastro do cliente.
+
+Grupo A
+PT: Clientes conectados em média ou alta tensão.
+EN: Medium or high voltage customers.
+Why: Apenas Grupo A pode operar no mercado livre hoje.
+
+Demanda (kW)
+PT: Potência máxima contratada.
+EN: Contracted maximum power.
+Why: Impacta estrutura de preço e risco.
+
+Consumo (kWh / MWh)
+PT: Energia efetivamente utilizada.
+EN: Actual energy consumed.
+Why: Base de preço, comissão e reconciliação.
+
+Submercado
+PT: Região elétrica (SE/CO, Sul, NE, Norte).
+EN: Brazilian power market region.
+Why: Preços variam fortemente por submercado.
+
+📄 RFQ / QUOTES
+
+RFQ (Pedido de Cotação)
+PT: Solicitação formal de preço enviada ao varejista.
+EN: Formal price request sent to supplier.
+Why: Padroniza competição e evita ruído.
+
+Energia Convencional
+PT: Energia sem incentivo regulatório.
+EN: Non-incentivized energy.
+Why: Normalmente mais barata, menos benefícios fiscais.
+
+Energia Incentivada (50% / 100%)
+PT: Energia renovável com benefício regulatório.
+EN: Incentivized renewable energy.
+Why: Exigida por alguns perfis e contratos.
+
+Validade da Proposta
+PT: Prazo em que o preço é válido.
+EN: How long the quote remains valid.
+Why: Preços podem mudar rapidamente.
+
+🧾 ONBOARDING / COMPLIANCE
+
+Checklist de Conformidade
+PT: Lista obrigatória de passos/documentos.
+EN: Mandatory compliance checklist.
+Why: Protege Ótima e o fornecedor.
+
+Evidência
+PT: Prova objetiva (doc, e-mail, registro).
+EN: Objective proof of completion.
+Why: “Se não está marcado, não aconteceu.”
+
+Signatário Autorizado
+PT: Pessoa legalmente habilitada a assinar.
+EN: Authorized contract signer.
+Why: Erro aqui invalida contratos.
+
+💰 COMISSÃO / RECEITA
+
+Comissão
+PT: Remuneração da Ótima pelo contrato fechado.
+EN: Ótima’s revenue from the deal.
+Why: Base do negócio.
+
+Cadência de Pagamento
+PT: Frequência de pagamento da comissão.
+EN: How often commissions are paid.
+Why: Afeta fluxo de caixa.
+
+Reconciliação
+PT: Comparação entre esperado vs pago.
+EN: Expected vs actual commission check.
+Why: Evita perdas financeiras.
+
+Variância de Consumo
+PT: Diferença entre consumo previsto e real.
+EN: Difference between forecasted and real usage.
+Why: Pode gerar ajuste financeiro.
+
+⚙️ OPS / EXECUÇÃO
+
+SLA
+PT: Prazo acordado para execução.
+EN: Service level deadline.
+Why: Atrasos geram risco e perda de confiança.
+
+Bloqueio (Blocker)
+PT: Algo que impede o avanço do negócio.
+EN: Something stopping deal progression.
+Why: Prioridade máxima de Ops.
+
+Caso (Deal Case)
+PT: Registro de problema operacional.
+EN: Operational issue record.
+Why: Evita perda de controle e memória.
+
+3️⃣ UX RULES (DO NOT IGNORE)
+
+No long paragraphs
+
+No energy jargon without definition
+
+Assume zero energy experience
+
+Every definition answers:
+
+What is it?
+
+Why should I care?
+
+What happens if I get it wrong?
+
+✅ ACCEPTANCE CRITERIA
+
+Before marking complete:
+
+A new Ops user can:
+
+Understand any field via (?) without asking
+
+Resolve blockers using dictionary + checklist
+
+Admin can:
+
+Edit terms live
+
+Add new terms later
+
+Dictionary links appear inside:
+
+Tooltips
+
+Blockers
+
+Error playbooks
+
+🧠 PHILOSOPHY (IMPORTANT)
+
+This is not documentation.
+This is operational safety infrastructure.
+
+You are turning Ótima into:
+
+A self-training system
+
+A mistake-resistant machine
+
+A scalable deal factory
+
+Build it cleanly. Build it simply. Build it once.

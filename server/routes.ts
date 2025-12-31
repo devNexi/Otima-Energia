@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { 
   insertLeadSchema, 
   insertClientSchema, 
@@ -45,6 +47,7 @@ import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-
 import { logAuditEvent } from "./audit";
 import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
+import { seedDictionaryTerms } from "./dictionarySeeder";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -6563,6 +6566,38 @@ export async function registerRoutes(
     }
   });
 
+  // ============== PORTAL DICTIONARY: SEED ==============
+
+  app.post("/api/admin/dictionary/seed", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    
+    try {
+      await seedDictionaryTerms();
+      await logAuditEvent({
+        actor: user.username || "system",
+        actorRole: user.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DICTIONARY_SEEDED",
+        entityType: "portal_dictionary",
+        entityId: null,
+        detailsJson: { message: "Dictionary terms seeded successfully" }
+      });
+      res.json({ success: true, message: "Dictionary terms seeded successfully" });
+    } catch (error: any) {
+      console.error("Error seeding dictionary:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed dictionary" });
+    }
+  });
+
   // ============== OPS GUARDRAILS: TOOLTIPS ==============
 
   app.get("/api/tooltips/dismissed", async (req, res) => {
@@ -6866,6 +6901,120 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching error stats:", error);
       res.status(500).json({ success: false, error: "Failed to fetch error stats" });
+    }
+  });
+
+  // ============== PORTAL DICTIONARY ==============
+
+  app.get("/api/dictionary", async (req, res) => {
+    try {
+      const { category, search } = req.query;
+      
+      let result;
+      if (search) {
+        const searchTerm = `%${(search as string).toLowerCase()}%`;
+        if (category && category !== "all") {
+          result = await db.execute(sql`
+            SELECT * FROM portal_dictionary_terms 
+            WHERE category = ${category}::dictionary_category
+            AND (LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} OR LOWER(key) LIKE ${searchTerm})
+            ORDER BY category, term_pt
+          `);
+        } else {
+          result = await db.execute(sql`
+            SELECT * FROM portal_dictionary_terms 
+            WHERE LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} OR LOWER(key) LIKE ${searchTerm}
+            ORDER BY category, term_pt
+          `);
+        }
+      } else if (category && category !== "all") {
+        result = await db.execute(sql`
+          SELECT * FROM portal_dictionary_terms 
+          WHERE category = ${category}::dictionary_category
+          ORDER BY category, term_pt
+        `);
+      } else {
+        result = await db.execute(sql`
+          SELECT * FROM portal_dictionary_terms 
+          ORDER BY category, term_pt
+        `);
+      }
+      
+      res.json({ success: true, terms: result.rows || [] });
+    } catch (error: any) {
+      console.error("Error fetching dictionary:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dictionary" });
+    }
+  });
+
+  app.get("/api/dictionary/:key", async (req, res) => {
+    try {
+      const result = await db.execute(
+        sql`SELECT * FROM portal_dictionary_terms WHERE key = ${req.params.key}`
+      );
+      const term = (result.rows || [])[0];
+      if (!term) {
+        return res.status(404).json({ success: false, error: "Term not found" });
+      }
+      res.json({ success: true, term });
+    } catch (error: any) {
+      console.error("Error fetching dictionary term:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch term" });
+    }
+  });
+
+  app.post("/api/dictionary", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { key, category, term_pt, term_en, short_def_pt, short_def_en, 
+              why_matters_pt, why_matters_en, example_pt, example_en, 
+              synonyms, related_keys } = req.body;
+      
+      await db.execute(sql`
+        INSERT INTO portal_dictionary_terms (
+          key, category, term_pt, term_en, short_def_pt, short_def_en,
+          why_matters_pt, why_matters_en, example_pt, example_en,
+          synonyms, related_keys
+        ) VALUES (
+          ${key}, ${category}::dictionary_category, ${term_pt}, ${term_en},
+          ${short_def_pt}, ${short_def_en}, ${why_matters_pt}, ${why_matters_en},
+          ${example_pt || null}, ${example_en || null},
+          ${synonyms || []}, ${related_keys || []}
+        )
+        ON CONFLICT (key) DO UPDATE SET
+          category = EXCLUDED.category,
+          term_pt = EXCLUDED.term_pt,
+          term_en = EXCLUDED.term_en,
+          short_def_pt = EXCLUDED.short_def_pt,
+          short_def_en = EXCLUDED.short_def_en,
+          why_matters_pt = EXCLUDED.why_matters_pt,
+          why_matters_en = EXCLUDED.why_matters_en,
+          example_pt = EXCLUDED.example_pt,
+          example_en = EXCLUDED.example_en,
+          synonyms = EXCLUDED.synonyms,
+          related_keys = EXCLUDED.related_keys,
+          updated_at = NOW()
+      `);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error saving dictionary term:", error);
+      res.status(500).json({ success: false, error: "Failed to save term" });
+    }
+  });
+
+  app.delete("/api/dictionary/:key", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      await db.execute(
+        sql`DELETE FROM portal_dictionary_terms WHERE key = ${req.params.key}`
+      );
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting dictionary term:", error);
+      res.status(500).json({ success: false, error: "Failed to delete term" });
     }
   });
 
