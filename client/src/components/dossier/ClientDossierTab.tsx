@@ -20,6 +20,7 @@ import {
   Sparkles,
   AlertCircle
 } from "lucide-react";
+import { DictionaryTooltip } from "@/components/dictionary/DictionaryTooltip";
 
 interface ClientDossierTabProps {
   clientId: number;
@@ -317,7 +318,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>Distribuidora *</Label>
+                <Label className="flex items-center gap-1">Distribuidora * <DictionaryTooltip termKey="distribuidora" /></Label>
                 <Input 
                   value={formData.distributor || ''} 
                   onChange={(e) => setFormData({...formData, distributor: e.target.value})}
@@ -325,7 +326,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>Submercado</Label>
+                <Label className="flex items-center gap-1">Submercado <DictionaryTooltip termKey="submercado" /></Label>
                 <Select 
                   value={formData.submarket || ''} 
                   onValueChange={(v) => setFormData({...formData, submarket: v})}
@@ -373,7 +374,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 </Select>
               </div>
               <div>
-                <Label>Consumo Anual (MWh) *</Label>
+                <Label className="flex items-center gap-1">Consumo Anual (MWh) * <DictionaryTooltip termKey="consumo" /></Label>
                 <Input 
                   type="number"
                   value={formData.annualConsumptionMWh || ''} 
@@ -382,7 +383,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>Consumo Médio Mensal (MWh)</Label>
+                <Label className="flex items-center gap-1">Consumo Médio Mensal (MWh) <DictionaryTooltip termKey="consumo" /></Label>
                 <Input 
                   type="number"
                   value={formData.averageMonthlyMWh || ''} 
@@ -391,7 +392,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>Demanda de Pico (kW)</Label>
+                <Label className="flex items-center gap-1">Demanda de Pico (kW) <DictionaryTooltip termKey="demanda" /></Label>
                 <Input 
                   type="number"
                   value={formData.peakDemandKW || ''} 
@@ -400,7 +401,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>Número de UCs</Label>
+                <Label className="flex items-center gap-1">Número de UCs <DictionaryTooltip termKey="uc" /></Label>
                 <Input 
                   type="number"
                   value={formData.numberOfUCs || 1} 

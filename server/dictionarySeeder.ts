@@ -302,11 +302,19 @@ const V1_DICTIONARY_TERMS: DictionaryTerm[] = [
   }
 ];
 
+function toPostgresArray(arr: string[] | undefined): string {
+  if (!arr || arr.length === 0) return "{}";
+  return `{${arr.map(s => `"${s.replace(/"/g, '\\"')}"`).join(",")}}`;
+}
+
 export async function seedDictionaryTerms(): Promise<void> {
   console.log("Seeding Portal Dictionary terms...");
   
   for (const term of V1_DICTIONARY_TERMS) {
     try {
+      const synonymsStr = toPostgresArray(term.synonyms);
+      const relatedKeysStr = toPostgresArray(term.related_keys);
+      
       await db.execute(sql`
         INSERT INTO portal_dictionary_terms (
           key, category, term_pt, term_en, short_def_pt, short_def_en,
@@ -323,8 +331,8 @@ export async function seedDictionaryTerms(): Promise<void> {
           ${term.why_matters_en},
           ${term.example_pt || null},
           ${term.example_en || null},
-          ${term.synonyms || []},
-          ${term.related_keys || []}
+          ${synonymsStr}::text[],
+          ${relatedKeysStr}::text[]
         )
         ON CONFLICT (key) DO UPDATE SET
           category = EXCLUDED.category,

@@ -55,6 +55,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DictionaryPanel } from "@/components/dictionary/DictionaryPanel";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -471,6 +472,17 @@ export default function Admin() {
                 </Button>
               </Link>
             )}
+            <DictionaryPanel>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-white hover:bg-violet-800"
+                data-testid="button-dictionary"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                {language === 'pt' ? 'Dicionário' : 'Dictionary'}
+              </Button>
+            </DictionaryPanel>
             <Button 
               variant="ghost" 
               size="sm"
