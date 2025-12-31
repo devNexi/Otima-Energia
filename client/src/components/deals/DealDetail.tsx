@@ -17,6 +17,7 @@ import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
+import { NextStepsWidget, useWorkflowGates } from "@/components/ops/NextStepsWidget";
 import { 
   Loader2, 
   ArrowLeft, 
@@ -147,6 +148,11 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const deal = dealData?.deal;
   const validTransitions = transitionsData?.validTransitions || [];
   const currentState = transitionsData?.currentState;
+  
+  const { canTransition, blockingItems, isLoading: gatesLoading } = useWorkflowGates(
+    dealId, 
+    deal?.status || 'DRAFT'
+  );
 
   if (isLoading) {
     return (
@@ -254,16 +260,28 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                   <ContextualTooltip
                     tooltipKey={`stage_transition_${deal.status}`}
                     title={language === "pt" ? "Avançar Estado do Deal" : "Advance Deal State"}
-                    content={language === "pt" 
-                      ? "Antes de avançar: verifique se todos os itens obrigatórios do checklist foram concluídos. Cada estágio tem requisitos específicos que devem ser atendidos."
-                      : "Before advancing: verify all mandatory checklist items are complete. Each stage has specific requirements that must be met."}
+                    content={!canTransition && blockingItems.length > 0
+                      ? (language === "pt" 
+                        ? `Bloqueado: Complete os seguintes itens antes de avançar: ${blockingItems.slice(0, 3).join(", ")}${blockingItems.length > 3 ? "..." : ""}`
+                        : `Blocked: Complete the following items before advancing: ${blockingItems.slice(0, 3).join(", ")}${blockingItems.length > 3 ? "..." : ""}`)
+                      : (language === "pt" 
+                        ? "Antes de avançar: verifique se todos os itens obrigatórios do checklist foram concluídos. Cada estágio tem requisitos específicos que devem ser atendidos."
+                        : "Before advancing: verify all mandatory checklist items are complete. Each stage has specific requirements that must be met.")}
                     whyMatters={language === "pt"
                       ? "Avançar sem documentação adequada pode causar atrasos no contrato, problemas de compliance ou perda de comissão."
                       : "Advancing without proper documentation can cause contract delays, compliance issues, or commission loss."}
                     mode="hover"
                   >
-                    <Button className="bg-violet-600 hover:bg-violet-700" data-testid="button-advance-state">
-                      <ArrowRight className="w-4 h-4 mr-2" />
+                    <Button 
+                      className={canTransition ? "bg-violet-600 hover:bg-violet-700" : "bg-gray-400 cursor-not-allowed"} 
+                      disabled={!canTransition || gatesLoading}
+                      data-testid="button-advance-state"
+                    >
+                      {gatesLoading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                      )}
                       {language === "pt" ? "Avançar para" : "Advance to"} {stateLabels[validTransitions[0] as DealState]?.[language as "en" | "pt"]}
                     </Button>
                   </ContextualTooltip>
@@ -315,8 +333,20 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </CardContent>
       </Card>
 
-      {/* Next Action Widget */}
+      {/* Ops Guardrails: Next Action Widget */}
       <NextActionWidget entityType="deal" entityId={dealId} />
+      
+      {/* Ops Guardrails: Next Steps Widget with workflow gates */}
+      <NextStepsWidget 
+        dealId={dealId} 
+        currentStage={deal.status} 
+        onActionClick={(action) => {
+          if (action === "open_checklist") {
+            const checklistBtn = document.querySelector('[data-testid="checklist-drawer-trigger"]');
+            if (checklistBtn) (checklistBtn as HTMLButtonElement).click();
+          }
+        }}
+      />
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>

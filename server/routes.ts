@@ -6821,6 +6821,54 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/ops/error-stats", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { range } = req.query;
+      const now = new Date();
+      let dateFrom: Date;
+      
+      switch (range) {
+        case "24h": dateFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
+        case "7d": dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+        case "30d": dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+        case "90d": dateFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
+        default: dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+
+      const errors = await storage.getOpsErrors({ limit: 500 });
+      const filteredErrors = errors.filter((e: any) => new Date(e.createdAt) >= dateFrom);
+      
+      const byStage: Record<string, number> = {};
+      const byErrorCode: Record<string, number> = {};
+      const byUser: Record<string, number> = {};
+      const bySupplier: Record<string, number> = {};
+      const bySeverity: Record<string, number> = {};
+
+      filteredErrors.forEach((e: any) => {
+        byStage[e.stageAt] = (byStage[e.stageAt] || 0) + 1;
+        byErrorCode[e.errorCode] = (byErrorCode[e.errorCode] || 0) + 1;
+        if (e.userId) byUser[e.userId] = (byUser[e.userId] || 0) + 1;
+        if (e.supplierId) bySupplier[e.supplierId] = (bySupplier[e.supplierId] || 0) + 1;
+        bySeverity[e.severity] = (bySeverity[e.severity] || 0) + 1;
+      });
+
+      res.json({
+        success: true,
+        byStage,
+        byErrorCode,
+        byUser,
+        bySupplier,
+        bySeverity,
+        recentErrors: filteredErrors.slice(0, 20)
+      });
+    } catch (error: any) {
+      console.error("Error fetching error stats:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch error stats" });
+    }
+  });
+
   // ============== OPS GUARDRAILS: PERFORMANCE METRICS ==============
 
   app.get("/api/ops/performance/:userId", async (req, res) => {
