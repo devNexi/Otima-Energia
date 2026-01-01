@@ -15,6 +15,7 @@ import { DealCasesTab } from "@/components/commission-os/DealCasesTab";
 import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChecklistTab";
 import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
+import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
 import { NextStepsWidget, useWorkflowGates } from "@/components/ops/NextStepsWidget";
@@ -38,7 +39,8 @@ import {
   X,
   Briefcase,
   ShieldCheck,
-  Send
+  Send,
+  BarChart3
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -527,6 +529,22 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               {language === "pt" ? "Conformidade" : "Compliance"}
             </TabsTrigger>
           </ContextualTooltip>
+          <ContextualTooltip
+            tooltipKey="tab_ecos_overview"
+            title={language === "pt" ? "Análise ECOS" : "ECOS Analysis"}
+            content={language === "pt" 
+              ? "Veja a análise de mercado e compare o preço do cliente com benchmarks atuais."
+              : "View market analysis and compare client pricing against current benchmarks."}
+            whyMatters={language === "pt"
+              ? "ECOS ajuda a identificar oportunidades de economia e preparar a argumentação comercial."
+              : "ECOS helps identify savings opportunities and prepare sales talk tracks."}
+            mode="hover"
+          >
+            <TabsTrigger value="ecos" className="flex items-center gap-2" data-testid="tab-ecos">
+              <BarChart3 className="w-4 h-4" />
+              {language === "pt" ? "ECOS" : "ECOS"}
+            </TabsTrigger>
+          </ContextualTooltip>
         </TabsList>
 
         <TabsContent value="rfq">
@@ -970,6 +988,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             currentState={deal.status}
             targetState={validTransitions.length > 0 ? validTransitions[0] : undefined}
           />
+        </TabsContent>
+
+        <TabsContent value="ecos">
+          <DealEcosTab dealId={dealId} />
         </TabsContent>
       </Tabs>
     </div>

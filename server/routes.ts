@@ -4437,6 +4437,113 @@ export async function registerRoutes(
     }
   });
 
+  // --- Deal ECOS Snapshots (Pre-Sales Insight Tool) ---
+  
+  // Get all ECOS snapshots for a deal
+  app.get("/api/deals/:id/ecos-snapshots", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshots = await storage.getDealEcosSnapshots(req.params.id);
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching deal ECOS snapshots:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch ECOS snapshots" });
+    }
+  });
+
+  // Get the latest ECOS snapshot for a deal
+  app.get("/api/deals/:id/ecos-snapshots/latest", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshot = await storage.getLatestDealEcosSnapshot(req.params.id);
+      if (!snapshot) {
+        return res.json({ success: true, snapshot: null });
+      }
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      console.error("Error fetching latest ECOS snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch latest ECOS snapshot" });
+    }
+  });
+
+  // Get a specific ECOS snapshot by ID
+  app.get("/api/deals/:dealId/ecos-snapshots/:snapshotId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshotId = parseInt(req.params.snapshotId);
+      if (isNaN(snapshotId)) {
+        return res.status(400).json({ success: false, error: "Invalid snapshot ID" });
+      }
+      
+      const snapshot = await storage.getDealEcosSnapshot(snapshotId);
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "ECOS snapshot not found" });
+      }
+      
+      // Verify the snapshot belongs to this deal
+      if (snapshot.dealId !== req.params.dealId) {
+        return res.status(404).json({ success: false, error: "ECOS snapshot not found for this deal" });
+      }
+      
+      res.json({ success: true, snapshot });
+    } catch (error: any) {
+      console.error("Error fetching ECOS snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch ECOS snapshot" });
+    }
+  });
+
+  // Create a new ECOS snapshot (evaluate and capture)
+  app.post("/api/deals/:id/ecos-snapshots", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      const { triggerType, notes } = req.body;
+      
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      const triggeredBy = user?.id || 'unknown';
+      
+      const { evaluateDealEcos, createDealEcosSnapshot } = await import("./deal-ecos-engine");
+      const result = await createDealEcosSnapshot(dealId, triggeredBy, triggerType || 'MANUAL', notes);
+      
+      res.json({ 
+        success: true, 
+        snapshotId: result.snapshotId,
+        evaluation: result.evaluation 
+      });
+    } catch (error: any) {
+      console.error("Error creating ECOS snapshot:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to create ECOS snapshot" });
+    }
+  });
+
+  // Preview ECOS evaluation without saving (dry run)
+  app.get("/api/deals/:id/ecos-evaluation", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const dealId = req.params.id;
+      
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const { evaluateDealEcos } = await import("./deal-ecos-engine");
+      const evaluation = await evaluateDealEcos(dealId, 'preview');
+      
+      res.json({ success: true, evaluation });
+    } catch (error: any) {
+      console.error("Error evaluating deal ECOS:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to evaluate deal" });
+    }
+  });
+
   // --- Deal Documents ---
 
   // Get documents for a deal
