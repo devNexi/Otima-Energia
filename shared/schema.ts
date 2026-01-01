@@ -3598,3 +3598,35 @@ export type InsertZohoIntakeEvent = z.infer<typeof insertZohoIntakeEventSchema>;
 export type ZohoIntakeEvent = typeof zohoIntakeEvents.$inferSelect;
 
 // ============== END ZOHO INTAKE EVENTS ==============
+
+// ============== ZOHO INTAKE ERRORS (DEAD-LETTER LOG) ==============
+
+export const zohoIntakeErrors = pgTable("zoho_intake_errors", {
+  id: serial("id").primaryKey(),
+  zohoLeadId: text("zoho_lead_id"), // May be null if payload was malformed
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  payloadJson: jsonb("payload_json"), // Full incoming payload for debugging
+  errorType: text("error_type").notNull(), // 'AUTH_FAILED', 'VALIDATION_ERROR', 'DUPLICATE_REJECTED', 'INTERNAL_ERROR'
+  errorMessage: text("error_message").notNull(),
+  errorDetails: jsonb("error_details"), // Validation errors, stack trace, etc.
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  resolved: boolean("resolved").default(false),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: text("resolved_by"),
+  resolvedNotes: text("resolved_notes"),
+});
+
+export const insertZohoIntakeErrorSchema = createInsertSchema(zohoIntakeErrors).omit({
+  id: true,
+  receivedAt: true,
+  resolved: true,
+  resolvedAt: true,
+  resolvedBy: true,
+  resolvedNotes: true,
+});
+
+export type InsertZohoIntakeError = z.infer<typeof insertZohoIntakeErrorSchema>;
+export type ZohoIntakeError = typeof zohoIntakeErrors.$inferSelect;
+
+// ============== END ZOHO INTAKE ERRORS ==============

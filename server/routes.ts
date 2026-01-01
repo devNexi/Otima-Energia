@@ -34,6 +34,7 @@ import {
   insertCommissionReconciliationLineSchema,
   insertDealCaseSchema,
   zohoIntakeEvents,
+  zohoIntakeErrors,
   clients,
   deals,
   DEAL_STATES,
@@ -6602,6 +6603,16 @@ export async function registerRoutes(
         ipAddress,
         userAgent
       );
+      try {
+        await db.insert(zohoIntakeErrors).values({
+          zohoLeadId: req.body?.zohoLeadId || null,
+          payloadJson: req.body || {},
+          errorType: "AUTH_FAILED",
+          errorMessage: "Invalid or missing x-zoho-intake-key header",
+          ipAddress,
+          userAgent
+        });
+      } catch (e) { console.error("Failed to log dead-letter:", e); }
       await logAuditEvent({
         actor: "zoho_intake",
         actorRole: "system",
@@ -6612,7 +6623,15 @@ export async function registerRoutes(
         entityId: null,
         detailsJson: { reason: "Invalid or missing intake key" }
       });
-      return res.status(401).json({ success: false, error: "Unauthorized: Invalid or missing x-zoho-intake-key" });
+      return res.status(401).json({ 
+        success: false, 
+        error: "Unauthorized: Invalid or missing x-zoho-intake-key",
+        portalDealId: null,
+        portalDealUrl: null,
+        created: false,
+        ownerAssigned: null,
+        stageAssigned: null
+      });
     }
     
     const parseResult = zohoIntakeSchema.safeParse(req.body);
@@ -6628,6 +6647,17 @@ export async function registerRoutes(
         ipAddress,
         userAgent
       );
+      try {
+        await db.insert(zohoIntakeErrors).values({
+          zohoLeadId: req.body?.zohoLeadId || null,
+          payloadJson: req.body || {},
+          errorType: "VALIDATION_ERROR",
+          errorMessage: errorMsg,
+          errorDetails: parseResult.error.errors,
+          ipAddress,
+          userAgent
+        });
+      } catch (e) { console.error("Failed to log dead-letter:", e); }
       await logAuditEvent({
         actor: "zoho_intake",
         actorRole: "system",
@@ -6638,7 +6668,15 @@ export async function registerRoutes(
         entityId: null,
         detailsJson: { reason: "Validation failed", error: errorMsg }
       });
-      return res.status(400).json({ success: false, error: errorMsg });
+      return res.status(400).json({ 
+        success: false, 
+        error: errorMsg,
+        portalDealId: null,
+        portalDealUrl: null,
+        created: false,
+        ownerAssigned: null,
+        stageAssigned: null
+      });
     }
     
     const payload = parseResult.data;
@@ -6676,10 +6714,12 @@ export async function registerRoutes(
             : "https://otimaenergia.replit.app";
         
         return res.json({
+          success: true,
           portalDealId: deal.id,
-          portalClientId: deal.clientId,
           portalDealUrl: `${baseUrl}/admin?tab=deals&deal=${deal.id}`,
-          status: "EXISTING"
+          created: false,
+          ownerAssigned: deal.internalOwner || null,
+          stageAssigned: deal.status
         });
       }
       
@@ -6798,10 +6838,12 @@ export async function registerRoutes(
           : "https://otimaenergia.replit.app";
       
       return res.json({
+        success: true,
         portalDealId: newDeal.id,
-        portalClientId: client.id,
         portalDealUrl: `${baseUrl}/admin?tab=deals&deal=${newDeal.id}`,
-        status: "CREATED"
+        created: true,
+        ownerAssigned: dealOwner,
+        stageAssigned: "DRAFT"
       });
       
     } catch (error: any) {
@@ -6816,6 +6858,17 @@ export async function registerRoutes(
         ipAddress,
         userAgent
       );
+      try {
+        await db.insert(zohoIntakeErrors).values({
+          zohoLeadId: payload.zohoLeadId,
+          payloadJson: payload,
+          errorType: "INTERNAL_ERROR",
+          errorMessage: error.message || "Internal server error",
+          errorDetails: { stack: error.stack },
+          ipAddress,
+          userAgent
+        });
+      } catch (e) { console.error("Failed to log dead-letter:", e); }
       await logAuditEvent({
         actor: "zoho_intake",
         actorRole: "system",
@@ -6826,7 +6879,76 @@ export async function registerRoutes(
         entityId: null,
         detailsJson: { zohoLeadId: payload.zohoLeadId, error: error.message }
       });
-      return res.status(500).json({ success: false, error: "Internal server error" });
+      return res.status(500).json({ 
+        success: false, 
+        error: "Internal server error",
+        portalDealId: null,
+        portalDealUrl: null,
+        created: false,
+        ownerAssigned: null,
+        stageAssigned: null
+      });
+    }
+  });
+
+  // ============== ZOHO INTAKE ERRORS (DEAD-LETTER) ==============
+
+  app.get("/api/admin/zoho-intake-errors", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const showResolved = req.query.showResolved === "true";
+      const errors = await db.select().from(zohoIntakeErrors)
+        .where(showResolved ? undefined : eq(zohoIntakeErrors.resolved, false))
+        .orderBy(desc(zohoIntakeErrors.receivedAt))
+        .limit(100);
+      
+      res.json({ success: true, errors });
+    } catch (error: any) {
+      console.error("Error fetching Zoho intake errors:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/admin/zoho-intake-errors/:id/resolve", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    
+    if (!user) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+    
+    const { id } = req.params;
+    const { notes } = req.body;
+    
+    try {
+      await db.update(zohoIntakeErrors)
+        .set({
+          resolved: true,
+          resolvedAt: new Date(),
+          resolvedBy: user.username,
+          resolvedNotes: notes || null
+        })
+        .where(eq(zohoIntakeErrors.id, parseInt(id)));
+      
+      await logAuditEvent({
+        actor: user.username || "unknown",
+        actorRole: user.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "ZOHO_INTAKE_ERROR_RESOLVED",
+        entityType: "zoho_intake_error",
+        entityId: id,
+        detailsJson: { notes }
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error resolving Zoho intake error:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
