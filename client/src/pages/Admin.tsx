@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DictionaryPanel } from "@/components/dictionary/DictionaryPanel";
+import { ZohoIntakeErrors } from "@/components/admin/ZohoIntakeErrors";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -641,6 +642,13 @@ export default function Admin() {
               <TabsTrigger value="audit-trail" className="flex items-center gap-2" data-testid="tab-audit-trail">
                 <BookOpen className="w-4 h-4" />
                 {language === "pt" ? "Auditoria" : "Audit Trail"}
+              </TabsTrigger>
+            )}
+            {/* Zoho Intake Errors - visible to admin only */}
+            {user?.role === "admin" && (
+              <TabsTrigger value="zoho-errors" className="flex items-center gap-2" data-testid="tab-zoho-errors">
+                <AlertTriangle className="w-4 h-4" />
+                {language === "pt" ? "Erros Zoho" : "Zoho Errors"}
               </TabsTrigger>
             )}
           </TabsList>
@@ -1284,6 +1292,13 @@ export default function Admin() {
           {user?.role === "admin" && (
             <TabsContent value="audit-trail">
               <AuditTrailTab />
+            </TabsContent>
+          )}
+
+          {/* Zoho Intake Errors - admin only */}
+          {user?.role === "admin" && (
+            <TabsContent value="zoho-errors">
+              <ZohoIntakeErrors />
             </TabsContent>
           )}
         </Tabs>
