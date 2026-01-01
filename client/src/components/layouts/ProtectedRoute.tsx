@@ -32,15 +32,7 @@ export function ProtectedRoute({ children, allowedRoles, redirectTo = "/admin" }
 }
 
 export function getRoleLandingPage(role: UserRole): string {
-  switch (role) {
-    case 'sales':
-      return '/admin/sales';
-    case 'ops':
-      return '/admin/ops';
-    case 'admin':
-    default:
-      return '/admin/overview';
-  }
+  return '/admin/deals';
 }
 
 export function AccessDenied() {

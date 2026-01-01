@@ -67,7 +67,11 @@ const statusColors: Record<string, string> = {
   lost: "bg-red-100 text-red-800"
 };
 
-export default function Admin() {
+interface AdminProps {
+  defaultTab?: string;
+}
+
+export default function Admin({ defaultTab }: AdminProps) {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
   const { user, isAuthenticated, isLoading: authLoading, login, logout, canAccess } = useAuth();
@@ -101,17 +105,13 @@ export default function Admin() {
     responseCount: number;
   } | null>(null);
   
-  const getDefaultTab = (role: string | undefined) => {
-    if (role === "ops") return "ops-dashboard";
-    return "ecos-dashboard";
-  };
-  const [activeTab, setActiveTab] = useState(() => getDefaultTab(user?.role));
+  const [activeTab, setActiveTab] = useState(defaultTab || "deals");
   
   useEffect(() => {
-    if (user?.role) {
-      setActiveTab(getDefaultTab(user.role));
+    if (defaultTab) {
+      setActiveTab(defaultTab);
     }
-  }, [user?.role]);
+  }, [defaultTab]);
   
   const [snapshotForm, setSnapshotForm] = useState({
     estimatedConsumptionKwh: "",
@@ -588,53 +588,43 @@ export default function Admin() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="flex flex-wrap gap-1">
-            {/* ECOS Dashboard - visible to sales and admin */}
-            {(user?.role === "sales" || user?.role === "admin") && (
-              <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
-                <LayoutDashboard className="w-4 h-4" />
-                {language === "pt" ? "Painel ECOS" : "ECOS Dashboard"}
-              </TabsTrigger>
-            )}
-            {/* Leads - visible to sales and admin */}
-            {(user?.role === "sales" || user?.role === "admin") && (
-              <TabsTrigger value="leads" className="flex items-center gap-2" data-testid="tab-leads">
-                <Inbox className="w-4 h-4" />
-                {t("admin.tab.leads")}
-              </TabsTrigger>
-            )}
-            {/* Clients - visible to sales and admin */}
-            {(user?.role === "sales" || user?.role === "admin") && (
-              <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
-                <Users className="w-4 h-4" />
-                {t("admin.tab.clients")}
-              </TabsTrigger>
-            )}
-            {/* RFQs (Quotes) - visible to sales and admin */}
-            {(user?.role === "sales" || user?.role === "admin") && (
-              <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
-                <FileText className="w-4 h-4" />
-                {t("admin.tab.rfqs")}
-              </TabsTrigger>
-            )}
+            {/* Deals - visible to all roles (primary workspace) */}
+            <TabsTrigger value="deals" className="flex items-center gap-2" data-testid="tab-deals">
+              <Briefcase className="w-4 h-4" />
+              {language === "pt" ? "Negócios" : "Deals"}
+            </TabsTrigger>
+            {/* ECOS Dashboard - visible to all roles */}
+            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
+              <Zap className="w-4 h-4" />
+              ECOS
+            </TabsTrigger>
+            {/* RFQs (Quotes) - visible to all roles */}
+            <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
+              <Send className="w-4 h-4" />
+              {language === "pt" ? "RFQs / Cotações" : "RFQs / Quotes"}
+            </TabsTrigger>
             {/* Ops Dashboard - visible to ops and admin */}
             {(user?.role === "ops" || user?.role === "admin") && (
               <TabsTrigger value="ops-dashboard" className="flex items-center gap-2" data-testid="tab-ops-dashboard">
-                <ShieldAlert className="w-4 h-4" />
-                {language === "pt" ? "Painel Ops" : "Ops Dashboard"}
+                <LayoutDashboard className="w-4 h-4" />
+                {language === "pt" ? "Ops Dashboard" : "Ops Dashboard"}
               </TabsTrigger>
             )}
-            {/* Deals - visible to ops and admin */}
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="deals" className="flex items-center gap-2" data-testid="tab-deals">
-                <Briefcase className="w-4 h-4" />
-                {language === "pt" ? "Negócios" : "Deals"}
-              </TabsTrigger>
-            )}
-            {/* Revenue - visible to ops and admin (replaces Commission OS tabs) */}
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="revenue" className="flex items-center gap-2" data-testid="tab-revenue">
-                <DollarSign className="w-4 h-4" />
-                {language === "pt" ? "Receita" : "Revenue"}
+            {/* Clients - visible to all roles */}
+            <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
+              <Users className="w-4 h-4" />
+              {t("admin.tab.clients")}
+            </TabsTrigger>
+            {/* Revenue/Commission - visible to all roles */}
+            <TabsTrigger value="revenue" className="flex items-center gap-2" data-testid="tab-revenue">
+              <DollarSign className="w-4 h-4" />
+              {language === "pt" ? "Comissão" : "Commission"}
+            </TabsTrigger>
+            {/* Admin Overview - visible to admin only */}
+            {user?.role === "admin" && (
+              <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
+                <LayoutDashboard className="w-4 h-4" />
+                {language === "pt" ? "Visão Geral" : "Overview"}
               </TabsTrigger>
             )}
             {/* Audit Trail - visible to admin only */}
@@ -644,265 +634,49 @@ export default function Admin() {
                 {language === "pt" ? "Auditoria" : "Audit Trail"}
               </TabsTrigger>
             )}
-            {/* Zoho Intake Errors - visible to admin only */}
+            {/* Integrations (Zoho Intake Logs) - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="zoho-errors" className="flex items-center gap-2" data-testid="tab-zoho-errors">
-                <AlertTriangle className="w-4 h-4" />
-                {language === "pt" ? "Erros Zoho" : "Zoho Errors"}
+              <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
+                <LinkIcon className="w-4 h-4" />
+                {language === "pt" ? "Integrações" : "Integrations"}
               </TabsTrigger>
             )}
           </TabsList>
 
-          {/* Role-guarded TabsContent blocks */}
-          {(user?.role === "sales" || user?.role === "admin") && (
-            <TabsContent value="ecos-dashboard">
-              <EcosDashboard 
-                onViewClient={(clientId) => {
-                  const client = clients.find((c: any) => c.id === clientId);
-                  if (client) {
-                    setEnergyProfileClient({
-                      id: client.id,
-                      companyName: client.companyName,
-                      segment: client.segment,
-                      region: client.region,
-                      avgConsumptionKwh: client.avgConsumptionKwh
-                    });
-                  }
-                }}
+          {/* Deals - primary workspace, visible to all */}
+          <TabsContent value="deals">
+            {selectedDealId ? (
+              <DealDetail 
+                dealId={selectedDealId} 
+                onBack={() => setSelectedDealId(null)} 
               />
-            </TabsContent>
-          )}
+            ) : (
+              <DealRegistry 
+                onViewDeal={(dealId: string) => setSelectedDealId(dealId)}
+              />
+            )}
+          </TabsContent>
 
-          {(user?.role === "sales" || user?.role === "admin") && (
-            <TabsContent value="leads">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("admin.leads.title")}</CardTitle>
-                <CardDescription>{t("admin.leads.description")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {leadsLoading ? (
-                  <div className="flex justify-center p-4">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  </div>
-                ) : leads.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">{t("admin.leads.empty")}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {leads.map((lead: any) => (
-                      <div 
-                        key={lead.id} 
-                        className="border rounded-lg p-4 flex items-center justify-between"
-                        data-testid={`lead-row-${lead.id}`}
-                      >
-                        <div>
-                          <h3 className="font-medium">{lead.name}</h3>
-                          <div className="text-sm text-gray-500 space-x-4">
-                            {lead.email && <span><Mail className="w-3 h-3 inline mr-1" />{lead.email}</span>}
-                            {lead.phone && <span><Phone className="w-3 h-3 inline mr-1" />{lead.phone}</span>}
-                            {lead.companyName && <span><Building2 className="w-3 h-3 inline mr-1" />{lead.companyName}</span>}
-                          </div>
-                          {lead.message && (
-                            <p className="text-sm text-gray-600 mt-2 italic">"{lead.message}"</p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setSnapshotLead({ id: lead.id, name: lead.name })}
-                            data-testid={`button-snapshot-lead-${lead.id}`}
-                          >
-                            <LineChart className="w-4 h-4 mr-1" />
-                            {t("snapshot.generate")}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => convertLeadMutation.mutate(lead.id)}
-                            disabled={convertLeadMutation.isPending}
-                            data-testid={`button-convert-lead-${lead.id}`}
-                          >
-                            <ArrowRight className="w-4 h-4 mr-1" />
-                            {t("admin.leads.convert")}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {/* ECOS Dashboard - visible to all */}
+          <TabsContent value="ecos-dashboard">
+            <EcosDashboard 
+              onViewClient={(clientId) => {
+                const client = clients.find((c: any) => c.id === clientId);
+                if (client) {
+                  setEnergyProfileClient({
+                    id: client.id,
+                    companyName: client.companyName,
+                    segment: client.segment,
+                    region: client.region,
+                    avgConsumptionKwh: client.avgConsumptionKwh
+                  });
+                }
+              }}
+            />
+          </TabsContent>
 
-            <Dialog open={!!snapshotLead} onOpenChange={(open) => { if (!open) { setSnapshotLead(null); setSnapshotViewMode("create"); } }}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{t("snapshot.dialog.title")}</DialogTitle>
-                  <DialogDescription>
-                    {snapshotLead?.name}
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="flex gap-2 mb-4">
-                  <Button 
-                    variant={snapshotViewMode === "view" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setSnapshotViewMode("view")}
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    {t("snapshot.view")} ({snapshots.length})
-                  </Button>
-                  <Button 
-                    variant={snapshotViewMode === "create" ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setSnapshotViewMode("create")}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    {t("snapshot.generate")}
-                  </Button>
-                </div>
-
-                {snapshotViewMode === "view" ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {snapshotsLoading ? (
-                      <div className="flex justify-center p-4">
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                      </div>
-                    ) : snapshots.length === 0 ? (
-                      <p className="text-center text-gray-500 py-4">{language === "pt" ? "Nenhuma análise gerada" : "No analyses generated"}</p>
-                    ) : (
-                      snapshots.map((snapshot: any) => (
-                        <div 
-                          key={snapshot.id} 
-                          className={`relative border rounded-lg p-4 ${snapshot.isLocked ? 'bg-gray-50' : ''}`}
-                          data-testid={`snapshot-card-${snapshot.id}`}
-                        >
-                          {snapshot.isLocked && (
-                            <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none flex items-center justify-center opacity-10">
-                              <span className="text-4xl font-bold text-gray-800 rotate-[-20deg]">LOCKED</span>
-                            </div>
-                          )}
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                {getBandIcon(snapshot.bandResult)}
-                                <Badge className={getBandColor(snapshot.bandResult)}>
-                                  {t(`snapshot.${snapshot.bandResult}`)}
-                                </Badge>
-                                {snapshot.isLocked && (
-                                  <Badge variant="secondary" className="gap-1">
-                                    <Lock className="w-3 h-3" />
-                                    {t("snapshot.locked")}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-700 mb-2">{snapshot.summaryText}</p>
-                              <div className="text-xs text-gray-500 space-y-1">
-                                <p>{t("snapshot.consumption")}: {snapshot.estimatedConsumptionKwh} kWh/mês</p>
-                                <p>{t("snapshot.price")}: R$ {snapshot.estimatedPriceRmwh}/MWh</p>
-                                {snapshot.potentialSavingsR && (
-                                  <p className="text-green-600 font-medium">{t("snapshot.potential_savings")}: R$ {parseFloat(snapshot.potentialSavingsR).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                                )}
-                                <p className="text-gray-400">{t("snapshot.generated_at")}: {new Date(snapshot.generatedAt).toLocaleDateString("pt-BR")}</p>
-                              </div>
-                            </div>
-                            {!snapshot.isLocked && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => lockSnapshotMutation.mutate(snapshot.id)}
-                                disabled={lockSnapshotMutation.isPending}
-                                data-testid={`button-lock-snapshot-${snapshot.id}`}
-                              >
-                                <Lock className="w-4 h-4 mr-1" />
-                                {t("snapshot.lock")}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="consumption">{t("snapshot.consumption")}</Label>
-                      <Input
-                        id="consumption"
-                        type="number"
-                        value={snapshotForm.estimatedConsumptionKwh}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, estimatedConsumptionKwh: e.target.value })}
-                        placeholder="50000"
-                        data-testid="input-snapshot-consumption"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="price">{t("snapshot.price")}</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        value={snapshotForm.estimatedPriceRmwh}
-                        onChange={(e) => setSnapshotForm({ ...snapshotForm, estimatedPriceRmwh: e.target.value })}
-                        placeholder="350"
-                        data-testid="input-snapshot-price"
-                      />
-                    </div>
-                    <div>
-                      <Label>{t("snapshot.segment")}</Label>
-                      <Select 
-                        value={snapshotForm.segment} 
-                        onValueChange={(val) => setSnapshotForm({ ...snapshotForm, segment: val })}
-                      >
-                        <SelectTrigger data-testid="select-snapshot-segment">
-                          <SelectValue placeholder={t("snapshot.select_segment")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="SME">SME</SelectItem>
-                          <SelectItem value="Industrial">Industrial</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>{t("snapshot.region")}</Label>
-                      <Select 
-                        value={snapshotForm.region} 
-                        onValueChange={(val) => setSnapshotForm({ ...snapshotForm, region: val })}
-                      >
-                        <SelectTrigger data-testid="select-snapshot-region">
-                          <SelectValue placeholder={t("snapshot.select_region")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sudeste">Sudeste</SelectItem>
-                          <SelectItem value="Sul">Sul</SelectItem>
-                          <SelectItem value="Nordeste">Nordeste</SelectItem>
-                          <SelectItem value="Norte">Norte</SelectItem>
-                          <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button 
-                      className="w-full"
-                      onClick={() => snapshotLead && generateSnapshotMutation.mutate({ leadId: snapshotLead.id, data: snapshotForm })}
-                      disabled={!snapshotForm.estimatedConsumptionKwh || !snapshotForm.estimatedPriceRmwh || !snapshotForm.segment || !snapshotForm.region || generateSnapshotMutation.isPending}
-                      data-testid="button-generate-snapshot"
-                    >
-                      {generateSnapshotMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          {t("snapshot.generating")}
-                        </>
-                      ) : (
-                        t("snapshot.generate_btn")
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-            </TabsContent>
-          )}
-
-          {(user?.role === "sales" || user?.role === "admin") && (
-            <TabsContent value="clients">
+          {/* Clients - visible to all */}
+          <TabsContent value="clients">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -1128,11 +902,10 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
-            </TabsContent>
-          )}
+          </TabsContent>
 
-          {(user?.role === "sales" || user?.role === "admin") && (
-            <TabsContent value="rfqs">
+          {/* RFQs - visible to all */}
+          <TabsContent value="rfqs">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -1250,10 +1023,9 @@ export default function Admin() {
                   onOpenChange={(open) => !open && setSelectedRfo(null)}
                 />
               )}
-            </TabsContent>
-          )}
+          </TabsContent>
 
-          {/* Ops Dashboard - Today's Work Engine */}
+          {/* Ops Dashboard - visible to ops and admin */}
           {(user?.role === "ops" || user?.role === "admin") && (
             <TabsContent value="ops-dashboard">
               <OpsDashboardTab 
@@ -1265,28 +1037,10 @@ export default function Admin() {
             </TabsContent>
           )}
 
-          {/* Deals tab - visible to ops and admin */}
-          {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="deals">
-              {selectedDealId ? (
-                <DealDetail 
-                  dealId={selectedDealId}
-                  onBack={() => setSelectedDealId(null)}
-                />
-              ) : (
-                <DealRegistry 
-                  onViewDeal={(dealId) => setSelectedDealId(dealId)}
-                />
-              )}
-            </TabsContent>
-          )}
-
-          {/* Revenue tab - visible to ops and admin (replaces Commission OS tabs) */}
-          {(user?.role === "ops" || user?.role === "admin") && (
-            <TabsContent value="revenue">
-              <RevenueTab language={language} />
-            </TabsContent>
-          )}
+          {/* Commission/Revenue tab - visible to all */}
+          <TabsContent value="revenue">
+            <RevenueTab language={language} />
+          </TabsContent>
           
           {/* Audit Trail - admin only */}
           {user?.role === "admin" && (
@@ -1295,10 +1049,34 @@ export default function Admin() {
             </TabsContent>
           )}
 
-          {/* Zoho Intake Errors - admin only */}
+          {/* Integrations - admin only (includes Zoho Intake Logs) */}
           {user?.role === "admin" && (
-            <TabsContent value="zoho-errors">
-              <ZohoIntakeErrors />
+            <TabsContent value="integrations">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5" />
+                    {language === "pt" ? "Integrações" : "Integrations"}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === "pt" 
+                      ? "Gerenciamento de integrações e logs de entrada" 
+                      : "Integration management and intake logs"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="zoho-intake" className="space-y-4">
+                    <TabsList>
+                      <TabsTrigger value="zoho-intake">
+                        {language === "pt" ? "Zoho CRM - Logs de Entrada" : "Zoho CRM - Intake Logs"}
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="zoho-intake">
+                      <ZohoIntakeErrors />
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
         </Tabs>
