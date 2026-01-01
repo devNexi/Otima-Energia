@@ -1820,6 +1820,85 @@ export const insertDealDocumentSchema = createInsertSchema(dealDocuments).omit({
 export type InsertDealDocument = z.infer<typeof insertDealDocumentSchema>;
 export type DealDocument = typeof dealDocuments.$inferSelect;
 
+// ============== DEAL ECOS SNAPSHOTS (Pre-Sales Insight Tool) ==============
+
+// Trigger types for ECOS snapshots
+export const ECOS_SNAPSHOT_TRIGGER = [
+  "MANUAL",
+  "BILL_UPLOAD",
+  "RENEWAL_REVIEW"
+] as const;
+export type EcosSnapshotTrigger = typeof ECOS_SNAPSHOT_TRIGGER[number];
+
+// ECOS snapshot status
+export const ECOS_SNAPSHOT_STATUS = [
+  "BELOW_BAND",
+  "WITHIN_BAND",
+  "ABOVE_BAND",
+  "NO_DATA"
+] as const;
+export type EcosSnapshotStatus = typeof ECOS_SNAPSHOT_STATUS[number];
+
+// Confidence levels
+export const ECOS_CONFIDENCE_LEVEL = [
+  "LOW",
+  "MEDIUM",
+  "HIGH"
+] as const;
+export type EcosConfidenceLevel = typeof ECOS_CONFIDENCE_LEVEL[number];
+
+// Recommended next steps
+export const ECOS_NEXT_STEP = [
+  "REQUEST_RFQ",
+  "WAIT",
+  "NEED_MORE_DATA"
+] as const;
+export type EcosNextStep = typeof ECOS_NEXT_STEP[number];
+
+// Deal ECOS Snapshots - Pre-sales insight tool for deals
+export const dealEcosSnapshots = pgTable("deal_ecos_snapshots", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  version: integer("version").default(1).notNull(),
+  
+  // Creation context
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  triggerType: text("trigger_type").notNull(), // MANUAL, BILL_UPLOAD, RENEWAL_REVIEW
+  
+  // Input data (frozen snapshot of inputs used)
+  inputData: jsonb("input_data").notNull(), // { uc, distributor, submarket, segment, contractTermAssumption, volumeMwh12m, demandKw, billMonthsUsed, estimatedPriceRmwh, etc. }
+  
+  // Benchmark matching (which benchmark row(s) used + bounds)
+  benchmarkMatch: jsonb("benchmark_match"), // { benchmarkId, segment, region, contractLength, lowerBoundRmwh, upperBoundRmwh, lastUpdated, confidence }
+  
+  // Computed results
+  results: jsonb("results").notNull(), // { clientEstimatedPriceRmwh, gapPercent, potentialSavingsMin, potentialSavingsMax, etc. }
+  
+  // Status classification
+  status: text("status").notNull(), // BELOW_BAND, WITHIN_BAND, ABOVE_BAND, NO_DATA
+  
+  // Confidence model
+  confidenceLevel: text("confidence_level").notNull(), // LOW, MEDIUM, HIGH
+  confidenceReasons: jsonb("confidence_reasons"), // ["Only 1 bill month uploaded", "Benchmark outdated 120 days", etc.]
+  
+  // Actionable output
+  recommendedNextStep: text("recommended_next_step").notNull(), // REQUEST_RFQ, WAIT, NEED_MORE_DATA
+  talkTrack: text("talk_track"), // Sales script generated from logic/template
+  talkTrackPt: text("talk_track_pt"), // Portuguese version
+  
+  // PDF generation
+  pdfDocumentId: integer("pdf_document_id").references(() => dealDocuments.id),
+});
+
+export const insertDealEcosSnapshotSchema = createInsertSchema(dealEcosSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealEcosSnapshot = z.infer<typeof insertDealEcosSnapshotSchema>;
+export type DealEcosSnapshot = typeof dealEcosSnapshots.$inferSelect;
+
 // Commission Terms Snapshot - Immutable record at CONTRACT_SIGNED
 export const dealCommissionTermsSnapshots = pgTable("deal_commission_terms_snapshots", {
   id: serial("id").primaryKey(),
@@ -2013,6 +2092,7 @@ export const dealsRelations = relations(deals, ({ one, many }) => ({
   documents: many(dealDocuments),
   commissionTermsSnapshots: many(dealCommissionTermsSnapshots),
   disputes: many(dealDisputes),
+  ecosSnapshots: many(dealEcosSnapshots),
 }));
 
 export const dealCommissionTermsSnapshotsRelations = relations(dealCommissionTermsSnapshots, ({ one }) => ({
@@ -2073,6 +2153,21 @@ export const dealDocumentsRelations = relations(dealDocuments, ({ one }) => ({
   deal: one(deals, {
     fields: [dealDocuments.dealId],
     references: [deals.id],
+  }),
+}));
+
+export const dealEcosSnapshotsRelations = relations(dealEcosSnapshots, ({ one }) => ({
+  deal: one(deals, {
+    fields: [dealEcosSnapshots.dealId],
+    references: [deals.id],
+  }),
+  createdByUser: one(users, {
+    fields: [dealEcosSnapshots.createdByUserId],
+    references: [users.id],
+  }),
+  pdfDocument: one(dealDocuments, {
+    fields: [dealEcosSnapshots.pdfDocumentId],
+    references: [dealDocuments.id],
   }),
 }));
 

@@ -1,0 +1,396 @@
+You are working inside the existing Ótima Energia admin portal codebase (Replit). The portal already includes:
+
+RBAC auth (admin/ops/sales)
+
+Zoho → Portal intake that creates Deals (Zoho is Leads only)
+
+Deal OS (deal state machine, RFQ, quotes, compliance, audit trail)
+
+Bill upload portal + OCR pipeline (Tesseract) with manual review
+
+Existing ECOS tables + endpoints (marketPriceBenchmarks, ecosSettings, ecosDecisionLogs, leadEcosSnapshots, clientContracts, etc.)
+
+✅ BUSINESS CHANGE (NON-NEGOTIABLE)
+
+ECOS is NOT a continuous “ongoing optimization” system anymore.
+We are removing the ongoing monitoring mindset and reframing ECOS as:
+
+Pre-Sales ECOS Snapshot (primary)
+
+A sales user (Renan) runs an ECOS snapshot for a Deal using:
+
+UC / bill upload OCR / manual inputs
+
+Output is a sales-ready insight:
+
+“Where are you vs market?”
+
+“Potential savings range” (no guarantees)
+
+“What we recommend doing next”
+
+Must be exportable as a PDF Insight Pack to share with prospects.
+
+Renewal ECOS Review (secondary)
+
+Same snapshot process, but framed for renewal / re-quote.
+
+No quarterly monitoring, no constant reminders, no “optimization as a service”.
+
+✅ PRIMARY USER
+
+Sales user with zero deep energy expertise.
+The UX must be guided, short, obvious, and defensible.
+
+🎯 OUTCOME
+
+When Renan opens a Deal, he should be able to:
+
+Click “Run ECOS Snapshot”
+
+If data missing → be prompted to upload a bill / confirm key fields
+
+Get an immediate “market positioning” summary + talk track
+
+Click “Download Insight PDF”
+
+Optionally click “Start RFQ” from the same place
+
+ECOS must feel like a sales weapon, not an ops burden.
+
+1️⃣ ECOS SCOPE UPDATE (REMOVE / DEPRECATE ONGOING OPTIMIZATION)
+Required changes:
+
+Remove/disable any scheduled “evaluate all clients” automation for ongoing optimization.
+
+Remove/disable “quarterly performance report” generation as a default workflow.
+
+Keep existing tables if already in DB, but deprecate UI/UX and scheduled jobs so the system does not push “continuous monitoring”.
+
+✅ ECOS should only run:
+
+On-demand per Deal (sales use)
+
+Optional renewal trigger (manual action)
+
+2️⃣ DATA MODEL: DEAL-CENTRIC ECOS SNAPSHOT
+2.1 New table (required)
+
+Create a deal_ecos_snapshots table (or equivalent) to store snapshots against Deals (NOT only leads/clients):
+
+deal_ecos_snapshots
+
+id (pk)
+
+dealId (fk → deals.id) UNIQUE per snapshot run (multiple allowed, but store versioning)
+
+version (int, auto increment per deal)
+
+createdAt
+
+createdByUserId
+
+triggerType (enum: MANUAL, BILL_UPLOAD, RENEWAL_REVIEW)
+
+inputData (jsonb) — frozen snapshot of inputs used
+(UC, distributor, submarket, segment, contract_term_assumption, volume_mwh_12m, demand_kw, billMonthsUsed, etc.)
+
+benchmarkMatch (jsonb) — which benchmark row(s) used + bounds
+
+results (jsonb) — computed outputs (gap %, annual savings range, etc.)
+
+confidenceLevel (enum: LOW/MEDIUM/HIGH)
+
+confidenceReasons (text[] or jsonb)
+
+status (enum: BELOW_BAND / WITHIN_BAND / ABOVE_BAND / NO_DATA)
+
+recommendedNextStep (enum: REQUEST_RFQ / WAIT / NEED_MORE_DATA)
+
+talkTrack (text) — short sales script generated from logic/template
+
+pdfDocumentId (nullable fk → dealDocuments.id) (when PDF is generated)
+
+2.2 Keep existing ECOS tables but repurpose
+
+Keep marketPriceBenchmarks and ecosSettings
+
+Keep ecosDecisionLogs but update its role:
+
+It should log snapshot actions for compliance + defensibility.
+
+Keep leadEcosSnapshots (for lead previews if still used)
+
+clientContracts / quarterlyReports: leave as-is if existing, but do not promote them in UI anymore.
+
+3️⃣ BENCHMARKING LOGIC (V1 — PRAGMATIC + DEFENSIBLE)
+
+You are NOT building a forecasting engine.
+
+V1 objective:
+
+Given incomplete data, produce a conservative positioning:
+
+“You appear above market band”
+
+“You appear within band”
+
+“We need more data to be confident”
+
+Benchmark matching:
+
+Match using:
+
+segment (SME / Industrial)
+
+region/submarket (SE/CO, S, NE, N)
+
+contract term assumption (12/24/36)
+
+product type assumption (convencional vs incentivada)
+If not provided → choose “Unknown” and reduce confidence.
+
+Output fields (minimum):
+
+client_estimated_price_r_per_mwh (from bill OCR or manual)
+
+benchmark_lower / benchmark_upper (R$/MWh)
+
+gap_percent vs upper
+
+potential_savings_range (min/max annual) must be phrased as estimate
+
+recommendedNextStep:
+
+REQUEST_RFQ (if above band or near upper)
+
+NEED_MORE_DATA (if no_data/low confidence)
+
+WAIT (if clearly below/within)
+
+Confidence model:
+
+Set confidence based on:
+
+OCR confidence score
+
+number of bill months available
+
+benchmark freshness (lastUpdated)
+
+completeness of UC/distributor/submarket
+Return:
+
+confidenceLevel (LOW/MED/HIGH)
+
+confidenceReasons array (e.g., “Only 1 bill month uploaded”, “Benchmark outdated 120 days”, etc.)
+
+4️⃣ UI/UX CHANGES (DEAL-FIRST, SALES-FRIENDLY)
+4.1 Deal Detail: Add “ECOS Snapshot” tab
+
+Inside DealDetail, create a new tab:
+
+ECOS Snapshot
+
+Button: Run ECOS Snapshot
+
+Shows last snapshot summary:
+
+Status badge: Above / Within / Below / No Data
+
+Confidence badge: Low/Med/High (with tooltip “why”)
+
+Key numbers: estimated price vs band
+
+“Potential savings range” (estimate wording)
+
+“Recommended next step” (big and clear)
+
+“Renan talk track” (copyable)
+
+History list: snapshots v1/v2/v3 for this deal (click to view)
+
+Buttons:
+
+Download Insight PDF (if generated)
+
+Generate PDF (if not generated)
+
+Start RFQ (only enabled if dossier is locked and required fields are present; otherwise show blocker guidance)
+
+4.2 ECOS Dashboard (existing): refocus
+
+Rename dashboard language to “Insights” and “Snapshots”, not “monitoring”.
+Example:
+
+“Snapshots generated this week”
+
+“Deals above band”
+
+“Benchmarks needing update”
+
+Do not show “quarterly optimization” or “continuous monitoring” language.
+
+5️⃣ PDF INSIGHT PACK GENERATOR (MANDATORY)
+
+Create a simple PDF generator (server-side) that produces a 1–2 page report:
+
+Title: “Diagnóstico de Posicionamento de Energia (Estimativa)”
+Contents:
+
+Deal + company identifiers (company name, CNPJ if present, UC if present)
+
+Summary block:
+
+Market positioning badge (Above/Within/Below)
+
+Confidence level + why
+
+Benchmark band chart (simple band visualization)
+
+Key assumptions list (explicit)
+
+Estimated savings range (no guarantees)
+
+Recommended next step
+
+Compliance footer:
+
+“Estimativas baseadas em dados fornecidos e referências de mercado.”
+
+“Valores podem variar conforme perfil real de consumo e condições comerciais.”
+
+Timestamp + internal reference ID
+
+Store the generated PDF as a dealDocument with type ecos_insight_report
+and link back to deal_ecos_snapshots.pdfDocumentId.
+
+6️⃣ API ENDPOINTS (REQUIRED)
+
+Add endpoints:
+
+POST /api/deals/:dealId/ecos/run
+
+runs snapshot, stores deal_ecos_snapshots record, logs in ecosDecisionLogs
+
+GET /api/deals/:dealId/ecos/snapshots
+
+list snapshots (latest first)
+
+GET /api/deals/:dealId/ecos/snapshots/:snapshotId
+
+fetch one snapshot detail
+
+POST /api/deals/:dealId/ecos/snapshots/:snapshotId/pdf
+
+generate PDF (or regenerate) and attach document
+
+All endpoints must be authenticated and RBAC safe:
+
+sales can run snapshots
+
+ops/admin can run snapshots
+
+only admin can edit benchmark tables/settings (if such UI exists)
+
+7️⃣ TOOLTIP COPY (MANDATORY, SHORT, SALES-ORIENTED)
+
+Add tooltips in the ECOS Snapshot tab:
+
+Run ECOS Snapshot
+“Gera um diagnóstico rápido com base em faturas e referências de mercado. Não é uma proposta comercial.”
+
+Confidence
+“Alta = dados completos. Baixa = faltam faturas/dados ou benchmark desatualizado.”
+
+Potential savings
+“Estimativa. A economia real depende das cotações recebidas e do contrato final.”
+
+Start RFQ
+“Use isso quando o dossiê estiver completo e bloqueado. Varejistas esperam dados finais.”
+
+Must support PT-BR and EN:
+
+Store tooltip strings with i18n keys.
+
+Provide EN equivalents (simple, literal).
+
+8️⃣ TERMINOLOGY (BRAZIL-CORRECT)
+
+Use this language in UI:
+
+“Varejistas” internally for the 126 list
+
+Do NOT show “Varejista Y/N” field anywhere
+
+In playbooks we track differentiators:
+
+onboarding SLA
+
+products quoted (convencional/incentivada)
+
+submarkets covered
+
+preferred RFQ intake format
+
+required docs/guarantees/credit turnaround time
+
+commission reporting cadence/format
+
+variance rules (true-up/clawback/offset)
+
+(Do NOT rebuild playbooks now unless needed for ECOS snapshot logic; just ensure language aligns.)
+
+9️⃣ ACCEPTANCE CRITERIA (TEST WITH DEMO DATA)
+
+Use demo seeder data (test1/test2 etc.) to confirm:
+
+A sales user can open a seeded deal, run ECOS snapshot, and see results.
+
+Snapshot is blocked with clear instructions if key inputs missing.
+
+PDF generates and is saved as a deal document.
+
+Snapshot history works.
+
+Audit trail records snapshot runs.
+
+No “continuous optimization / quarterly monitoring” prompts appear anywhere.
+
+🔥 IMPORTANT CONSTRAINTS
+
+Avoid overengineering
+
+Do not build PLD forecasting, Monte Carlo, or portfolio optimization
+
+Do not require ongoing client uploads
+
+ECOS is a pre-sales insight tool + renewal review tool
+
+All outputs must avoid guarantees (“up to 40%” ok; “will save” not ok)
+
+DELIVERABLE
+
+Implement all changes above in the existing repo, respecting existing patterns in:
+
+schema definitions
+
+storage methods
+
+route structure
+
+RBAC
+
+audit logging
+
+object storage document handling
+
+When complete, provide:
+
+summary of what was changed
+
+where the new tab appears
+
+how to run a snapshot using demo data
+
+example generated PDF filename and where it is stored
