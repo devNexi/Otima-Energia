@@ -7335,14 +7335,30 @@ export async function registerRoutes(
           result = await db.execute(sql`
             SELECT * FROM portal_dictionary_terms 
             WHERE category = ${category}::dictionary_category
-            AND (LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} OR LOWER(key) LIKE ${searchTerm})
-            ORDER BY category, term_pt
+            AND (
+              LOWER(term_pt) LIKE ${searchTerm} 
+              OR LOWER(term_en) LIKE ${searchTerm} 
+              OR LOWER(key) LIKE ${searchTerm}
+              OR LOWER(short_def_pt) LIKE ${searchTerm}
+              OR LOWER(short_def_en) LIKE ${searchTerm}
+              OR EXISTS (SELECT 1 FROM unnest(synonyms) AS syn WHERE LOWER(syn) LIKE ${searchTerm})
+            )
+            ORDER BY 
+              CASE WHEN LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} THEN 0 ELSE 1 END,
+              category, term_pt
           `);
         } else {
           result = await db.execute(sql`
             SELECT * FROM portal_dictionary_terms 
-            WHERE LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} OR LOWER(key) LIKE ${searchTerm}
-            ORDER BY category, term_pt
+            WHERE LOWER(term_pt) LIKE ${searchTerm} 
+              OR LOWER(term_en) LIKE ${searchTerm} 
+              OR LOWER(key) LIKE ${searchTerm}
+              OR LOWER(short_def_pt) LIKE ${searchTerm}
+              OR LOWER(short_def_en) LIKE ${searchTerm}
+              OR EXISTS (SELECT 1 FROM unnest(synonyms) AS syn WHERE LOWER(syn) LIKE ${searchTerm})
+            ORDER BY 
+              CASE WHEN LOWER(term_pt) LIKE ${searchTerm} OR LOWER(term_en) LIKE ${searchTerm} THEN 0 ELSE 1 END,
+              category, term_pt
           `);
         }
       } else if (category && category !== "all") {

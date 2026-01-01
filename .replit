@@ -51,3 +51,6 @@ integrations = ["javascript_database:1.0.0", "javascript_object_storage:1.0.0"]
 
 [userenv.development]
 ENABLE_DEMO_MODE = "true"
+
+[userenv.shared]
+ZOHO_INTAKE_KEY = "J7qK9xR2vN4mP8sT5wY3bL6cE1aH0fUz"

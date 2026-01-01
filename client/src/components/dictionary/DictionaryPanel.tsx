@@ -19,7 +19,8 @@ import {
   DollarSign, 
   Cog,
   ChevronRight,
-  Loader2
+  Loader2,
+  Globe
 } from "lucide-react";
 
 interface DictionaryTerm {
@@ -40,6 +41,7 @@ interface DictionaryTerm {
 
 const CATEGORIES = [
   { key: "all", label_pt: "Todos", label_en: "All", icon: BookOpen },
+  { key: "GENERAL", label_pt: "Geral", label_en: "General", icon: Globe },
   { key: "DOSSIER", label_pt: "Dossiê", label_en: "Dossier", icon: FileText },
   { key: "RFQ_QUOTES", label_pt: "RFQ / Cotações", label_en: "RFQ / Quotes", icon: Send },
   { key: "ONBOARDING_COMPLIANCE", label_pt: "Onboarding", label_en: "Onboarding", icon: ClipboardCheck },
@@ -48,6 +50,7 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
+  GENERAL: "bg-slate-100 text-slate-800 border-slate-200",
   DOSSIER: "bg-blue-100 text-blue-800 border-blue-200",
   RFQ_QUOTES: "bg-purple-100 text-purple-800 border-purple-200",
   ONBOARDING_COMPLIANCE: "bg-amber-100 text-amber-800 border-amber-200",

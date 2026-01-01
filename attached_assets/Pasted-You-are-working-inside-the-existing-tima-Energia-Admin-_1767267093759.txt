@@ -1,0 +1,442 @@
+You are working inside the existing Ótima Energia Admin Portal.
+
+Context
+
+We already built a “Portal Dictionary” UI drawer/modal with:
+
+Search bar
+
+Category tabs: All, Dossier, RFQ/Quotes, Onboarding, Commission, Operations
+But every category is empty.
+
+Goal
+
+Ship a complete Portal Dictionary v1 that:
+
+Displays real terms used in the portal
+
+Has PT-BR primary text + English translation field
+
+Is searchable (by either language, aliases, acronyms)
+
+Is categorized so each tab shows relevant terms
+
+Can be expanded later without code edits (admin can add terms)
+
+1) DATA MODEL (DB) — REQUIRED
+
+Create a database table:
+
+portal_dictionary_terms
+
+id (uuid / serial)
+
+term_key (string, unique) // internal key (snake_case)
+
+term_pt (string) // PT-BR display title
+
+term_en (string) // EN display title
+
+definition_pt (text) // PT-BR definition (short, clear)
+
+definition_en (text) // EN definition (short, clear)
+
+category (enum/string) // one of: DOSSIER, RFQ_QUOTES, ONBOARDING, COMMISSION, OPERATIONS, GENERAL
+
+aliases (text[]) // searchable synonyms e.g. ["UC", "Unidade Consumidora"]
+
+related_terms (text[]) // list of term_keys (optional)
+
+created_at
+
+updated_at
+
+Seed this table with the copy below (Section 4).
+
+2) API — REQUIRED
+
+Create endpoints:
+
+GET /api/portal-dictionary
+
+Query params:
+
+q = search string (optional)
+
+category = filter (optional, omit means All)
+
+Behavior:
+
+Full-text search across: term_pt, term_en, definition_pt, definition_en, aliases
+
+Return ordered results: exact matches first, then partial matches
+
+POST /api/portal-dictionary (admin only)
+
+Create new term. Validate unique term_key.
+
+PATCH /api/portal-dictionary/:id (admin only)
+
+Update term.
+
+DELETE /api/portal-dictionary/:id (admin only)
+
+Soft delete preferred (optional), otherwise hard delete OK.
+
+RBAC:
+
+Everyone logged in can read
+
+Only admin can create/edit/delete
+
+Audit:
+
+Log create/edit/delete to audit trail with source="portal_dictionary"
+
+3) UI — REQUIRED
+
+Fix the Portal Dictionary drawer so it actually shows data.
+
+Tabs
+
+Map UI tabs to category filters:
+
+All → no category filter
+
+Dossier → DOSSIER
+
+RFQ / Quotes → RFQ_QUOTES
+
+Onboarding → ONBOARDING
+
+Commission → COMMISSION
+
+Operations → OPERATIONS
+
+Search behavior
+
+Search should query API with q
+
+If a tab is selected, it should also pass category
+
+Search must match both PT-BR and EN and aliases (UC, CNPJ, RFQ, etc.)
+
+Term card layout
+
+Each result card shows:
+
+Title line: term_pt (bold) + small badge showing category
+
+Subtitle line: term_en (muted)
+
+Body: definition_pt (default shown)
+
+Toggle button: “EN” switch reveals definition_en
+
+Empty state
+
+If no results:
+
+Show: “Nenhum termo encontrado” + hint “Tente buscar por siglas (ex: UC, CCEE, RFQ)”
+
+4) SEED CONTENT — INSERT EXACTLY (PT-BR + EN)
+
+Seed the table with the terms below. Keep the copy exactly as written.
+
+GENERAL
+
+term_key: uc_unidade_consumidora
+term_pt: UC (Unidade Consumidora)
+term_en: Consumer Unit (UC)
+definition_pt: Código que identifica a unidade de consumo na distribuidora. Usamos a UC para localizar faturas, validar dados e estruturar cotações.
+definition_en: Identifier code for the customer’s consumption unit at the utility. Used to locate bills, validate data, and structure quotes.
+category: GENERAL
+aliases: ["Unidade Consumidora","Código UC","Consumer Unit"]
+
+term_key: cnpj
+term_pt: CNPJ
+term_en: Corporate Tax ID (CNPJ)
+definition_pt: Número de identificação fiscal da empresa. Necessário para cadastro, propostas e documentos.
+definition_en: Brazil’s corporate tax identifier. Required for registration, proposals, and documentation.
+category: GENERAL
+aliases: ["Cadastro Nacional","Tax ID"]
+
+term_key: grupo_a
+term_pt: Grupo A
+term_en: Group A (Medium/High Voltage)
+definition_pt: Consumidor atendido em média/alta tensão. Normalmente tem processos e documentação diferentes do Grupo B.
+definition_en: Customer served at medium/high voltage. Typically has different processes and documentation than Group B.
+category: GENERAL
+aliases: ["Alta tensão","Média tensão","MT","AT"]
+
+term_key: grupo_b
+term_pt: Grupo B
+term_en: Group B (Low Voltage)
+definition_pt: Consumidor atendido em baixa tensão. Pode exigir abordagem e priorização diferentes.
+definition_en: Customer served at low voltage. May require a different approach and prioritization.
+category: GENERAL
+aliases: ["Baixa tensão","BT"]
+
+term_key: acl
+term_pt: ACL (Ambiente de Contratação Livre)
+term_en: Free Contracting Environment (ACL)
+definition_pt: Ambiente onde o cliente pode escolher uma varejista e contratar energia com condições negociadas, em vez de comprar apenas da distribuidora.
+definition_en: Market where the customer can choose a retail energy trader and negotiate supply terms instead of buying only from the utility.
+category: GENERAL
+aliases: ["Mercado Livre","Ambiente Livre","Free Market"]
+
+term_key: acr
+term_pt: ACR (Ambiente de Contratação Regulada)
+term_en: Regulated Contracting Environment (ACR)
+definition_pt: Ambiente regulado onde o cliente compra energia da distribuidora local com tarifas definidas e menor flexibilidade contratual.
+definition_en: Regulated market where the customer buys from the local utility under regulated tariffs with less contractual flexibility.
+category: GENERAL
+aliases: ["Mercado Cativo","Distribuidora","Regulated Market"]
+
+term_key: varejista
+term_pt: Varejista (Comercializadora Varejista)
+term_en: Retail Energy Trader (Varejista)
+definition_pt: Comercializadora habilitada a representar clientes no ACL com operação padronizada. É a contraparte contratual do cliente e executa onboarding/migração no processo.
+definition_en: Retail energy trader authorized to represent customers in the ACL with standardized operations. Contractual counterparty to the customer and executes onboarding/migration steps.
+category: GENERAL
+aliases: ["Comercializadora varejista","Retail trader"]
+
+DOSSIER
+
+term_key: dossie
+term_pt: Dossiê do Cliente
+term_en: Client Dossier
+definition_pt: Pacote padronizado com dados validados do cliente (UC, consumo, demanda, distribuidora, etc.). É a base de toda RFQ. Dado errado aqui gera cotação errada.
+definition_en: Standardized package of validated customer data (UC, consumption, demand, utility, etc.). Foundation for every RFQ. Wrong data here produces wrong quotes.
+category: DOSSIER
+aliases: ["Dossiê","Dossier","Perfil de consumo"]
+
+term_key: status_dossie_draft
+term_pt: Dossiê — Rascunho (Draft)
+term_en: Dossier — Draft
+definition_pt: Dados ainda incompletos ou não revisados. Não deve ser usado para envio de RFQ.
+definition_en: Data is incomplete or not reviewed. Should not be used to send RFQs.
+category: DOSSIER
+aliases: ["Draft","Rascunho"]
+
+term_key: status_dossie_ready
+term_pt: Dossiê — Pronto (Ready)
+term_en: Dossier — Ready
+definition_pt: Dados revisados e prontos para envio. Pode virar “Bloqueado” quando RFQs forem disparadas.
+definition_en: Data reviewed and ready to send. May be locked once RFQs are dispatched.
+category: DOSSIER
+aliases: ["Ready","Pronto"]
+
+term_key: status_dossie_locked
+term_pt: Dossiê — Bloqueado (Locked)
+term_en: Dossier — Locked
+definition_pt: Congela os dados para proteger consistência com fornecedores. Alterar após RFQ causa retrabalho e perda de confiança.
+definition_en: Freezes the data to protect consistency with suppliers. Changing after RFQ creates rework and trust loss.
+category: DOSSIER
+aliases: ["Locked","Bloqueado"]
+
+term_key: ocr_fatura
+term_pt: OCR de Fatura
+term_en: Bill OCR
+definition_pt: Extração automática de dados da fatura (UC, consumo, demanda, valor, distribuidora). Deve sempre ser revisada por um humano.
+definition_en: Automatic extraction from bills (UC, consumption, demand, value, utility). Must always be reviewed by a human.
+category: DOSSIER
+aliases: ["OCR","Extração","Fatura"]
+
+RFQ_QUOTES
+
+term_key: rfq
+term_pt: RFQ (Pedido de Cotação)
+term_en: RFQ (Request for Quote)
+definition_pt: Solicitação enviada às varejistas com o dossiê e parâmetros do cliente para receber propostas.
+definition_en: Request sent to retail traders with the dossier and customer parameters to receive offers.
+category: RFQ_QUOTES
+aliases: ["Pedido de Cotação","Cotação","RFO"]
+
+term_key: blind_auction
+term_pt: Leilão Cego (Blind Auction)
+term_en: Blind Auction
+definition_pt: Envio padronizado do mesmo dossiê para múltiplas varejistas com prazo. O objetivo é comparar propostas sem viés e sem retrabalho.
+definition_en: Standard dispatch of the same dossier to multiple retail traders with a deadline. Goal is unbiased comparison without rework.
+category: RFQ_QUOTES
+aliases: ["Auction","Leilão","Painel"]
+
+term_key: quote
+term_pt: Cotação (Quote)
+term_en: Quote / Offer
+definition_pt: Proposta recebida da varejista com preço, vigência, produto, submercado e regras comerciais. Deve ser registrada exatamente como recebida.
+definition_en: Offer from the retail trader including price, term, product, submarket, and commercial rules. Must be recorded exactly as received.
+category: RFQ_QUOTES
+aliases: ["Proposta","Oferta"]
+
+term_key: quote_validity
+term_pt: Validade da Cotação
+term_en: Quote Validity
+definition_pt: Prazo até quando a cotação é válida. Depois disso, precisa ser renovada ou re-cotada.
+definition_en: How long the offer is valid. After expiry, it must be refreshed or re-quoted.
+category: RFQ_QUOTES
+aliases: ["Validade","Expiry"]
+
+term_key: submercado
+term_pt: Submercado
+term_en: Submarket
+definition_pt: Região de referência do sistema elétrico usada na estruturação comercial e risco (ex: SE/CO, S, NE, N).
+definition_en: Power system reference region used for commercial structuring and risk (e.g., SE/CO, S, NE, N).
+category: RFQ_QUOTES
+aliases: ["SE/CO","NE","N","S"]
+
+term_key: produto_incentivada_convencional
+term_pt: Produto (Incentivada / Convencional)
+term_en: Product Type (Incentivada / Conventional)
+definition_pt: Tipo de energia ofertada. Cada varejista pode ter regras diferentes de disponibilidade e precificação por produto.
+definition_en: Type of energy product offered. Each retail trader may price and offer differently per product type.
+category: RFQ_QUOTES
+aliases: ["Incentivada","Convencional","Produto"]
+
+ONBOARDING
+
+term_key: onboarding
+term_pt: Onboarding
+term_en: Onboarding
+definition_pt: Etapa operacional após selecionar a cotação: coleta de documentos, validações e abertura do processo com a varejista.
+definition_en: Operational stage after selecting a quote: document collection, validations, and starting the process with the retail trader.
+category: ONBOARDING
+aliases: ["Cadastro","Entrada","Implantação"]
+
+term_key: sla_onboarding
+term_pt: SLA de Onboarding
+term_en: Onboarding SLA
+definition_pt: Prazo-alvo que a varejista leva para concluir etapas (ex: análise de documentos, retorno, ativação).
+definition_en: Target time the retail trader takes to complete steps (e.g., doc review, feedback, activation).
+category: ONBOARDING
+aliases: ["SLA","Prazo","Turnaround"]
+
+term_key: documentos_obrigatorios
+term_pt: Documentos Obrigatórios
+term_en: Required Documents
+definition_pt: Lista de documentos mínimos exigidos para avançar. Varia por varejista e por perfil de cliente.
+definition_en: Minimum documents required to proceed. Varies by retail trader and customer profile.
+category: ONBOARDING
+aliases: ["Docs","Documentação","Checklist"]
+
+term_key: garantias
+term_pt: Garantias
+term_en: Guarantees / Collateral
+definition_pt: Exigências de garantia definidas pela varejista após análise de risco (quando aplicável).
+definition_en: Collateral requirements set by the retail trader after risk review (when applicable).
+category: ONBOARDING
+aliases: ["Garantia","Caução","Collateral"]
+
+COMMISSION
+
+term_key: comissao
+term_pt: Comissão
+term_en: Commission
+definition_pt: Remuneração paga pela varejista à Ótima pela intermediação. Registrada e reconciliada no Revenue/Commission OS.
+definition_en: Fee paid by the retail trader to Ótima for intermediation. Logged and reconciled in the Revenue/Commission OS.
+category: COMMISSION
+aliases: ["Receita","Fee"]
+
+term_key: cadencia_pagamento
+term_pt: Cadência de Pagamento
+term_en: Payment Cadence
+definition_pt: Como a varejista paga comissão (mensal, trimestral, misto). Definido no Playbook do fornecedor.
+definition_en: How the retail trader pays commission (monthly, quarterly, mixed). Defined in the supplier playbook.
+category: COMMISSION
+aliases: ["Mensal","Trimestral","Upfront"]
+
+term_key: relatorio_comissao
+term_pt: Relatório de Comissão
+term_en: Commission Report
+definition_pt: Arquivo/forma como a varejista reporta valores e bases (CSV/Excel/PDF). Usado para reconciliação.
+definition_en: File/format used by the retail trader to report amounts and bases (CSV/Excel/PDF). Used for reconciliation.
+category: COMMISSION
+aliases: ["Report","Extrato","Importação"]
+
+term_key: reconciliacao
+term_pt: Reconciliação
+term_en: Reconciliation
+definition_pt: Comparação entre comissão esperada, reportada e paga. Divergências viram disputa.
+definition_en: Comparison between expected, reported, and paid commission. Variances become disputes.
+category: COMMISSION
+aliases: ["Conciliar","Conferência","Variance"]
+
+term_key: true_up_clawback
+term_pt: Ajuste de Consumo (True-up / Clawback)
+term_en: Consumption True-up / Clawback
+definition_pt: Regras sobre variação de consumo real vs contratado. Pode gerar ajuste financeiro ou estorno parcial dependendo da varejista.
+definition_en: Rules for actual vs contracted consumption variance. May generate financial adjustments or clawbacks depending on the retail trader.
+category: COMMISSION
+aliases: ["True-up","Clawback","Ajuste","Variação"]
+
+OPERATIONS
+
+term_key: deal_os
+term_pt: Deal OS (Fluxo de Negócio)
+term_en: Deal OS (Deal Workflow)
+definition_pt: Sistema de estados que controla o ciclo do negócio: RFQ, cotações, seleção, onboarding e contrato.
+definition_en: State machine that controls the deal lifecycle: RFQ, quotes, selection, onboarding, and contract.
+category: OPERATIONS
+aliases: ["Deal","Fluxo","Pipeline"]
+
+term_key: blocker
+term_pt: Bloqueio (Blocker)
+term_en: Blocker
+definition_pt: Motivo objetivo que impede avanço (ex: checklist incompleto, dossiê não bloqueado, SLA estourado). Sempre vem com ação recomendada.
+definition_en: Objective reason preventing progress (e.g., incomplete checklist, dossier not locked, SLA breach). Always includes a recommended action.
+category: OPERATIONS
+aliases: ["Travado","Impedido","Blocked"]
+
+term_key: checklist_compliance
+term_pt: Checklist de Compliance
+term_en: Compliance Checklist
+definition_pt: Lista de itens obrigatórios por etapa. Se não estiver concluído, o sistema bloqueia o avanço.
+definition_en: Required items per stage. If not completed, the system blocks progress.
+category: OPERATIONS
+aliases: ["Compliance","Checklist","Obrigatório"]
+
+term_key: audit_trail
+term_pt: Trilha de Auditoria (Audit Trail)
+term_en: Audit Trail
+definition_pt: Registro cronológico de ações no sistema (quem fez, quando fez, o que mudou). Essencial para rastreabilidade.
+definition_en: Chronological log of system actions (who, when, what changed). Essential for traceability.
+category: OPERATIONS
+aliases: ["Auditoria","Logs","Histórico"]
+
+term_key: deal_case
+term_pt: Caso (Deal Case)
+term_en: Deal Case (Issue/Blocker Case)
+definition_pt: Registro estruturado de problema operacional (retorno, travado, docs pendentes, etc.) com SLA e responsável.
+definition_en: Structured record of an operational issue (returned, stuck, docs pending, etc.) with SLA and owner.
+category: OPERATIONS
+aliases: ["Case","Ocorrência","Problema"]
+
+5) ACCEPTANCE TESTS (MANDATORY)
+
+After implementation, verify:
+
+Dictionary shows seeded terms in each category tab
+
+Search “UC” returns UC term
+
+Search “Consumer Unit” returns UC term
+
+Search “Mercado Livre” returns ACL term
+
+Empty state works
+
+Admin can add a new term and it appears immediately
+
+Audit trail logs admin edits
+
+6) IMPORTANT UX RULES
+
+Definitions must be short (1–3 sentences)
+
+No walls of text
+
+Default view is PT-BR, but EN is always available via toggle
+
+Use consistent category naming and avoid duplicates
+
+Deliver this as Portal Dictionary v1.
