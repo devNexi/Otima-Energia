@@ -65,6 +65,7 @@ import {
   type OpsPlaybook, type InsertOpsPlaybook,
   type OpsErrorEvent, type InsertOpsErrorEvent,
   type OpsPerformanceSnapshot, type InsertOpsPerformanceSnapshot,
+  type DealEcosSnapshot, type InsertDealEcosSnapshot,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -81,7 +82,7 @@ import {
   clientDossiers, clientDossierSnapshots,
   supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides,
   userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
-  opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots
+  opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -295,6 +296,14 @@ export interface IStorage {
   
   // ECOS - Audit Trail
   getAuditTrailForClient(clientId: number): Promise<any[]>;
+  
+  // ECOS - Deal Snapshots (Pre-Sales Insight Tool)
+  createDealEcosSnapshot(snapshot: InsertDealEcosSnapshot): Promise<DealEcosSnapshot>;
+  getDealEcosSnapshots(dealId: string): Promise<DealEcosSnapshot[]>;
+  getDealEcosSnapshot(id: number): Promise<DealEcosSnapshot | undefined>;
+  getLatestDealEcosSnapshot(dealId: string): Promise<DealEcosSnapshot | undefined>;
+  updateDealEcosSnapshot(id: number, data: Partial<InsertDealEcosSnapshot>): Promise<DealEcosSnapshot | undefined>;
+  getNextSnapshotVersion(dealId: string): Promise<number>;
   
   // ============== DEAL OS ==============
   // Deals
@@ -1661,6 +1670,48 @@ export class Storage implements IStorage {
     }
     
     return trail.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  // ============== DEAL ECOS SNAPSHOTS (Pre-Sales Insight Tool) ==============
+  
+  async createDealEcosSnapshot(snapshot: InsertDealEcosSnapshot): Promise<DealEcosSnapshot> {
+    const result = await db.insert(dealEcosSnapshots).values(snapshot).returning();
+    return result[0];
+  }
+
+  async getDealEcosSnapshots(dealId: string): Promise<DealEcosSnapshot[]> {
+    return await db.select().from(dealEcosSnapshots)
+      .where(eq(dealEcosSnapshots.dealId, dealId))
+      .orderBy(desc(dealEcosSnapshots.version));
+  }
+
+  async getDealEcosSnapshot(id: number): Promise<DealEcosSnapshot | undefined> {
+    const result = await db.select().from(dealEcosSnapshots)
+      .where(eq(dealEcosSnapshots.id, id));
+    return result[0];
+  }
+
+  async getLatestDealEcosSnapshot(dealId: string): Promise<DealEcosSnapshot | undefined> {
+    const result = await db.select().from(dealEcosSnapshots)
+      .where(eq(dealEcosSnapshots.dealId, dealId))
+      .orderBy(desc(dealEcosSnapshots.version))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateDealEcosSnapshot(id: number, data: Partial<InsertDealEcosSnapshot>): Promise<DealEcosSnapshot | undefined> {
+    const result = await db.update(dealEcosSnapshots)
+      .set(data)
+      .where(eq(dealEcosSnapshots.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getNextSnapshotVersion(dealId: string): Promise<number> {
+    const result = await db.select({ maxVersion: sql<number>`COALESCE(MAX(version), 0)` })
+      .from(dealEcosSnapshots)
+      .where(eq(dealEcosSnapshots.dealId, dealId));
+    return (result[0]?.maxVersion ?? 0) + 1;
   }
 
   // ============== DEAL OS IMPLEMENTATION ==============
