@@ -23,8 +23,12 @@ interface QuoteWithSupplier {
   supplierName: string;
   energyType: string | null;
   baseEnergyPriceRmwh: string | null;
+  clientEnergyPriceRmwh: string | null;
   validUntil: string | null;
   termMonths?: number;
+  isComplete?: boolean;
+  isRiskFlagged?: boolean;
+  isExpired?: boolean;
 }
 
 interface ProposalGeneratorProps {
@@ -57,13 +61,19 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // Baseline inputs (from bill data)
+  // Baseline inputs (from bill data or manual entry)
   const [baseline, setBaseline] = useState({
     consumptionMwh12m: "",
     energySupplyCost12m: "",
+    energySupplyCostManual: "",
+    costIsProxy: false,
+    proxyLabel: "Estimativa conservadora",
     isAnnualized: false,
     sourceNote: "Últimos 12 meses"
   });
+  
+  // Track if using manual entry mode
+  const [useManualBaseline, setUseManualBaseline] = useState(false);
   
   // Selected quotes to include in proposal
   const [selectedItems, setSelectedItems] = useState<Array<{
@@ -83,14 +93,16 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
   // Compute savings for each item
   const computedItems = useMemo(() => {
     const baselineConsumption = parseFloat(baseline.consumptionMwh12m) || 0;
-    const baselineCost = parseFloat(baseline.energySupplyCost12m) || 0;
+    // Use manual entry if extracted is not available
+    const baselineCost = parseFloat(baseline.energySupplyCost12m) || parseFloat(baseline.energySupplyCostManual) || 0;
     
     return selectedItems.map((item, index) => {
       const quote = quotes.find(q => q.id === item.quoteId);
       if (!quote) return null;
       
-      const basePrice = parseFloat(quote.baseEnergyPriceRmwh || '0');
-      const finalPrice = basePrice + item.marginValue;
+      // Use client-facing price (never expose base price)
+      const clientPrice = parseFloat(quote.clientEnergyPriceRmwh || quote.baseEnergyPriceRmwh || '0');
+      const finalPrice = clientPrice + item.marginValue;
       
       let proposedCost12m = 0;
       let savings12m = 0;
@@ -143,8 +155,11 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
         body: JSON.stringify({
           baselineConsumptionMwh12m: baseline.consumptionMwh12m || null,
           baselineEnergySupplyCost12m: baseline.energySupplyCost12m || null,
+          baselineEnergySupplyCostManual: useManualBaseline ? baseline.energySupplyCostManual : null,
+          baselineCostIsProxy: baseline.costIsProxy,
+          baselineProxyLabel: baseline.costIsProxy ? baseline.proxyLabel : null,
           baselineIsAnnualized: baseline.isAnnualized,
-          baselineSourceNote: baseline.sourceNote,
+          baselineSourceNote: useManualBaseline ? "Entrada manual" : baseline.sourceNote,
           validUntil: validUntil.toISOString().split('T')[0],
           preparedByName: preparedByName || null,
           proposalTitle: `Proposta Comercial - ${client.companyName}`
@@ -259,9 +274,12 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
     ));
   };
 
+  // Check if baseline cost is available (extracted OR manual)
+  const effectiveBaselineCost = baseline.energySupplyCost12m || baseline.energySupplyCostManual;
+  
   const canGenerate = selectedItems.length > 0 && 
     baseline.consumptionMwh12m && 
-    baseline.energySupplyCost12m && 
+    effectiveBaselineCost && 
     recommendedItemIndex !== null;
 
   return (
@@ -312,14 +330,46 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
                   />
                 </div>
                 <div>
-                  <Label>Custo Anual Fornecimento (R$)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Ex: 480000"
-                    value={baseline.energySupplyCost12m}
-                    onChange={(e) => setBaseline({ ...baseline, energySupplyCost12m: e.target.value })}
-                    data-testid="input-baseline-cost"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <Label>Custo Anual Fornecimento (R$)</Label>
+                    <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useManualBaseline}
+                        onChange={(e) => setUseManualBaseline(e.target.checked)}
+                        className="h-3 w-3"
+                      />
+                      Entrada manual
+                    </label>
+                  </div>
+                  {!useManualBaseline ? (
+                    <Input
+                      type="number"
+                      placeholder="Ex: 480000 (da fatura)"
+                      value={baseline.energySupplyCost12m}
+                      onChange={(e) => setBaseline({ ...baseline, energySupplyCost12m: e.target.value })}
+                      data-testid="input-baseline-cost"
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        placeholder="Custo anual manual (R$)"
+                        value={baseline.energySupplyCostManual}
+                        onChange={(e) => setBaseline({ ...baseline, energySupplyCostManual: e.target.value })}
+                        data-testid="input-baseline-cost-manual"
+                      />
+                      <label className="flex items-center gap-2 text-xs text-amber-600">
+                        <input
+                          type="checkbox"
+                          checked={baseline.costIsProxy}
+                          onChange={(e) => setBaseline({ ...baseline, costIsProxy: e.target.checked })}
+                          className="h-3 w-3"
+                        />
+                        Marcar como estimativa conservadora
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2 flex items-center gap-4">
                   <label className="flex items-center gap-2">
@@ -584,6 +634,12 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
                 <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <Zap className="h-4 w-4" /> Seu Consumo Atual
                 </h3>
+                {baseline.costIsProxy && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded mb-3 text-sm flex items-center gap-2">
+                    <span className="font-medium">{baseline.proxyLabel || 'Estimativa conservadora'}</span>
+                    <span className="text-amber-600">— Custo base estimado manualmente</span>
+                  </div>
+                )}
                 <div className="bg-gray-50 p-4 rounded grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-sm text-gray-500">Consumo anual estimado</p>
@@ -591,13 +647,16 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Custo anual atual (fornecimento)</p>
-                    <p className="text-xl font-bold">{baseline.energySupplyCost12m ? formatCurrency(parseFloat(baseline.energySupplyCost12m)) : '—'}</p>
+                    <p className="text-xl font-bold">
+                      {effectiveBaselineCost ? formatCurrency(parseFloat(effectiveBaselineCost)) : '—'}
+                      {useManualBaseline && <span className="text-xs text-amber-600 ml-1">(manual)</span>}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Preço médio atual</p>
                     <p className="text-xl font-bold">
-                      {baseline.consumptionMwh12m && baseline.energySupplyCost12m 
-                        ? `R$ ${(parseFloat(baseline.energySupplyCost12m) / parseFloat(baseline.consumptionMwh12m)).toFixed(2)}/MWh`
+                      {baseline.consumptionMwh12m && effectiveBaselineCost 
+                        ? `R$ ${(parseFloat(effectiveBaselineCost) / parseFloat(baseline.consumptionMwh12m)).toFixed(2)}/MWh`
                         : '—'}
                     </p>
                   </div>
