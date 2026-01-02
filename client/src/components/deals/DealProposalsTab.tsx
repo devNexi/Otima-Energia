@@ -24,7 +24,8 @@ import {
   DollarSign,
   Trash2,
   Clock,
-  Copy
+  Copy,
+  Download
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -439,6 +440,19 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                           >
                             <ExternalLink className="w-4 h-4 mr-1" />
                             Visualizar
+                          </a>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                        >
+                          <a 
+                            href={`/api/proposals/${selectedProposal.id}/pdf`}
+                            download
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            PDF
                           </a>
                         </Button>
                       </>

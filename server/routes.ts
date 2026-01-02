@@ -4598,6 +4598,17 @@ export async function registerRoutes(
       const results = snapshot.results as any || {};
       const confidenceReasons = (snapshot.confidenceReasons as any[]) || [];
       
+      // Get brand kit for styling
+      const brandKit = await storage.getBrandKit();
+      const primaryColor = brandKit?.primaryColor || '#9e3ffd';
+      const secondaryColor = brandKit?.secondaryColor || '#df0af2';
+      const darkColor = brandKit?.darkColor || '#16163f';
+      const textColor = brandKit?.textColor || '#736d77';
+      const lightBgColor = brandKit?.lightBgColor || '#eee7f1';
+      const fontFamily = brandKit?.fontFamily || 'Inter';
+      const brandName = brandKit?.brandName || 'Ótima Energia';
+      const footerText = brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com.br';
+      
       // Generate HTML for PDF
       const html = `
 <!DOCTYPE html>
@@ -4606,14 +4617,15 @@ export async function registerRoutes(
   <meta charset="UTF-8">
   <title>ECOS Insight Pack — ${client?.companyName || 'Cliente'}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=${fontFamily}:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 40px; line-height: 1.5; }
-    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #0066cc; padding-bottom: 20px; }
-    .header h1 { color: #0066cc; font-size: 22px; margin-bottom: 5px; }
-    .header .subtitle { color: #666; font-size: 11px; margin-top: 5px; }
-    .logo { font-size: 20px; font-weight: bold; color: #0066cc; margin-bottom: 10px; }
+    body { font-family: '${fontFamily}', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: ${textColor}; padding: 40px; line-height: 1.5; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid ${primaryColor}; padding-bottom: 20px; }
+    .header h1 { color: ${primaryColor}; font-size: 22px; margin-bottom: 5px; }
+    .header .subtitle { color: ${textColor}; font-size: 11px; margin-top: 5px; }
+    .logo { font-size: 20px; font-weight: bold; color: ${darkColor}; margin-bottom: 10px; }
     .section { margin-bottom: 20px; page-break-inside: avoid; }
-    .section-title { font-size: 13px; font-weight: bold; color: #0066cc; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
+    .section-title { font-size: 13px; font-weight: bold; color: ${primaryColor}; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
     .row { display: flex; margin-bottom: 6px; }
     .label { width: 180px; color: #666; font-size: 11px; }
     .value { flex: 1; font-size: 11px; font-weight: 500; }
@@ -4635,14 +4647,14 @@ export async function registerRoutes(
     .disclaimer { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; padding: 12px; margin: 15px 0; font-size: 9px; color: #742a2a; }
     .disclaimer-title { font-weight: bold; margin-bottom: 3px; }
     .footer { margin-top: 30px; text-align: center; color: #999; font-size: 9px; border-top: 1px solid #ddd; padding-top: 15px; }
-    .next-step { background: #ebf8ff; border: 1px solid #90cdf4; border-radius: 6px; padding: 12px; margin: 15px 0; text-align: center; }
-    .next-step-label { font-size: 10px; color: #2b6cb0; margin-bottom: 5px; }
-    .next-step-value { font-size: 14px; font-weight: bold; color: #2b6cb0; }
+    .next-step { background: ${lightBgColor}; border: 1px solid ${primaryColor}40; border-radius: 6px; padding: 12px; margin: 15px 0; text-align: center; }
+    .next-step-label { font-size: 10px; color: ${primaryColor}; margin-bottom: 5px; }
+    .next-step-value { font-size: 14px; font-weight: bold; color: ${darkColor}; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">ÓTIMA ENERGIA</div>
+    <div class="logo">${brandName.toUpperCase()}</div>
     <h1>ECOS™ Insight Pack</h1>
     <p class="subtitle">Análise de Mercado para Negociação de Energia</p>
   </div>
@@ -4727,7 +4739,8 @@ export async function registerRoutes(
   
   <div class="footer">
     <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-    <p>Ótima Energia © ${new Date().getFullYear()} — Todos os direitos reservados</p>
+    <p>${brandName} © ${new Date().getFullYear()} — Todos os direitos reservados</p>
+    <p>${footerText}</p>
     <p>Este documento é confidencial e destinado exclusivamente ao cliente identificado.</p>
   </div>
 </body>
@@ -8987,6 +9000,279 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error getting proposal views:", error);
       res.status(500).json({ success: false, error: "Failed to get views" });
+    }
+  });
+
+  // Generate proposal PDF with brand kit styling
+  app.get("/api/proposals/:proposalId/pdf", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      if (proposal.status === 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Proposal must be generated first" });
+      }
+      
+      const snapshot = await storage.getDealProposalSnapshot(proposal.id);
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "Snapshot not found" });
+      }
+      
+      const brandKit = await storage.getBrandKit();
+      const client = await storage.getClient(proposal.clientId);
+      
+      // Build branded HTML for PDF
+      const snapshotData = snapshot.snapshotJson as any;
+      const items = snapshotData.items || [];
+      const recommendedItem = items.find((i: any) => i.isRecommended);
+      
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=${brandKit?.fontFamily || 'Inter'}:wght@400;500;600;700&display=swap');
+            
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: '${brandKit?.fontFamily || 'Inter'}', sans-serif;
+              color: ${brandKit?.textColor || '#736d77'};
+              background: white;
+              padding: 40px;
+            }
+            
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 40px;
+              padding-bottom: 20px;
+              border-bottom: 3px solid ${brandKit?.primaryColor || '#9e3ffd'};
+            }
+            
+            .brand-name {
+              font-size: 28px;
+              font-weight: 700;
+              color: ${brandKit?.darkColor || '#16163f'};
+            }
+            
+            .tagline {
+              font-size: 14px;
+              color: ${brandKit?.textColor || '#736d77'};
+              margin-top: 4px;
+            }
+            
+            .proposal-date {
+              text-align: right;
+              font-size: 12px;
+              color: ${brandKit?.textColor || '#736d77'};
+            }
+            
+            .client-section {
+              background: ${brandKit?.lightBgColor || '#eee7f1'};
+              padding: 24px;
+              border-radius: 12px;
+              margin-bottom: 30px;
+            }
+            
+            .client-section h2 {
+              color: ${brandKit?.darkColor || '#16163f'};
+              font-size: 18px;
+              margin-bottom: 8px;
+            }
+            
+            .client-name {
+              font-size: 24px;
+              font-weight: 600;
+              color: ${brandKit?.primaryColor || '#9e3ffd'};
+            }
+            
+            .section-title {
+              font-size: 20px;
+              font-weight: 600;
+              color: ${brandKit?.darkColor || '#16163f'};
+              margin-bottom: 16px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid ${brandKit?.primaryColor || '#9e3ffd'};
+            }
+            
+            .quote-card {
+              border: 1px solid #e5e5e5;
+              border-radius: 12px;
+              padding: 20px;
+              margin-bottom: 16px;
+              background: white;
+            }
+            
+            .quote-card.recommended {
+              border: 2px solid ${brandKit?.primaryColor || '#9e3ffd'};
+              background: linear-gradient(135deg, ${brandKit?.lightBgColor || '#eee7f1'}20, white);
+            }
+            
+            .quote-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 12px;
+            }
+            
+            .supplier-name {
+              font-size: 18px;
+              font-weight: 600;
+              color: ${brandKit?.darkColor || '#16163f'};
+            }
+            
+            .recommended-badge {
+              background: linear-gradient(135deg, ${brandKit?.primaryColor || '#9e3ffd'}, ${brandKit?.secondaryColor || '#df0af2'});
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 500;
+            }
+            
+            .quote-details {
+              display: flex;
+              gap: 40px;
+            }
+            
+            .quote-detail {
+              flex: 1;
+            }
+            
+            .quote-label {
+              font-size: 12px;
+              color: ${brandKit?.textColor || '#736d77'};
+              text-transform: uppercase;
+              margin-bottom: 4px;
+            }
+            
+            .quote-value {
+              font-size: 24px;
+              font-weight: 700;
+              color: ${brandKit?.primaryColor || '#9e3ffd'};
+            }
+            
+            .quote-notes {
+              margin-top: 12px;
+              padding-top: 12px;
+              border-top: 1px solid #e5e5e5;
+              font-size: 14px;
+              color: ${brandKit?.textColor || '#736d77'};
+            }
+            
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e5e5e5;
+              text-align: center;
+              font-size: 12px;
+              color: ${brandKit?.textColor || '#736d77'};
+            }
+            
+            .cta-section {
+              background: linear-gradient(135deg, ${brandKit?.primaryColor || '#9e3ffd'}, ${brandKit?.secondaryColor || '#df0af2'});
+              color: white;
+              padding: 24px;
+              border-radius: 12px;
+              text-align: center;
+              margin-top: 30px;
+            }
+            
+            .cta-title {
+              font-size: 20px;
+              font-weight: 600;
+              margin-bottom: 8px;
+            }
+            
+            .cta-text {
+              font-size: 14px;
+              opacity: 0.9;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="brand-name">${brandKit?.brandName || 'Ótima Energia'}</div>
+              <div class="tagline">${brandKit?.tagline || 'Sua energia, nossa expertise'}</div>
+            </div>
+            <div class="proposal-date">
+              <div>Proposta #${proposal.publicId?.substring(0, 8).toUpperCase()}</div>
+              <div>${new Date(proposal.createdAt).toLocaleDateString('pt-BR')}</div>
+            </div>
+          </div>
+          
+          <div class="client-section">
+            <h2>Proposta para</h2>
+            <div class="client-name">${client?.companyName || snapshotData.client?.company || 'Cliente'}</div>
+          </div>
+          
+          <div class="section-title">Opções de Fornecimento</div>
+          
+          ${items.map((item: any) => `
+            <div class="quote-card ${item.isRecommended ? 'recommended' : ''}">
+              <div class="quote-header">
+                <div class="supplier-name">${item.supplierName}</div>
+                ${item.isRecommended ? '<div class="recommended-badge">Recomendado</div>' : ''}
+              </div>
+              <div class="quote-details">
+                <div class="quote-detail">
+                  <div class="quote-label">Produto</div>
+                  <div class="quote-value" style="font-size: 16px; color: ${brandKit?.darkColor || '#16163f'};">${item.productType === 'INCENTIVIZED_50' ? 'I-50%' : item.productType === 'INCENTIVIZED_100' ? 'I-100%' : 'Convencional'}</div>
+                </div>
+                <div class="quote-detail">
+                  <div class="quote-label">Preço Final</div>
+                  <div class="quote-value">R$ ${parseFloat(item.finalEnergyPriceRmwh).toFixed(2)}/MWh</div>
+                </div>
+              </div>
+              ${item.publicNotes ? `<div class="quote-notes">${item.publicNotes}</div>` : ''}
+            </div>
+          `).join('')}
+          
+          <div class="cta-section">
+            <div class="cta-title">Pronto para economizar?</div>
+            <div class="cta-text">Entre em contato para finalizar sua proposta e começar a economizar na sua conta de energia.</div>
+          </div>
+          
+          <div class="footer">
+            ${brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil'}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Generate PDF using Puppeteer
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
+      });
+      
+      await browser.close();
+      
+      // Set headers for PDF download
+      const filename = `proposta-${proposal.publicId?.substring(0, 8) || proposal.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
+      
+    } catch (error: any) {
+      console.error("Error generating proposal PDF:", error);
+      res.status(500).json({ success: false, error: "Failed to generate PDF" });
     }
   });
 
