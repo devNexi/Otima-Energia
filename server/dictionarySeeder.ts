@@ -299,6 +299,78 @@ const V1_DICTIONARY_TERMS: DictionaryTerm[] = [
     example_en: "Case #1234: Commission not paid by supplier X",
     synonyms: ["ticket", "issue", "problema", "ocorrência"],
     related_keys: ["bloqueio", "sla"]
+  },
+
+  // ========== DEAL ASSEMBLY (Montagem do Negócio) ==========
+  {
+    key: "montagem_negocio",
+    category: "OPS_EXECUTION",
+    term_pt: "Montagem do Negócio",
+    term_en: "Deal Assembly",
+    short_def_pt: "Visão completa do progresso do deal através de todas as etapas.",
+    short_def_en: "Complete view of deal progress through all stages.",
+    why_matters_pt: "Mostra exatamente onde o deal está e o que precisa ser feito.",
+    why_matters_en: "Shows exactly where the deal is and what needs to be done.",
+    example_pt: "Deal em 'RFQ Enviado' com 2 bloqueadores",
+    example_en: "Deal at 'RFQ Sent' with 2 blockers",
+    synonyms: ["assembly", "workflow", "progresso"],
+    related_keys: ["bloqueio", "dossier", "rfq"]
+  },
+  {
+    key: "dossier_travado",
+    category: "OPS_EXECUTION",
+    term_pt: "Dossiê Travado (Locked)",
+    term_en: "Locked Dossier",
+    short_def_pt: "Dossiê que foi congelado e não pode mais ser editado.",
+    short_def_en: "Dossier that has been frozen and cannot be edited.",
+    why_matters_pt: "RFQ só pode ser enviado após travar o dossiê. Garante consistência.",
+    why_matters_en: "RFQ can only be sent after locking the dossier. Ensures consistency.",
+    example_pt: "Dossiê travado em 15/Jan pelo usuário Callum",
+    example_en: "Dossier locked on Jan 15 by user Callum",
+    synonyms: ["congelado", "imutável", "locked"],
+    related_keys: ["dossier", "rfq", "snapshot"]
+  },
+  {
+    key: "cotacao_elegivel",
+    category: "OPS_EXECUTION",
+    term_pt: "Cotação Elegível",
+    term_en: "Eligible Quote",
+    short_def_pt: "Cotação válida para proposta: não expirada, completa e sem riscos.",
+    short_def_en: "Quote valid for proposal: not expired, complete, and no risk flags.",
+    why_matters_pt: "Proposta requer mínimo 2 cotações elegíveis para garantir competitividade.",
+    why_matters_en: "Proposal requires minimum 2 eligible quotes to ensure competitiveness.",
+    example_pt: "3 cotações recebidas, 2 elegíveis (1 expirada)",
+    example_en: "3 quotes received, 2 eligible (1 expired)",
+    synonyms: ["quote válida", "eligible quote"],
+    related_keys: ["rfq", "proposta", "validade_proposta"]
+  },
+  {
+    key: "hard_gate",
+    category: "OPS_EXECUTION",
+    term_pt: "Hard Gate (Portão Obrigatório)",
+    term_en: "Hard Gate",
+    short_def_pt: "Regra de negócio que impede avanço se não cumprida.",
+    short_def_en: "Business rule that blocks progression if not met.",
+    why_matters_pt: "Protege contra erros operacionais graves. Não pode ser ignorado.",
+    why_matters_en: "Protects against serious operational errors. Cannot be bypassed.",
+    example_pt: "RFQ requer dossiê travado (hard gate)",
+    example_en: "RFQ requires locked dossier (hard gate)",
+    synonyms: ["gate", "regra obrigatória", "bloqueio"],
+    related_keys: ["bloqueio", "dossier_travado", "montagem_negocio"]
+  },
+  {
+    key: "fila_montagem",
+    category: "OPS_EXECUTION",
+    term_pt: "Fila de Montagem",
+    term_en: "Assembly Queue",
+    short_def_pt: "Lista de deals em andamento, ordenada por prioridade e bloqueios.",
+    short_def_en: "List of active deals, ordered by priority and blockers.",
+    why_matters_pt: "Ops usa essa fila para priorizar ações diárias.",
+    why_matters_en: "Ops uses this queue to prioritize daily actions.",
+    example_pt: "12 deals na fila, 3 bloqueados",
+    example_en: "12 deals in queue, 3 blocked",
+    synonyms: ["queue", "pipeline"],
+    related_keys: ["montagem_negocio", "bloqueio"]
   }
 ];
 
