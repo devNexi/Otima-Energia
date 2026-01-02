@@ -139,7 +139,8 @@ export default function EcosValidationPage() {
     },
     onSuccess: () => {
       toast.success("ECOS snapshot created successfully");
-      queryClient.invalidateQueries({ queryKey: ["/api/deals", selectedDealId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals", selectedDealId, "ecos-evaluation"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals", selectedDealId, "ecos-snapshots"] });
     },
     onError: () => {
       toast.error("Failed to create ECOS snapshot");
