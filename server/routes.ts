@@ -8724,6 +8724,51 @@ export async function registerRoutes(
     }
   });
 
+  // ============== DEAL ASSEMBLY (Montagem do Negócio) ==============
+  
+  const { DealAssemblyEngine } = await import('./deal-assembly-engine');
+  const assemblyEngine = new DealAssemblyEngine(storage);
+  
+  // Get assembly status for a single deal
+  app.get("/api/deals/:dealId/assembly-status", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const status = await assemblyEngine.getAssemblyStatus(req.params.dealId);
+      if (!status) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      res.json({ success: true, ...status });
+    } catch (error: any) {
+      console.error("Error getting assembly status:", error);
+      res.status(500).json({ success: false, error: "Failed to get assembly status" });
+    }
+  });
+  
+  // Get assembly queue (bulk)
+  app.get("/api/deals/assembly-queue", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const userRole = req.session?.role;
+      
+      const filters: any = {};
+      if (req.query.stage) filters.stage = req.query.stage as string;
+      if (req.query.blockedOnly === 'true') filters.blockedOnly = true;
+      if (req.query.needsActionToday === 'true') filters.needsActionToday = true;
+      if (req.query.myDeals === 'true' && userRole !== 'admin') {
+        filters.userId = userId;
+      }
+      
+      const queue = await assemblyEngine.getAssemblyQueue(filters);
+      res.json({ success: true, queue, total: queue.length });
+    } catch (error: any) {
+      console.error("Error getting assembly queue:", error);
+      res.status(500).json({ success: false, error: "Failed to get assembly queue" });
+    }
+  });
+
   // ============== DEAL PROPOSALS (Proposal OS) ==============
   
   // Get proposals for a deal

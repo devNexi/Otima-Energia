@@ -1,0 +1,377 @@
+DEAL ASSEMBLY (ÓTIMA OS)
+(PT-BR + English, production-ready, no new “business model” logic — this is workflow + UX + hard gates.)
+
+CONTEXT (CURRENT STATE)
+
+You are working inside the existing Ótima Energia Admin Portal.
+
+System of Record:
+
+Zoho CRM = Leads only
+
+Ótima Portal = Deals, Dossiês, RFQs, Quotes, Proposals, Compliance, Revenue/Commission
+
+Deals are created via POST /api/intake/zoho/deal (idempotent by zohoLeadId).
+
+The portal already has:
+
+Deals state machine (10 states)
+
+RFQ + Blind Auction tooling
+
+Quote intake + supplier scorecard
+
+Client Dossiê (DRAFT → READY → LOCKED)
+
+Compliance gates + audit trail
+
+Proposal generator + branded PDFs
+
+ECOS deal-centric snapshots (insights language)
+
+Demo mode seeder + guided tours
+
+Portal Dictionary (currently empty in UI; separate task)
+
+Important operating reality:
+
+All target suppliers are comercializadoras varejistas (“varejistas” internally).
+
+We do NOT run credit decisions or “execute migration” ourselves.
+
+We DO orchestrate: docs, checklists, timelines, RFQ dispatch, quote intake, proposals, audit proof.
+
+GOAL
+
+Build Deal Assembly: a guided, linear “assembly line” workflow that makes it extremely hard for Ops/Sales to do the wrong thing, and very easy to do the right thing — end-to-end:
+
+Deal Created → Dossiê Ready → Dossiê Locked → RFQ Sent → Quotes Received → Quote Selected → Uplift & Proposal → Onboarding Checklist → Contract Signed → Supply Live
+
+This must:
+
+Reduce cognitive load
+
+Surface “next step” and blockers
+
+Enforce gates (hard where required)
+
+Keep audit-proof evidence
+
+Work in demo mode with seeded data
+
+NON-NEGOTIABLE UX PRINCIPLES
+
+One screen tells the truth: what’s the next step + what’s blocking it.
+
+No dense text; use short tooltips, banners, and checklists.
+
+Assume Ops users have zero energy market knowledge.
+
+Everything bilingual-ready (PT-BR first; English translation support).
+
+BUILD REQUIREMENTS
+1) ADD “DEAL ASSEMBLY” VIEW (CORE)
+What it is
+
+A new deal-level view (tab or primary section) called:
+
+PT-BR: “Montagem do Negócio”
+
+EN: “Deal Assembly”
+
+It appears in each Deal Detail page and also as a list queue (like “Today’s Work Engine”) for Ops.
+
+What it shows (Deal Detail)
+
+A vertical stepper / checklist timeline with each stage:
+
+Origem & Qualificação (Zoho)
+
+Dossiê do Cliente
+
+Dossiê Travado (Lock)
+
+RFQ Enviado
+
+Cotações Recebidas
+
+Comparação & Seleção
+
+Proposta (PDF)
+
+Onboarding (Docs)
+
+Contrato Assinado
+
+Fornecimento Ativo (optional visual)
+
+Each step has:
+
+Status: Not started / In progress / Complete / Blocked
+
+Primary action button (one per step)
+
+Blockers list (exact missing items)
+
+Evidence links (where relevant)
+
+What it shows (Ops queue list)
+
+A new queue page:
+
+PT-BR: “Fila de Montagem”
+
+EN: “Assembly Queue”
+
+Filters:
+
+My deals / all deals (role-based)
+
+Stage
+
+Blocked only
+
+“Needs action today”
+
+Each row:
+
+Deal name + client
+
+Current stage
+
+Next required action
+
+Blocker count
+
+Last activity date
+
+SLA timers (RFQ sent waiting > X days)
+
+2) HARD GATING RULES (ASSEMBLY ENFORCEMENT)
+
+Deal Assembly must enforce the linear flow using existing gates. Add missing checks if not present.
+
+Required gates
+
+GATE A: Can’t send RFQ unless Dossiê is LOCKED
+
+If user clicks “Enviar RFQ” and dossier not LOCKED:
+
+Block action
+
+Show “Travar Dossiê” step as required
+
+Explain why briefly
+
+GATE B: Can’t generate proposal unless
+
+At least 2 eligible quotes OR 1 quote + explicit override note by admin
+
+Baseline exists (bill-derived or manual baseline)
+
+Selected “Recomendado” quote chosen
+
+GATE C: Can’t transition to CONTRACT_SIGNED unless compliance checklist complete
+
+Must include “authority/signer verification” (decision-maker proof)
+
+Must include “proposal sent” evidence entry
+
+Must include onboarding docs set marked complete
+
+GATE D: Sales users
+
+Sales should see the assembly but with limited actions:
+
+They can view progress, generate proposal (if allowed by your policy), log comms
+
+They cannot bypass Ops compliance gates
+(If your current RBAC already handles this, just ensure consistent behavior here.)
+
+3) “NEXT STEP” WIDGETS (MAKE IT IDIOT-PROOF)
+
+On the Deal Overview and in Deal Assembly, always display:
+
+PT-BR
+
+“Próximo passo recomendado”
+
+“O que está bloqueando?”
+
+“Tempo parado desde: X dias”
+
+EN
+
+“Recommended next step”
+
+“What’s blocking?”
+
+“Idle for: X days”
+
+Rules:
+
+If blocked, next step = the first missing blocker item.
+
+If not blocked, next step = next assembly stage action.
+
+4) INTEGRATE WITH EXISTING OBJECTS (NO DUPLICATION)
+
+Deal Assembly must not create parallel structures; it should reference existing records:
+
+Dossiê status comes from existing dossier workflow
+
+RFQ status comes from RFQ dispatch records
+
+Quotes come from dealQuotes (Deal OS immutable)
+
+Proposal comes from proposal system PDFs
+
+Compliance comes from checklist requirements/items + audit logs
+
+SLA comes from supplier SLA tracking / RFQ dispatch timestamps
+
+If any of these do not have a clean “current status” accessor method, build a small selector/query layer:
+
+getAssemblyStatus(dealId) that returns a computed JSON object:
+
+stage statuses
+
+blockers
+
+next action
+
+evidence links
+
+5) SUPPLIER (“VAREJISTA”) HANDOFF CLARITY
+
+In Deal Assembly steps and tooltips, clarify:
+
+PT-BR: “A varejista executa o onboarding/migração no ACL; a Ótima garante que a documentação e o cliente avancem sem travar.”
+
+EN: “The varejista executes onboarding/migration steps; Ótima orchestrates documents and keeps the client moving.”
+
+This is important for Ops mental model.
+
+6) TOOLTIP COVERAGE (BILINGUAL)
+
+Add tooltips in Deal Assembly on first use, using the existing tooltip system.
+
+Mandatory tooltips:
+
+Dossiê = “Base da cotação. Dados ruins = preços ruins.”
+
+Lock Dossiê = “Depois de enviar RFQ, mudar dados cria atrito e perda de confiança.”
+
+Send RFQ = “Sempre no formato exigido pela varejista. Nosso sistema adapta.”
+
+Add Quote = “Registrar exatamente como recebido. Sem ajustar.”
+
+Recommend Quote = “Obrigatório antes de gerar proposta.”
+
+Generate Proposal = “PDF comercial; só preços do cliente, sem comissão.”
+
+Contract Signed = “Bloqueado até compliance completo e evidências linkadas.”
+
+All tooltips:
+
+stored in dictionary keys
+
+show PT-BR by default; English available for admin toggle
+
+7) DEMO MODE SUPPORT (MANDATORY)
+
+Update demo seeder + guided tour so Deal Assembly can be tested immediately.
+
+Demo requirements:
+
+At least 3 deals:
+
+deal stuck at Dossiê not locked
+
+deal with RFQ sent and missing quotes
+
+deal with quotes + proposal generated + onboarding pending
+
+Include one expired quote
+
+Include one negative savings quote
+
+Include one deal blocked by missing signer verification checklist
+
+Add a guided tour:
+
+“Deal Assembly — End-to-end”
+
+8) NAVIGATION / ORDER (ALIGNMENT WITH YOUR LATEST RULES)
+
+Update left-nav ordering to your latest preference:
+
+Suppliers (Varejistas) (first)
+
+Deals
+
+ECOS
+
+RFQs / Quote Requests
+
+Quotes
+
+Proposals
+
+Clients
+
+Revenue / Commission (after clients)
+
+Compliance
+
+Audit Trail
+
+Settings
+
+Also: remove/hide Leads panel from portal UI (since Zoho is leads-only).
+If any “leads” table exists for website form legacy, keep backend but remove from nav + UI and label internally as legacy.
+
+ACCEPTANCE CRITERIA (QA CHECKLIST)
+
+Before marking complete, verify:
+
+✅ A brand-new Ops user can open a Deal and see:
+
+current stage
+
+next action
+
+blockers with exact missing items
+
+one obvious button to proceed
+
+✅ RFQ cannot be sent unless dossier LOCKED
+✅ Proposal cannot be generated unless eligible quotes + baseline + recommended quote exist
+✅ Contract cannot be signed unless compliance checklist complete
+✅ Every key action writes to audit trail
+✅ Demo mode showcases all major stuck states
+✅ Nav order matches spec and Leads removed from UI
+
+DELIVERABLES
+
+Deal Assembly Deal Detail tab + queue page
+
+Computed status endpoint/helper (getAssemblyStatus)
+
+Gates integrated into buttons/actions
+
+Tooltips (PT-BR + EN)
+
+Demo + guided tour
+
+Nav re-order + Leads removed from UI
+
+QUESTIONS YOU MUST ANSWER IN YOUR IMPLEMENTATION NOTES (IN COMMENTS)
+
+What is the single computed source of truth for assembly status?
+
+Which tables/events feed each step’s completion status?
+
+Which actions are blocked for sales role vs ops/admin?
+
+If anything is ambiguous, make the simplest UX decision that prevents mistakes and preserves supplier trust.
