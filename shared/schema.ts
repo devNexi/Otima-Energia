@@ -3801,6 +3801,9 @@ export const prcDocuments = pgTable("prc_documents", {
   // Ops notes
   notes: text("notes"),
   
+  // Submarket hint (uploader hint for parsing)
+  submarketHint: text("submarket_hint"),
+  
   // Demo mode flag
   isDemo: boolean("is_demo").default(false),
   

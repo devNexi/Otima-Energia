@@ -7987,7 +7987,7 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "No file uploaded" });
       }
       
-      const { supplierId, referenceMonth, isDemo } = req.body;
+      const { supplierId, referenceMonth, isDemo, submarketHint, source, notes, autoParse } = req.body;
       
       // Validate required fields
       if (!supplierId || !referenceMonth) {
@@ -8033,7 +8033,7 @@ export async function registerRoutes(
       await objectStorage.upload(storageKey, file.buffer, file.mimetype);
       
       const fileUrl = `https://storage.googleapis.com/${bucketId}/${storageKey}`;
-      const sourceName = `PRC ${supplier.name} ${referenceMonth}`;
+      const sourceName = source || `PRC ${supplier.name} ${referenceMonth}`;
       const userId = await getSessionUserId(req);
       
       // Create PRC document record
@@ -8046,7 +8046,9 @@ export async function registerRoutes(
         originalFilename: file.originalname,
         fileSizeBytes: file.size,
         uploadedByUserId: userId || null,
-        isDemo: isDemo === 'true' || isDemo === true
+        isDemo: isDemo === 'true' || isDemo === true,
+        notes: notes || null,
+        submarketHint: submarketHint || null
       });
       
       // Log audit

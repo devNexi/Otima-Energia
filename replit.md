@@ -39,6 +39,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Commission OS**: Usage tracking, reconciliation, and case management built on Deal OS, with detailed database tables and API endpoints for financial operations.
 - **Notification System**: Email notification infrastructure for operational alerts (e.g., `DEAL_BLOCKED`, `SLA_BREACH`), utilizing a queue-based approach.
 - **Lost Deal Intelligence**: Structured taxonomy for tracking reasons for lost deals, including client, supplier, competitive, and process categories, with analytics API.
+- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs), with multi-file drag-drop, metadata fields (supplier, reference month, submarket hint, source, notes), and document status tracking through the parse/verify/publish workflow.
 
 ### Authentication & Authorization
 - **Role-Based Access Control**: `admin`, `ops`, `sales` roles.
