@@ -893,18 +893,26 @@ export const insertClientContractSchema = createInsertSchema(clientContracts).om
 export type InsertClientContract = z.infer<typeof insertClientContractSchema>;
 export type ClientContract = typeof clientContracts.$inferSelect;
 
-// Market Price Benchmarks - Manual price band inputs
+// Market Price Benchmarks - Manual price band inputs + PRC-derived benchmarks
 export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
   id: serial("id").primaryKey(),
   
-  // Segment Info
-  segment: text("segment").notNull(), // 'SME', 'Industrial'
+  // Segment Info (legacy fields - keep for backwards compat)
+  segment: text("segment").notNull(), // 'SME', 'Industrial', 'UNKNOWN'
   region: text("region").notNull(), // 'Sudeste', 'Sul', 'Nordeste', 'Norte', 'Centro-Oeste'
   contractLengthMonths: integer("contract_length_months").notNull(), // 12, 24, 36
   
-  // Price Band (R$/MWh)
+  // NEW: PRC-derived fields (for structured benchmarks)
+  referenceMonth: text("reference_month"), // YYYY-MM format for monthly versioning
+  submarket: text("submarket"), // 'SECO', 'SUL', 'NNE', 'NORTE', 'NE' - Brazilian submarkets
+  productType: text("product_type"), // 'CONVENCIONAL', 'INCENTIVADA', 'INC_I0', etc.
+  termMonths: integer("term_months"), // 12, 24, 36, 60 (replaces contractLengthMonths for PRC)
+  
+  // Price Band (R$/MWh) - enhanced for PRC
   lowerBoundRmwh: decimal("lower_bound_rmwh", { precision: 10, scale: 2 }).notNull(),
   upperBoundRmwh: decimal("upper_bound_rmwh", { precision: 10, scale: 2 }).notNull(),
+  midPriceRmwh: decimal("mid_price_rmwh", { precision: 10, scale: 2 }), // Median price
+  numSources: integer("num_sources"), // Number of PRCs/sources used
   
   // Metadata
   effectiveDate: date("effective_date").notNull(),
@@ -915,15 +923,21 @@ export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
   
   // Governance Fields
   sourceType: text("source_type"), // 'SupplierQuote', 'BrokerIntel', 'PublicSignal', 'InternalDeal', 'PRC', 'Other'
-  sourceName: text("source_name"), // Name/label of source (e.g., "PRC Q4 2025", "Supplier X Quote")
+  sourceName: text("source_name"), // Name/label of source (e.g., "PRCs 2025-12 (8 suppliers)")
   sourceDetails: text("source_details"), // Free text for additional context
   sourceUrl: text("source_url"), // Optional link to source document
   sourceDocId: integer("source_doc_id"), // FK to dealDocuments table for evidence linking
+  sourcePrcBatchId: integer("source_prc_batch_id"), // FK to prc_publish_batches for PRC evidence
   confidence: text("confidence").default("Medium"), // 'Low', 'Medium', 'High'
   reviewCadence: text("review_cadence").default("Quarterly"), // 'Monthly', 'Quarterly'
   nextReviewDate: date("next_review_date"),
   lastReviewedAt: timestamp("last_reviewed_at"),
   lastReviewedBy: text("last_reviewed_by"),
+  
+  // Publishing status
+  status: text("status").default("DRAFT"), // 'DRAFT', 'PUBLISHED', 'ARCHIVED'
+  publishedAt: timestamp("published_at"),
+  publishedByUserId: text("published_by_user_id"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -3727,3 +3741,223 @@ export type InsertZohoIntakeError = z.infer<typeof insertZohoIntakeErrorSchema>;
 export type ZohoIntakeError = typeof zohoIntakeErrors.$inferSelect;
 
 // ============== END ZOHO INTAKE ERRORS ==============
+
+// ============== PRC DOCUMENTS & BENCHMARK PUBLISHING ==============
+
+// PRC Parse Status enum values
+export const PRC_PARSE_STATUS = ['UPLOADED', 'PARSING', 'PARSED', 'NEEDS_REVIEW', 'VERIFIED', 'PUBLISHED', 'FAILED'] as const;
+export type PrcParseStatus = typeof PRC_PARSE_STATUS[number];
+
+// PRC Submarket enum values (Brazilian electricity submarkets - PRC format)
+export const PRC_SUBMARKETS = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE', 'UNKNOWN'] as const;
+export type PrcSubmarket = typeof PRC_SUBMARKETS[number];
+
+// Product type enum values
+export const PRODUCT_TYPES = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100', 'UNKNOWN'] as const;
+export type ProductType = typeof PRODUCT_TYPES[number];
+
+// Benchmark status enum values
+export const BENCHMARK_STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
+export type BenchmarkStatus = typeof BENCHMARK_STATUSES[number];
+
+// PRC Documents - Raw PRC PDF uploads + metadata
+export const prcDocuments = pgTable("prc_documents", {
+  id: serial("id").primaryKey(),
+  
+  // Supplier reference
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Reference period
+  referenceMonth: text("reference_month").notNull(), // YYYY-MM format
+  
+  // Source metadata
+  sourceName: text("source_name").notNull(), // Auto-generated: "PRC <Supplier> <YYYY-MM>"
+  
+  // File storage
+  fileStorageKey: text("file_storage_key").notNull(), // Object storage key
+  fileUrl: text("file_url"), // Public URL if available
+  originalFilename: text("original_filename").notNull(),
+  fileSizeBytes: integer("file_size_bytes"),
+  
+  // Upload metadata
+  uploadedByUserId: text("uploaded_by_user_id").references(() => users.id),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  
+  // Parse status and quality
+  parseStatus: text("parse_status").default("UPLOADED").notNull(), // PRC_PARSE_STATUS
+  parseConfidence: integer("parse_confidence"), // 0-100
+  parseErrors: jsonb("parse_errors"), // Array of error messages
+  parseStartedAt: timestamp("parse_started_at"),
+  parseCompletedAt: timestamp("parse_completed_at"),
+  
+  // Row counts (denormalized for quick display)
+  rowsExtracted: integer("rows_extracted").default(0),
+  rowsFlagged: integer("rows_flagged").default(0),
+  
+  // Review/verification
+  verifiedByUserId: text("verified_by_user_id").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  
+  // Ops notes
+  notes: text("notes"),
+  
+  // Demo mode flag
+  isDemo: boolean("is_demo").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPrcDocumentSchema = createInsertSchema(prcDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  parseStatus: true,
+  parseConfidence: true,
+  parseErrors: true,
+  parseStartedAt: true,
+  parseCompletedAt: true,
+  rowsExtracted: true,
+  rowsFlagged: true,
+  verifiedByUserId: true,
+  verifiedAt: true,
+});
+
+export type InsertPrcDocument = z.infer<typeof insertPrcDocumentSchema>;
+export type PrcDocument = typeof prcDocuments.$inferSelect;
+
+// PRC Rows - Parsed structured rows from PRC PDFs
+export const prcRows = pgTable("prc_rows", {
+  id: serial("id").primaryKey(),
+  
+  // Parent document
+  prcDocumentId: integer("prc_document_id").references(() => prcDocuments.id).notNull(),
+  
+  // Denormalized for speed
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  referenceMonth: text("reference_month").notNull(), // YYYY-MM
+  
+  // Market segment
+  submarket: text("submarket").notNull(), // SUBMARKETS enum
+  
+  // Product classification
+  productType: text("product_type").notNull(), // PRODUCT_TYPES enum
+  
+  // Contract term
+  termMonths: integer("term_months"), // 12, 24, 36, 60
+  termLabel: text("term_label"), // "ANUAL", "TRIANUAL", "QUINQUENAL", "2026-2028"
+  
+  // Price data
+  priceRPerMWh: decimal("price_r_per_mwh", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("BRL").notNull(),
+  
+  // Parse quality
+  confidence: integer("confidence").notNull(), // 0-100
+  rawSnippet: text("raw_snippet"), // Exact extracted text fragment
+  
+  // Deduplication
+  rowHash: text("row_hash"), // Hash for detecting duplicates
+  
+  // Flags
+  isOutlierFlag: boolean("is_outlier_flag").default(false),
+  outlierReason: text("outlier_reason"),
+  
+  // Manual corrections
+  wasManuallyEdited: boolean("was_manually_edited").default(false),
+  editedByUserId: text("edited_by_user_id").references(() => users.id),
+  editedAt: timestamp("edited_at"),
+  originalValues: jsonb("original_values"), // Pre-edit values for audit
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPrcRowSchema = createInsertSchema(prcRows).omit({
+  id: true,
+  createdAt: true,
+  wasManuallyEdited: true,
+  editedByUserId: true,
+  editedAt: true,
+  originalValues: true,
+});
+
+export type InsertPrcRow = z.infer<typeof insertPrcRowSchema>;
+export type PrcRow = typeof prcRows.$inferSelect;
+
+// PRC Publish Batches - Track benchmark publishing events
+export const prcPublishBatches = pgTable("prc_publish_batches", {
+  id: serial("id").primaryKey(),
+  
+  // Reference period
+  referenceMonth: text("reference_month").notNull(), // YYYY-MM
+  
+  // Batch metadata
+  batchName: text("batch_name").notNull(), // e.g., "PRCs 2025-12 (8 suppliers)"
+  
+  // Source documents
+  documentIds: jsonb("document_ids").notNull(), // Array of prc_document IDs
+  documentCount: integer("document_count").notNull(),
+  totalRowsUsed: integer("total_rows_used").notNull(),
+  
+  // Published benchmarks
+  benchmarkIds: jsonb("benchmark_ids"), // Array of benchmark IDs created
+  benchmarksCreated: integer("benchmarks_created").default(0),
+  
+  // Coverage stats
+  coverageStats: jsonb("coverage_stats"), // { submarkets, products, terms }
+  
+  // Status
+  status: text("status").default("DRAFT").notNull(), // DRAFT, PUBLISHED, ARCHIVED
+  
+  // Audit
+  publishedByUserId: text("published_by_user_id").references(() => users.id),
+  publishedAt: timestamp("published_at"),
+  
+  notes: text("notes"),
+  isDemo: boolean("is_demo").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPrcPublishBatchSchema = createInsertSchema(prcPublishBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  benchmarkIds: true,
+  benchmarksCreated: true,
+  publishedByUserId: true,
+  publishedAt: true,
+});
+
+export type InsertPrcPublishBatch = z.infer<typeof insertPrcPublishBatchSchema>;
+export type PrcPublishBatch = typeof prcPublishBatches.$inferSelect;
+
+// Relations for PRC tables
+export const prcDocumentsRelations = relations(prcDocuments, ({ one, many }) => ({
+  supplier: one(suppliers, {
+    fields: [prcDocuments.supplierId],
+    references: [suppliers.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [prcDocuments.uploadedByUserId],
+    references: [users.id],
+  }),
+  verifiedBy: one(users, {
+    fields: [prcDocuments.verifiedByUserId],
+    references: [users.id],
+  }),
+  rows: many(prcRows),
+}));
+
+export const prcRowsRelations = relations(prcRows, ({ one }) => ({
+  document: one(prcDocuments, {
+    fields: [prcRows.prcDocumentId],
+    references: [prcDocuments.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [prcRows.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+// ============== END PRC DOCUMENTS ==============

@@ -1,0 +1,472 @@
+0) CONTEXT (CURRENT STATE — DO NOT BREAK)
+
+You are working inside the existing Ótima Energia Admin Portal.
+
+Already built / relevant:
+
+Deal-centric ECOS snapshot model (pre-sales insights, not ongoing optimization)
+
+marketPriceBenchmarks table exists
+
+ECOS dashboard language recently updated from “monitoring/relatórios” → “insights”
+
+Benchmark evidence linking recently added to marketPriceBenchmarks:
+
+sourceName
+
+sourceDocId (FK to dealDocuments)
+
+sourceType now includes PRC
+
+Deal Documents storage already exists (used for contracts etc.)
+
+OCR pipeline exists for bills (Tesseract), storage uses Object Storage
+
+IMPORTANT ECOS PRODUCT DECISION:
+ECOS should NOT “monitor clients forever”.
+ECOS is pre-sales leverage + deal-closing insight reports.
+It produces: snapshot insights and PDF insight packs for deals.
+
+1) QUICK REVIEW OF YOUR LATEST ECOS WORK (AND WHAT TO ADJUST)
+✅ The “insights” language refactor is correct
+
+Yes — this aligns perfectly with the new ECOS positioning (pre-sales insight snapshots, not continuous monitoring).
+
+Do this to make it bulletproof:
+
+Add bilingual string keys for all “insight” labels (PT-BR + EN) so the portal can switch language later.
+
+Ensure every old “monitor” term is replaced consistently in:
+
+dashboard cards
+
+empty states
+
+tooltips
+
+filters
+
+export/PDF strings
+
+⚠️ Evidence linking: sourceDocId -> dealDocuments is workable, but not ideal
+
+Right now, PRCs are benchmark evidence, not deal evidence.
+It’s acceptable to reuse dealDocuments only if you add a clear document category/type and prevent confusion.
+
+Required fix:
+
+Add documentCategory or documentScope to documents model, e.g.:
+
+DEAL_EVIDENCE
+
+BENCHMARK_EVIDENCE
+
+PRC uploads must be stored under BENCHMARK_EVIDENCE, not attached to a specific deal.
+
+If you prefer a cleaner separation (recommended), create a dedicated PRC doc table and reference that instead. (Specs below.)
+
+2) BUILD GOAL (WHAT WE ARE BUILDING NOW)
+Build: PRC Ingestion + Benchmark Publisher
+
+We need a system where Ops can:
+
+Upload raw PRC PDFs monthly (multiple suppliers)
+
+System parses them into structured benchmark rows
+
+Ops reviews low-confidence rows only
+
+Ops “Publishes” the month → updates benchmark bands used by ECOS snapshots
+
+ECOS automatically uses latest published PRC benchmarks for deal insights
+
+Key principle:
+Upload raw files → portal handles extraction → minimal human review → publish.
+
+3) TERMINOLOGY (INTERNAL CONSISTENCY)
+
+“PRC” = “Preço de Referência Comparável” (supplier reference pricing PDFs)
+
+“Benchmark” = derived normalized pricing bands built from PRCs + later from real quotes
+
+“Evidence” = the original PRC PDF (and later other evidence sources)
+
+4) DATA MODEL — REQUIRED TABLES & FIELDS
+Option A (Recommended): Dedicated PRC document tables (cleanest)
+
+Create 2 new tables:
+
+A1) prc_documents
+
+Stores raw PRC PDF uploads + metadata.
+
+Fields:
+
+id (pk)
+
+supplierId (fk → suppliers.id)
+
+referenceMonth (string YYYY-MM)
+
+sourceName (string) default like: "PRC <Supplier> <YYYY-MM>"
+
+fileStorageKey / fileUrl (whatever pattern you use for object storage)
+
+originalFilename
+
+uploadedByUserId
+
+uploadedAt
+
+parseStatus enum: UPLOADED | PARSED | NEEDS_REVIEW | VERIFIED | PUBLISHED | FAILED
+
+parseConfidence number (0–100)
+
+parseErrors json/text
+
+notes text (ops notes)
+
+isDemo boolean (respect demo mode)
+
+A2) prc_rows
+
+Stores parsed structured rows extracted from PRC PDFs.
+
+Fields:
+
+id (pk)
+
+prcDocumentId (fk → prc_documents.id)
+
+supplierId (fk → suppliers.id) (denormalized for speed)
+
+referenceMonth (string YYYY-MM) (denormalized)
+
+submarket enum: SECO | SUL | NNE | NORTE | NE | UNKNOWN
+
+productType enum: CONVENCIONAL | INCENTIVADA | INC_I0 | INC_I50 | INC_I100 | UNKNOWN
+
+termMonths integer nullable (12/24/36/60)
+
+termLabel string nullable (“ANUAL”, “TRIANUAL”, “QUINQUENAL”, “2026-2028”)
+
+priceRPerMWh decimal (required)
+
+currency default BRL
+
+confidence number (0–100)
+
+rawSnippet text (the exact line(s) or extracted fragment)
+
+rowHash string (dedupe)
+
+isOutlierFlag boolean
+
+createdAt
+
+Option B (Acceptable): Keep your new sourceDocId -> dealDocuments
+
+If you keep this:
+
+You MUST add documentScope to dealDocuments (BENCHMARK_EVIDENCE vs DEAL_EVIDENCE)
+
+PRCs must be stored as BENCHMARK_EVIDENCE
+
+marketPriceBenchmarks.sourceDocId should only point to docs with BENCHMARK_EVIDENCE
+
+Either way is fine — choose A if you want future-proof clarity.
+
+5) DERIVED BENCHMARKS (PUBLISHING OUTPUT)
+
+We need to compute benchmark bands by month.
+
+Preferred design
+
+Keep marketPriceBenchmarks as the published benchmark table, but enhance it to support monthly versioning.
+
+Required fields (add if missing):
+
+referenceMonth (YYYY-MM)
+
+segment enum (if used): SME | INDUSTRIAL | UNKNOWN (optional for PRCs)
+
+submarket enum
+
+productType enum
+
+termMonths int
+
+lowPrice decimal (p25 or min)
+
+midPrice decimal (median)
+
+highPrice decimal (p75 or max)
+
+numSources int
+
+sourceType enum includes PRC
+
+sourceName string (e.g. “PRCs 2025-12 (8 suppliers)”)
+
+sourceDocId OR sourcePrcBatchId (depending on model)
+
+publishedAt
+
+publishedByUserId
+
+status enum: DRAFT | PUBLISHED | ARCHIVED
+
+Benchmark grouping key
+
+Benchmark is identified by:
+referenceMonth + submarket + productType + termMonths (+ segment optional)
+
+6) UI BUILD — ADMIN: “PRC Upload & Publish”
+
+Create a new Admin UI area:
+
+Tab name: Benchmarks
+Subtab: PRC Upload
+
+Screen 1: PRC Upload
+
+Form fields:
+
+Supplier (dropdown)
+
+Reference Month (YYYY-MM picker)
+
+Upload PDF(s) (multi-upload supported)
+
+Optional: Source Label override (default auto)
+
+Submit
+
+On submit:
+
+Store PDFs to object storage
+
+Create prc_documents
+
+Trigger parsing job (async)
+
+Screen 2: PRC Review Queue
+
+List PRC documents with:
+
+supplier
+
+month
+
+status
+
+parse confidence
+
+rows extracted
+
+flagged rows count
+
+“Review” button
+
+Screen 3: PRC Document Review
+
+Show:
+
+Document viewer (pdf preview)
+
+Parsed rows table with inline edit
+
+Filters: show only low-confidence / outliers
+
+Each row shows:
+
+productType
+
+termMonths / termLabel
+
+submarket
+
+price
+
+confidence badge
+
+rawSnippet
+
+edit/save
+
+delete row
+
+Actions:
+
+“Mark Verified” (moves doc to VERIFIED)
+
+“Re-run Parse” (if parsing logic improved)
+
+“Flag as Bad Source” (FAILED)
+
+Screen 4: Publish Benchmarks
+
+For a selected referenceMonth:
+
+Show summary:
+
+number of PRC docs
+
+number verified
+
+total rows
+
+missing coverage grid (submarket × product × term)
+
+Button: “Generate Benchmark Preview”
+
+Shows computed low/mid/high bands
+
+Button: “Publish Month”
+
+On publish:
+
+Write/Upsert rows into marketPriceBenchmarks with status PUBLISHED
+
+Archive previous benchmark rows for same month/key if needed
+
+Log audit event
+
+7) PARSER REQUIREMENTS (REALISTIC + FAST)
+
+PRC PDFs vary by supplier and layout.
+
+Parsing strategy (must follow this order)
+
+Try PDF text extraction (fast)
+
+If extraction empty or too broken → OCR fallback (use existing OCR infra, but only when needed)
+
+Extraction heuristics
+
+Must detect:
+
+reference month (if present; if not, trust the upload field)
+
+submarket headings (SE/CO, Sul, Norte/NE etc.)
+
+product sections:
+
+Convencional
+
+Incentivada variants i0/i50/i100
+
+term buckets:
+
+“Anual / Trianual / Quinquenal”
+
+or year ranges (convert to months if possible)
+
+price tokens (R$/MWh)
+
+Confidence scoring
+
+For each row:
+
+High confidence if product+term+submarket+price found cleanly
+
+Medium if one field inferred
+
+Low if ambiguous or missing submarket/product/term
+Low-confidence rows must appear in the review queue.
+
+Outlier detection
+
+Flag row if price deviates > X% from median of same grouping in the month.
+
+8) ECOS INTEGRATION (WHAT CHANGES)
+
+ECOS deal snapshot evaluation should:
+
+Use latest PUBLISHED benchmarks for:
+
+submarket (if known)
+
+productType (if known, else use blended or “UNKNOWN” band)
+
+termMonths (if known, else default bucket 24)
+
+Store in deal_ecos_snapshots:
+
+which benchmark month used
+
+which band used
+
+benchmark source evidence link (clickable)
+
+ECOS must phrase results as:
+
+“faixa de referência”
+
+“indicativo”
+
+“potencial”
+Never guarantee savings.
+
+9) TOOLING / AUDIT / DEMO MODE REQUIREMENTS
+
+Every PRC upload, verification, and publish must:
+
+create an audit log entry
+
+include source = benchmark_prc
+
+Respect isDemo mode:
+
+demo PRCs should not pollute production benchmarks
+
+Add RBAC:
+
+Ops can upload + review + verify
+
+Only Admin can publish (recommended), or Ops lead + Admin only
+
+10) ACCEPTANCE CRITERIA (DEFINITION OF DONE)
+
+✅ Upload 20 PRC PDFs and the system:
+
+stores them
+
+parses them into rows
+
+flags low confidence rows
+
+allows quick review edits
+
+produces a month preview coverage grid
+
+publishes benchmark bands
+
+ECOS snapshots can reference those published bands immediately
+
+✅ Evidence linking:
+
+Benchmarks show clickable evidence source
+
+PRC PDF is viewable from benchmark UI (no broken links)
+
+✅ Ops UX:
+
+Ops can do monthly update in < 30 minutes:
+
+upload batch → review only flagged rows → publish
+
+✅ Safety:
+
+No PRC benchmark can publish without at least 1 verified document
+
+Publishing logs audit + freezes the month benchmark snapshot
+
+11) RESPONSE TO YOUR QUESTION (“Does the updated dashboard look good?”)
+
+Yes — the language shift to “insights” is the right move and aligns with the new ECOS scope.
+But ensure bilingual string keys + replace every remaining monitoring word everywhere and ensure the evidence linking is benchmark-scoped (not deal-scoped) via documentScope or dedicated PRC tables.
+
+NOW BUILD IT
+
+Implement the full PRC ingestion + review + publish system above, integrated into the existing portal patterns (object storage, OCR fallback, RBAC, audit logging, demo-mode separation).

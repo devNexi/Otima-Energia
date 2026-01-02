@@ -7820,5 +7820,548 @@ export async function registerRoutes(
     }
   });
 
+  // ============== PRC INGESTION & BENCHMARK PUBLISHING ==============
+  
+  // --- PRC Documents ---
+  
+  // List PRC documents with filters
+  app.get("/api/prc/documents", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { supplierId, referenceMonth, parseStatus, isDemo } = req.query;
+      const documents = await storage.getPrcDocuments({
+        supplierId: supplierId ? parseInt(supplierId as string) : undefined,
+        referenceMonth: referenceMonth as string | undefined,
+        parseStatus: parseStatus as string | undefined,
+        isDemo: isDemo === 'true' ? true : isDemo === 'false' ? false : undefined
+      });
+      
+      // Enrich with supplier names
+      const suppliers = await storage.getSuppliers();
+      const enriched = documents.map(doc => ({
+        ...doc,
+        supplierName: suppliers.find(s => s.id === doc.supplierId)?.name || 'Unknown'
+      }));
+      
+      res.json({ success: true, documents: enriched });
+    } catch (error: any) {
+      console.error("Error fetching PRC documents:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch PRC documents" });
+    }
+  });
+  
+  // Get single PRC document with rows
+  app.get("/api/prc/documents/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const document = await storage.getPrcDocument(parseInt(req.params.id));
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      const rows = await storage.getPrcRows(document.id);
+      const supplier = await storage.getSupplier(document.supplierId);
+      
+      res.json({ 
+        success: true, 
+        document: {
+          ...document,
+          supplierName: supplier?.name || 'Unknown'
+        },
+        rows 
+      });
+    } catch (error: any) {
+      console.error("Error fetching PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch PRC document" });
+    }
+  });
+  
+  // Upload PRC document
+  app.post("/api/prc/documents", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { supplierId, referenceMonth, fileStorageKey, fileUrl, originalFilename, fileSizeBytes, isDemo } = req.body;
+      
+      if (!supplierId || !referenceMonth || !fileStorageKey || !originalFilename) {
+        return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+      
+      const supplier = await storage.getSupplier(parseInt(supplierId));
+      if (!supplier) {
+        return res.status(400).json({ success: false, error: "Supplier not found" });
+      }
+      
+      const sourceName = `PRC ${supplier.name} ${referenceMonth}`;
+      
+      const userId = await getSessionUserId(req);
+      
+      const document = await storage.createPrcDocument({
+        supplierId: parseInt(supplierId),
+        referenceMonth,
+        sourceName,
+        fileStorageKey,
+        fileUrl,
+        originalFilename,
+        fileSizeBytes: fileSizeBytes ? parseInt(fileSizeBytes) : undefined,
+        uploadedByUserId: userId || null,
+        isDemo: isDemo || false
+      });
+      
+      // Log audit
+      await storage.logAdminAction({
+        action: 'PRC_DOCUMENT_UPLOADED',
+        entityType: 'prc_documents',
+        entityId: document.id,
+        actor: userId || 'system',
+        detailsJson: { supplierId, referenceMonth, originalFilename, sourceName }
+      });
+      
+      res.json({ success: true, document });
+    } catch (error: any) {
+      console.error("Error creating PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to create PRC document" });
+    }
+  });
+  
+  // Update PRC document parse status
+  app.patch("/api/prc/documents/:id/status", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { status, confidence, errors } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ success: false, error: "Status is required" });
+      }
+      
+      const document = await storage.updatePrcDocumentParseStatus(
+        parseInt(req.params.id),
+        status,
+        confidence,
+        errors
+      );
+      
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      res.json({ success: true, document });
+    } catch (error: any) {
+      console.error("Error updating PRC document status:", error);
+      res.status(500).json({ success: false, error: "Failed to update status" });
+    }
+  });
+  
+  // Verify PRC document
+  app.post("/api/prc/documents/:id/verify", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const userId = await getSessionUserId(req) || 'system';
+      
+      const document = await storage.verifyPrcDocument(parseInt(req.params.id), userId);
+      
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      // Log audit
+      await storage.logAdminAction({
+        action: 'PRC_DOCUMENT_VERIFIED',
+        entityType: 'prc_documents',
+        entityId: document.id,
+        actor: userId,
+        detailsJson: { supplierId: document.supplierId, referenceMonth: document.referenceMonth }
+      });
+      
+      res.json({ success: true, document });
+    } catch (error: any) {
+      console.error("Error verifying PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to verify document" });
+    }
+  });
+  
+  // Delete PRC document
+  app.delete("/api/prc/documents/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const userId = await getSessionUserId(req) || 'system';
+      const document = await storage.getPrcDocument(parseInt(req.params.id));
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      await storage.deletePrcDocument(parseInt(req.params.id));
+      
+      // Log audit
+      await storage.logAdminAction({
+        action: 'PRC_DOCUMENT_DELETED',
+        entityType: 'prc_documents',
+        entityId: document.id,
+        actor: userId,
+        detailsJson: { supplierId: document.supplierId, referenceMonth: document.referenceMonth }
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to delete document" });
+    }
+  });
+  
+  // --- PRC Rows ---
+  
+  // Get rows for a document
+  app.get("/api/prc/documents/:id/rows", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const rows = await storage.getPrcRows(parseInt(req.params.id));
+      res.json({ success: true, rows });
+    } catch (error: any) {
+      console.error("Error fetching PRC rows:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch rows" });
+    }
+  });
+  
+  // Update a single PRC row
+  app.patch("/api/prc/rows/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const userId = await getSessionUserId(req) || 'system';
+      const row = await storage.updatePrcRow(parseInt(req.params.id), req.body, userId);
+      
+      if (!row) {
+        return res.status(404).json({ success: false, error: "PRC row not found" });
+      }
+      
+      res.json({ success: true, row });
+    } catch (error: any) {
+      console.error("Error updating PRC row:", error);
+      res.status(500).json({ success: false, error: "Failed to update row" });
+    }
+  });
+  
+  // Delete a single PRC row
+  app.delete("/api/prc/rows/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      await storage.deletePrcRow(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting PRC row:", error);
+      res.status(500).json({ success: false, error: "Failed to delete row" });
+    }
+  });
+  
+  // Get flagged rows needing review
+  app.get("/api/prc/rows/flagged", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { referenceMonth } = req.query;
+      const rows = await storage.getFlaggedPrcRows(referenceMonth as string | undefined);
+      res.json({ success: true, rows });
+    } catch (error: any) {
+      console.error("Error fetching flagged rows:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch flagged rows" });
+    }
+  });
+  
+  // --- PRC Month Summary & Publishing ---
+  
+  // Get month summary (for publish preview)
+  app.get("/api/prc/months/:month/summary", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { isDemo } = req.query;
+      const summary = await storage.getPrcMonthSummary(
+        req.params.month,
+        isDemo === 'true' ? true : isDemo === 'false' ? false : undefined
+      );
+      
+      // Enrich supplier coverage with names
+      const suppliers = await storage.getSuppliers();
+      const supplierNames = summary.supplierCoverage.map(id => 
+        suppliers.find(s => s.id === id)?.name || 'Unknown'
+      );
+      
+      res.json({ 
+        success: true, 
+        summary: {
+          ...summary,
+          supplierNames
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching month summary:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch month summary" });
+    }
+  });
+  
+  // Get all rows for a month (for benchmark calculation)
+  app.get("/api/prc/months/:month/rows", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { isDemo } = req.query;
+      const rows = await storage.getPrcRowsForMonth(
+        req.params.month,
+        isDemo === 'true' ? true : isDemo === 'false' ? false : undefined
+      );
+      res.json({ success: true, rows });
+    } catch (error: any) {
+      console.error("Error fetching month rows:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch month rows" });
+    }
+  });
+  
+  // Get publish batches
+  app.get("/api/prc/publish-batches", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { referenceMonth, status } = req.query;
+      const batches = await storage.getPrcPublishBatches({
+        referenceMonth: referenceMonth as string | undefined,
+        status: status as string | undefined
+      });
+      res.json({ success: true, batches });
+    } catch (error: any) {
+      console.error("Error fetching publish batches:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch publish batches" });
+    }
+  });
+  
+  // Create publish batch (generate benchmarks)
+  app.post("/api/prc/publish-batches", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { referenceMonth, isDemo } = req.body;
+      
+      if (!referenceMonth) {
+        return res.status(400).json({ success: false, error: "Reference month is required" });
+      }
+      
+      // Get verified documents for the month
+      const allDocs = await storage.getPrcDocuments({ referenceMonth, isDemo });
+      const verifiedDocs = allDocs.filter(d => 
+        d.parseStatus === 'VERIFIED' || d.parseStatus === 'PUBLISHED'
+      );
+      
+      if (verifiedDocs.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "At least one verified PRC document is required to publish" 
+        });
+      }
+      
+      // Get all rows for benchmark calculation
+      const rows = await storage.getPrcRowsForMonth(referenceMonth, isDemo);
+      const validRows = rows.filter(r => !r.isOutlierFlag);
+      
+      // Get supplier names for batch name
+      const suppliers = await storage.getSuppliers();
+      const supplierCount = new Set(verifiedDocs.map(d => d.supplierId)).size;
+      const batchName = `PRCs ${referenceMonth} (${supplierCount} suppliers)`;
+      
+      // Create the batch
+      const batch = await storage.createPrcPublishBatch({
+        referenceMonth,
+        batchName,
+        documentIds: verifiedDocs.map(d => d.id),
+        documentCount: verifiedDocs.length,
+        totalRowsUsed: validRows.length,
+        coverageStats: {
+          submarkets: Array.from(new Set(validRows.map(r => r.submarket))),
+          products: Array.from(new Set(validRows.map(r => r.productType))),
+          terms: Array.from(new Set(validRows.map(r => r.termMonths).filter(Boolean)))
+        },
+        isDemo: isDemo || false
+      });
+      
+      res.json({ success: true, batch });
+    } catch (error: any) {
+      console.error("Error creating publish batch:", error);
+      res.status(500).json({ success: false, error: "Failed to create publish batch" });
+    }
+  });
+  
+  // Publish batch (create benchmarks)
+  app.post("/api/prc/publish-batches/:id/publish", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const batch = await storage.getPrcPublishBatch(parseInt(req.params.id));
+      if (!batch) {
+        return res.status(404).json({ success: false, error: "Publish batch not found" });
+      }
+      
+      if (batch.status === 'PUBLISHED') {
+        return res.status(400).json({ success: false, error: "Batch already published" });
+      }
+      
+      const userId = await getSessionUserId(req) || 'system';
+      
+      // IMPORTANT: Only use rows from the batch's verified documents, not all rows from the month
+      const batchDocumentIds = batch.documentIds as number[];
+      
+      // Get rows ONLY from the documents in this batch
+      const allBatchRows: Awaited<ReturnType<typeof storage.getPrcRows>>[] = [];
+      for (const docId of batchDocumentIds) {
+        const docRows = await storage.getPrcRows(docId);
+        allBatchRows.push(...docRows);
+      }
+      
+      // Filter out outliers - only use verified, non-outlier rows
+      const validRows = allBatchRows.filter(r => !r.isOutlierFlag);
+      
+      if (validRows.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "No valid rows found in batch documents" 
+        });
+      }
+      
+      // Track exactly which rows were used for audit trail
+      const usedRowIds = validRows.map(r => r.id);
+      
+      // Group rows by submarket + productType + termMonths
+      const grouped: Record<string, typeof validRows> = {};
+      for (const row of validRows) {
+        const key = `${row.submarket}|${row.productType}|${row.termMonths || 'unknown'}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(row);
+      }
+      
+      // Create benchmarks for each group
+      const benchmarkIds: number[] = [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      for (const [key, groupRows] of Object.entries(grouped)) {
+        const [submarket, productType, termStr] = key.split('|');
+        const termMonths = termStr === 'unknown' ? null : parseInt(termStr);
+        
+        const prices = groupRows.map(r => parseFloat(r.priceRPerMWh)).sort((a, b) => a - b);
+        const lowPrice = prices[Math.floor(prices.length * 0.25)] || prices[0];
+        const midPrice = prices[Math.floor(prices.length * 0.5)] || prices[0];
+        const highPrice = prices[Math.floor(prices.length * 0.75)] || prices[prices.length - 1];
+        
+        // Create the benchmark
+        const benchmark = await storage.createBenchmark({
+          segment: 'UNKNOWN',
+          region: submarket,
+          contractLengthMonths: termMonths || 24,
+          lowerBoundRmwh: lowPrice.toFixed(2),
+          upperBoundRmwh: highPrice.toFixed(2),
+          midPriceRmwh: midPrice.toFixed(2),
+          effectiveDate: today,
+          referenceMonth: batch.referenceMonth,
+          submarket,
+          productType,
+          termMonths,
+          numSources: groupRows.length,
+          sourceType: 'PRC',
+          sourceName: batch.batchName,
+          sourcePrcBatchId: batch.id,
+          confidence: 'High',
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+          publishedByUserId: userId
+        });
+        
+        benchmarkIds.push(benchmark.id);
+      }
+      
+      // Update batch with published benchmarks
+      const updatedBatch = await storage.publishPrcBatch(batch.id, userId, benchmarkIds);
+      
+      // Update all source documents to PUBLISHED status
+      for (const docId of (batch.documentIds as number[])) {
+        await storage.updatePrcDocumentParseStatus(docId, 'PUBLISHED');
+      }
+      
+      // Log audit with full provenance
+      await storage.logAdminAction({
+        action: 'PRC_BATCH_PUBLISHED',
+        entityType: 'prc_publish_batches',
+        entityId: batch.id,
+        actor: userId,
+        detailsJson: { 
+          referenceMonth: batch.referenceMonth, 
+          benchmarksCreated: benchmarkIds.length,
+          documentCount: batch.documentCount,
+          documentIds: batchDocumentIds,
+          rowsUsed: usedRowIds.length,
+          rowIds: usedRowIds.slice(0, 100) // First 100 for audit, full list may be too large
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        batch: updatedBatch,
+        benchmarksCreated: benchmarkIds.length
+      });
+    } catch (error: any) {
+      console.error("Error publishing batch:", error);
+      res.status(500).json({ success: false, error: "Failed to publish batch" });
+    }
+  });
+  
+  // Preview benchmarks for a month (without publishing)
+  app.get("/api/prc/months/:month/benchmark-preview", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { isDemo } = req.query;
+      
+      // Get rows for this month
+      const rows = await storage.getPrcRowsForMonth(
+        req.params.month,
+        isDemo === 'true' ? true : isDemo === 'false' ? false : undefined
+      );
+      const validRows = rows.filter(r => !r.isOutlierFlag);
+      
+      // Group and calculate preview
+      const grouped: Record<string, typeof validRows> = {};
+      for (const row of validRows) {
+        const key = `${row.submarket}|${row.productType}|${row.termMonths || 'unknown'}`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(row);
+      }
+      
+      const preview = Object.entries(grouped).map(([key, groupRows]) => {
+        const [submarket, productType, termStr] = key.split('|');
+        const termMonths = termStr === 'unknown' ? null : parseInt(termStr);
+        
+        const prices = groupRows.map(r => parseFloat(r.priceRPerMWh)).sort((a, b) => a - b);
+        
+        return {
+          submarket,
+          productType,
+          termMonths,
+          lowPrice: prices[Math.floor(prices.length * 0.25)] || prices[0],
+          midPrice: prices[Math.floor(prices.length * 0.5)] || prices[0],
+          highPrice: prices[Math.floor(prices.length * 0.75)] || prices[prices.length - 1],
+          numSources: groupRows.length,
+          supplierIds: Array.from(new Set(groupRows.map(r => r.supplierId)))
+        };
+      });
+      
+      res.json({ success: true, preview });
+    } catch (error: any) {
+      console.error("Error generating benchmark preview:", error);
+      res.status(500).json({ success: false, error: "Failed to generate preview" });
+    }
+  });
+
   return httpServer;
 }

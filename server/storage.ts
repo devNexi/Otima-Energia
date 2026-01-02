@@ -66,6 +66,9 @@ import {
   type OpsErrorEvent, type InsertOpsErrorEvent,
   type OpsPerformanceSnapshot, type InsertOpsPerformanceSnapshot,
   type DealEcosSnapshot, type InsertDealEcosSnapshot,
+  type PrcDocument, type InsertPrcDocument,
+  type PrcRow, type InsertPrcRow,
+  type PrcPublishBatch, type InsertPrcPublishBatch,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -82,7 +85,8 @@ import {
   clientDossiers, clientDossierSnapshots,
   supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides,
   userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
-  opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots
+  opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots,
+  prcDocuments, prcRows, prcPublishBatches
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -605,6 +609,46 @@ export interface IStorage {
   // Performance Snapshots
   getPerformanceSnapshots(userId: string, periodType?: string): Promise<OpsPerformanceSnapshot[]>;
   getAllPerformanceSnapshots(options: { periodType?: string; periodStart?: Date; limit?: number }): Promise<OpsPerformanceSnapshot[]>;
+  
+  // ============== PRC INGESTION & BENCHMARK PUBLISHING ==============
+  
+  // PRC Documents
+  createPrcDocument(data: InsertPrcDocument): Promise<PrcDocument>;
+  getPrcDocuments(filters?: { supplierId?: number; referenceMonth?: string; parseStatus?: string; isDemo?: boolean }): Promise<PrcDocument[]>;
+  getPrcDocument(id: number): Promise<PrcDocument | undefined>;
+  updatePrcDocument(id: number, data: Partial<InsertPrcDocument>): Promise<PrcDocument | undefined>;
+  updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[]): Promise<PrcDocument | undefined>;
+  verifyPrcDocument(id: number, verifiedByUserId: string): Promise<PrcDocument | undefined>;
+  deletePrcDocument(id: number): Promise<void>;
+  
+  // PRC Rows
+  createPrcRow(data: InsertPrcRow): Promise<PrcRow>;
+  createPrcRows(rows: InsertPrcRow[]): Promise<PrcRow[]>;
+  getPrcRows(documentId: number): Promise<PrcRow[]>;
+  getPrcRowsForMonth(referenceMonth: string, isDemo?: boolean): Promise<PrcRow[]>;
+  getPrcRow(id: number): Promise<PrcRow | undefined>;
+  updatePrcRow(id: number, data: Partial<InsertPrcRow>, editedByUserId?: string): Promise<PrcRow | undefined>;
+  deletePrcRow(id: number): Promise<void>;
+  deletePrcRowsForDocument(documentId: number): Promise<void>;
+  getFlaggedPrcRows(referenceMonth?: string): Promise<PrcRow[]>;
+  
+  // PRC Publish Batches
+  createPrcPublishBatch(data: InsertPrcPublishBatch): Promise<PrcPublishBatch>;
+  getPrcPublishBatches(filters?: { referenceMonth?: string; status?: string }): Promise<PrcPublishBatch[]>;
+  getPrcPublishBatch(id: number): Promise<PrcPublishBatch | undefined>;
+  updatePrcPublishBatch(id: number, data: Partial<InsertPrcPublishBatch>): Promise<PrcPublishBatch | undefined>;
+  publishPrcBatch(id: number, publishedByUserId: string, benchmarkIds: number[]): Promise<PrcPublishBatch | undefined>;
+  
+  // PRC Stats
+  getPrcMonthSummary(referenceMonth: string, isDemo?: boolean): Promise<{
+    documentCount: number;
+    verifiedCount: number;
+    totalRows: number;
+    flaggedRows: number;
+    supplierCoverage: number[];
+    submarketCoverage: string[];
+    productCoverage: string[];
+  }>;
 }
 
 export class Storage implements IStorage {
@@ -3543,6 +3587,261 @@ export class Storage implements IStorage {
     return await query
       .orderBy(desc(opsPerformanceSnapshots.periodStart))
       .limit(options.limit || 50);
+  }
+  
+  // ============== PRC INGESTION & BENCHMARK PUBLISHING ==============
+  
+  // PRC Documents
+  async createPrcDocument(data: InsertPrcDocument): Promise<PrcDocument> {
+    const result = await db.insert(prcDocuments).values(data).returning();
+    return result[0];
+  }
+  
+  async getPrcDocuments(filters?: { supplierId?: number; referenceMonth?: string; parseStatus?: string; isDemo?: boolean }): Promise<PrcDocument[]> {
+    const conditions = [];
+    
+    if (filters?.supplierId) {
+      conditions.push(eq(prcDocuments.supplierId, filters.supplierId));
+    }
+    if (filters?.referenceMonth) {
+      conditions.push(eq(prcDocuments.referenceMonth, filters.referenceMonth));
+    }
+    if (filters?.parseStatus) {
+      conditions.push(eq(prcDocuments.parseStatus, filters.parseStatus));
+    }
+    if (filters?.isDemo !== undefined) {
+      conditions.push(eq(prcDocuments.isDemo, filters.isDemo));
+    }
+    
+    let query = db.select().from(prcDocuments);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(prcDocuments.uploadedAt));
+  }
+  
+  async getPrcDocument(id: number): Promise<PrcDocument | undefined> {
+    const result = await db.select().from(prcDocuments).where(eq(prcDocuments.id, id));
+    return result[0];
+  }
+  
+  async updatePrcDocument(id: number, data: Partial<InsertPrcDocument>): Promise<PrcDocument | undefined> {
+    const result = await db.update(prcDocuments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(prcDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[]): Promise<PrcDocument | undefined> {
+    const updateData: any = {
+      parseStatus: status,
+      updatedAt: new Date()
+    };
+    
+    if (confidence !== undefined) {
+      updateData.parseConfidence = confidence;
+    }
+    if (errors !== undefined) {
+      updateData.parseErrors = errors;
+    }
+    if (status === 'PARSING') {
+      updateData.parseStartedAt = new Date();
+    }
+    if (status === 'PARSED' || status === 'FAILED') {
+      updateData.parseCompletedAt = new Date();
+    }
+    
+    const result = await db.update(prcDocuments)
+      .set(updateData)
+      .where(eq(prcDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async verifyPrcDocument(id: number, verifiedByUserId: string): Promise<PrcDocument | undefined> {
+    const result = await db.update(prcDocuments)
+      .set({
+        parseStatus: 'VERIFIED',
+        verifiedByUserId,
+        verifiedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(prcDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deletePrcDocument(id: number): Promise<void> {
+    await db.delete(prcRows).where(eq(prcRows.prcDocumentId, id));
+    await db.delete(prcDocuments).where(eq(prcDocuments.id, id));
+  }
+  
+  // PRC Rows
+  async createPrcRow(data: InsertPrcRow): Promise<PrcRow> {
+    const result = await db.insert(prcRows).values(data).returning();
+    return result[0];
+  }
+  
+  async createPrcRows(rows: InsertPrcRow[]): Promise<PrcRow[]> {
+    if (rows.length === 0) return [];
+    const result = await db.insert(prcRows).values(rows).returning();
+    return result;
+  }
+  
+  async getPrcRows(documentId: number): Promise<PrcRow[]> {
+    return await db.select().from(prcRows).where(eq(prcRows.prcDocumentId, documentId));
+  }
+  
+  async getPrcRowsForMonth(referenceMonth: string, isDemo?: boolean): Promise<PrcRow[]> {
+    const conditions = [eq(prcRows.referenceMonth, referenceMonth)];
+    
+    if (isDemo !== undefined) {
+      const docs = await this.getPrcDocuments({ referenceMonth, isDemo });
+      const docIds = docs.map(d => d.id);
+      if (docIds.length === 0) return [];
+      
+      return await db.select().from(prcRows)
+        .where(and(
+          eq(prcRows.referenceMonth, referenceMonth),
+          sql`${prcRows.prcDocumentId} = ANY(ARRAY[${sql.raw(docIds.join(','))}]::int[])`
+        ));
+    }
+    
+    return await db.select().from(prcRows).where(eq(prcRows.referenceMonth, referenceMonth));
+  }
+  
+  async getPrcRow(id: number): Promise<PrcRow | undefined> {
+    const result = await db.select().from(prcRows).where(eq(prcRows.id, id));
+    return result[0];
+  }
+  
+  async updatePrcRow(id: number, data: Partial<InsertPrcRow>, editedByUserId?: string): Promise<PrcRow | undefined> {
+    const existingRow = await this.getPrcRow(id);
+    if (!existingRow) return undefined;
+    
+    const updateData: any = { ...data };
+    
+    if (editedByUserId) {
+      updateData.wasManuallyEdited = true;
+      updateData.editedByUserId = editedByUserId;
+      updateData.editedAt = new Date();
+      updateData.originalValues = {
+        submarket: existingRow.submarket,
+        productType: existingRow.productType,
+        termMonths: existingRow.termMonths,
+        priceRPerMWh: existingRow.priceRPerMWh,
+        confidence: existingRow.confidence
+      };
+    }
+    
+    const result = await db.update(prcRows)
+      .set(updateData)
+      .where(eq(prcRows.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deletePrcRow(id: number): Promise<void> {
+    await db.delete(prcRows).where(eq(prcRows.id, id));
+  }
+  
+  async deletePrcRowsForDocument(documentId: number): Promise<void> {
+    await db.delete(prcRows).where(eq(prcRows.prcDocumentId, documentId));
+  }
+  
+  async getFlaggedPrcRows(referenceMonth?: string): Promise<PrcRow[]> {
+    const conditions = [eq(prcRows.isOutlierFlag, true)];
+    
+    if (referenceMonth) {
+      conditions.push(eq(prcRows.referenceMonth, referenceMonth));
+    }
+    
+    return await db.select().from(prcRows).where(and(...conditions));
+  }
+  
+  // PRC Publish Batches
+  async createPrcPublishBatch(data: InsertPrcPublishBatch): Promise<PrcPublishBatch> {
+    const result = await db.insert(prcPublishBatches).values(data).returning();
+    return result[0];
+  }
+  
+  async getPrcPublishBatches(filters?: { referenceMonth?: string; status?: string }): Promise<PrcPublishBatch[]> {
+    const conditions = [];
+    
+    if (filters?.referenceMonth) {
+      conditions.push(eq(prcPublishBatches.referenceMonth, filters.referenceMonth));
+    }
+    if (filters?.status) {
+      conditions.push(eq(prcPublishBatches.status, filters.status));
+    }
+    
+    let query = db.select().from(prcPublishBatches);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(prcPublishBatches.createdAt));
+  }
+  
+  async getPrcPublishBatch(id: number): Promise<PrcPublishBatch | undefined> {
+    const result = await db.select().from(prcPublishBatches).where(eq(prcPublishBatches.id, id));
+    return result[0];
+  }
+  
+  async updatePrcPublishBatch(id: number, data: Partial<InsertPrcPublishBatch>): Promise<PrcPublishBatch | undefined> {
+    const result = await db.update(prcPublishBatches)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(prcPublishBatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async publishPrcBatch(id: number, publishedByUserId: string, benchmarkIds: number[]): Promise<PrcPublishBatch | undefined> {
+    const result = await db.update(prcPublishBatches)
+      .set({
+        status: 'PUBLISHED',
+        publishedByUserId,
+        publishedAt: new Date(),
+        benchmarkIds,
+        benchmarksCreated: benchmarkIds.length,
+        updatedAt: new Date()
+      })
+      .where(eq(prcPublishBatches.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // PRC Stats
+  async getPrcMonthSummary(referenceMonth: string, isDemo?: boolean): Promise<{
+    documentCount: number;
+    verifiedCount: number;
+    totalRows: number;
+    flaggedRows: number;
+    supplierCoverage: number[];
+    submarketCoverage: string[];
+    productCoverage: string[];
+  }> {
+    const docs = await this.getPrcDocuments({ referenceMonth, isDemo });
+    const verifiedDocs = docs.filter(d => d.parseStatus === 'VERIFIED' || d.parseStatus === 'PUBLISHED');
+    
+    const rows = await this.getPrcRowsForMonth(referenceMonth, isDemo);
+    const flaggedRows = rows.filter(r => r.isOutlierFlag);
+    
+    const supplierIds = Array.from(new Set(docs.map(d => d.supplierId)));
+    const submarkets = Array.from(new Set(rows.map(r => r.submarket)));
+    const products = Array.from(new Set(rows.map(r => r.productType)));
+    
+    return {
+      documentCount: docs.length,
+      verifiedCount: verifiedDocs.length,
+      totalRows: rows.length,
+      flaggedRows: flaggedRows.length,
+      supplierCoverage: supplierIds,
+      submarketCoverage: submarkets,
+      productCoverage: products
+    };
   }
 }
 
