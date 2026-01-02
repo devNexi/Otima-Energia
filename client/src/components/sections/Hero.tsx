@@ -23,6 +23,9 @@ export function Hero() {
       {/* Content - Bottom left like DCVC */}
       <div className="relative z-10 min-h-screen flex items-end">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
+          <p className="text-lg lg:text-xl text-white/80 font-medium tracking-wide mb-4">
+            Sua energia. Sua escolha. Sua economia.
+          </p>
           <h1 className="dcvc-statement text-white max-w-4xl mb-6 leading-[1.3]">
             Economia inteligente para a energia da sua empresa no{" "}
             <span className="text-highlight inline-block mt-1">Mercado Livre</span>.

@@ -3887,7 +3887,7 @@ export class Storage implements IStorage {
     // Create default brand kit if none exists
     const defaultKit = await db.insert(brandKit).values({
       brandName: 'Ótima Energia',
-      tagline: 'Sua energia, nossa expertise',
+      tagline: 'Sua energia. Sua escolha. Sua economia.',
       primaryColor: '#9e3ffd',
       secondaryColor: '#df0af2',
       darkColor: '#16163f',

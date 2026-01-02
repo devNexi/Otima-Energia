@@ -9200,7 +9200,7 @@ export async function registerRoutes(
           <div class="header">
             <div>
               <div class="brand-name">${brandKit?.brandName || 'Ótima Energia'}</div>
-              <div class="tagline">${brandKit?.tagline || 'Sua energia, nossa expertise'}</div>
+              <div class="tagline">${brandKit?.tagline || 'Sua energia. Sua escolha. Sua economia.'}</div>
             </div>
             <div class="proposal-date">
               <div>Proposta #${proposal.publicId?.substring(0, 8).toUpperCase()}</div>

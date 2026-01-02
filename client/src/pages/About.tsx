@@ -13,6 +13,9 @@ export default function About() {
       <section className="bg-[#eee7f1] pt-32 pb-24 lg:pt-40 lg:pb-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl">
+            <p className="text-sm font-medium text-[#9e3ffd] uppercase tracking-wider mb-6">
+              Sua energia. Sua escolha. Sua economia.
+            </p>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
               Ótima Energia é uma corretora especializada em ajudar empresas brasileiras a acessar o mercado livre de energia com clareza, eficiência e total transparência.
             </p>

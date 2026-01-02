@@ -97,6 +97,11 @@ export function Footer() {
             />
           </Link>
 
+          {/* Slogan */}
+          <p className="text-sm font-medium text-[#9e3ffd]">
+            Sua energia. Sua escolha. Sua economia.
+          </p>
+
           {/* Copyright & Links */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">
             <span>©{currentYear} Ótima Energia. Todos os direitos reservados.</span>

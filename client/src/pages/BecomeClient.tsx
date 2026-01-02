@@ -96,6 +96,9 @@ export default function BecomeClient() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
+              <p className="text-sm font-medium text-[#9e3ffd] uppercase tracking-wider mb-4">
+                Sua energia. Sua escolha. Sua economia.
+              </p>
               <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
                 Simule sua economia com um diagnóstico técnico gratuito
               </h1>
