@@ -52,12 +52,14 @@ import {
   Briefcase,
   Scale,
   BookOpen,
-  ShieldAlert
+  ShieldAlert,
+  Target
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DictionaryPanel } from "@/components/dictionary/DictionaryPanel";
 import { ZohoIntakeErrors } from "@/components/admin/ZohoIntakeErrors";
 import { PrcManagement } from "@/components/prc/PrcManagement";
+import { AssemblyQueueTab } from "@/components/ops/AssemblyQueueTab";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -447,6 +449,13 @@ export default function Admin({ defaultTab }: AdminProps) {
               <Briefcase className="w-4 h-4" />
               {language === "pt" ? "Negócios" : "Deals"}
             </TabsTrigger>
+            {/* Assembly Queue - visible to ops and admin */}
+            {(user?.role === "ops" || user?.role === "admin") && (
+              <TabsTrigger value="assembly-queue" className="flex items-center gap-2" data-testid="tab-assembly-queue">
+                <Target className="w-4 h-4" />
+                {language === "pt" ? "Fila Montagem" : "Assembly Queue"}
+              </TabsTrigger>
+            )}
             {/* ECOS Dashboard - visible to all roles */}
             <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
               <Zap className="w-4 h-4" />
@@ -516,6 +525,16 @@ export default function Admin({ defaultTab }: AdminProps) {
                 onViewDeal={(dealId: string) => setSelectedDealId(dealId)}
               />
             )}
+          </TabsContent>
+
+          {/* Assembly Queue - visible to ops and admin */}
+          <TabsContent value="assembly-queue">
+            <AssemblyQueueTab 
+              onSelectDeal={(dealId) => {
+                setSelectedDealId(dealId);
+                setActiveTab("deals");
+              }}
+            />
           </TabsContent>
 
           {/* ECOS Dashboard - visible to all */}
