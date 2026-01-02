@@ -8015,6 +8015,72 @@ export async function registerRoutes(
   
   // --- PRC Rows ---
   
+  // Create a new PRC row (manual entry)
+  app.post("/api/prc/rows", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const { prcDocumentId, supplierId, referenceMonth, submarket, productType, termMonths, priceRPerMWh, confidence } = req.body;
+      
+      if (!prcDocumentId || !supplierId || !referenceMonth || !submarket || !productType || priceRPerMWh === undefined) {
+        return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+      
+      // Verify document exists
+      const document = await storage.getPrcDocument(prcDocumentId);
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      // Validate and coerce numeric fields
+      const parsedPrice = typeof priceRPerMWh === 'string' ? parseFloat(priceRPerMWh) : priceRPerMWh;
+      const parsedTerm = termMonths ? (typeof termMonths === 'string' ? parseInt(termMonths, 10) : termMonths) : null;
+      const parsedConfidence = confidence !== undefined ? (typeof confidence === 'string' ? parseInt(confidence, 10) : confidence) : 100;
+      
+      if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        return res.status(400).json({ success: false, error: "Invalid price value" });
+      }
+      
+      // Validate submarket and productType against allowed values
+      const validSubmarkets = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE'];
+      const validProducts = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100'];
+      
+      if (!validSubmarkets.includes(submarket)) {
+        return res.status(400).json({ success: false, error: "Invalid submarket" });
+      }
+      if (!validProducts.includes(productType)) {
+        return res.status(400).json({ success: false, error: "Invalid product type" });
+      }
+      
+      const row = await storage.createPrcRow({
+        prcDocumentId,
+        supplierId,
+        referenceMonth,
+        submarket,
+        productType,
+        termMonths: parsedTerm,
+        priceRPerMWh: String(parsedPrice),
+        confidence: parsedConfidence,
+        isOutlierFlag: false
+      });
+      
+      // Log audit
+      const userId = await getSessionUserId(req) || 'system';
+      await storage.logAdminAction({
+        action: 'PRC_ROW_CREATED',
+        entityType: 'prc_rows',
+        entityId: row.id,
+        actor: userId,
+        detailsJson: { prcDocumentId, submarket, productType, priceRPerMWh }
+      });
+      
+      res.json({ success: true, row });
+    } catch (error: any) {
+      console.error("Error creating PRC row:", error);
+      res.status(500).json({ success: false, error: "Failed to create row" });
+    }
+  });
+  
   // Get rows for a document
   app.get("/api/prc/documents/:id/rows", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;

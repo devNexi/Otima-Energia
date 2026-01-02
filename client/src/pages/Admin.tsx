@@ -57,6 +57,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DictionaryPanel } from "@/components/dictionary/DictionaryPanel";
 import { ZohoIntakeErrors } from "@/components/admin/ZohoIntakeErrors";
+import { PrcManagement } from "@/components/prc/PrcManagement";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -492,6 +493,13 @@ export default function Admin({ defaultTab }: AdminProps) {
               <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
                 <LinkIcon className="w-4 h-4" />
                 {language === "pt" ? "Integrações" : "Integrations"}
+              </TabsTrigger>
+            )}
+            {/* PRC Ingestion - visible to admin only */}
+            {user?.role === "admin" && (
+              <TabsTrigger value="prc" className="flex items-center gap-2" data-testid="tab-prc">
+                <TrendingUp className="w-4 h-4" />
+                {language === "pt" ? "PRCs" : "PRCs"}
               </TabsTrigger>
             )}
           </TabsList>
@@ -930,6 +938,13 @@ export default function Admin({ defaultTab }: AdminProps) {
                   </Tabs>
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* PRC Ingestion - admin only */}
+          {user?.role === "admin" && (
+            <TabsContent value="prc">
+              <PrcManagement />
             </TabsContent>
           )}
         </Tabs>
