@@ -8037,7 +8037,7 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "No file uploaded" });
       }
       
-      const { supplierId, referenceMonth, isDemo, submarketHint, source, notes, autoParse } = req.body;
+      const { supplierId, supplierName, referenceMonth, isDemo, submarketHint, source, notes, autoParse } = req.body;
       
       // Validate required fields - only referenceMonth is required now
       if (!referenceMonth) {
@@ -8057,7 +8057,7 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "Only PDF and image files are allowed" });
       }
       
-      // Handle supplier: if not provided, auto-create a prc_only stub
+      // Handle supplier: can be supplierId, supplierName, or auto-detect from filename
       let supplier;
       let parsedSupplierId: number;
       
@@ -8071,10 +8071,10 @@ export async function registerRoutes(
           return res.status(400).json({ success: false, error: "Supplier not found" });
         }
       } else {
-        // Extract supplier name from filename or create generic stub
+        // Use supplierName if provided, otherwise extract from filename
         const filename = file.originalname;
         const extractedName = extractSupplierNameFromFilename(filename);
-        const stubName = extractedName || `Unknown PRC ${Date.now()}`;
+        const stubName = supplierName || extractedName || `Unknown PRC ${Date.now()}`;
         const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         
         // Create prc_only supplier stub

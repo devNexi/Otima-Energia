@@ -100,7 +100,7 @@ export function PrcManagement() {
   });
   const [selectedDocument, setSelectedDocument] = useState<PrcDocument | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [newPrc, setNewPrc] = useState({ supplierId: '', referenceMonth: selectedMonth });
+  const [newPrc, setNewPrc] = useState({ supplierName: '', referenceMonth: selectedMonth });
   const [showAddRowForm, setShowAddRowForm] = useState(false);
   const [newRow, setNewRow] = useState({
     submarket: 'SECO',
@@ -313,7 +313,9 @@ export function PrcManagement() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('supplierId', newPrc.supplierId);
+      if (newPrc.supplierName.trim()) {
+        formData.append('supplierName', newPrc.supplierName.trim());
+      }
       formData.append('referenceMonth', newPrc.referenceMonth);
       
       const res = await fetch('/api/prc/documents/upload', {
@@ -336,7 +338,7 @@ export function PrcManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/prc/months/summary'] });
       setUploadDialogOpen(false);
       setSelectedFile(null);
-      setNewPrc({ supplierId: '', referenceMonth: selectedMonth });
+      setNewPrc({ supplierName: '', referenceMonth: selectedMonth });
     },
     onError: (error: Error) => {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
@@ -702,17 +704,16 @@ export function PrcManagement() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Supplier</Label>
-              <Select value={newPrc.supplierId} onValueChange={(v) => setNewPrc({ ...newPrc, supplierId: v })}>
-                <SelectTrigger data-testid="select-prc-supplier">
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s: any) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Supplier (optional)</Label>
+              <Input
+                placeholder="Enter supplier name (e.g. CAPACITECH)"
+                value={newPrc.supplierName}
+                onChange={(e) => setNewPrc({ ...newPrc, supplierName: e.target.value })}
+                data-testid="input-prc-supplier"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave blank to auto-detect from filename
+              </p>
             </div>
             <div>
               <Label>Reference Month</Label>
@@ -778,7 +779,7 @@ export function PrcManagement() {
                 Cancel
               </Button>
               <Button 
-                disabled={!selectedFile || !newPrc.supplierId || uploadPrcMutation.isPending}
+                disabled={!selectedFile || uploadPrcMutation.isPending}
                 onClick={() => selectedFile && uploadPrcMutation.mutate(selectedFile)}
                 data-testid="button-confirm-upload-prc"
               >
