@@ -106,6 +106,7 @@ export function AssemblyQueueTab({ onSelectDeal }: AssemblyQueueTabProps) {
               size="sm"
               onClick={() => refetch()}
               disabled={isRefetching}
+              data-testid="button-refresh-assembly-queue"
             >
               <RefreshCw className={cn("w-4 h-4 mr-2", isRefetching && "animate-spin")} />
               {isPt ? "Atualizar" : "Refresh"}

@@ -60,6 +60,7 @@ import { DictionaryPanel } from "@/components/dictionary/DictionaryPanel";
 import { ZohoIntakeErrors } from "@/components/admin/ZohoIntakeErrors";
 import { PrcManagement } from "@/components/prc/PrcManagement";
 import { AssemblyQueueTab } from "@/components/ops/AssemblyQueueTab";
+import SupplierManager from "@/pages/SupplierManager";
 
 const statusColors: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-800",
@@ -444,6 +445,11 @@ export default function Admin({ defaultTab }: AdminProps) {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="flex flex-wrap gap-1">
+            {/* Suppliers - first tab, visible to all roles */}
+            <TabsTrigger value="suppliers" className="flex items-center gap-2" data-testid="tab-suppliers">
+              <Building2 className="w-4 h-4" />
+              {language === "pt" ? "Fornecedores" : "Suppliers"}
+            </TabsTrigger>
             {/* Deals - visible to all roles (primary workspace) */}
             <TabsTrigger value="deals" className="flex items-center gap-2" data-testid="tab-deals">
               <Briefcase className="w-4 h-4" />
@@ -512,6 +518,11 @@ export default function Admin({ defaultTab }: AdminProps) {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {/* Suppliers - first tab */}
+          <TabsContent value="suppliers">
+            <SupplierManager />
+          </TabsContent>
 
           {/* Deals - primary workspace, visible to all */}
           <TabsContent value="deals">
