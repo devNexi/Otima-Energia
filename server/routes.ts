@@ -6562,6 +6562,15 @@ export async function registerRoutes(
       const dossier = await storage.getClientDossier(deal.clientId);
       let snapshotId = null;
       
+      // HARD GATE: Dossier must exist and be at least READY (not DRAFT)
+      if (!dossier || dossier.status === 'DRAFT') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "O dossiê deve estar completo (READY ou LOCKED) antes de enviar RFQ",
+          code: "DOSSIER_NOT_READY"
+        });
+      }
+      
       // If dossier is READY, auto-lock it and create snapshot before sending RFQ
       if (dossier && dossier.status === 'READY') {
         await storage.lockDossier(dossier.id, user?.id || 'system');
@@ -9118,6 +9127,15 @@ export async function registerRoutes(
       const items = await storage.getDealProposalItems(proposal.id);
       if (items.length === 0) {
         return res.status(400).json({ success: false, error: "Proposal has no items" });
+      }
+      
+      // HARD GATE: Must have at least 2 eligible quotes/items in proposal
+      if (items.length < 2) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "A proposta requer no mínimo 2 cotações elegíveis",
+          code: "INSUFFICIENT_QUOTES"
+        });
       }
       
       // Check at least one recommended
