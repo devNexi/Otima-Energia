@@ -56,14 +56,15 @@ interface PrcRow {
   prcDocumentId: number;
   supplierId: number;
   referenceMonth: string;
-  energyType: string;
+  productType: string;
   submarket: string;
-  supplyStart: string | null;
-  supplyEnd: string | null;
-  priceReaisMwh: number;
+  termMonths: number | null;
+  termLabel: string | null;
+  priceRPerMWh: string;
   validUntil: string | null;
   flaggedForReview: boolean;
   flagReason: string | null;
+  isOutlierFlag: boolean;
   notes: string | null;
   rawRow: string | null;
   createdAt: string;
@@ -193,11 +194,10 @@ export default function PrcReviewPage() {
   const startEditRow = (row: PrcRow) => {
     setEditingRowId(row.id);
     setEditedRow({
-      energyType: row.energyType,
+      productType: row.productType,
       submarket: row.submarket,
-      supplyStart: row.supplyStart,
-      supplyEnd: row.supplyEnd,
-      priceReaisMwh: row.priceReaisMwh,
+      termMonths: row.termMonths,
+      priceRPerMWh: row.priceRPerMWh,
       validUntil: row.validUntil,
       notes: row.notes
     });
@@ -388,9 +388,9 @@ export default function PrcReviewPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Type</TableHead>
+                            <TableHead>Product Type</TableHead>
                             <TableHead>Submarket</TableHead>
-                            <TableHead>Supply Period</TableHead>
+                            <TableHead>Term</TableHead>
                             <TableHead>Price (R$/MWh)</TableHead>
                             <TableHead>Valid Until</TableHead>
                             <TableHead>Status</TableHead>
@@ -399,22 +399,22 @@ export default function PrcReviewPage() {
                         </TableHeader>
                         <TableBody>
                           {rows.map((row) => (
-                            <TableRow key={row.id} className={row.flaggedForReview ? "bg-orange-50" : ""} data-testid={`row-prc-${row.id}`}>
+                            <TableRow key={row.id} className={row.flaggedForReview ? "bg-orange-50" : row.isOutlierFlag ? "bg-yellow-50" : ""} data-testid={`row-prc-${row.id}`}>
                               {editingRowId === row.id ? (
                                 <>
                                   <TableCell>
                                     <Select
-                                      value={editedRow.energyType || row.energyType}
-                                      onValueChange={(v) => setEditedRow({ ...editedRow, energyType: v })}
+                                      value={editedRow.productType || row.productType}
+                                      onValueChange={(v) => setEditedRow({ ...editedRow, productType: v })}
                                     >
-                                      <SelectTrigger className="w-28">
+                                      <SelectTrigger className="w-32">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="CONV">CONV</SelectItem>
-                                        <SelectItem value="I50">I50</SelectItem>
-                                        <SelectItem value="I100">I100</SelectItem>
-                                        <SelectItem value="I0">I0</SelectItem>
+                                        <SelectItem value="CONVENCIONAL">CONV</SelectItem>
+                                        <SelectItem value="INCENTIVADA_50">I50</SelectItem>
+                                        <SelectItem value="INCENTIVADA_100">I100</SelectItem>
+                                        <SelectItem value="INCENTIVADA_0">I0</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
@@ -434,28 +434,21 @@ export default function PrcReviewPage() {
                                     </Select>
                                   </TableCell>
                                   <TableCell>
-                                    <div className="flex gap-1">
-                                      <Input
-                                        type="date"
-                                        className="w-32"
-                                        value={editedRow.supplyStart || row.supplyStart || ""}
-                                        onChange={(e) => setEditedRow({ ...editedRow, supplyStart: e.target.value })}
-                                      />
-                                      <Input
-                                        type="date"
-                                        className="w-32"
-                                        value={editedRow.supplyEnd || row.supplyEnd || ""}
-                                        onChange={(e) => setEditedRow({ ...editedRow, supplyEnd: e.target.value })}
-                                      />
-                                    </div>
+                                    <Input
+                                      type="number"
+                                      className="w-20"
+                                      placeholder="Months"
+                                      value={editedRow.termMonths ?? row.termMonths ?? ""}
+                                      onChange={(e) => setEditedRow({ ...editedRow, termMonths: e.target.value ? parseInt(e.target.value) : null })}
+                                    />
                                   </TableCell>
                                   <TableCell>
                                     <Input
                                       type="number"
                                       step="0.01"
                                       className="w-28"
-                                      value={editedRow.priceReaisMwh ?? row.priceReaisMwh}
-                                      onChange={(e) => setEditedRow({ ...editedRow, priceReaisMwh: parseFloat(e.target.value) })}
+                                      value={editedRow.priceRPerMWh ?? row.priceRPerMWh}
+                                      onChange={(e) => setEditedRow({ ...editedRow, priceRPerMWh: e.target.value })}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -472,6 +465,11 @@ export default function PrcReviewPage() {
                                         Flagged
                                       </Badge>
                                     )}
+                                    {row.isOutlierFlag && (
+                                      <Badge variant="outline" className="text-yellow-600 border-yellow-300 text-xs">
+                                        Outlier
+                                      </Badge>
+                                    )}
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-1">
@@ -486,21 +484,23 @@ export default function PrcReviewPage() {
                                 </>
                               ) : (
                                 <>
-                                  <TableCell className="font-medium">{row.energyType}</TableCell>
+                                  <TableCell className="font-medium">{row.productType}</TableCell>
                                   <TableCell>{row.submarket}</TableCell>
                                   <TableCell className="text-sm">
-                                    {row.supplyStart && row.supplyEnd 
-                                      ? `${row.supplyStart} - ${row.supplyEnd}`
-                                      : row.supplyStart || row.supplyEnd || "-"}
+                                    {row.termMonths ? `${row.termMonths}mo` : row.termLabel || "-"}
                                   </TableCell>
                                   <TableCell className="font-mono">
-                                    R$ {row.priceReaisMwh.toFixed(2)}
+                                    R$ {parseFloat(row.priceRPerMWh).toFixed(2)}
                                   </TableCell>
                                   <TableCell>{row.validUntil || "-"}</TableCell>
                                   <TableCell>
                                     {row.flaggedForReview ? (
                                       <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
                                         {row.flagReason || "Flagged"}
+                                      </Badge>
+                                    ) : row.isOutlierFlag ? (
+                                      <Badge variant="outline" className="text-yellow-600 border-yellow-300 text-xs">
+                                        Outlier
                                       </Badge>
                                     ) : (
                                       <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
@@ -597,6 +597,53 @@ export default function PrcReviewPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {isVerified && (
+                <Card className="border-green-200 bg-green-50/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-green-700">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Benchmark Preview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      This document's rows will contribute to benchmarks when published.
+                    </p>
+                    {rows.length > 0 && (
+                      <div className="space-y-2 text-sm">
+                        {Object.entries(
+                          rows.filter(r => !r.isOutlierFlag).reduce((acc, row) => {
+                            const termDisplay = row.termMonths ? `${row.termMonths}mo` : 'N/A';
+                            const key = `${row.submarket} | ${row.productType} | ${termDisplay}`;
+                            if (!acc[key]) acc[key] = { count: 0, prices: [] as number[] };
+                            acc[key].count++;
+                            acc[key].prices.push(parseFloat(row.priceRPerMWh));
+                            return acc;
+                          }, {} as Record<string, { count: number; prices: number[] }>)
+                        ).map(([key, data]) => {
+                          const sortedPrices = data.prices.sort((a, b) => a - b);
+                          const lowPrice = sortedPrices[Math.floor(sortedPrices.length * 0.25)] || sortedPrices[0];
+                          const highPrice = sortedPrices[Math.floor(sortedPrices.length * 0.75)] || sortedPrices[sortedPrices.length - 1];
+                          return (
+                            <div key={key} className="flex justify-between items-center p-2 bg-white rounded border">
+                              <span className="font-medium text-xs">{key}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {data.count} row(s) | R$ {lowPrice.toFixed(0)} - {highPrice.toFixed(0)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <Link href={`/admin/benchmarks?month=${document.referenceMonth}`}>
+                      <Button variant="outline" size="sm" className="w-full mt-2" data-testid="button-view-benchmarks">
+                        View All Benchmarks
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
