@@ -3961,3 +3961,258 @@ export const prcRowsRelations = relations(prcRows, ({ one }) => ({
 }));
 
 // ============== END PRC DOCUMENTS ==============
+
+// ============== BRAND KIT ==============
+// Admin-editable branding configuration for customer-facing documents
+
+export const brandKit = pgTable("brand_kit", {
+  id: serial("id").primaryKey(),
+  
+  // Brand identity
+  brandName: text("brand_name").default("Ótima Energia").notNull(),
+  tagline: text("tagline"),
+  
+  // Colors (hex values matching website CSS tokens)
+  primaryColor: text("primary_color").default("#9e3ffd").notNull(),
+  secondaryColor: text("secondary_color").default("#df0af2").notNull(),
+  darkColor: text("dark_color").default("#16163f").notNull(),
+  lightBgColor: text("light_bg_color").default("#eee7f1").notNull(),
+  textColor: text("text_color").default("#736d77").notNull(),
+  
+  // Typography
+  fontFamily: text("font_family").default("Inter").notNull(),
+  headingFontFamily: text("heading_font_family"),
+  
+  // Logo assets (references to object storage)
+  logoUrl: text("logo_url"),
+  logoLightUrl: text("logo_light_url"),
+  faviconUrl: text("favicon_url"),
+  
+  // Footer content
+  footerText: text("footer_text").default("Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil"),
+  footerPhone: text("footer_phone"),
+  footerAddress: text("footer_address"),
+  
+  // Website reference
+  websiteUrl: text("website_url").default("https://otimaenergia.com"),
+  websiteStyleRef: text("website_style_ref"),
+  
+  // Audit
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedByUserId: text("updated_by_user_id").references(() => users.id),
+});
+
+export const insertBrandKitSchema = createInsertSchema(brandKit).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertBrandKit = z.infer<typeof insertBrandKitSchema>;
+export type BrandKit = typeof brandKit.$inferSelect;
+
+// ============== END BRAND KIT ==============
+
+// ============== PROPOSAL OS (Deal-Centric) ==============
+// Proposals generated from dealQuotes (immutable Deal OS quotes)
+// NOTE: This is separate from legacy `proposals` table which uses supplierQuotes
+
+export const dealProposalStatusEnum = ["DRAFT", "GENERATED", "SENT", "VIEWED", "ACCEPTED", "REJECTED", "EXPIRED"] as const;
+export type DealProposalStatus = typeof dealProposalStatusEnum[number];
+
+export const dealProposals = pgTable("deal_proposals", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationships
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  
+  // Status & lifecycle
+  status: text("status").default("DRAFT").notNull(), // DRAFT, GENERATED, SENT, VIEWED, ACCEPTED, REJECTED, EXPIRED
+  
+  // Public access
+  publicId: varchar("public_id", { length: 50 }).unique(), // URL-safe slug for public access
+  publicEnabled: boolean("public_enabled").default(true),
+  
+  // PDF document reference
+  pdfDocId: integer("pdf_doc_id").references(() => dealDocuments.id),
+  
+  // View tracking
+  viewCount: integer("view_count").default(0),
+  lastViewedAt: timestamp("last_viewed_at"),
+  sentAt: timestamp("sent_at"),
+  
+  // Audit
+  createdByUserId: text("created_by_user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  
+  // Demo mode
+  isDemo: boolean("is_demo").default(false),
+});
+
+export const insertDealProposalSchema = createInsertSchema(dealProposals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+  lastViewedAt: true,
+});
+
+export type InsertDealProposal = z.infer<typeof insertDealProposalSchema>;
+export type DealProposal = typeof dealProposals.$inferSelect;
+
+// Deal Proposal Items - Individual quote lines in a deal proposal
+export const dealProposalMarginTypeEnum = ["ADD_R_PER_MWH", "ADD_PERCENT"] as const;
+export type DealProposalMarginType = typeof dealProposalMarginTypeEnum[number];
+
+export const dealProposalItems = pgTable("deal_proposal_items", {
+  id: serial("id").primaryKey(),
+  
+  // Relationships
+  proposalId: varchar("proposal_id", { length: 255 }).references(() => dealProposals.id).notNull(),
+  dealQuoteId: varchar("deal_quote_id", { length: 255 }).references(() => dealQuotes.id).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  
+  // Denormalized for stability
+  supplierName: text("supplier_name").notNull(),
+  
+  // Energy product details
+  productType: text("product_type"), // CONVENCIONAL, INCENTIVADA, etc.
+  submarket: text("submarket"), // SECO, S, NE, N
+  termMonths: integer("term_months"),
+  validUntil: date("valid_until"),
+  
+  // Pricing (AUDIT ONLY - supplier base price NEVER shown publicly)
+  supplierBaseEnergyPriceRmwh: decimal("supplier_base_energy_price_rmwh", { precision: 10, scale: 4 }),
+  
+  // Margin calculation
+  marginType: text("margin_type").default("ADD_R_PER_MWH").notNull(), // ADD_R_PER_MWH, ADD_PERCENT
+  marginValue: decimal("margin_value", { precision: 12, scale: 4 }).default("0").notNull(),
+  
+  // Final price (SHOWN to customer)
+  finalEnergyPriceRmwh: decimal("final_energy_price_rmwh", { precision: 10, scale: 4 }).notNull(),
+  
+  // Display flags
+  isRecommended: boolean("is_recommended").default(false),
+  displayOrder: integer("display_order").default(0),
+  
+  // Notes
+  publicNotes: text("public_notes"), // Customer-safe notes
+  notesInternal: text("notes_internal"), // Never shown publicly
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealProposalItemSchema = createInsertSchema(dealProposalItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealProposalItem = z.infer<typeof insertDealProposalItemSchema>;
+export type DealProposalItem = typeof dealProposalItems.$inferSelect;
+
+// Deal Proposal Snapshots - Immutable record of proposal at generation time
+export const dealProposalSnapshots = pgTable("deal_proposal_snapshots", {
+  id: serial("id").primaryKey(),
+  
+  // One snapshot per proposal
+  proposalId: varchar("proposal_id", { length: 255 }).references(() => dealProposals.id).unique().notNull(),
+  
+  // Immutable snapshot data
+  snapshotJson: jsonb("snapshot_json").notNull(),
+  sha256Hash: text("sha256_hash").notNull(),
+  
+  // Audit
+  createdByUserId: text("created_by_user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  
+  isDemo: boolean("is_demo").default(false),
+});
+
+export const insertDealProposalSnapshotSchema = createInsertSchema(dealProposalSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealProposalSnapshot = z.infer<typeof insertDealProposalSnapshotSchema>;
+export type DealProposalSnapshot = typeof dealProposalSnapshots.$inferSelect;
+
+// Deal Proposal Views - Track each view of public proposal
+export const dealProposalViews = pgTable("deal_proposal_views", {
+  id: serial("id").primaryKey(),
+  
+  proposalId: varchar("proposal_id", { length: 255 }).references(() => dealProposals.id).notNull(),
+  
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+  ipHash: text("ip_hash"), // Hashed for privacy
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  
+  isDemo: boolean("is_demo").default(false),
+});
+
+export const insertDealProposalViewSchema = createInsertSchema(dealProposalViews).omit({
+  id: true,
+  viewedAt: true,
+});
+
+export type InsertDealProposalView = z.infer<typeof insertDealProposalViewSchema>;
+export type DealProposalView = typeof dealProposalViews.$inferSelect;
+
+// Relations for Deal Proposal OS
+export const dealProposalsRelations = relations(dealProposals, ({ one, many }) => ({
+  deal: one(deals, {
+    fields: [dealProposals.dealId],
+    references: [deals.id],
+  }),
+  client: one(clients, {
+    fields: [dealProposals.clientId],
+    references: [clients.id],
+  }),
+  createdBy: one(users, {
+    fields: [dealProposals.createdByUserId],
+    references: [users.id],
+  }),
+  pdfDocument: one(dealDocuments, {
+    fields: [dealProposals.pdfDocId],
+    references: [dealDocuments.id],
+  }),
+  items: many(dealProposalItems),
+  snapshot: one(dealProposalSnapshots),
+  views: many(dealProposalViews),
+}));
+
+export const dealProposalItemsRelations = relations(dealProposalItems, ({ one }) => ({
+  proposal: one(dealProposals, {
+    fields: [dealProposalItems.proposalId],
+    references: [dealProposals.id],
+  }),
+  dealQuote: one(dealQuotes, {
+    fields: [dealProposalItems.dealQuoteId],
+    references: [dealQuotes.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [dealProposalItems.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+export const dealProposalSnapshotsRelations = relations(dealProposalSnapshots, ({ one }) => ({
+  proposal: one(dealProposals, {
+    fields: [dealProposalSnapshots.proposalId],
+    references: [dealProposals.id],
+  }),
+  createdBy: one(users, {
+    fields: [dealProposalSnapshots.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const dealProposalViewsRelations = relations(dealProposalViews, ({ one }) => ({
+  proposal: one(dealProposals, {
+    fields: [dealProposalViews.proposalId],
+    references: [dealProposals.id],
+  }),
+}));
+
+// ============== END PROPOSAL OS (Deal-Centric) ==============

@@ -1,0 +1,450 @@
+You are working inside the existing Ótima Energia admin portal.
+
+System context (already built):
+
+RBAC + session auth (admin/ops/sales)
+
+Deal OS state machine + immutable dealQuotes
+
+RFQ dispatch + quote intake
+
+Client Dossiê workflow (draft → ready → locked)
+
+Deal documents storage (GCS) + audit log
+
+Demo mode seeder (isDemo=true)
+
+ECOS refactor: deal-centric snapshots + insights language
+
+Business goal for this build:
+Renan needs to generate customer-facing documents that look like Ótima’s website:
+
+Proposal PDF + shareable web page (customer decision doc)
+
+ECOS Snapshot Insight PDF (pre-sales “insight pack”)
+
+Critical constraints:
+
+Do NOT build e-sign, client portal, or continuous monitoring.
+
+Do NOT expose supplier base prices or internal commission logic in customer outputs.
+
+Outputs must be auditable + immutable + brand-consistent.
+
+✅ A) BRANDING SYSTEM (FOUNDATION FOR ALL CUSTOMER OUTPUTS)
+1) Create a “Brand Kit” config (admin-editable)
+
+Add table:
+
+brandKit
+
+id (pk)
+
+brandName text default “Ótima Energia”
+
+primaryColor text (hex) (default = pull from website theme if known)
+
+secondaryColor text (hex)
+
+fontFamily text (default: Inter or system fallback)
+
+logoDocId (FK dealDocuments.id OR a new assets table)
+
+faviconDocId optional
+
+websiteStyleRef text (optional: “match otimaenergia.com”)
+
+updatedAt, updatedBy
+
+Add admin UI: Settings → Brand Kit
+
+Upload logo (SVG/PNG)
+
+Set colors + font
+
+Preview a sample proposal header live
+
+2) Shared template components
+
+Create a reusable branded layout wrapper used by:
+
+Proposal public page
+
+Proposal PDF
+
+ECOS Snapshot PDF
+
+Rules:
+
+Use Brand Kit logo in header
+
+Use primary color for accents, table headers, badges
+
+Footer: “Ótima Energia • contato@otimaenergia.com.br
+ • Rio de Janeiro - Brasil”
+
+No stock “generic” styling. Must match the calm, modern look of website.
+
+✅ B) PROPOSAL OS v1 — Canonical Source = dealQuotes
+Important clarification:
+
+All proposals must be generated from dealQuotes (Deal OS immutable quotes).
+
+supplierQuotes is legacy. Keep it for historical CRM-lite if you want, but Proposal OS must not depend on it.
+
+✅ 1) NEW TABLES (Proposal OS)
+proposals
+
+id (pk)
+
+dealId (FK deals.id, required)
+
+clientId (FK clients.id, required)
+
+status enum: DRAFT | GENERATED | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
+
+createdByUserId (FK users.id)
+
+createdAt, updatedAt
+
+publicId (unique slug)
+
+publicEnabled boolean default true
+
+pdfDocId (FK dealDocuments.id, nullable)
+
+sentAt, lastViewedAt
+
+viewCount int default 0
+
+isDemo boolean default false
+
+proposalItems
+
+Each chosen supplier quote line (1–3 max)
+
+id (pk)
+
+proposalId (FK proposals.id)
+
+dealQuoteId (FK deal_quotes.id) required
+
+supplierId (FK suppliers.id)
+
+supplierName text (denormalized for stability)
+
+productType enum: CONVENCIONAL | INCENTIVADA | UNKNOWN
+
+submarket enum: SECO | S | NE | N | UNKNOWN
+
+termMonths int
+
+validUntil date nullable
+
+Pricing fields
+
+supplierBaseEnergyPriceRmwh numeric(10,4) ✅ stored (audit) ❌ never shown publicly
+
+marginType enum: ADD_R_PER_MWH | ADD_PERCENT
+
+marginValue numeric(12,4)
+
+finalEnergyPriceRmwh numeric(10,4) ✅ shown publicly
+
+Other:
+
+isRecommended boolean default false
+
+publicNotes text nullable (customer-safe text)
+
+notesInternal text nullable (never public)
+
+proposalSnapshots (immutable)
+
+id (pk)
+
+proposalId (unique FK)
+
+snapshotJson jsonb
+
+sha256Hash text
+
+createdAt
+
+createdByUserId
+
+isDemo
+
+proposalViews
+
+id (pk)
+
+proposalId (FK)
+
+viewedAt
+
+ipHash nullable
+
+userAgent nullable
+
+isDemo
+
+✅ 2) PROPOSAL BUILDER UX (RENAN-FIRST)
+
+Location:
+
+Deal detail page: add tab “Propostas” (Sales/Admin only)
+
+Flow:
+
+Button: “Criar Proposta”
+
+Choose mode:
+
+WINNER_ONLY (default: selected quote)
+
+COMPARE (choose 2–3 quotes)
+
+For each selected quote:
+
+show parsed normalized summary from dealQuotes:
+
+energyType, term, product, submarket, validity
+
+input margin:
+
+default ADD_R_PER_MWH
+
+value
+
+compute finalPrice live
+
+Mark one quote as “Recomendado” (required)
+
+Validate + Generate
+
+Guardrails:
+
+Block “Generate” unless:
+
+Dossiê is LOCKED
+
+at least one quote selected
+
+margin non-negative
+
+validity not expired (or require force generate confirmation)
+
+✅ 3) PUBLIC PROPOSAL PAGE + PDF (BRANDED)
+Template content rules (customer safe)
+
+Show:
+
+Client name
+
+Proposal date
+
+Offer summary (Recommended)
+
+Optional comparison table (2–3 offers max)
+
+“Próximos passos” section
+
+Disclaimers
+
+Never show:
+
+supplierBaseEnergyPriceRmwh
+
+margin values
+
+commission model
+
+rawQuoteJson
+
+internal notes
+
+audit hash
+
+Disclaimers (PT-BR first, EN toggle optional)
+
+Use cautious, non-guarantee language:
+
+“Estimativas baseadas nas informações fornecidas e condições indicadas na cotação.”
+
+“Valores podem variar conforme perfil de consumo, janelas de contratação e condições finais do fornecedor.”
+
+“Esta proposta não constitui contrato. A contratação final depende de validação e aceite das partes.”
+
+PDF generation
+
+Use Playwright server-side:
+
+Render the same branded HTML template
+
+Save to object storage
+
+Create dealDocument record: type=PROPOSAL_PDF, relatedId=proposalId
+
+Set proposals.pdfDocId
+
+✅ 4) TRACKING + AUDITABILITY
+Proposal list per deal
+
+Show:
+
+status badge
+
+createdAt
+
+createdBy
+
+viewCount
+
+lastViewedAt
+
+buttons:
+
+View
+
+Copy link
+
+Download PDF
+
+Mark as Sent
+
+Mark Accepted/Rejected (manual)
+
+Immutability
+
+Once GENERATED, proposal becomes read-only.
+
+Any changes require creating a new proposal (versioning by multiple proposal rows).
+
+All actions must log to adminAuditLog:
+
+entityType=proposal
+
+action=create/update/generate/view/mark_sent/accept/reject
+
+include source=portal + user
+
+✅ C) BRANDED ECOS SNAPSHOT INSIGHT PDF (PRE-SALES)
+
+ECOS is now pre-sales insight and deal-centric. We need a branded, customer-facing PDF from the snapshot.
+
+Endpoint
+
+POST /api/ecos/snapshots/:snapshotId/pdf
+Rules:
+
+Sales/Admin only
+
+Generates a branded PDF “Pacote de Insights ECOS”
+
+Stores as dealDocument (type=ECOS_INSIGHT_PDF)
+
+Links it to the snapshot (add pdfDocId to deal_ecos_snapshots if not already)
+
+PDF content (customer-safe)
+
+Include:
+
+A clear headline: “Resumo de Posicionamento de Preço”
+
+Their current tariff/price assumption (from bill OCR / user input)
+
+Benchmark band positioning (visual but simple)
+
+Confidence level explanation (simple)
+
+“O que isso significa” section
+
+“Próximos passos sugeridos” talk track (from engine)
+
+Disclaimers: no guarantee
+
+Do NOT include:
+
+internal benchmark rows
+
+supplier-specific PRC doc references
+
+internal calculations beyond summary
+
+Branding
+
+Must use Brand Kit just like proposals.
+
+✅ D) QUOTE SOURCE RULES (IMPORTANT)
+
+Proposal OS must use dealQuotes as the canonical source.
+
+For each dealQuoteId:
+
+pull normalized fields:
+
+baseEnergyPriceRmwh
+
+energyType
+
+priceStructure
+
+indexationRules
+
+validUntil
+
+supplierId
+
+store baseEnergyPrice in proposalItems as audit-only
+
+If a dealQuote lacks baseEnergyPriceRmwh (not normalized yet):
+
+block selection OR prompt “normalize first”
+
+✅ E) DEMO MODE SUPPORT
+
+Update demo seeder:
+
+Add 5 proposals across demo deals:
+
+2 generated, 1 viewed
+
+1 draft
+
+1 sent
+
+Add 2 ECOS insight PDFs
+All with isDemo=true
+
+✅ F) ACCEPTANCE CRITERIA
+
+Sales user can:
+
+Open deal with dealQuotes
+
+Create proposal (winner or compare)
+
+Add margin → final price preview
+
+Generate proposal (requires dossier LOCKED)
+
+Copy link, open in incognito → view tracking increments
+
+Download branded PDF
+
+Confirm supplier base price / margin never appears in public output
+
+Generate branded ECOS snapshot PDF
+
+All actions show in audit log
+
+✅ IMPORTANT UX NOTE
+
+Proposals and ECOS PDFs must look like they came from otimaenergia.com:
+
+calm, modern, “venture-grade” polish
+
+consistent typography and spacing
+
+logo + brand colors consistently applied
