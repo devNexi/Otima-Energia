@@ -1705,9 +1705,20 @@ export const dealQuotes = pgTable("deal_quotes", {
   energyType: text("energy_type"),
   priceStructure: text("price_structure"),
   baseEnergyPriceRmwh: decimal("base_energy_price_rmwh", { precision: 10, scale: 4 }),
+  
+  // Client-facing uplifted price (base + commission markup) - ONLY this shown to client
+  clientEnergyPriceRmwh: decimal("client_energy_price_rmwh", { precision: 10, scale: 4 }),
+  
+  // Term for proposal grouping (each supplier×term = distinct quote row)
+  termMonths: integer("term_months"),
+  
   indexationRules: jsonb("indexation_rules"),
   flexibilityClauses: jsonb("flexibility_clauses"),
   penaltyClauses: jsonb("penalty_clauses"),
+  
+  // Quote completeness (required for proposal eligibility)
+  isComplete: boolean("is_complete").default(false), // All required fields populated
+  isRiskFlagged: boolean("is_risk_flagged").default(false), // AI or manual risk flag
   
   // Commission terms offered
   commissionModel: text("commission_model"),
@@ -4052,9 +4063,17 @@ export const dealProposals = pgTable("deal_proposals", {
   // ============ BASELINE (Bill-derived) ============
   // Frozen at proposal creation from client bill data
   baselineConsumptionMwh12m: decimal("baseline_consumption_mwh_12m", { precision: 12, scale: 3 }), // Annual consumption (last 12mo or annualized)
-  baselineEnergySupplyCost12m: decimal("baseline_energy_supply_cost_12m", { precision: 14, scale: 2 }), // R$ energy supply component only
+  baselineEnergySupplyCost12m: decimal("baseline_energy_supply_cost_12m", { precision: 14, scale: 2 }), // R$ energy supply component only (extracted or manual)
   baselineIsAnnualized: boolean("baseline_is_annualized").default(false), // True if <12 months data extrapolated
   baselineSourceNote: text("baseline_source_note"), // "Últimos 12 meses" or "Anualizado de X meses"
+  
+  // ============ BASELINE FALLBACK (when extraction fails) ============
+  baselineEnergySupplyCostManual: decimal("baseline_energy_supply_cost_manual", { precision: 14, scale: 2 }), // Manually entered cost
+  baselineCostIsProxy: boolean("baseline_cost_is_proxy").default(false), // True if conservative proxy applied
+  baselineProxyLabel: text("baseline_proxy_label"), // "Estimativa conservadora" when proxy used
+  
+  // ============ IMMUTABLE SNAPSHOT ============
+  proposalSnapshotJson: jsonb("proposal_snapshot_json"), // Frozen: baseline + quotes + savings + recommendation
   
   // ============ RECOMMENDED OPTION ============
   recommendedItemId: integer("recommended_item_id"), // FK to dealProposalItems.id (operator-selected)
@@ -4121,8 +4140,11 @@ export const dealProposalItems = pgTable("deal_proposal_items", {
   marginType: text("margin_type").default("ADD_R_PER_MWH").notNull(), // ADD_R_PER_MWH, ADD_PERCENT
   marginValue: decimal("margin_value", { precision: 12, scale: 4 }).default("0").notNull(),
   
-  // Final price (SHOWN to customer) - This is the client_price_r$/mwh (uplifted)
-  finalEnergyPriceRmwh: decimal("final_energy_price_rmwh", { precision: 10, scale: 4 }).notNull(),
+  // Client-facing price (SHOWN to customer) - Uplifted price with commission
+  clientEnergyPriceRmwh: decimal("client_energy_price_rmwh", { precision: 10, scale: 4 }).notNull(),
+  
+  // Legacy field for backward compatibility (same as clientEnergyPriceRmwh)
+  finalEnergyPriceRmwh: decimal("final_energy_price_rmwh", { precision: 10, scale: 4 }),
   
   // ============ COMPUTED SAVINGS (frozen at proposal creation) ============
   // Based on: baseline_cost_12m vs (MWh_annual × client_price)
