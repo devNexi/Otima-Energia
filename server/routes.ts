@@ -53,6 +53,7 @@ import { logAuditEvent } from "./audit";
 import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
+import { processPrcDocumentWithBuffer } from "./prc-parser";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -7923,6 +7924,107 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error creating PRC document:", error);
       res.status(500).json({ success: false, error: "Failed to create PRC document" });
+    }
+  });
+  
+  // Upload PRC PDF with auto-parse pipeline
+  app.post("/api/prc/documents/upload", upload.single("file"), async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: "No file uploaded" });
+      }
+      
+      const { supplierId, referenceMonth, isDemo } = req.body;
+      
+      // Validate required fields
+      if (!supplierId || !referenceMonth) {
+        return res.status(400).json({ success: false, error: "Missing supplierId or referenceMonth" });
+      }
+      
+      // Validate supplierId is numeric
+      const parsedSupplierId = parseInt(supplierId, 10);
+      if (isNaN(parsedSupplierId) || parsedSupplierId <= 0) {
+        return res.status(400).json({ success: false, error: "Invalid supplierId" });
+      }
+      
+      // Validate referenceMonth format (YYYY-MM)
+      if (!/^\d{4}-\d{2}$/.test(referenceMonth)) {
+        return res.status(400).json({ success: false, error: "Invalid referenceMonth format. Use YYYY-MM" });
+      }
+      
+      // Validate file type - only allow PDF for now (images route to OCR-only)
+      const isPdf = file.mimetype === 'application/pdf';
+      const isImage = ['image/png', 'image/jpeg', 'image/jpg'].includes(file.mimetype);
+      
+      if (!isPdf && !isImage) {
+        return res.status(400).json({ success: false, error: "Only PDF and image files are allowed" });
+      }
+      
+      // Get supplier for naming
+      const supplier = await storage.getSupplier(parsedSupplierId);
+      if (!supplier) {
+        return res.status(400).json({ success: false, error: "Supplier not found" });
+      }
+      
+      // Upload to object storage
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ success: false, error: "Object storage not configured" });
+      }
+      
+      const timestamp = Date.now();
+      const safeFilename = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storageKey = `prc/${referenceMonth}/${parsedSupplierId}_${timestamp}_${safeFilename}`;
+      
+      const objectStorage = new ObjectStorageService();
+      await objectStorage.upload(storageKey, file.buffer, file.mimetype);
+      
+      const fileUrl = `https://storage.googleapis.com/${bucketId}/${storageKey}`;
+      const sourceName = `PRC ${supplier.name} ${referenceMonth}`;
+      const userId = await getSessionUserId(req);
+      
+      // Create PRC document record
+      const document = await storage.createPrcDocument({
+        supplierId: parsedSupplierId,
+        referenceMonth,
+        sourceName,
+        fileStorageKey: storageKey,
+        fileUrl,
+        originalFilename: file.originalname,
+        fileSizeBytes: file.size,
+        uploadedByUserId: userId || null,
+        isDemo: isDemo === 'true' || isDemo === true
+      });
+      
+      // Log audit
+      await storage.logAdminAction({
+        action: 'PRC_DOCUMENT_UPLOADED',
+        entityType: 'prc_documents',
+        entityId: document.id,
+        actor: userId || 'system',
+        detailsJson: { supplierId: parsedSupplierId, referenceMonth, originalFilename: file.originalname, sourceName, fileType: isPdf ? 'pdf' : 'image' }
+      });
+      
+      // Trigger auto-parse pipeline (async - don't await to respond quickly)
+      // Pass isImage flag to parser to use OCR directly for images
+      processPrcDocumentWithBuffer(document.id, file.buffer, isImage)
+        .then(() => console.log(`PRC document ${document.id} parsing completed`))
+        .catch((err) => console.error(`PRC document ${document.id} parsing failed:`, err));
+      
+      res.json({ 
+        success: true, 
+        document: {
+          ...document,
+          supplierName: supplier.name
+        },
+        message: "File uploaded, parsing started"
+      });
+    } catch (error: any) {
+      console.error("Error uploading PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to upload PRC document" });
     }
   });
   

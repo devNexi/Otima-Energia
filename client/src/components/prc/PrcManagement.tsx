@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,8 @@ export function PrcManagement() {
     termMonths: '24',
     priceRPerMWh: ''
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const SUBMARKETS = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE'];
   const PRODUCT_TYPES = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100'];
@@ -304,6 +306,40 @@ export function PrcManagement() {
       toast({ title: "Row deleted", description: "Price row has been removed." });
       queryClient.invalidateQueries({ queryKey: ['/api/prc/documents/rows', selectedDocument?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/prc/months/summary'] });
+    }
+  });
+
+  const uploadPrcMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('supplierId', newPrc.supplierId);
+      formData.append('referenceMonth', newPrc.referenceMonth);
+      
+      const res = await fetch('/api/prc/documents/upload', {
+        method: 'POST',
+        headers: { 'x-session-id': sessionId || '' },
+        body: formData
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to upload PRC document');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "PRC uploaded", 
+        description: `${data.document.originalFilename} uploaded. Auto-parsing started.` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/prc/documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/prc/months/summary'] });
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setNewPrc({ supplierId: '', referenceMonth: selectedMonth });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     }
   });
 
@@ -694,29 +730,64 @@ export function PrcManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Drag and drop your PRC file here, or click to browse
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Supports PDF, PNG, JPG files up to 10MB
-              </p>
+            <div 
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${selectedFile ? 'border-green-400 bg-green-50' : 'hover:border-primary hover:bg-muted/50'}`}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {selectedFile ? (
+                <>
+                  <FileText className="w-12 h-12 mx-auto mb-2 text-green-600" />
+                  <p className="text-sm font-medium">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                  >
+                    Change file
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Click to select your PRC file
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Supports PDF, PNG, JPG files up to 10MB
+                  </p>
+                </>
+              )}
               <input
+                ref={fileInputRef}
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                style={{ display: 'none' }}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setSelectedFile(file);
+                }}
                 data-testid="input-prc-file"
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+              <Button variant="outline" onClick={() => { setUploadDialogOpen(false); setSelectedFile(null); }}>
                 Cancel
               </Button>
-              <Button disabled data-testid="button-confirm-upload-prc">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload
+              <Button 
+                disabled={!selectedFile || !newPrc.supplierId || uploadPrcMutation.isPending}
+                onClick={() => selectedFile && uploadPrcMutation.mutate(selectedFile)}
+                data-testid="button-confirm-upload-prc"
+              >
+                {uploadPrcMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {uploadPrcMutation.isPending ? 'Uploading...' : 'Upload & Parse'}
               </Button>
             </div>
           </div>
@@ -833,9 +904,14 @@ export function PrcManagement() {
                               toast({ title: "Price required", description: "Please enter a price value.", variant: "destructive" });
                               return;
                             }
+                            const price = parseFloat(newRow.priceRPerMWh);
+                            if (isNaN(price) || price <= 0) {
+                              toast({ title: "Invalid price", description: "Please enter a valid positive number.", variant: "destructive" });
+                              return;
+                            }
                             createRowMutation.mutate({ documentId: selectedDocument.id, row: newRow });
                           }}
-                          disabled={createRowMutation.isPending}
+                          disabled={createRowMutation.isPending || !newRow.priceRPerMWh}
                           data-testid="button-save-new-row"
                         >
                           {createRowMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}

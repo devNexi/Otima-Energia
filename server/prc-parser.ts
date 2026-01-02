@@ -344,7 +344,7 @@ export async function parsePrcDocumentWithOcr(imageBuffer: Buffer): Promise<PrcP
   return result;
 }
 
-export async function processPrcDocumentWithBuffer(documentId: number, pdfBuffer: Buffer): Promise<void> {
+export async function processPrcDocumentWithBuffer(documentId: number, fileBuffer: Buffer, isImage: boolean = false): Promise<void> {
   const document = await storage.getPrcDocument(documentId);
   if (!document) {
     throw new Error(`PRC document ${documentId} not found`);
@@ -353,11 +353,20 @@ export async function processPrcDocumentWithBuffer(documentId: number, pdfBuffer
   await storage.updatePrcDocumentParseStatus(documentId, 'PARSING');
   
   try {
-    let result = await parsePrcDocument(pdfBuffer);
+    let result: PrcParseResult;
     
-    if (!result.success || result.rows.length === 0) {
-      console.log(`Text extraction failed for doc ${documentId}, attempting OCR...`);
-      result = await parsePrcDocumentWithOcr(pdfBuffer);
+    // For images, skip PDF text extraction and go directly to OCR
+    if (isImage) {
+      console.log(`Processing image doc ${documentId} with OCR directly`);
+      result = await parsePrcDocumentWithOcr(fileBuffer);
+    } else {
+      // For PDFs, try text extraction first
+      result = await parsePrcDocument(fileBuffer);
+      
+      if (!result.success || result.rows.length === 0) {
+        console.log(`Text extraction failed for doc ${documentId}, attempting OCR...`);
+        result = await parsePrcDocumentWithOcr(fileBuffer);
+      }
     }
     
     if (!result.success || result.rows.length === 0) {
@@ -370,7 +379,27 @@ export async function processPrcDocumentWithBuffer(documentId: number, pdfBuffer
       return;
     }
     
-    for (const row of result.rows) {
+    // Filter out rows with invalid submarket/product (UNKNOWN fallbacks)
+    const validSubmarkets = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE'];
+    const validProducts = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100'];
+    const validRows = result.rows.filter(row => 
+      validSubmarkets.includes(row.submarket) && validProducts.includes(row.productType)
+    );
+    
+    if (validRows.length === 0) {
+      await storage.updatePrcDocumentParseStatus(
+        documentId,
+        'NEEDS_REVIEW',
+        0,
+        ['No valid pricing rows extracted - manual entry required']
+      );
+      return;
+    }
+    
+    // Delete any existing rows for this document before inserting (avoid duplicates on re-parse)
+    await storage.deletePrcRowsForDocument(documentId);
+    
+    for (const row of validRows) {
       await storage.createPrcRow({
         prcDocumentId: documentId,
         supplierId: document.supplierId,
@@ -386,7 +415,7 @@ export async function processPrcDocumentWithBuffer(documentId: number, pdfBuffer
       });
     }
     
-    const outlierCount = result.rows.filter(r => r.isOutlierFlag).length;
+    const outlierCount = validRows.filter(r => r.isOutlierFlag).length;
     const newStatus = outlierCount > 0 ? 'NEEDS_REVIEW' : 'PARSED';
     
     await storage.updatePrcDocumentParseStatus(
