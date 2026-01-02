@@ -33,6 +33,11 @@ import {
   insertCommissionReconciliationRunSchema,
   insertCommissionReconciliationLineSchema,
   insertDealCaseSchema,
+  insertDealProposalSchema,
+  insertDealProposalItemSchema,
+  insertDealProposalSnapshotSchema,
+  insertDealProposalViewSchema,
+  insertBrandKitSchema,
   zohoIntakeEvents,
   zohoIntakeErrors,
   clients,
@@ -8528,6 +8533,443 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error generating benchmark preview:", error);
       res.status(500).json({ success: false, error: "Failed to generate preview" });
+    }
+  });
+
+  // ============== BRAND KIT ==============
+  
+  // Get brand kit
+  app.get("/api/brand-kit", async (req, res) => {
+    try {
+      const kit = await storage.getBrandKit();
+      res.json({ success: true, brandKit: kit });
+    } catch (error: any) {
+      console.error("Error getting brand kit:", error);
+      res.status(500).json({ success: false, error: "Failed to get brand kit" });
+    }
+  });
+  
+  // Update brand kit (admin only)
+  app.patch("/api/brand-kit/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin'])) return;
+    
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.session?.userId;
+      
+      const kit = await storage.updateBrandKit(id, {
+        ...req.body,
+        updatedByUserId: userId
+      });
+      
+      if (!kit) {
+        return res.status(404).json({ success: false, error: "Brand kit not found" });
+      }
+      
+      await logAuditEvent({
+        action: 'update',
+        entityType: 'brand_kit',
+        entityId: id.toString(),
+        userId,
+        changes: req.body,
+        source: 'admin'
+      });
+      
+      res.json({ success: true, brandKit: kit });
+    } catch (error: any) {
+      console.error("Error updating brand kit:", error);
+      res.status(500).json({ success: false, error: "Failed to update brand kit" });
+    }
+  });
+
+  // ============== DEAL PROPOSALS (Proposal OS) ==============
+  
+  // Get proposals for a deal
+  app.get("/api/deals/:dealId/proposals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const proposals = await storage.getDealProposals(req.params.dealId);
+      res.json({ success: true, proposals });
+    } catch (error: any) {
+      console.error("Error getting proposals:", error);
+      res.status(500).json({ success: false, error: "Failed to get proposals" });
+    }
+  });
+  
+  // Get single proposal
+  app.get("/api/proposals/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.id);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      const items = await storage.getDealProposalItems(proposal.id);
+      const snapshot = await storage.getDealProposalSnapshot(proposal.id);
+      
+      res.json({ success: true, proposal, items, snapshot });
+    } catch (error: any) {
+      console.error("Error getting proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to get proposal" });
+    }
+  });
+  
+  // Create proposal draft
+  app.post("/api/deals/:dealId/proposals", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const deal = await storage.getDeal(req.params.dealId);
+      
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const proposal = await storage.createDealProposal({
+        dealId: deal.id,
+        clientId: deal.clientId!,
+        status: 'DRAFT',
+        createdByUserId: userId!,
+        isDemo: deal.isDemo
+      });
+      
+      await logAuditEvent({
+        action: 'create',
+        entityType: 'deal_proposal',
+        entityId: proposal.id,
+        userId,
+        changes: { dealId: deal.id, status: 'DRAFT' },
+        source: 'portal'
+      });
+      
+      res.json({ success: true, proposal });
+    } catch (error: any) {
+      console.error("Error creating proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to create proposal" });
+    }
+  });
+  
+  // Add item to proposal
+  app.post("/api/proposals/:proposalId/items", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      if (proposal.status !== 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Cannot modify generated proposal" });
+      }
+      
+      // Get deal quote
+      const dealQuote = await storage.getDealQuote(req.body.dealQuoteId);
+      if (!dealQuote) {
+        return res.status(404).json({ success: false, error: "Deal quote not found" });
+      }
+      
+      // Get supplier name
+      const supplier = await storage.getSupplier(dealQuote.supplierId);
+      const supplierName = supplier?.name || 'Unknown Supplier';
+      
+      // Calculate final price based on margin
+      const basePrice = parseFloat(dealQuote.baseEnergyPriceRmwh || '0');
+      const marginType = req.body.marginType || 'ADD_R_PER_MWH';
+      const marginValue = parseFloat(req.body.marginValue || '0');
+      
+      let finalPrice: number;
+      if (marginType === 'ADD_R_PER_MWH') {
+        finalPrice = basePrice + marginValue;
+      } else {
+        finalPrice = basePrice * (1 + marginValue / 100);
+      }
+      
+      const item = await storage.createDealProposalItem({
+        proposalId: proposal.id,
+        dealQuoteId: dealQuote.id,
+        supplierId: dealQuote.supplierId,
+        supplierName,
+        productType: dealQuote.energyType,
+        submarket: null,
+        termMonths: null,
+        validUntil: dealQuote.validUntil,
+        supplierBaseEnergyPriceRmwh: dealQuote.baseEnergyPriceRmwh,
+        marginType,
+        marginValue: marginValue.toString(),
+        finalEnergyPriceRmwh: finalPrice.toFixed(4),
+        isRecommended: req.body.isRecommended || false,
+        publicNotes: req.body.publicNotes
+      });
+      
+      res.json({ success: true, item });
+    } catch (error: any) {
+      console.error("Error adding proposal item:", error);
+      res.status(500).json({ success: false, error: "Failed to add proposal item" });
+    }
+  });
+  
+  // Update proposal item
+  app.patch("/api/proposals/:proposalId/items/:itemId", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      if (!proposal || proposal.status !== 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Cannot modify generated proposal" });
+      }
+      
+      const item = await storage.updateDealProposalItem(parseInt(req.params.itemId), req.body);
+      res.json({ success: true, item });
+    } catch (error: any) {
+      console.error("Error updating proposal item:", error);
+      res.status(500).json({ success: false, error: "Failed to update proposal item" });
+    }
+  });
+  
+  // Delete proposal item
+  app.delete("/api/proposals/:proposalId/items/:itemId", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      if (!proposal || proposal.status !== 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Cannot modify generated proposal" });
+      }
+      
+      await storage.deleteDealProposalItem(parseInt(req.params.itemId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting proposal item:", error);
+      res.status(500).json({ success: false, error: "Failed to delete proposal item" });
+    }
+  });
+  
+  // Generate proposal (mark as GENERATED, create snapshot)
+  app.post("/api/proposals/:proposalId/generate", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      if (proposal.status !== 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Proposal already generated" });
+      }
+      
+      // Check items exist
+      const items = await storage.getDealProposalItems(proposal.id);
+      if (items.length === 0) {
+        return res.status(400).json({ success: false, error: "Proposal has no items" });
+      }
+      
+      // Check at least one recommended
+      const hasRecommended = items.some(i => i.isRecommended);
+      if (!hasRecommended) {
+        return res.status(400).json({ success: false, error: "At least one item must be marked as recommended" });
+      }
+      
+      // Get deal and client for snapshot
+      const deal = await storage.getDeal(proposal.dealId);
+      const client = await storage.getClient(proposal.clientId);
+      const brandKit = await storage.getBrandKit();
+      
+      // Create snapshot data
+      const snapshotData = {
+        proposal,
+        items: items.map(i => ({
+          ...i,
+          supplierBaseEnergyPriceRmwh: undefined // Never include base price in snapshot
+        })),
+        deal: {
+          id: deal?.id,
+          stage: deal?.stage,
+          title: deal?.title
+        },
+        client: {
+          id: client?.id,
+          name: client?.contactName,
+          company: client?.companyName
+        },
+        brandKit,
+        generatedAt: new Date().toISOString(),
+        generatedBy: userId
+      };
+      
+      // Create SHA-256 hash
+      const crypto = await import('crypto');
+      const hash = crypto.createHash('sha256')
+        .update(JSON.stringify(snapshotData))
+        .digest('hex');
+      
+      // Create snapshot
+      await storage.createDealProposalSnapshot({
+        proposalId: proposal.id,
+        snapshotJson: snapshotData,
+        sha256Hash: hash,
+        createdByUserId: userId!,
+        isDemo: proposal.isDemo
+      });
+      
+      // Update status to GENERATED
+      const updatedProposal = await storage.updateDealProposal(proposal.id, {
+        status: 'GENERATED'
+      });
+      
+      await logAuditEvent({
+        action: 'generate',
+        entityType: 'deal_proposal',
+        entityId: proposal.id,
+        userId,
+        changes: { status: 'GENERATED', sha256Hash: hash },
+        source: 'portal'
+      });
+      
+      res.json({ success: true, proposal: updatedProposal });
+    } catch (error: any) {
+      console.error("Error generating proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to generate proposal" });
+    }
+  });
+  
+  // Mark proposal as sent
+  app.post("/api/proposals/:proposalId/send", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      if (proposal.status === 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Proposal must be generated first" });
+      }
+      
+      const updated = await storage.updateDealProposal(proposal.id, {
+        status: 'SENT',
+        sentAt: new Date()
+      });
+      
+      await logAuditEvent({
+        action: 'send',
+        entityType: 'deal_proposal',
+        entityId: proposal.id,
+        userId,
+        changes: { status: 'SENT' },
+        source: 'portal'
+      });
+      
+      res.json({ success: true, proposal: updated });
+    } catch (error: any) {
+      console.error("Error marking proposal sent:", error);
+      res.status(500).json({ success: false, error: "Failed to mark proposal sent" });
+    }
+  });
+  
+  // Update proposal status (accept/reject)
+  app.post("/api/proposals/:proposalId/status", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const { status } = req.body;
+      
+      if (!['ACCEPTED', 'REJECTED', 'EXPIRED'].includes(status)) {
+        return res.status(400).json({ success: false, error: "Invalid status" });
+      }
+      
+      const updated = await storage.updateDealProposal(req.params.proposalId, { status });
+      
+      await logAuditEvent({
+        action: 'update_status',
+        entityType: 'deal_proposal',
+        entityId: req.params.proposalId,
+        userId,
+        changes: { status },
+        source: 'portal'
+      });
+      
+      res.json({ success: true, proposal: updated });
+    } catch (error: any) {
+      console.error("Error updating proposal status:", error);
+      res.status(500).json({ success: false, error: "Failed to update status" });
+    }
+  });
+  
+  // Public proposal view (no auth required)
+  app.get("/api/public/proposals/:publicId", async (req, res) => {
+    try {
+      const proposal = await storage.getDealProposalByPublicId(req.params.publicId);
+      
+      if (!proposal || !proposal.publicEnabled) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      // Record view
+      const crypto = await import('crypto');
+      const ipHash = crypto.createHash('sha256')
+        .update(req.ip || 'unknown')
+        .digest('hex')
+        .substring(0, 16);
+      
+      await storage.recordDealProposalView({
+        proposalId: proposal.id,
+        ipHash,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referrer'),
+        isDemo: proposal.isDemo
+      });
+      
+      // Increment view count
+      await storage.incrementDealProposalViewCount(proposal.id);
+      
+      // Update status to VIEWED if sent
+      if (proposal.status === 'SENT') {
+        await storage.updateDealProposal(proposal.id, { status: 'VIEWED' });
+      }
+      
+      // Get snapshot (customer-safe data)
+      const snapshot = await storage.getDealProposalSnapshot(proposal.id);
+      const brandKit = await storage.getBrandKit();
+      
+      res.json({ 
+        success: true, 
+        proposal: {
+          id: proposal.id,
+          publicId: proposal.publicId,
+          status: proposal.status,
+          createdAt: proposal.createdAt
+        },
+        snapshot: snapshot?.snapshotJson,
+        brandKit
+      });
+    } catch (error: any) {
+      console.error("Error getting public proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to get proposal" });
+    }
+  });
+  
+  // Get proposal views
+  app.get("/api/proposals/:proposalId/views", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const views = await storage.getDealProposalViews(req.params.proposalId);
+      res.json({ success: true, views });
+    } catch (error: any) {
+      console.error("Error getting proposal views:", error);
+      res.status(500).json({ success: false, error: "Failed to get views" });
     }
   });
 
