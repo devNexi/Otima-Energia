@@ -1,0 +1,111 @@
+You’ve completed Phase A (demo seeder + guided demo flow) and Phase B1 (PRC Upload Center at /admin/prc). Good.
+
+Now implement Phase B2, B3, B4 so PRC ingestion becomes a repeatable monthly process and benchmarks become ECOS-ready.
+
+B2 — AUTO PARSE PIPELINE (NO EXTRA CLICKS)
+
+On upload, automatically enqueue parsing immediately.
+
+Status progression must be visible: UPLOADED → PARSING → PARSED / NEEDS_REVIEW / FAILED.
+
+Parsing uses existing server/prc-parser.ts (pdf-parse primary, Tesseract fallback).
+
+Parsing results create prcRows with confidence and outlier flags.
+
+B3 — REVIEW QUEUE (HUMAN-IN-THE-LOOP)
+
+Create a “Review Queue” view under /admin/prc:
+
+Default filter shows ONLY NEEDS_REVIEW documents.
+
+Bulk filters: status, supplier (optional), competência (month/year), submarket.
+Document detail page must show:
+
+Parsed rows table (inline editable)
+
+Confidence per row
+
+Outlier warning badges
+
+Add row / delete row (already built) available here too
+Actions:
+
+“Verify” sets status to VERIFIED (requires at least 1 valid row)
+
+“Fail document” sets status to FAILED with mandatory reason
+All edits + status changes must write to audit trail.
+
+B4 — PUBLISH TO BENCHMARKS (GOVERNED)
+
+Publishing rules:
+
+ONLY VERIFIED docs can be published.
+
+Add “Benchmark Preview” panel before publishing showing:
+
+which marketPriceBenchmarks rows will be created/updated
+
+diff-style changes
+
+any outlier rows highlighted
+Publishing implementation:
+
+Create a prcPublishBatch record per publish action (support batch publish).
+
+On publish, upsert benchmark rows and attach evidence:
+
+sourceType = 'PRC'
+
+sourceName (doc label)
+
+sourceDocId (linked evidence document)
+
+After publish, document status becomes PUBLISHED.
+
+COMPETÊNCIA (MONTH/YEAR) REQUIRED
+
+Add competenciaMonth + competenciaYear to prcDocuments if not already present.
+
+On upload, infer from filename when possible; otherwise require user to select.
+
+This is required for future benchmark time-series.
+
+ECOS VALIDATION SCREEN (ADMIN ONLY)
+
+Add an internal /admin/ecos/validation view:
+
+Select a Deal → run ECOS preview evaluation
+
+Display:
+
+benchmark row used (term/submarket/product)
+
+PRC evidence doc link (internal)
+
+confidence breakdown
+
+resulting status + bilingual talk track
+
+Must re-run after PRC edits/publish.
+
+UX EXPECTATIONS
+
+Upload → auto-parse → review queue → verify → publish should be a fast assembly line.
+
+No long text blocks; action-driven UI.
+
+Ensure all actions are audit logged.
+
+Acceptance criteria:
+
+I can upload 10 PRCs, they parse automatically.
+
+NEEDS_REVIEW queue shows only what needs attention.
+
+I can verify + publish batch.
+
+ECOS immediately uses published benchmarks.
+
+Evidence links are preserved and viewable internally.
+
+Proceed with B2–B4 + ECOS validation next.
