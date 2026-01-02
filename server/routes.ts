@@ -55,7 +55,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
-import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
+import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
@@ -6888,6 +6888,38 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching demo deals:", error);
       res.status(500).json({ success: false, error: "Failed to fetch demo deals" });
+    }
+  });
+
+  // Get demo proposals for guided flow
+  app.get("/api/admin/demo/proposals", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled." });
+    }
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const proposals = await getDemoProposals();
+      res.json({ success: true, proposals });
+    } catch (error: any) {
+      console.error("Error fetching demo proposals:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch demo proposals" });
+    }
+  });
+
+  // Get demo ECOS snapshots for guided flow
+  app.get("/api/admin/demo/ecos-snapshots", async (req, res) => {
+    if (!isDemoModeEnabled()) {
+      return res.status(403).json({ success: false, error: "Demo mode is disabled." });
+    }
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const snapshots = await getDemoEcosSnapshots();
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      console.error("Error fetching demo ECOS snapshots:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch demo ECOS snapshots" });
     }
   });
 

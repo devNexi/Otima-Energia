@@ -1,0 +1,315 @@
+You are working inside the existing Ótima Energia admin portal.
+
+The system already includes:
+
+Deal OS (immutable quotes, Deal Assembly foundation)
+
+ECOS (deal-centric insight snapshots)
+
+PRC parsing engine (pdf-parse + OCR + confidence scoring)
+
+Branded PDF generation (proposals + ECOS insights)
+
+Demo/Sandbox mode
+
+Audit trail + RBAC
+
+Your task is to close the ECOS validation loop and operationalize PRC ingestion so the platform is launch-ready and scalable.
+
+This is NOT net-new logic — this is workflow hardening, UX clarity, and Ops efficiency.
+
+🎯 CORE OBJECTIVES
+
+Prove ECOS works end-to-end with realistic data
+
+Make monthly PRC ingestion effortless
+
+Ensure human-in-the-loop control without slowing Ops
+
+Produce client-ready, branded insight outputs
+
+Prepare data exhaust for future automation (Mercado Invisível)
+
+PHASE A — DEMO DATA UPGRADE (REQUIRED)
+A1) Expand Demo Seeder
+
+Update demo seeder to include:
+
+Deals & Proposals
+
+5 demo deals with realistic Brazilian profiles (submarket, product mix)
+
+5 proposals:
+
+2 = GENERATED (PDF attached)
+
+1 = SENT
+
+1 = VIEWED (seed proposalViews)
+
+1 = DRAFT
+
+ECOS Snapshots
+
+3 ECOS snapshots:
+
+within_band (HIGH confidence)
+
+above_band (MED confidence)
+
+no_data / LOW confidence
+
+2 ECOS Insight PDFs generated and linked to snapshots (dealDocuments)
+
+All demo data must:
+
+be flagged isDemo = true
+
+be removable via “Nuke Demo Data”
+
+never pollute production metrics
+
+A2) Guided Demo Flow (Admin-only)
+
+Add Admin Settings → Guided Demo Flow panel:
+
+Buttons that deep-link to:
+
+Open demo deal
+
+View ECOS snapshot
+
+Download ECOS Insight PDF
+
+Open proposal
+
+Download proposal PDF
+
+This allows live demos without setup.
+
+PHASE B — PRC BULK UPLOAD & AUTO INGEST (CRITICAL)
+
+You already have:
+
+prcDocuments
+
+prcRows
+
+Parse status workflow
+
+Confidence scoring + outlier detection
+
+Now we operationalize it.
+
+B1) PRC Upload Center (Admin / Ops)
+
+Create a dedicated PRC Upload Center:
+
+Capabilities
+
+Multi-file PDF upload
+
+Optional metadata:
+
+Source name (default = filename)
+
+Supplier (optional)
+
+Month / Year
+
+Submarket coverage (optional)
+
+On upload:
+
+Create prcDocuments with status = UPLOADED
+
+sourceType = 'PRC'
+
+Store raw file as evidence (dealDocuments compatible)
+
+B2) Auto Parse Pipeline
+
+Upon upload:
+
+Trigger parsing automatically
+
+Use existing:
+
+pdf-parse (primary)
+
+OCR fallback (Tesseract)
+
+Apply current confidence logic
+
+Status outcomes:
+
+PARSED → high confidence
+
+NEEDS_REVIEW → partial / suspicious
+
+FAILED → unreadable
+
+B3) Review Queue UI (Human-in-the-loop)
+
+Build PRC Review Queue:
+
+Filters
+
+Status
+
+Month / Year
+
+Supplier
+
+Submarket
+
+Per document view
+
+Extracted rows (editable inline)
+
+Confidence per row
+
+Outlier flags
+
+Add / edit / delete rows (reuse existing row editor)
+
+Full audit trail for edits
+
+Actions
+
+“Approve & Verify” → status = VERIFIED
+
+“Reject” → status = FAILED (requires reason)
+
+B4) Publish to Benchmarks
+
+On VERIFIED → PUBLISHED:
+
+Create/update marketPriceBenchmarks rows
+
+Populate:
+
+price band
+
+segment
+
+term
+
+submarket
+
+product type
+
+Link evidence:
+
+sourceType = PRC
+
+sourceName
+
+sourceDocId
+
+Benchmarks must:
+
+be immediately usable by ECOS
+
+retain frozen evidence snapshot for audits
+
+PHASE C — ECOS VALIDATION MODE (ADMIN)
+
+Add ECOS Validation Screen:
+
+Purpose
+
+Trust-building
+
+Debugging
+
+Training
+
+Features
+
+Select deal → run ECOS preview
+
+Show:
+
+benchmark row used
+
+PRC evidence document (internal only)
+
+confidence breakdown
+
+resulting status + talk track
+
+Re-run after PRC edits
+
+This screen is internal only — never client-facing.
+
+PHASE D — BRAND & LANGUAGE CONSISTENCY (FINAL PASS)
+D1) Language
+
+Ensure ECOS uses “Insights” language everywhere:
+
+No monitoring terminology
+
+No ongoing optimization wording
+
+Pre-sales leverage only
+
+D2) Branding
+
+All outbound assets must:
+
+Use Ótima brand kit
+
+Match website typography, colors, spacing
+
+Include logo + footer disclaimer
+
+Applies to:
+
+ECOS Insight PDFs
+
+Proposal PDFs
+
+ACCEPTANCE CRITERIA
+
+Before completion:
+
+I can upload 5 PRC PDFs in one action
+
+At least one parses automatically into rows
+
+NEEDS_REVIEW docs are easy to fix and publish
+
+ECOS instantly reflects new benchmarks
+
+Demo mode shows:
+
+ECOS snapshot
+
+ECOS PDF
+
+Proposal PDF
+
+Zero manual DB work required
+
+🧠 ARCHITECTURAL PHILOSOPHY
+
+This system is:
+
+Insight-first, not monitoring-heavy
+
+Human-verified, not over-automated
+
+Evidence-backed, not black-box
+
+Designed for future automation, not dependent on it
+
+This is the foundation for:
+
+Mercado Invisível (pricing intelligence layer)
+
+TrocarLuz (scaled B2C later)
+
+Supplier trust and repeatable deal flow
+
+Do not start Deal Assembly until this PRC + ECOS validation loop is complete.

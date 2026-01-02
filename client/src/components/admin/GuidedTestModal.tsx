@@ -21,7 +21,12 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  FileSearch
+  FileSearch,
+  FileSpreadsheet,
+  BarChart3,
+  Eye,
+  Zap,
+  ExternalLink
 } from "lucide-react";
 
 interface GuidedTestModalProps {
@@ -46,14 +51,33 @@ interface DemoDeal {
   scenario?: string;
 }
 
-type TourType = 'overview' | 'blind_auction' | 'revenue' | 'compliance';
+interface DemoProposal {
+  id: number;
+  publicId: string;
+  title: string;
+  status: string;
+  viewCount: number;
+  dealId: string;
+}
+
+interface DemoEcosSnapshot {
+  id: number;
+  dealId: string;
+  version: number;
+  status: string;
+  confidenceLevel: string;
+  triggerType: string;
+}
+
+type TourType = 'overview' | 'blind_auction' | 'revenue' | 'compliance' | 'proposals_ecos';
 
 export function GuidedTestModal({ open, onOpenChange }: GuidedTestModalProps) {
   const [completedSteps, setCompletedSteps] = useState<Record<TourType, number[]>>({
     overview: [],
     blind_auction: [],
     revenue: [],
-    compliance: []
+    compliance: [],
+    proposals_ecos: []
   });
   const [activeTour, setActiveTour] = useState<TourType>('overview');
 
@@ -63,7 +87,21 @@ export function GuidedTestModal({ open, onOpenChange }: GuidedTestModalProps) {
     refetchOnWindowFocus: false,
   });
 
+  const { data: demoProposalsData } = useQuery<{ success: boolean; proposals: DemoProposal[] }>({
+    queryKey: ["/api/admin/demo/proposals"],
+    enabled: open,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: demoEcosData } = useQuery<{ success: boolean; snapshots: DemoEcosSnapshot[] }>({
+    queryKey: ["/api/admin/demo/ecos-snapshots"],
+    enabled: open,
+    refetchOnWindowFocus: false,
+  });
+
   const demoDeals = demoDealsData?.deals || [];
+  const demoProposals = demoProposalsData?.proposals || [];
+  const demoEcosSnapshots = demoEcosData?.snapshots || [];
   
   const happyPathDeal = demoDeals.find(d => d.scenario === 'Happy Path');
   const slaBreachDeal = demoDeals.find(d => d.scenario === 'SLA Breach');
@@ -296,11 +334,92 @@ export function GuidedTestModal({ open, onOpenChange }: GuidedTestModalProps) {
     }
   ];
 
+  // Find specific demo proposals by status
+  const generatedProposal = demoProposals.find(p => p.status === 'GENERATED');
+  const sentProposal = demoProposals.find(p => p.status === 'SENT');
+  const viewedProposal = demoProposals.find(p => p.status === 'VIEWED');
+  const draftProposal = demoProposals.find(p => p.status === 'DRAFT');
+
+  // Find specific ECOS snapshots by status
+  const withinBandSnapshot = demoEcosSnapshots.find(s => s.status === 'WITHIN_BAND');
+  const aboveBandSnapshot = demoEcosSnapshots.find(s => s.status === 'ABOVE_BAND');
+  const noDataSnapshot = demoEcosSnapshots.find(s => s.status === 'NO_DATA');
+
+  const proposalsEcosSteps: TestStep[] = [
+    {
+      id: 1,
+      title: "1. View Generated Proposal",
+      description: generatedProposal 
+        ? `Open proposal "${generatedProposal.title}" - status GENERATED, ready to send`
+        : "Seed 'Happy Path' scenario to see proposals",
+      icon: <FileSpreadsheet className="h-5 w-5" />,
+      href: happyPathDeal && generatedProposal ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/settings",
+      action: generatedProposal ? "View Proposal" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(1)
+    },
+    {
+      id: 2,
+      title: "2. Test Public Proposal Link",
+      description: viewedProposal
+        ? `View public link for proposal (has ${viewedProposal.viewCount} views) - opens in new tab`
+        : "Seed demo data to see public proposals",
+      icon: <ExternalLink className="h-5 w-5" />,
+      href: viewedProposal ? `/p/${viewedProposal.publicId}` : "/admin/settings",
+      action: viewedProposal ? "Open Public Link" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(2)
+    },
+    {
+      id: 3,
+      title: "3. Check Proposal View Tracking",
+      description: viewedProposal
+        ? `Proposal with ${viewedProposal.viewCount} recorded views - view analytics on deal page`
+        : "Seed demo data to see proposal analytics",
+      icon: <Eye className="h-5 w-5" />,
+      href: happyPathDeal && viewedProposal ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/settings",
+      action: viewedProposal ? "View Analytics" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(3)
+    },
+    {
+      id: 4,
+      title: "4. ECOS: Within Band Analysis",
+      description: withinBandSnapshot
+        ? `ECOS v${withinBandSnapshot.version}: WITHIN_BAND status, ${withinBandSnapshot.confidenceLevel} confidence`
+        : "Seed 'Happy Path' to see ECOS insights",
+      icon: <BarChart3 className="h-5 w-5" />,
+      href: happyPathDeal && withinBandSnapshot ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/settings",
+      action: withinBandSnapshot ? "View ECOS" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(4)
+    },
+    {
+      id: 5,
+      title: "5. ECOS: Above Band Alert",
+      description: aboveBandSnapshot
+        ? `ECOS v${aboveBandSnapshot.version}: ABOVE_BAND status - client may be overpaying`
+        : "Seed 'Happy Path' for comparison snapshots",
+      icon: <Zap className="h-5 w-5" />,
+      href: happyPathDeal && aboveBandSnapshot ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/settings",
+      action: aboveBandSnapshot ? "View Alert" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(5)
+    },
+    {
+      id: 6,
+      title: "6. ECOS: No Data Scenario",
+      description: noDataSnapshot
+        ? `ECOS v${noDataSnapshot.version}: NO_DATA status - benchmark missing for region`
+        : "Seed demo data to see data gaps",
+      icon: <AlertTriangle className="h-5 w-5" />,
+      href: happyPathDeal && noDataSnapshot ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/settings",
+      action: noDataSnapshot ? "View Gap" : "Seed Data",
+      completed: completedSteps.proposals_ecos.includes(6)
+    }
+  ];
+
   const tourConfigs = {
     overview: { steps: overviewSteps, title: "Overview Tour", icon: <PlayCircle className="h-4 w-4" /> },
     blind_auction: { steps: blindAuctionSteps, title: "Blind Auction", icon: <Gavel className="h-4 w-4" /> },
     revenue: { steps: revenueSteps, title: "Revenue / Commission", icon: <TrendingUp className="h-4 w-4" /> },
-    compliance: { steps: complianceSteps, title: "Compliance Gates", icon: <Shield className="h-4 w-4" /> }
+    compliance: { steps: complianceSteps, title: "Compliance Gates", icon: <Shield className="h-4 w-4" /> },
+    proposals_ecos: { steps: proposalsEcosSteps, title: "Proposals & ECOS", icon: <FileSpreadsheet className="h-4 w-4" /> }
   };
 
   const currentTour = tourConfigs[activeTour];
@@ -326,7 +445,7 @@ export function GuidedTestModal({ open, onOpenChange }: GuidedTestModalProps) {
         </DialogHeader>
 
         <Tabs value={activeTour} onValueChange={(v) => setActiveTour(v as TourType)} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             {Object.entries(tourConfigs).map(([key, config]) => (
               <TabsTrigger key={key} value={key} className="flex items-center gap-1.5 text-xs md:text-sm">
                 {config.icon}

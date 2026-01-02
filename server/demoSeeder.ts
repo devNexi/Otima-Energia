@@ -10,8 +10,14 @@ import {
   clientDossiers,
   rfqDispatches,
   supplierRfqPlaybooks,
+  dealProposals,
+  dealProposalItems,
+  dealProposalSnapshots,
+  dealProposalViews,
+  dealEcosSnapshots,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 const DEMO_PREFIX = "DEMO_";
 
@@ -246,6 +252,297 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     }
   ]);
   summary.commissionEvents = 2;
+  
+  // ========== PROPOSALS ==========
+  // Get the quotes we just created
+  const quotes = await db.select().from(dealQuotes).where(eq(dealQuotes.dealId, deal.id));
+  
+  // Proposal 1: GENERATED (PDF ready)
+  const proposal1PublicId = randomBytes(8).toString('hex');
+  const [proposal1] = await db.insert(dealProposals).values({
+    dealId: deal.id,
+    clientId: client.id,
+    publicId: proposal1PublicId,
+    title: "Proposta Comercial - Happy Path Corp",
+    status: "GENERATED",
+    publicEnabled: true,
+    viewCount: 0,
+    isDemo: true,
+  }).returning();
+  
+  // Add items to proposal 1
+  if (quotes.length > 0) {
+    await db.insert(dealProposalItems).values({
+      proposalId: proposal1.id,
+      dealQuoteId: quotes[0].id,
+      supplierId: quotes[0].supplierId,
+      supplierName: supplierList[0].name,
+      productType: "CONVENCIONAL",
+      marginType: "ADD_R_PER_MWH",
+      marginValue: "5.00",
+      finalEnergyPriceRmwh: "185.00",
+      isRecommended: true,
+      publicNotes: "Melhor custo-benefício",
+      isDemo: true,
+    });
+    
+    // Create snapshot for proposal 1
+    const snapshot1Data = {
+      proposal: proposal1,
+      items: [{
+        supplierName: supplierList[0].name,
+        productType: "CONVENCIONAL",
+        finalEnergyPriceRmwh: "185.00",
+        isRecommended: true,
+        publicNotes: "Melhor custo-benefício"
+      }],
+      client: { name: client.contactPerson, company: client.companyName },
+      generatedAt: new Date().toISOString()
+    };
+    const hash1 = randomBytes(32).toString('hex');
+    await db.insert(dealProposalSnapshots).values({
+      proposalId: proposal1.id,
+      snapshotJson: snapshot1Data,
+      sha256Hash: hash1,
+      createdByUserId: null,
+      isDemo: true,
+    });
+  }
+  
+  // Proposal 2: GENERATED (second one)
+  const proposal2PublicId = randomBytes(8).toString('hex');
+  const [proposal2] = await db.insert(dealProposals).values({
+    dealId: deal.id,
+    clientId: client.id,
+    publicId: proposal2PublicId,
+    title: "Proposta Alternativa - Happy Path Corp",
+    status: "GENERATED",
+    publicEnabled: true,
+    viewCount: 0,
+    isDemo: true,
+  }).returning();
+  
+  if (quotes.length > 1) {
+    await db.insert(dealProposalItems).values({
+      proposalId: proposal2.id,
+      dealQuoteId: quotes[1].id,
+      supplierId: quotes[1].supplierId,
+      supplierName: supplierList[1].name,
+      productType: "CONVENCIONAL",
+      marginType: "ADD_PERCENT",
+      marginValue: "3.00",
+      finalEnergyPriceRmwh: "195.70",
+      isRecommended: true,
+      publicNotes: "Opção premium com garantias extras",
+      isDemo: true,
+    });
+    
+    const snapshot2Data = {
+      proposal: proposal2,
+      items: [{
+        supplierName: supplierList[1].name,
+        productType: "CONVENCIONAL",
+        finalEnergyPriceRmwh: "195.70",
+        isRecommended: true,
+        publicNotes: "Opção premium com garantias extras"
+      }],
+      client: { name: client.contactPerson, company: client.companyName },
+      generatedAt: new Date().toISOString()
+    };
+    const hash2 = randomBytes(32).toString('hex');
+    await db.insert(dealProposalSnapshots).values({
+      proposalId: proposal2.id,
+      snapshotJson: snapshot2Data,
+      sha256Hash: hash2,
+      createdByUserId: null,
+      isDemo: true,
+    });
+  }
+  
+  // Proposal 3: SENT
+  const proposal3PublicId = randomBytes(8).toString('hex');
+  const [proposal3] = await db.insert(dealProposals).values({
+    dealId: deal.id,
+    clientId: client.id,
+    publicId: proposal3PublicId,
+    title: "Proposta Enviada - Happy Path Corp",
+    status: "SENT",
+    sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    publicEnabled: true,
+    viewCount: 0,
+    isDemo: true,
+  }).returning();
+  
+  // Proposal 4: VIEWED (with view records)
+  const proposal4PublicId = randomBytes(8).toString('hex');
+  const [proposal4] = await db.insert(dealProposals).values({
+    dealId: deal.id,
+    clientId: client.id,
+    publicId: proposal4PublicId,
+    title: "Proposta Visualizada - Happy Path Corp",
+    status: "VIEWED",
+    sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    publicEnabled: true,
+    viewCount: 3,
+    isDemo: true,
+  }).returning();
+  
+  // Add view records
+  await db.insert(dealProposalViews).values([
+    {
+      proposalId: proposal4.id,
+      ipHash: randomBytes(8).toString('hex'),
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
+      referrer: "https://mail.google.com",
+      isDemo: true,
+    },
+    {
+      proposalId: proposal4.id,
+      ipHash: randomBytes(8).toString('hex'),
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/604.1",
+      referrer: null,
+      isDemo: true,
+    },
+    {
+      proposalId: proposal4.id,
+      ipHash: randomBytes(8).toString('hex'),
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Safari/17.0",
+      referrer: "https://outlook.office.com",
+      isDemo: true,
+    }
+  ]);
+  
+  // Proposal 5: DRAFT
+  const proposal5PublicId = randomBytes(8).toString('hex');
+  await db.insert(dealProposals).values({
+    dealId: deal.id,
+    clientId: client.id,
+    publicId: proposal5PublicId,
+    title: "Proposta em Rascunho - Happy Path Corp",
+    status: "DRAFT",
+    publicEnabled: false,
+    viewCount: 0,
+    isDemo: true,
+  });
+  
+  summary.proposals = 5;
+  summary.proposalViews = 3;
+  
+  // ========== ECOS SNAPSHOTS ==========
+  // ECOS Snapshot 1: WITHIN_BAND, HIGH confidence
+  await db.insert(dealEcosSnapshots).values({
+    dealId: deal.id,
+    version: 1,
+    triggerType: "MANUAL",
+    inputData: {
+      submarket: "SE/CO",
+      distributor: "CPFL",
+      segment: "Industrial",
+      volumeMwh12m: 1200,
+      demandKw: 250,
+      clientCurrentPriceRmwh: 195.00
+    },
+    benchmarkMatch: {
+      benchmarkId: 1,
+      segment: "Industrial",
+      region: "SE/CO",
+      lowerBoundRmwh: 175.00,
+      upperBoundRmwh: 210.00,
+      confidence: 0.92
+    },
+    results: {
+      clientEstimatedPriceRmwh: 195.00,
+      gapPercent: 0,
+      potentialSavingsMin: 0,
+      potentialSavingsMax: 18000
+    },
+    status: "WITHIN_BAND",
+    confidenceLevel: "HIGH",
+    confidenceReasons: [
+      { factor: "Multiple PRCs available", impact: "positive", descriptionPt: "Múltiplos PRCs disponíveis" },
+      { factor: "Recent benchmark data", impact: "positive", descriptionPt: "Dados de benchmark recentes" },
+      { factor: "Segment match exact", impact: "positive", descriptionPt: "Correspondência exata do segmento" }
+    ],
+    recommendedNextStep: "WAIT",
+    talkTrack: "Client is within market band - no urgent action needed",
+    talkTrackPt: "Cliente está dentro da faixa de mercado - sem ação urgente necessária",
+    isDemo: true,
+  });
+  
+  // ECOS Snapshot 2: ABOVE_BAND, MEDIUM confidence
+  await db.insert(dealEcosSnapshots).values({
+    dealId: deal.id,
+    version: 2,
+    triggerType: "BILL_UPLOAD",
+    inputData: {
+      submarket: "SE/CO",
+      distributor: "CPFL",
+      segment: "Industrial",
+      volumeMwh12m: 1200,
+      demandKw: 250,
+      clientCurrentPriceRmwh: 245.00
+    },
+    benchmarkMatch: {
+      benchmarkId: 1,
+      segment: "Industrial",
+      region: "SE/CO",
+      lowerBoundRmwh: 175.00,
+      upperBoundRmwh: 210.00,
+      confidence: 0.78
+    },
+    results: {
+      clientEstimatedPriceRmwh: 245.00,
+      gapPercent: 16.7,
+      potentialSavingsMin: 42000,
+      potentialSavingsMax: 84000
+    },
+    status: "ABOVE_BAND",
+    confidenceLevel: "MEDIUM",
+    confidenceReasons: [
+      { factor: "Benchmark 45 days old", impact: "negative", descriptionPt: "Benchmark com 45 dias" },
+      { factor: "Single bill analyzed", impact: "negative", descriptionPt: "Apenas uma fatura analisada" },
+      { factor: "Segment match partial", impact: "positive", descriptionPt: "Correspondência parcial do segmento" }
+    ],
+    recommendedNextStep: "REQUEST_RFQ",
+    talkTrack: "Client is paying above market - recommend RFQ process",
+    talkTrackPt: "Cliente está pagando acima do mercado - recomenda-se processo de RFQ",
+    isDemo: true,
+  });
+  
+  // ECOS Snapshot 3: NO_DATA, LOW confidence
+  await db.insert(dealEcosSnapshots).values({
+    dealId: deal.id,
+    version: 3,
+    triggerType: "MANUAL",
+    inputData: {
+      submarket: "N",
+      distributor: "Equatorial",
+      segment: "Commercial",
+      volumeMwh12m: 600,
+      demandKw: 120,
+      clientCurrentPriceRmwh: null
+    },
+    benchmarkMatch: null,
+    results: {
+      clientEstimatedPriceRmwh: null,
+      gapPercent: null,
+      potentialSavingsMin: null,
+      potentialSavingsMax: null
+    },
+    status: "NO_DATA",
+    confidenceLevel: "LOW",
+    confidenceReasons: [
+      { factor: "No benchmark for region", impact: "negative", descriptionPt: "Sem benchmark para a região" },
+      { factor: "No billing data provided", impact: "negative", descriptionPt: "Dados de fatura não fornecidos" },
+      { factor: "Small sample size", impact: "negative", descriptionPt: "Amostra pequena" }
+    ],
+    recommendedNextStep: "NEED_MORE_DATA",
+    talkTrack: "Insufficient data for analysis - need more billing information",
+    talkTrackPt: "Dados insuficientes para análise - necessário mais informações de fatura",
+    isDemo: true,
+  });
+  
+  summary.ecosSnapshots = 3;
   
   return summary;
 }
@@ -1202,6 +1499,23 @@ export async function nukeDemoData(): Promise<{ success: boolean; deleted: Recor
   const deleted: Record<string, number> = {};
   
   try {
+    // Delete proposal-related demo data first (child tables)
+    const proposalViewsResult = await db.delete(dealProposalViews).where(eq(dealProposalViews.isDemo, true)).returning();
+    deleted.proposalViews = proposalViewsResult.length;
+    
+    const proposalSnapshotsResult = await db.delete(dealProposalSnapshots).where(eq(dealProposalSnapshots.isDemo, true)).returning();
+    deleted.proposalSnapshots = proposalSnapshotsResult.length;
+    
+    const proposalItemsResult = await db.delete(dealProposalItems).where(eq(dealProposalItems.isDemo, true)).returning();
+    deleted.proposalItems = proposalItemsResult.length;
+    
+    const proposalsResult = await db.delete(dealProposals).where(eq(dealProposals.isDemo, true)).returning();
+    deleted.proposals = proposalsResult.length;
+    
+    // Delete ECOS snapshots
+    const ecosSnapshotsResult = await db.delete(dealEcosSnapshots).where(eq(dealEcosSnapshots.isDemo, true)).returning();
+    deleted.ecosSnapshots = ecosSnapshotsResult.length;
+    
     const usageResult = await db.delete(clientUsagePeriods).where(eq(clientUsagePeriods.isDemo, true)).returning();
     deleted.usagePeriods = usageResult.length;
 
@@ -1266,7 +1580,56 @@ export async function getDemoDataStats(): Promise<Record<string, number>> {
   const usageCount = await db.select({ count: sql<number>`count(*)` }).from(clientUsagePeriods).where(eq(clientUsagePeriods.isDemo, true));
   stats.usagePeriods = Number(usageCount[0]?.count || 0);
   
+  // New stats for proposals and ECOS
+  const proposalCount = await db.select({ count: sql<number>`count(*)` }).from(dealProposals).where(eq(dealProposals.isDemo, true));
+  stats.proposals = Number(proposalCount[0]?.count || 0);
+  
+  const ecosSnapshotCount = await db.select({ count: sql<number>`count(*)` }).from(dealEcosSnapshots).where(eq(dealEcosSnapshots.isDemo, true));
+  stats.ecosSnapshots = Number(ecosSnapshotCount[0]?.count || 0);
+  
   return stats;
+}
+
+// Get demo proposals for guided flow
+export async function getDemoProposals(): Promise<Array<{
+  id: number;
+  publicId: string;
+  title: string;
+  status: string;
+  viewCount: number;
+  dealId: string;
+}>> {
+  const proposals = await db.select({
+    id: dealProposals.id,
+    publicId: dealProposals.publicId,
+    title: dealProposals.title,
+    status: dealProposals.status,
+    viewCount: dealProposals.viewCount,
+    dealId: dealProposals.dealId,
+  }).from(dealProposals).where(eq(dealProposals.isDemo, true));
+  
+  return proposals;
+}
+
+// Get demo ECOS snapshots for guided flow
+export async function getDemoEcosSnapshots(): Promise<Array<{
+  id: number;
+  dealId: string;
+  version: number;
+  status: string;
+  confidenceLevel: string;
+  triggerType: string;
+}>> {
+  const snapshots = await db.select({
+    id: dealEcosSnapshots.id,
+    dealId: dealEcosSnapshots.dealId,
+    version: dealEcosSnapshots.version,
+    status: dealEcosSnapshots.status,
+    confidenceLevel: dealEcosSnapshots.confidenceLevel,
+    triggerType: dealEcosSnapshots.triggerType,
+  }).from(dealEcosSnapshots).where(eq(dealEcosSnapshots.isDemo, true));
+  
+  return snapshots;
 }
 
 // Get list of demo deals with their scenarios for tours
