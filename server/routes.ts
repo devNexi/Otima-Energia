@@ -8759,7 +8759,7 @@ export async function registerRoutes(
     }
   });
   
-  // Create proposal draft
+  // Create proposal draft with baseline data
   app.post("/api/deals/:dealId/proposals", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
@@ -8771,12 +8771,32 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
       
+      // Extract baseline data from request (bill-derived)
+      const {
+        baselineConsumptionMwh12m,
+        baselineEnergySupplyCost12m,
+        baselineIsAnnualized,
+        baselineSourceNote,
+        validUntil,
+        preparedByName,
+        customNotes,
+        proposalTitle
+      } = req.body;
+      
       const proposal = await storage.createDealProposal({
         dealId: deal.id,
         clientId: deal.clientId!,
         status: 'DRAFT',
         createdByUserId: userId!,
-        isDemo: deal.isDemo
+        isDemo: deal.isDemo,
+        baselineConsumptionMwh12m: baselineConsumptionMwh12m?.toString() || null,
+        baselineEnergySupplyCost12m: baselineEnergySupplyCost12m?.toString() || null,
+        baselineIsAnnualized: baselineIsAnnualized || false,
+        baselineSourceNote: baselineSourceNote || null,
+        validUntil: validUntil || null,
+        preparedByName: preparedByName || null,
+        customNotes: customNotes || null,
+        proposalTitle: proposalTitle || null
       });
       
       await logAuditEvent({
@@ -8784,7 +8804,7 @@ export async function registerRoutes(
         entityType: 'deal_proposal',
         entityId: proposal.id,
         userId,
-        changes: { dealId: deal.id, status: 'DRAFT' },
+        changes: { dealId: deal.id, status: 'DRAFT', hasBaseline: !!baselineConsumptionMwh12m },
         source: 'portal'
       });
       
@@ -8795,7 +8815,43 @@ export async function registerRoutes(
     }
   });
   
-  // Add item to proposal
+  // Update proposal (baseline, metadata, recommended option)
+  app.patch("/api/proposals/:proposalId", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.proposalId);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      if (proposal.status !== 'DRAFT') {
+        return res.status(400).json({ success: false, error: "Cannot modify generated proposal" });
+      }
+      
+      const allowedFields = [
+        'baselineConsumptionMwh12m', 'baselineEnergySupplyCost12m', 
+        'baselineIsAnnualized', 'baselineSourceNote',
+        'recommendedItemId', 'recommendedReason',
+        'validUntil', 'preparedByName', 'customNotes', 'proposalTitle'
+      ];
+      
+      const updates: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+      
+      const updated = await storage.updateDealProposal(proposal.id, updates);
+      res.json({ success: true, proposal: updated });
+    } catch (error: any) {
+      console.error("Error updating proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to update proposal" });
+    }
+  });
+  
+  // Add item to proposal with savings calculation
   app.post("/api/proposals/:proposalId/items", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
@@ -8831,19 +8887,60 @@ export async function registerRoutes(
         finalPrice = basePrice * (1 + marginValue / 100);
       }
       
+      // Term is required - use from request or quote
+      const termMonths = req.body.termMonths || dealQuote.termMonths || 12;
+      
+      // Calculate savings if baseline exists
+      let proposedCost12m: string | null = null;
+      let savings12m: string | null = null;
+      let savingsTotal: string | null = null;
+      let savingsMonthlyAvg: string | null = null;
+      let isNegativeSavings = false;
+      
+      const baselineConsumption = parseFloat(proposal.baselineConsumptionMwh12m || '0');
+      const baselineCost = parseFloat(proposal.baselineEnergySupplyCost12m || '0');
+      
+      if (baselineConsumption > 0 && baselineCost > 0) {
+        // proposed_cost_12m = MWh_annual × client_price
+        const proposedCost12mNum = baselineConsumption * finalPrice;
+        proposedCost12m = proposedCost12mNum.toFixed(2);
+        
+        // savings_12m = baseline_cost_12m - proposed_cost_12m
+        const savings12mNum = baselineCost - proposedCost12mNum;
+        savings12m = savings12mNum.toFixed(2);
+        
+        // savings_total = savings_12m × (term_months / 12)
+        const savingsTotalNum = savings12mNum * (termMonths / 12);
+        savingsTotal = savingsTotalNum.toFixed(2);
+        
+        // savings_monthly_avg = savings_total / term_months
+        const savingsMonthlyNum = savingsTotalNum / termMonths;
+        savingsMonthlyAvg = savingsMonthlyNum.toFixed(2);
+        
+        // Guardrail: mark negative savings
+        isNegativeSavings = savingsTotalNum < 0;
+      }
+      
       const item = await storage.createDealProposalItem({
         proposalId: proposal.id,
         dealQuoteId: dealQuote.id,
         supplierId: dealQuote.supplierId,
         supplierName,
         productType: dealQuote.energyType,
-        submarket: null,
-        termMonths: null,
+        energyType: req.body.energyType || dealQuote.energyType || 'convencional',
+        submarket: req.body.submarket || null,
+        termMonths,
         validUntil: dealQuote.validUntil,
+        indexationType: req.body.indexationType || null,
         supplierBaseEnergyPriceRmwh: dealQuote.baseEnergyPriceRmwh,
         marginType,
         marginValue: marginValue.toString(),
         finalEnergyPriceRmwh: finalPrice.toFixed(4),
+        proposedCost12m,
+        savings12m,
+        savingsTotal,
+        savingsMonthlyAvg,
+        isNegativeSavings,
         isRecommended: req.body.isRecommended || false,
         publicNotes: req.body.publicNotes
       });

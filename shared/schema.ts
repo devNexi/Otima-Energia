@@ -4049,6 +4049,23 @@ export const dealProposals = pgTable("deal_proposals", {
   // PDF document reference
   pdfDocId: integer("pdf_doc_id").references(() => dealDocuments.id),
   
+  // ============ BASELINE (Bill-derived) ============
+  // Frozen at proposal creation from client bill data
+  baselineConsumptionMwh12m: decimal("baseline_consumption_mwh_12m", { precision: 12, scale: 3 }), // Annual consumption (last 12mo or annualized)
+  baselineEnergySupplyCost12m: decimal("baseline_energy_supply_cost_12m", { precision: 14, scale: 2 }), // R$ energy supply component only
+  baselineIsAnnualized: boolean("baseline_is_annualized").default(false), // True if <12 months data extrapolated
+  baselineSourceNote: text("baseline_source_note"), // "Últimos 12 meses" or "Anualizado de X meses"
+  
+  // ============ RECOMMENDED OPTION ============
+  recommendedItemId: integer("recommended_item_id"), // FK to dealProposalItems.id (operator-selected)
+  recommendedReason: text("recommended_reason"), // Preset reason why this is recommended
+  
+  // ============ PROPOSAL METADATA ============
+  proposalTitle: text("proposal_title"), // Custom title if desired
+  validUntil: date("valid_until"), // Proposal expiry date
+  preparedByName: text("prepared_by_name"), // Sales rep name for PDF
+  customNotes: text("custom_notes"), // Additional notes for client
+  
   // View tracking
   viewCount: integer("view_count").default(0),
   lastViewedAt: timestamp("last_viewed_at"),
@@ -4091,9 +4108,11 @@ export const dealProposalItems = pgTable("deal_proposal_items", {
   
   // Energy product details
   productType: text("product_type"), // CONVENCIONAL, INCENTIVADA, etc.
+  energyType: text("energy_type"), // convencional, incentivada (for display)
   submarket: text("submarket"), // SECO, S, NE, N
-  termMonths: integer("term_months"),
+  termMonths: integer("term_months").notNull(), // Required for term-specific pricing
   validUntil: date("valid_until"),
+  indexationType: text("indexation_type"), // IPCA, IGPM, Fixed, etc. (display only)
   
   // Pricing (AUDIT ONLY - supplier base price NEVER shown publicly)
   supplierBaseEnergyPriceRmwh: decimal("supplier_base_energy_price_rmwh", { precision: 10, scale: 4 }),
@@ -4102,15 +4121,23 @@ export const dealProposalItems = pgTable("deal_proposal_items", {
   marginType: text("margin_type").default("ADD_R_PER_MWH").notNull(), // ADD_R_PER_MWH, ADD_PERCENT
   marginValue: decimal("margin_value", { precision: 12, scale: 4 }).default("0").notNull(),
   
-  // Final price (SHOWN to customer)
+  // Final price (SHOWN to customer) - This is the client_price_r$/mwh (uplifted)
   finalEnergyPriceRmwh: decimal("final_energy_price_rmwh", { precision: 10, scale: 4 }).notNull(),
+  
+  // ============ COMPUTED SAVINGS (frozen at proposal creation) ============
+  // Based on: baseline_cost_12m vs (MWh_annual × client_price)
+  proposedCost12m: decimal("proposed_cost_12m", { precision: 14, scale: 2 }), // Annual cost with this quote
+  savings12m: decimal("savings_12m", { precision: 14, scale: 2 }), // baseline_cost_12m - proposed_cost_12m
+  savingsTotal: decimal("savings_total", { precision: 14, scale: 2 }), // savings_12m × (term_months / 12)
+  savingsMonthlyAvg: decimal("savings_monthly_avg", { precision: 14, scale: 2 }), // savings_total / term_months
+  isNegativeSavings: boolean("is_negative_savings").default(false), // True if savings_total < 0
   
   // Display flags
   isRecommended: boolean("is_recommended").default(false),
   displayOrder: integer("display_order").default(0),
   
   // Notes
-  publicNotes: text("public_notes"), // Customer-safe notes
+  publicNotes: text("public_notes"), // Customer-safe notes (max 8-10 words qualitative)
   notesInternal: text("notes_internal"), // Never shown publicly
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
