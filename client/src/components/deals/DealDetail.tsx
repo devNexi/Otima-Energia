@@ -17,6 +17,7 @@ import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
+import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
 import { NextStepsWidget, useWorkflowGates } from "@/components/ops/NextStepsWidget";
@@ -462,6 +463,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="assembly" className="flex items-center gap-2" data-testid="tab-assembly">
+            <Zap className="w-4 h-4" />
+            {language === "pt" ? "Montagem" : "Assembly"}
+          </TabsTrigger>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             {language === "pt" ? "Visão Geral" : "Overview"}
@@ -551,6 +556,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             </TabsTrigger>
           </ContextualTooltip>
         </TabsList>
+
+        <TabsContent value="assembly">
+          <DealAssemblyTab dealId={dealId} />
+        </TabsContent>
 
         <TabsContent value="rfq">
           <BlindAuctionPanel dealId={dealId} />
