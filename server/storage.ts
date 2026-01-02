@@ -69,6 +69,11 @@ import {
   type PrcDocument, type InsertPrcDocument,
   type PrcRow, type InsertPrcRow,
   type PrcPublishBatch, type InsertPrcPublishBatch,
+  type BrandKit, type InsertBrandKit,
+  type DealProposal, type InsertDealProposal,
+  type DealProposalItem, type InsertDealProposalItem,
+  type DealProposalSnapshot, type InsertDealProposalSnapshot,
+  type DealProposalView, type InsertDealProposalView,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -86,7 +91,8 @@ import {
   supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides,
   userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
   opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots,
-  prcDocuments, prcRows, prcPublishBatches
+  prcDocuments, prcRows, prcPublishBatches,
+  brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -649,6 +655,33 @@ export interface IStorage {
     submarketCoverage: string[];
     productCoverage: string[];
   }>;
+  
+  // ============== BRAND KIT ==============
+  getBrandKit(): Promise<BrandKit | undefined>;
+  updateBrandKit(id: number, data: Partial<InsertBrandKit>): Promise<BrandKit | undefined>;
+  
+  // ============== DEAL PROPOSALS (Proposal OS) ==============
+  createDealProposal(data: InsertDealProposal): Promise<DealProposal>;
+  getDealProposals(dealId: string): Promise<DealProposal[]>;
+  getDealProposal(id: string): Promise<DealProposal | undefined>;
+  getDealProposalByPublicId(publicId: string): Promise<DealProposal | undefined>;
+  updateDealProposal(id: string, data: Partial<InsertDealProposal>): Promise<DealProposal | undefined>;
+  deleteDealProposal(id: string): Promise<void>;
+  
+  // Proposal Items
+  createDealProposalItem(data: InsertDealProposalItem): Promise<DealProposalItem>;
+  getDealProposalItems(proposalId: string): Promise<DealProposalItem[]>;
+  updateDealProposalItem(id: number, data: Partial<InsertDealProposalItem>): Promise<DealProposalItem | undefined>;
+  deleteDealProposalItem(id: number): Promise<void>;
+  
+  // Proposal Snapshots
+  createDealProposalSnapshot(data: InsertDealProposalSnapshot): Promise<DealProposalSnapshot>;
+  getDealProposalSnapshot(proposalId: string): Promise<DealProposalSnapshot | undefined>;
+  
+  // Proposal Views
+  recordDealProposalView(data: InsertDealProposalView): Promise<DealProposalView>;
+  getDealProposalViews(proposalId: string): Promise<DealProposalView[]>;
+  incrementDealProposalViewCount(proposalId: string): Promise<void>;
 }
 
 export class Storage implements IStorage {
@@ -3423,7 +3456,7 @@ export class Storage implements IStorage {
   }
   
   async getBlockingItems(dealId: string, targetStage?: string): Promise<OpsChecklistItem[]> {
-    const deal = await this.getDealById(dealId);
+    const deal = await this.getDeal(dealId);
     if (!deal) return [];
     
     const stage = targetStage || deal.stage;
@@ -3842,6 +3875,116 @@ export class Storage implements IStorage {
       submarketCoverage: submarkets,
       productCoverage: products
     };
+  }
+  
+  // ============== BRAND KIT ==============
+  async getBrandKit(): Promise<BrandKit | undefined> {
+    const result = await db.select().from(brandKit).limit(1);
+    return result[0];
+  }
+  
+  async updateBrandKit(id: number, data: Partial<InsertBrandKit>): Promise<BrandKit | undefined> {
+    const result = await db.update(brandKit)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(brandKit.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  // ============== DEAL PROPOSALS (Proposal OS) ==============
+  async createDealProposal(data: InsertDealProposal): Promise<DealProposal> {
+    const publicId = randomBytes(8).toString('hex');
+    const result = await db.insert(dealProposals).values({
+      ...data,
+      publicId
+    }).returning();
+    return result[0];
+  }
+  
+  async getDealProposals(dealId: string): Promise<DealProposal[]> {
+    return await db.select().from(dealProposals)
+      .where(eq(dealProposals.dealId, dealId))
+      .orderBy(desc(dealProposals.createdAt));
+  }
+  
+  async getDealProposal(id: string): Promise<DealProposal | undefined> {
+    const result = await db.select().from(dealProposals).where(eq(dealProposals.id, id));
+    return result[0];
+  }
+  
+  async getDealProposalByPublicId(publicId: string): Promise<DealProposal | undefined> {
+    const result = await db.select().from(dealProposals)
+      .where(eq(dealProposals.publicId, publicId));
+    return result[0];
+  }
+  
+  async updateDealProposal(id: string, data: Partial<InsertDealProposal>): Promise<DealProposal | undefined> {
+    const result = await db.update(dealProposals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealProposals.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteDealProposal(id: string): Promise<void> {
+    await db.delete(dealProposals).where(eq(dealProposals.id, id));
+  }
+  
+  // Proposal Items
+  async createDealProposalItem(data: InsertDealProposalItem): Promise<DealProposalItem> {
+    const result = await db.insert(dealProposalItems).values(data).returning();
+    return result[0];
+  }
+  
+  async getDealProposalItems(proposalId: string): Promise<DealProposalItem[]> {
+    return await db.select().from(dealProposalItems)
+      .where(eq(dealProposalItems.proposalId, proposalId))
+      .orderBy(dealProposalItems.displayOrder);
+  }
+  
+  async updateDealProposalItem(id: number, data: Partial<InsertDealProposalItem>): Promise<DealProposalItem | undefined> {
+    const result = await db.update(dealProposalItems)
+      .set(data)
+      .where(eq(dealProposalItems.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async deleteDealProposalItem(id: number): Promise<void> {
+    await db.delete(dealProposalItems).where(eq(dealProposalItems.id, id));
+  }
+  
+  // Proposal Snapshots
+  async createDealProposalSnapshot(data: InsertDealProposalSnapshot): Promise<DealProposalSnapshot> {
+    const result = await db.insert(dealProposalSnapshots).values(data).returning();
+    return result[0];
+  }
+  
+  async getDealProposalSnapshot(proposalId: string): Promise<DealProposalSnapshot | undefined> {
+    const result = await db.select().from(dealProposalSnapshots)
+      .where(eq(dealProposalSnapshots.proposalId, proposalId));
+    return result[0];
+  }
+  
+  // Proposal Views
+  async recordDealProposalView(data: InsertDealProposalView): Promise<DealProposalView> {
+    const result = await db.insert(dealProposalViews).values(data).returning();
+    return result[0];
+  }
+  
+  async getDealProposalViews(proposalId: string): Promise<DealProposalView[]> {
+    return await db.select().from(dealProposalViews)
+      .where(eq(dealProposalViews.proposalId, proposalId))
+      .orderBy(desc(dealProposalViews.viewedAt));
+  }
+  
+  async incrementDealProposalViewCount(proposalId: string): Promise<void> {
+    await db.update(dealProposals)
+      .set({
+        viewCount: sql`${dealProposals.viewCount} + 1`,
+        lastViewedAt: new Date()
+      })
+      .where(eq(dealProposals.id, proposalId));
   }
 }
 
