@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
-import { apiRequest } from "@/lib/queryClient";
 import { useI18n } from "@/lib/i18n";
 import { 
   BookOpen, 
@@ -173,17 +172,33 @@ export function DictionaryPanel() {
   const [category, setCategory] = useState("all");
   const [selectedTerm, setSelectedTerm] = useState<DictionaryTerm | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["/api/dictionary", search, category],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (category && category !== "all") params.set("category", category);
-      const res = await apiRequest("GET", `/api/dictionary?${params.toString()}`);
-      return res.json();
+      try {
+        const params = new URLSearchParams();
+        if (search) params.set("search", search);
+        if (category && category !== "all") params.set("category", category);
+        const response = await fetch(`/api/dictionary?${params.toString()}`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      } catch (err) {
+        console.error("Dictionary fetch error:", err);
+        throw err;
+      }
     },
-    enabled: open
+    enabled: open,
+    staleTime: 0,
+    retry: 1
   });
+  
+  if (error) {
+    console.error("Dictionary query error:", error);
+  }
 
   const terms: DictionaryTerm[] = data?.terms || [];
   const groupedTerms: Record<string, DictionaryTerm[]> = {};

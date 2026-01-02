@@ -1,0 +1,229 @@
+Proposal Generator Refactor — Option A (Energy Supply Savings Only, Term-Specific Quotes)
+Context
+
+Proposals are sales collateral, not admin reports.
+
+Audience: non-expert business decision-makers.
+
+Inputs available: customer bill(s) + supplier quotes (client uplifted prices per term) + branded PDF generation.
+
+Objective
+
+Refactor Proposal Generator so that:
+
+every quote clearly shows estimated savings (R$) over its own contract term
+
+the proposal tells a clear financial story: today vs best option vs alternatives
+
+output improves close probability via: best option framing + term effect + monthly framing
+
+adds a trust-building line: “Baseado no seu histórico de consumo — sem compromisso.”
+
+REQUIRED IMPLEMENTATION (Option A)
+1) Baseline Definition (Compared-to-what)
+
+All savings are compared against the client’s current bill-derived baseline for the energy supply component only.
+
+Baseline inputs (from bill OCR / bill parsing)
+
+baseline_consumption_mwh_12m
+
+Prefer last 12 months actual; if fewer months available, annualise.
+
+baseline_energy_supply_cost_12m
+
+Energy supply component only (exclude regulated charges not comparable to the quote).
+
+Baseline transparency line (must appear in PDF once)
+
+“Comparação baseada na parcela de fornecimento de energia das suas faturas atuais (últimos 12 meses).”
+
+If annualised:
+
+“Estimativa baseada no histórico disponível de faturas (anualizado).”
+
+2) Quote Data Model (Term-specific pricing is mandatory)
+
+Each quote is term-specific. Therefore each quote row must include its own term and its own client price.
+
+Quote inputs (per quote)
+
+supplier_name
+
+energy_type (convencional / incentivada)
+
+term_months (e.g., 24 / 36 / 60)
+
+client_price_r$/mwh (uplifted — client-facing)
+
+indexation_type (display only; do not model indexation)
+
+valid_until (optional, display if available)
+
+3) Savings Math (Per quote, per term — Mandatory)
+
+Use only:
+
+current cost = bill-based baseline
+
+proposed cost = client price (uplifted)
+
+Let:
+
+MWh_annual = baseline_consumption_mwh_12m
+
+baseline_cost_12m = baseline_energy_supply_cost_12m
+
+Compute for each quote:
+
+Proposed annual energy supply cost
+
+proposed_cost_12m = MWh_annual × client_price_r$/mwh
+
+Annual savings (energy supply only)
+
+savings_12m = baseline_cost_12m – proposed_cost_12m
+
+Total savings over quote term
+
+savings_total = savings_12m × (term_months / 12)
+
+Average monthly savings over term
+
+savings_monthly_avg = savings_total / term_months
+
+Guardrails
+
+If savings_total < 0, label as:
+
+“Aumento estimado no período: R$ X”
+
+No % savings. Only R$.
+
+Always include fixed footnote in PDF:
+
+“Economia estimada apenas na parcela de fornecimento de energia, baseada no consumo dos últimos 12 meses. Valores podem variar conforme perfil e condições contratuais.”
+
+SALES “INFLATION” (Legit framing — Required)
+A) Headline uses Best Option (term-specific)
+
+Choose the “Best Option” as the quote with the highest positive savings_total.
+
+Executive Summary headline:
+
+“Potencial de economia estimada de até R$ {BEST_SAVINGS_TOTAL} no prazo de {BEST_TERM_MONTHS} meses.”
+
+Sub-line:
+
+“Equivalente a ~R$ {BEST_MONTHLY_AVG} por mês (média no período).”
+
+Add trust line (below sub-line):
+
+“Baseado no seu histórico de consumo — sem compromisso.”
+
+B) Term effect is shown explicitly (24/36/60)
+
+Because prices differ by term, the table must clearly communicate tradeoffs.
+
+Add a short line above the table:
+
+“As ofertas variam por prazo (24/36/60 meses). A economia total reflete o prazo escolhido.”
+
+C) Monthly + Over-term framing (every quote row)
+
+Each quote must show:
+
+R$ no período (prazo) → savings_total
+
+R$ / mês (média) → savings_monthly_avg
+
+PDF LAYOUT (Updated)
+Section A — Executive Summary
+
+Headline: “Potencial de economia estimada de até R$ X no prazo de Y meses”
+
+Sub-line: “~R$ Z por mês (média no período)”
+
+Trust line: “Baseado no seu histórico de consumo — sem compromisso.”
+
+One scope line (small):
+
+“Comparação baseada na parcela de fornecimento das faturas atuais.”
+
+Section B — Current Baseline (simple, non-technical)
+
+Show:
+
+“Consumo anual estimado: {MWh_annual} MWh”
+
+“Custo anual atual (fornecimento): R$ {baseline_cost_12m}”
+
+“Preço médio atual (fornecimento): R$ {baseline_cost_12m / MWh_annual} / MWh”
+
+Section C — Comparison Table (core)
+
+Each quote row shows:
+
+supplier name
+
+energy type
+
+term (months)
+
+client price (R$/MWh)
+
+economia estimada no período (R$)
+
+economia média por mês (R$)
+
+short qualitative note (preset selectable, max 8–10 words)
+
+Section D — Recommended Option
+
+Renan selects one quote as “Recomendado” before generation.
+
+Show:
+
+term, client price, savings_total, savings_monthly_avg
+
+“Por que recomendamos” (preset reasons)
+
+Section E — Next Steps (simple)
+
+Escolher a opção (prazo e modelo)
+
+Assinar documentos e aprovar garantias (se aplicável)
+
+Onboarding com a comercializadora + data de início do fornecimento
+
+Internal vs Client Data Separation (Hard Rule)
+
+PDF must never expose:
+
+supplier base price
+
+uplift/commission
+Only show:
+
+client_price_r$/mwh
+
+derived savings values
+
+Acceptance Criteria
+
+A non-expert understands:
+
+what they spend today (energy supply component)
+
+what they could save (best option + per term)
+
+why the recommended option is recommended
+
+Renan generates a proposal in <2 minutes
+
+Output increases clarity, not complexity
+
+NOTE TO REPLIT (important implementation detail)
+
+Please confirm how supplier quotes are structured in the database/UI to ensure term-based pricing is handled correctly.
+One supplier may provide multiple prices for different terms (e.g., 12/24/36/60 months). The Proposal Generator must treat each (supplier × term) as a distinct quote row, and calculate savings using that quote’s specific term_months and client_price_r$/mwh.
