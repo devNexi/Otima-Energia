@@ -29,6 +29,7 @@ import ProposalTracker from "@/pages/ProposalTracker";
 import BenchmarkManager from "@/pages/BenchmarkManager";
 import AdminSettings from "@/pages/AdminSettings";
 import NotFound from "@/pages/not-found";
+import PublicProposal from "@/pages/PublicProposal";
 
 function Router() {
   return (
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/rede-de-lucros-otima" component={RedeLucros} />
       <Route path="/termos-parcerias" component={TermosParcerias} />
       <Route path="/portal/upload/:token" component={Portal} />
+      <Route path="/proposta/:publicId" component={PublicProposal} />
       
       {/* Admin routes - redirect /admin to /admin/deals */}
       <Route path="/admin">{() => <Redirect to="/admin/deals" />}</Route>

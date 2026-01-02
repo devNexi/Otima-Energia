@@ -8943,6 +8943,23 @@ export async function registerRoutes(
       const snapshot = await storage.getDealProposalSnapshot(proposal.id);
       const brandKit = await storage.getBrandKit();
       
+      // SECURITY: Sanitize snapshot to ensure no supplier base prices leak
+      let sanitizedSnapshot = snapshot?.snapshotJson;
+      if (sanitizedSnapshot && sanitizedSnapshot.items) {
+        sanitizedSnapshot = {
+          ...sanitizedSnapshot,
+          items: sanitizedSnapshot.items.map((item: any) => ({
+            id: item.id,
+            supplierName: item.supplierName,
+            productType: item.productType,
+            finalEnergyPriceRmwh: item.finalEnergyPriceRmwh,
+            isRecommended: item.isRecommended,
+            publicNotes: item.publicNotes
+            // Explicitly omit: supplierBaseEnergyPriceRmwh, marginType, marginValue, supplierId, dealQuoteId
+          }))
+        };
+      }
+      
       res.json({ 
         success: true, 
         proposal: {
@@ -8951,7 +8968,7 @@ export async function registerRoutes(
           status: proposal.status,
           createdAt: proposal.createdAt
         },
-        snapshot: snapshot?.snapshotJson,
+        snapshot: sanitizedSnapshot,
         brandKit
       });
     } catch (error: any) {

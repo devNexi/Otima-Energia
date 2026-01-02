@@ -1,9 +1,10 @@
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { DemoDataPanel } from "@/components/admin/DemoDataPanel";
+import { BrandKitPanel } from "@/components/admin/BrandKitPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
-import { Settings, Database, Shield, Globe } from "lucide-react";
+import { Settings, Database, Shield, Globe, Palette } from "lucide-react";
 import { Redirect } from "wouter";
 
 export default function AdminSettings() {
@@ -40,6 +41,10 @@ export default function AdminSettings() {
               <Database className="h-4 w-4" />
               Demo Data
             </TabsTrigger>
+            <TabsTrigger value="brand" className="flex items-center gap-2" data-testid="tab-brand">
+              <Palette className="h-4 w-4" />
+              Brand Kit
+            </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2" data-testid="tab-security">
               <Shield className="h-4 w-4" />
               Segurança
@@ -52,6 +57,10 @@ export default function AdminSettings() {
 
           <TabsContent value="demo">
             <DemoDataPanel />
+          </TabsContent>
+
+          <TabsContent value="brand">
+            <BrandKitPanel />
           </TabsContent>
 
           <TabsContent value="security">

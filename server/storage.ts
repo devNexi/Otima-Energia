@@ -3880,7 +3880,25 @@ export class Storage implements IStorage {
   // ============== BRAND KIT ==============
   async getBrandKit(): Promise<BrandKit | undefined> {
     const result = await db.select().from(brandKit).limit(1);
-    return result[0];
+    if (result.length > 0) {
+      return result[0];
+    }
+    
+    // Create default brand kit if none exists
+    const defaultKit = await db.insert(brandKit).values({
+      brandName: 'Ótima Energia',
+      tagline: 'Sua energia, nossa expertise',
+      primaryColor: '#9e3ffd',
+      secondaryColor: '#df0af2',
+      darkColor: '#16163f',
+      lightBgColor: '#eee7f1',
+      textColor: '#736d77',
+      fontFamily: 'Inter',
+      footerText: 'Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil',
+      websiteUrl: 'https://otimaenergia.com'
+    }).returning();
+    
+    return defaultKit[0];
   }
   
   async updateBrandKit(id: number, data: Partial<InsertBrandKit>): Promise<BrandKit | undefined> {

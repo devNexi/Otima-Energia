@@ -16,6 +16,7 @@ import { ComplianceChecklistTab } from "@/components/commission-os/ComplianceChe
 import { NextActionWidget } from "@/components/widgets/NextActionWidget";
 import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { DealEcosTab } from "@/components/deals/DealEcosTab";
+import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
 import { NextStepsWidget, useWorkflowGates } from "@/components/ops/NextStepsWidget";
@@ -497,6 +498,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
             </TabsTrigger>
           </ContextualTooltip>
+          <TabsTrigger value="proposals" className="flex items-center gap-2" data-testid="tab-proposals">
+            <FileText className="w-4 h-4" />
+            {language === "pt" ? "Propostas" : "Proposals"}
+          </TabsTrigger>
           <TabsTrigger value="commission" className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             {language === "pt" ? "Comissões" : "Commissions"} ({deal.commissionEvents?.length || 0})
@@ -797,6 +802,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="proposals">
+          <DealProposalsTab dealId={dealId} />
         </TabsContent>
 
         <TabsContent value="commission">
