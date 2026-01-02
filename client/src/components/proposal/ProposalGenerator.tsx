@@ -52,10 +52,31 @@ const RECOMMENDED_REASONS = [
   "Alinhado ao perfil de consumo do cliente"
 ];
 
-export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, suppliers }: ProposalGeneratorProps) {
+export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: fallbackQuotes, suppliers }: ProposalGeneratorProps) {
   const { t, language } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch eligible quotes from API (excludes expired/incomplete/risk-flagged)
+  const { data: eligibleQuotesData, isLoading: loadingQuotes } = useQuery({
+    queryKey: ["eligible-quotes", dealId],
+    queryFn: async () => {
+      const response = await fetch(`/api/deals/${dealId}/eligible-quotes`, {
+        credentials: "include"
+      });
+      if (!response.ok) return { quotes: [] };
+      return response.json();
+    },
+    enabled: open
+  });
+  
+  // Use API quotes only - never fall back to props to prevent base price leakage
+  const quotes: QuoteWithSupplier[] = useMemo(() => {
+    const apiQuotes = eligibleQuotesData?.quotes || [];
+    // Only use API quotes (already filtered server-side for eligibility and client pricing)
+    // Never expose base price by using unfiltered fallback props
+    return apiQuotes.filter((q: QuoteWithSupplier) => q.clientEnergyPriceRmwh && q.termMonths);
+  }, [eligibleQuotesData]);
   
   const [activeTab, setActiveTab] = useState("configure");
   const [proposalId, setProposalId] = useState<string | null>(null);
@@ -100,8 +121,9 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
       const quote = quotes.find(q => q.id === item.quoteId);
       if (!quote) return null;
       
-      // Use client-facing price (never expose base price)
-      const clientPrice = parseFloat(quote.clientEnergyPriceRmwh || quote.baseEnergyPriceRmwh || '0');
+      // Use client-facing price ONLY (never expose base price)
+      if (!quote.clientEnergyPriceRmwh) return null; // Skip quotes without client pricing
+      const clientPrice = parseFloat(quote.clientEnergyPriceRmwh);
       const finalPrice = clientPrice + item.marginValue;
       
       let proposedCost12m = 0;
@@ -246,8 +268,16 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes, 
   };
   
   const addQuoteToProposal = (quoteId: string) => {
-    const quote = quotes.find(q => q.id === quoteId);
-    if (!quote) return;
+    const quote = quotes.find((q: QuoteWithSupplier) => q.id === quoteId);
+    // Security: never add quote without client pricing
+    if (!quote || !quote.clientEnergyPriceRmwh) {
+      toast({ 
+        title: "Cotação inválida",
+        description: "Esta cotação não possui preço cliente definido.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setSelectedItems([...selectedItems, {
       quoteId,

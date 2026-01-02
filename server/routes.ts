@@ -8787,11 +8787,18 @@ export async function registerRoutes(
       const suppliers = await storage.getSuppliers();
       const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
       
-      const enrichedQuotes = eligibleQuotes.map(q => ({
-        ...q,
+      // Only return quotes with client pricing set (never expose base price)
+      const quotesWithClientPrice = eligibleQuotes.filter(q => q.clientEnergyPriceRmwh);
+      
+      const enrichedQuotes = quotesWithClientPrice.map(q => ({
+        id: q.id,
+        supplierId: q.supplierId,
         supplierName: supplierMap.get(q.supplierId) || 'Unknown Supplier',
-        // Never expose base price to client - use clientEnergyPriceRmwh or compute from base + default margin
-        clientEnergyPriceRmwh: q.clientEnergyPriceRmwh || q.baseEnergyPriceRmwh
+        energyType: q.energyType,
+        clientEnergyPriceRmwh: q.clientEnergyPriceRmwh,
+        validUntil: q.validUntil,
+        termMonths: q.termMonths,
+        priceStructure: q.priceStructure
       }));
       
       res.json({ success: true, quotes: enrichedQuotes });
