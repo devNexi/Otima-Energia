@@ -1,0 +1,128 @@
+You are working in the Ótima Energia portal.
+
+Current state:
+
+ECOS deal snapshots are implemented (deal_ecos_snapshots + engine + UI tab + endpoints).
+
+Remaining tasks are: PDF Insight Pack, dashboard refocus, bilingual tooltips, remove monitoring logic.
+
+Portal must be Deals-only (Zoho holds Leads).
+
+1) REMOVE LEADS FROM PORTAL NAV (NON-NEGOTIABLE)
+
+Business rule: Zoho = Leads only, Portal = Deals only.
+
+Actions:
+
+Remove the “Leads” tab from left navigation and all lead-category/pipeline UI in portal.
+
+Do NOT delete database tables if used historically; just remove UI/UX.
+
+Keep Zoho-origin metadata read-only inside Deal detail (zohoLeadId, BR fields, source agent), but no Lead list views.
+
+Acceptance:
+
+Sales/Ops/Admin cannot access a lead list page.
+
+Deals remain the first-class operational object.
+
+2) BUILD PDF INSIGHT PACK GENERATOR (ECOS)
+
+Implement server-side PDF generation for a deal_ecos_snapshot.
+
+Endpoint:
+POST /api/deals/:dealId/ecos/snapshots/:snapshotId/pdf
+
+Behavior:
+
+Generate 1–2 page PDF in PT-BR by default, with optional EN version toggle later.
+
+Store PDF as dealDocument with docType = ecos_insight_report
+
+Link it back to deal_ecos_snapshots.pdfDocumentId
+
+Include:
+
+Client + deal identifiers (company name, CNPJ if present, UC if present)
+
+Status badge (ABOVE/WITHIN/BELOW/NO_DATA)
+
+Confidence + reasons (explicit)
+
+Benchmark band used (lower/upper) and source label
+
+Estimated current price (from snapshot inputs)
+
+Savings range (explicitly “estimativa”, no guarantees)
+
+Recommended next step (REQUEST_RFQ / NEED_MORE_DATA / WAIT)
+
+Assumptions list (term, product type, submarket, months of bills used)
+
+Compliance disclaimer footer (no guaranteed savings)
+
+Timestamp + snapshot reference ID
+
+Use existing object storage pattern used by dealDocuments.
+
+3) DASHBOARD LANGUAGE REFOCUS
+
+Update ECOS dashboard labels to remove “monitoring/continuous optimization” language.
+Replace with:
+
+“Insights gerados”
+
+“Deals acima da faixa”
+
+“Benchmarks para revisar”
+No quarterly monitoring language.
+
+4) BILINGUAL TOOLTIPS (PT-BR + EN)
+
+Implement tooltip dictionary keys for ECOS Snapshot tab:
+
+Run snapshot
+
+Confidence
+
+Savings estimate
+
+Start RFQ
+
+Download PDF
+Tooltips must be short and sales-friendly.
+Default UI language PT-BR, but store EN strings too.
+
+5) DEPRECATE ONGOING MONITORING CODE
+
+Disable:
+
+evaluateAllClients scheduled logic
+
+quarterly report generation triggers
+Keep code only if used elsewhere but ensure no background tasks run.
+
+6) PRC BENCHMARK EVIDENCE LINKING (MINIMUM)
+
+Add fields to marketPriceBenchmarks (if not already):
+
+source_type
+
+source_name
+
+source_doc_id (FK to dealDocuments or a generic documents table)
+So each benchmark band can reference a PRC PDF as evidence.
+
+No need to parse PRC PDFs yet. V1 is manual entry + evidence linking.
+
+DONE CRITERIA
+
+Leads tab is gone.
+
+PDF Insight Pack generates and downloads from snapshot tab.
+
+Dashboard copy reflects “insights”, not “monitoring”.
+
+Tooltips appear PT-BR (and EN stored).
+
+No scheduled monitoring jobs run.

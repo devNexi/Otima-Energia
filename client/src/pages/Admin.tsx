@@ -92,8 +92,6 @@ export default function Admin({ defaultTab }: AdminProps) {
     contactPerson: "",
     ucCode: ""
   });
-  const [snapshotLead, setSnapshotLead] = useState<{ id: number; name: string } | null>(null);
-  const [snapshotViewMode, setSnapshotViewMode] = useState<"create" | "view">("create");
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [selectedRfo, setSelectedRfo] = useState<{
     id: number;
@@ -113,13 +111,6 @@ export default function Admin({ defaultTab }: AdminProps) {
     }
   }, [defaultTab]);
   
-  const [snapshotForm, setSnapshotForm] = useState({
-    estimatedConsumptionKwh: "",
-    estimatedPriceRmwh: "",
-    segment: "",
-    region: ""
-  });
-
   const statusLabels: Record<string, string> = {
     prospect: t("status.prospect"),
     awaiting_quote: t("status.awaiting_quote"),
@@ -128,14 +119,6 @@ export default function Admin({ defaultTab }: AdminProps) {
     closed: t("status.closed"),
     lost: t("status.lost")
   };
-
-  const { data: leadsData, isLoading: leadsLoading } = useQuery({
-    queryKey: ["/api/leads"],
-    queryFn: async () => {
-      const res = await fetch("/api/leads");
-      return res.json();
-    }
-  });
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery({
     queryKey: ["/api/clients"],
@@ -169,16 +152,6 @@ export default function Admin({ defaultTab }: AdminProps) {
     }
   });
 
-  const { data: snapshotsData, isLoading: snapshotsLoading } = useQuery({
-    queryKey: ["/api/leads", snapshotLead?.id, "snapshots"],
-    queryFn: async () => {
-      if (!snapshotLead) return { snapshots: [] };
-      const res = await fetch(`/api/leads/${snapshotLead.id}/snapshots`);
-      return res.json();
-    },
-    enabled: !!snapshotLead
-  });
-
   const createClientMutation = useMutation({
     mutationFn: async (data: typeof newClientForm) => {
       const res = await fetch("/api/clients", {
@@ -193,18 +166,6 @@ export default function Admin({ defaultTab }: AdminProps) {
       setNewClientOpen(false);
       setNewClientForm({ companyName: "", cnpj: "", email: "", phone: "", contactPerson: "", ucCode: "" });
       toast({ title: t("admin.toast.client_created") });
-    }
-  });
-
-  const convertLeadMutation = useMutation({
-    mutationFn: async (leadId: number) => {
-      const res = await fetch(`/api/leads/${leadId}/convert`, { method: "POST" });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: t("admin.toast.lead_converted") });
     }
   });
 
@@ -242,106 +203,6 @@ export default function Admin({ defaultTab }: AdminProps) {
     }
   });
 
-  const generateSnapshotMutation = useMutation({
-    mutationFn: async ({ leadId, data }: { leadId: number; data: typeof snapshotForm }) => {
-      const benchmarks = benchmarksData?.benchmarks || [];
-      const matchingBenchmark = benchmarks.find((b: any) => 
-        b.segment === data.segment && b.region === data.region
-      );
-      
-      const estimatedPrice = parseFloat(data.estimatedPriceRmwh);
-      const estimatedConsumption = parseFloat(data.estimatedConsumptionKwh);
-      
-      let bandResult = "no_data";
-      let summaryText = "Não foi possível encontrar uma faixa de referência para este segmento/região.";
-      let potentialSavingsR = null;
-      
-      if (matchingBenchmark) {
-        const lower = parseFloat(matchingBenchmark.lowerBoundRmwh);
-        const upper = parseFloat(matchingBenchmark.upperBoundRmwh);
-        
-        if (estimatedPrice <= upper && estimatedPrice >= lower) {
-          bandResult = "within_band";
-          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está dentro da faixa de referência (R$ ${lower.toFixed(2)} - R$ ${upper.toFixed(2)}/MWh).`;
-        } else if (estimatedPrice > upper) {
-          bandResult = "above_band";
-          const savings = ((estimatedPrice - upper) * estimatedConsumption * 12) / 1000;
-          potentialSavingsR = savings;
-          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está ACIMA da faixa de referência. Economia potencial de até R$ ${savings.toFixed(2)}/ano ao migrar para o mercado livre.`;
-        } else {
-          bandResult = "at_risk";
-          summaryText = `O preço estimado de R$ ${estimatedPrice.toFixed(2)}/MWh está abaixo da faixa de referência - verifique os dados.`;
-        }
-      }
-      
-      const res = await fetch(`/api/leads/${leadId}/snapshot`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          benchmarkIdUsed: matchingBenchmark?.id || null,
-          benchmarkLowerRmwh: matchingBenchmark?.lowerBoundRmwh || null,
-          benchmarkUpperRmwh: matchingBenchmark?.upperBoundRmwh || null,
-          benchmarkSegment: data.segment,
-          benchmarkRegion: data.region,
-          estimatedConsumptionKwh: data.estimatedConsumptionKwh,
-          estimatedPriceRmwh: data.estimatedPriceRmwh,
-          segment: data.segment,
-          region: data.region,
-          bandResult,
-          summaryText,
-          potentialSavingsR: potentialSavingsR?.toString() || null,
-          generatedBy: "admin"
-        })
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", snapshotLead?.id, "snapshots"] });
-      setSnapshotViewMode("view");
-      setSnapshotForm({ estimatedConsumptionKwh: "", estimatedPriceRmwh: "", segment: "", region: "" });
-      toast({ title: t("snapshot.toast.created") });
-    },
-    onError: () => {
-      toast({ title: t("snapshot.toast.error"), variant: "destructive" });
-    }
-  });
-
-  const lockSnapshotMutation = useMutation({
-    mutationFn: async (snapshotId: number) => {
-      const res = await fetch(`/api/snapshots/${snapshotId}/lock`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lockedBy: "admin" })
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", snapshotLead?.id, "snapshots"] });
-      toast({ title: t("snapshot.toast.locked") });
-    }
-  });
-
-  const snapshots = snapshotsData?.snapshots || [];
-
-  const getBandIcon = (bandResult: string) => {
-    switch (bandResult) {
-      case "within_band": return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case "above_band": return <AlertTriangle className="w-4 h-4 text-amber-600" />;
-      case "at_risk": return <AlertCircle className="w-4 h-4 text-red-600" />;
-      default: return <HelpCircle className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const getBandColor = (bandResult: string) => {
-    switch (bandResult) {
-      case "within_band": return "bg-green-100 text-green-800";
-      case "above_band": return "bg-amber-100 text-amber-800";
-      case "at_risk": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-600";
-    }
-  };
-
-  const leads = leadsData?.leads || [];
   const clients = clientsData?.clients || [];
   const rfqs = rfqsData?.requests || [];
 
@@ -523,14 +384,6 @@ export default function Admin({ defaultTab }: AdminProps) {
           {/* Sales stats - visible to sales and admin */}
           {(user?.role === "sales" || user?.role === "admin") && (
             <>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.leads")}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-violet-900" data-testid="stat-leads">{leads.length}</div>
-                </CardContent>
-              </Card>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-500">{t("admin.stats.clients")}</CardTitle>

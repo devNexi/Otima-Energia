@@ -914,9 +914,11 @@ export const marketPriceBenchmarks = pgTable("market_price_benchmarks", {
   updatedBy: text("updated_by").default("admin"),
   
   // Governance Fields
-  sourceType: text("source_type"), // 'SupplierQuote', 'BrokerIntel', 'PublicSignal', 'InternalDeal', 'Other'
+  sourceType: text("source_type"), // 'SupplierQuote', 'BrokerIntel', 'PublicSignal', 'InternalDeal', 'PRC', 'Other'
+  sourceName: text("source_name"), // Name/label of source (e.g., "PRC Q4 2025", "Supplier X Quote")
   sourceDetails: text("source_details"), // Free text for additional context
   sourceUrl: text("source_url"), // Optional link to source document
+  sourceDocId: integer("source_doc_id"), // FK to dealDocuments table for evidence linking
   confidence: text("confidence").default("Medium"), // 'Low', 'Medium', 'High'
   reviewCadence: text("review_cadence").default("Quarterly"), // 'Monthly', 'Quarterly'
   nextReviewDate: date("next_review_date"),

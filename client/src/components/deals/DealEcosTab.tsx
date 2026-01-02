@@ -13,6 +13,7 @@ import {
   Minus,
   RefreshCw,
   Download,
+  FileText,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -167,6 +168,50 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
     }
   });
 
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async (snapshotId: number) => {
+    setDownloadingPdf(true);
+    try {
+      const sessionId = localStorage.getItem("sessionId");
+      const res = await fetch(`/api/deals/${dealId}/ecos-snapshots/${snapshotId}/pdf`, {
+        method: "POST",
+        headers: { "x-session-id": sessionId || "" }
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ecos_insight_pack_${dealId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: language === "pt" ? "PDF gerado" : "PDF generated",
+        description: language === "pt" 
+          ? "O Insight Pack foi baixado com sucesso." 
+          : "Insight Pack has been downloaded successfully."
+      });
+    } catch (error: any) {
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: language === "pt" 
+          ? "Falha ao gerar o PDF. Tente novamente." 
+          : "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const latestSnapshot = snapshots?.[0];
   const displayData = previewEval || (latestSnapshot && {
     status: latestSnapshot.status,
@@ -229,6 +274,31 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
               )}
               {language === "pt" ? "Salvar Snapshot" : "Capture Snapshot"}
             </Button>
+            {latestSnapshot && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadPdf(latestSnapshot.id)}
+                      disabled={downloadingPdf}
+                      data-testid="button-download-pdf"
+                    >
+                      {downloadingPdf ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileText className="w-4 h-4 mr-2" />
+                      )}
+                      PDF
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{language === "pt" ? "Baixar Insight Pack em PDF" : "Download Insight Pack as PDF"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </CardHeader>
         <CardContent>

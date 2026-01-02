@@ -4544,6 +4544,232 @@ export async function registerRoutes(
     }
   });
 
+  // --- ECOS Insight Pack PDF Generation ---
+  
+  app.post("/api/deals/:dealId/ecos-snapshots/:snapshotId/pdf", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, snapshotId } = req.params;
+      
+      // Get the deal and snapshot
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const snapshot = await storage.getDealEcosSnapshot(parseInt(snapshotId));
+      if (!snapshot || snapshot.dealId !== dealId) {
+        return res.status(404).json({ success: false, error: "Snapshot not found" });
+      }
+      
+      // Get related data
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const dossier = client ? await storage.getClientDossierByClientId(client.id) : null;
+      
+      // Status labels in PT-BR
+      const statusLabels: Record<string, { label: string; color: string; bgColor: string }> = {
+        'ABOVE_BAND': { label: 'ACIMA DA FAIXA', color: '#c53030', bgColor: '#fed7d7' },
+        'WITHIN_BAND': { label: 'DENTRO DA FAIXA', color: '#2f855a', bgColor: '#c6f6d5' },
+        'BELOW_BAND': { label: 'ABAIXO DA FAIXA', color: '#2b6cb0', bgColor: '#bee3f8' },
+        'NO_DATA': { label: 'DADOS INSUFICIENTES', color: '#718096', bgColor: '#e2e8f0' }
+      };
+      
+      const confidenceLabels: Record<string, string> = {
+        'HIGH': 'ALTA',
+        'MEDIUM': 'MÉDIA',
+        'LOW': 'BAIXA'
+      };
+      
+      const nextStepLabels: Record<string, string> = {
+        'REQUEST_RFQ': 'Solicitar Cotação (RFQ)',
+        'WAIT': 'Aguardar / Monitorar',
+        'NEED_MORE_DATA': 'Coletar Mais Dados'
+      };
+      
+      const statusInfo = statusLabels[snapshot.status] || statusLabels['NO_DATA'];
+      const frozenInputs = snapshot.frozenInputs as any || {};
+      const benchmarkMatch = snapshot.benchmarkMatch as any || {};
+      const results = snapshot.results as any || {};
+      const confidenceReasons = (snapshot.confidenceReasons as any[]) || [];
+      
+      // Generate HTML for PDF
+      const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>ECOS Insight Pack — ${client?.companyName || 'Cliente'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 40px; line-height: 1.5; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #0066cc; padding-bottom: 20px; }
+    .header h1 { color: #0066cc; font-size: 22px; margin-bottom: 5px; }
+    .header .subtitle { color: #666; font-size: 11px; margin-top: 5px; }
+    .logo { font-size: 20px; font-weight: bold; color: #0066cc; margin-bottom: 10px; }
+    .section { margin-bottom: 20px; page-break-inside: avoid; }
+    .section-title { font-size: 13px; font-weight: bold; color: #0066cc; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 5px; text-transform: uppercase; }
+    .row { display: flex; margin-bottom: 6px; }
+    .label { width: 180px; color: #666; font-size: 11px; }
+    .value { flex: 1; font-size: 11px; font-weight: 500; }
+    .status-badge { display: inline-block; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: bold; text-align: center; }
+    .status-container { text-align: center; margin: 20px 0; }
+    .confidence-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; background: #f0f0f0; margin-left: 10px; }
+    .highlight-box { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .savings-value { font-size: 20px; font-weight: bold; color: #2f855a; }
+    .price-comparison { display: flex; justify-content: space-between; margin: 15px 0; }
+    .price-item { flex: 1; text-align: center; padding: 10px; }
+    .price-item .value { font-size: 16px; font-weight: bold; display: block; }
+    .price-item .label { font-size: 10px; color: #666; display: block; }
+    .reason-list { font-size: 10px; color: #666; margin-top: 5px; }
+    .reason-item { margin: 3px 0; padding-left: 10px; }
+    .reason-positive { color: #2f855a; }
+    .reason-negative { color: #c53030; }
+    .assumptions { background: #fffaf0; border: 1px solid #fbd38d; border-radius: 6px; padding: 12px; margin: 15px 0; font-size: 10px; }
+    .assumptions-title { font-weight: bold; color: #c05621; margin-bottom: 5px; }
+    .disclaimer { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 6px; padding: 12px; margin: 15px 0; font-size: 9px; color: #742a2a; }
+    .disclaimer-title { font-weight: bold; margin-bottom: 3px; }
+    .footer { margin-top: 30px; text-align: center; color: #999; font-size: 9px; border-top: 1px solid #ddd; padding-top: 15px; }
+    .next-step { background: #ebf8ff; border: 1px solid #90cdf4; border-radius: 6px; padding: 12px; margin: 15px 0; text-align: center; }
+    .next-step-label { font-size: 10px; color: #2b6cb0; margin-bottom: 5px; }
+    .next-step-value { font-size: 14px; font-weight: bold; color: #2b6cb0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">ÓTIMA ENERGIA</div>
+    <h1>ECOS™ Insight Pack</h1>
+    <p class="subtitle">Análise de Mercado para Negociação de Energia</p>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Identificação</div>
+    <div class="row"><span class="label">Empresa:</span><span class="value">${client?.companyName || 'Não informado'}</span></div>
+    ${client?.cnpj ? `<div class="row"><span class="label">CNPJ:</span><span class="value">${client.cnpj}</span></div>` : ''}
+    ${dossier?.ucCodes?.[0] ? `<div class="row"><span class="label">UC:</span><span class="value">${dossier.ucCodes[0]}</span></div>` : ''}
+    <div class="row"><span class="label">Deal ID:</span><span class="value">${dealId}</span></div>
+    <div class="row"><span class="label">Snapshot:</span><span class="value">v${snapshot.version} — ID #${snapshot.id}</span></div>
+  </div>
+  
+  <div class="status-container">
+    <span class="status-badge" style="background: ${statusInfo.bgColor}; color: ${statusInfo.color};">
+      ${statusInfo.label}
+    </span>
+    <span class="confidence-badge">Confiança: ${confidenceLabels[snapshot.confidenceLevel] || snapshot.confidenceLevel}</span>
+  </div>
+  
+  ${snapshot.status !== 'NO_DATA' ? `
+  <div class="section">
+    <div class="section-title">Comparativo de Preços</div>
+    <div class="price-comparison">
+      <div class="price-item">
+        <span class="label">Preço Estimado Atual</span>
+        <span class="value" style="color: ${snapshot.status === 'ABOVE_BAND' ? '#c53030' : '#333'};">
+          R$ ${frozenInputs.clientCurrentPriceRmwh ? parseFloat(frozenInputs.clientCurrentPriceRmwh).toFixed(2) : results.clientEstimatedPriceRmwh?.toFixed(2) || '—'}/MWh
+        </span>
+      </div>
+      <div class="price-item">
+        <span class="label">Faixa de Mercado</span>
+        <span class="value">
+          R$ ${benchmarkMatch.lowerBoundRmwh?.toFixed(2) || '—'} — R$ ${benchmarkMatch.upperBoundRmwh?.toFixed(2) || '—'}/MWh
+        </span>
+      </div>
+    </div>
+    ${results.gapPercent ? `
+    <div class="highlight-box">
+      <div class="row"><span class="label">Diferença:</span><span class="value" style="color: ${results.gapPercent > 0 ? '#c53030' : '#2f855a'};">${results.gapPercent > 0 ? '+' : ''}${results.gapPercent.toFixed(1)}% em relação à faixa</span></div>
+      ${results.potentialSavingsMax ? `
+      <div class="row"><span class="label">Economia Potencial (estimativa):</span><span class="savings-value">Até R$ ${results.potentialSavingsMax.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/ano</span></div>
+      ` : ''}
+    </div>
+    ` : ''}
+  </div>
+  ` : ''}
+  
+  <div class="next-step">
+    <div class="next-step-label">PRÓXIMO PASSO RECOMENDADO</div>
+    <div class="next-step-value">${nextStepLabels[snapshot.recommendedNextStep || ''] || snapshot.recommendedNextStep || 'Coletar Mais Dados'}</div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Fatores de Confiança</div>
+    <div class="reason-list">
+      ${confidenceReasons.map((r: any) => `
+        <div class="reason-item ${r.impact === 'positive' ? 'reason-positive' : 'reason-negative'}">
+          ${r.impact === 'positive' ? '✓' : '✗'} ${r.descriptionPt || r.descriptionEn || r.factor}
+        </div>
+      `).join('')}
+    </div>
+  </div>
+  
+  <div class="assumptions">
+    <div class="assumptions-title">Premissas da Análise</div>
+    <ul style="padding-left: 15px; margin-top: 5px;">
+      <li>Submercado: ${frozenInputs.submarket || dossier?.submarket || 'Não especificado'}</li>
+      <li>Distribuidora: ${frozenInputs.distributor || dossier?.distributor || 'Não especificada'}</li>
+      <li>Grupo de Conexão: ${frozenInputs.connectionGroup || dossier?.connectionGroup || 'Não especificado'}</li>
+      <li>Consumo estimado: ${frozenInputs.avgConsumptionMwhMonth ? `${parseFloat(frozenInputs.avgConsumptionMwhMonth).toFixed(1)} MWh/mês` : 'Não informado'}</li>
+      <li>Benchmark utilizado: ${benchmarkMatch.sourceLabel || 'Referência de mercado padrão'}</li>
+    </ul>
+  </div>
+  
+  <div class="disclaimer">
+    <div class="disclaimer-title">Aviso Legal</div>
+    Os valores apresentados neste relatório são <strong>estimativas</strong> baseadas em dados fornecidos e condições de mercado no momento da análise. 
+    Não constituem garantia de economia ou proposta comercial. Os valores finais dependem de negociação específica com fornecedores.
+    Consulte a equipe Ótima Energia para uma proposta personalizada.
+  </div>
+  
+  <div class="footer">
+    <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+    <p>Ótima Energia © ${new Date().getFullYear()} — Todos os direitos reservados</p>
+    <p>Este documento é confidencial e destinado exclusivamente ao cliente identificado.</p>
+  </div>
+</body>
+</html>
+      `;
+      
+      // Generate PDF using Puppeteer
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
+      });
+      
+      await browser.close();
+      
+      // Create deal document record
+      const fileName = `ecos_insight_pack_${dealId}_v${snapshot.version}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const document = await storage.createDealDocument({
+        dealId,
+        documentType: 'ecos_insight_report',
+        fileName,
+        uploadedBy: 'system',
+        isVerified: true,
+        verifiedBy: 'system'
+      });
+      
+      // Link the PDF to the snapshot
+      await storage.updateDealEcosSnapshot(snapshot.id, { pdfDocumentId: document.id });
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(pdfBuffer);
+      
+    } catch (error: any) {
+      console.error("Error generating ECOS Insight Pack PDF:", error);
+      res.status(500).json({ success: false, error: "Failed to generate PDF" });
+    }
+  });
+
   // --- Deal Documents ---
 
   // Get documents for a deal

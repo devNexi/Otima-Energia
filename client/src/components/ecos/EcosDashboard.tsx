@@ -209,7 +209,7 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
               {dashboard.atRiskCount}
             </div>
             <p className="text-xs text-gray-500">
-              {language === "pt" ? "Monitorar" : "Monitor"}
+              {language === "pt" ? "Revisar insights" : "Review insights"}
             </p>
           </CardContent>
         </Card>
@@ -402,16 +402,16 @@ export function EcosDashboard({ onViewClient }: EcosDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-700">
               <FileText className="w-5 h-5" />
-              {language === "pt" ? "Relatórios Pendentes" : "Pending Reports"}
+              {language === "pt" ? "Insights Pendentes" : "Pending Insights"}
             </CardTitle>
             <CardDescription>
-              {language === "pt" ? "Relatórios aguardando aprovação" : "Reports awaiting approval"}
+              {language === "pt" ? "Insights aguardando revisão" : "Insights awaiting review"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {dashboard.pendingReports.length === 0 ? (
               <p className="text-center text-gray-500 py-4">
-                {language === "pt" ? "Nenhum relatório pendente" : "No pending reports"}
+                {language === "pt" ? "Nenhum insight pendente" : "No pending insights"}
               </p>
             ) : (
               <div className="space-y-3 max-h-80 overflow-y-auto">

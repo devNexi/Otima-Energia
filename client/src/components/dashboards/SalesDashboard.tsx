@@ -21,7 +21,7 @@ import {
 
 interface WorklistItem {
   id: number;
-  entityType: 'lead' | 'client' | 'deal' | 'proposal';
+  entityType: 'client' | 'deal' | 'proposal';
   name: string;
   status: string;
   nextAction: string;
@@ -50,17 +50,17 @@ export function SalesDashboard() {
 
   const kpiCards = [
     {
-      title: "Novos Leads",
-      description: "Últimos 7 dias",
-      value: kpis?.newLeads ?? 0,
-      icon: Users,
+      title: "Deals Ativos",
+      description: "Em andamento",
+      value: kpis?.activeDeals ?? 0,
+      icon: FileText,
       color: "text-blue-600",
       bgColor: "bg-blue-50"
     },
     {
-      title: "Leads Aguardando",
+      title: "Aguardando Cotação",
       description: "Sem resposta",
-      value: kpis?.leadsAwaitingResponse ?? 0,
+      value: kpis?.dealsAwaitingQuote ?? 0,
       icon: Clock,
       color: "text-yellow-600",
       bgColor: "bg-yellow-50"
@@ -90,7 +90,6 @@ export function SalesDashboard() {
   };
 
   const entityIcons = {
-    lead: Users,
     client: Building2,
     deal: FileText,
     proposal: Send
@@ -168,8 +167,7 @@ export function SalesDashboard() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{item.name}</span>
                           <Badge variant="outline" className="text-xs capitalize">
-                            {item.entityType === 'lead' ? 'Lead' : 
-                             item.entityType === 'client' ? 'Cliente' :
+                            {item.entityType === 'client' ? 'Cliente' :
                              item.entityType === 'deal' ? 'Negócio' : 'Proposta'}
                           </Badge>
                           <Badge className={priorityColors[item.priority]}>
