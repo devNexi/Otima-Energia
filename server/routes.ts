@@ -8759,6 +8759,48 @@ export async function registerRoutes(
     }
   });
   
+  // Get eligible quotes for proposal (excludes expired/incomplete/risk-flagged)
+  app.get("/api/deals/:dealId/eligible-quotes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const quotes = await storage.getDealQuotes(req.params.dealId);
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Filter eligible quotes
+      const eligibleQuotes = quotes.filter(q => {
+        // Exclude expired
+        if (q.validUntil && q.validUntil < today) return false;
+        if (q.isExpired) return false;
+        
+        // Exclude incomplete (must have clientEnergyPriceRmwh or baseEnergyPriceRmwh and termMonths)
+        if (!q.clientEnergyPriceRmwh && !q.baseEnergyPriceRmwh) return false;
+        if (!q.termMonths) return false;
+        
+        // Exclude risk-flagged
+        if (q.isRiskFlagged) return false;
+        
+        return true;
+      });
+      
+      // Enrich with supplier names
+      const suppliers = await storage.getSuppliers();
+      const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
+      
+      const enrichedQuotes = eligibleQuotes.map(q => ({
+        ...q,
+        supplierName: supplierMap.get(q.supplierId) || 'Unknown Supplier',
+        // Never expose base price to client - use clientEnergyPriceRmwh or compute from base + default margin
+        clientEnergyPriceRmwh: q.clientEnergyPriceRmwh || q.baseEnergyPriceRmwh
+      }));
+      
+      res.json({ success: true, quotes: enrichedQuotes });
+    } catch (error: any) {
+      console.error("Error getting eligible quotes:", error);
+      res.status(500).json({ success: false, error: "Failed to get eligible quotes" });
+    }
+  });
+  
   // Create proposal draft with baseline data
   app.post("/api/deals/:dealId/proposals", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
@@ -8771,10 +8813,13 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
       
-      // Extract baseline data from request (bill-derived)
+      // Extract baseline data from request (bill-derived or manual)
       const {
         baselineConsumptionMwh12m,
         baselineEnergySupplyCost12m,
+        baselineEnergySupplyCostManual,
+        baselineCostIsProxy,
+        baselineProxyLabel,
         baselineIsAnnualized,
         baselineSourceNote,
         validUntil,
@@ -8783,6 +8828,9 @@ export async function registerRoutes(
         proposalTitle
       } = req.body;
       
+      // Determine effective baseline cost (extracted > manual > proxy)
+      const effectiveBaselineCost = baselineEnergySupplyCost12m || baselineEnergySupplyCostManual;
+      
       const proposal = await storage.createDealProposal({
         dealId: deal.id,
         clientId: deal.clientId!,
@@ -8790,7 +8838,10 @@ export async function registerRoutes(
         createdByUserId: userId!,
         isDemo: deal.isDemo,
         baselineConsumptionMwh12m: baselineConsumptionMwh12m?.toString() || null,
-        baselineEnergySupplyCost12m: baselineEnergySupplyCost12m?.toString() || null,
+        baselineEnergySupplyCost12m: effectiveBaselineCost?.toString() || null,
+        baselineEnergySupplyCostManual: baselineEnergySupplyCostManual?.toString() || null,
+        baselineCostIsProxy: baselineCostIsProxy || false,
+        baselineProxyLabel: baselineCostIsProxy ? (baselineProxyLabel || 'Estimativa conservadora') : null,
         baselineIsAnnualized: baselineIsAnnualized || false,
         baselineSourceNote: baselineSourceNote || null,
         validUntil: validUntil || null,
@@ -8804,7 +8855,7 @@ export async function registerRoutes(
         entityType: 'deal_proposal',
         entityId: proposal.id,
         userId,
-        changes: { dealId: deal.id, status: 'DRAFT', hasBaseline: !!baselineConsumptionMwh12m },
+        changes: { dealId: deal.id, status: 'DRAFT', hasBaseline: !!baselineConsumptionMwh12m, isProxy: baselineCostIsProxy },
         source: 'portal'
       });
       
@@ -8829,8 +8880,14 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "Cannot modify generated proposal" });
       }
       
+      // Block modifications if immutable snapshot exists
+      if (proposal.proposalSnapshotJson) {
+        return res.status(400).json({ success: false, error: "Proposal snapshot is immutable - cannot modify" });
+      }
+      
       const allowedFields = [
         'baselineConsumptionMwh12m', 'baselineEnergySupplyCost12m', 
+        'baselineEnergySupplyCostManual', 'baselineCostIsProxy', 'baselineProxyLabel',
         'baselineIsAnnualized', 'baselineSourceNote',
         'recommendedItemId', 'recommendedReason',
         'validUntil', 'preparedByName', 'customNotes', 'proposalTitle'
@@ -8935,6 +8992,7 @@ export async function registerRoutes(
         supplierBaseEnergyPriceRmwh: dealQuote.baseEnergyPriceRmwh,
         marginType,
         marginValue: marginValue.toString(),
+        clientEnergyPriceRmwh: finalPrice.toFixed(4),
         finalEnergyPriceRmwh: finalPrice.toFixed(4),
         proposedCost12m,
         savings12m,
@@ -9049,7 +9107,7 @@ export async function registerRoutes(
         .update(JSON.stringify(snapshotData))
         .digest('hex');
       
-      // Create snapshot
+      // Create snapshot in separate table (for querying)
       await storage.createDealProposalSnapshot({
         proposalId: proposal.id,
         snapshotJson: snapshotData,
@@ -9058,9 +9116,10 @@ export async function registerRoutes(
         isDemo: proposal.isDemo
       });
       
-      // Update status to GENERATED
+      // Also store immutable snapshot on proposal itself
       const updatedProposal = await storage.updateDealProposal(proposal.id, {
-        status: 'GENERATED'
+        status: 'GENERATED',
+        proposalSnapshotJson: snapshotData
       });
       
       await logAuditEvent({
