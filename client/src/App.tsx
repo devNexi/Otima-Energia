@@ -29,6 +29,7 @@ import ProposalTracker from "@/pages/ProposalTracker";
 import BenchmarkManager from "@/pages/BenchmarkManager";
 import PrcUploadCenter from "@/pages/PrcUploadCenter";
 import PrcReviewPage from "@/pages/PrcReviewPage";
+import EcosValidationPage from "@/pages/EcosValidationPage";
 import AdminSettings from "@/pages/AdminSettings";
 import NotFound from "@/pages/not-found";
 import PublicProposal from "@/pages/PublicProposal";
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/admin/benchmarks" component={BenchmarkManager} />
       <Route path="/admin/prc" component={PrcUploadCenter} />
       <Route path="/admin/prc/review/:id" component={PrcReviewPage} />
+      <Route path="/admin/ecos/validation" component={EcosValidationPage} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route component={NotFound} />
     </Switch>
