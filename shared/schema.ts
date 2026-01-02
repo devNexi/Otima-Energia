@@ -156,6 +156,14 @@ export type InsertConsumptionProfile = z.infer<typeof insertConsumptionProfileSc
 export type ConsumptionProfile = typeof consumptionProfiles.$inferSelect;
 
 // Suppliers master table
+// Supplier status enum
+export const SUPPLIER_STATUSES = ['active', 'inactive', 'prc_only'] as const;
+export type SupplierStatus = typeof SUPPLIER_STATUSES[number];
+
+// Supplier source enum
+export const SUPPLIER_SOURCES = ['manual', 'prc_import', 'zoho_sync'] as const;
+export type SupplierSource = typeof SUPPLIER_SOURCES[number];
+
 export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -166,6 +174,8 @@ export const suppliers = pgTable("suppliers", {
   website: text("website"),
   commissionTerms: text("commission_terms"), // Standard terms with this supplier
   isActive: boolean("is_active").default(true),
+  status: text("status").default("active"), // 'active', 'inactive', 'prc_only'
+  source: text("source").default("manual"), // 'manual', 'prc_import', 'zoho_sync'
   isDemo: boolean("is_demo").default(false), // Demo/sandbox data flag
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -1,0 +1,100 @@
+ou are working inside the existing Ótima Energia admin portal.
+
+A blocking issue exists in the PRC Upload flow:
+
+❌ The PRC upload modal requires selecting a supplier from a dropdown, but the supplier list is empty in early-stage usage. This prevents PRC ingestion entirely.
+
+This must be fixed immediately.
+
+🎯 Core Principle (DO NOT IGNORE)
+
+PRCs are market evidence, not supplier onboarding artifacts.
+
+The system must allow PRCs to be uploaded before suppliers are formally onboarded.
+
+Uploading PRCs must NEVER be blocked by missing supplier records.
+
+✅ REQUIRED CHANGES
+1️⃣ Supplier Selection Must Be Optional
+
+Remove required constraint from supplier dropdown
+
+UI copy update:
+
+From: “Select supplier”
+
+To: “Select supplier (optional)”
+
+User must be able to proceed without selecting a supplier.
+
+2️⃣ Add PRC-Only Supplier Stub Logic (MANDATORY)
+
+If no supplier is selected at upload time:
+
+Auto-create a supplier stub with:
+
+name: extracted supplier name from PRC filename or PDF header if available, else "Unknown (PRC)"
+
+status: "prc_only"
+
+isActive: false
+
+source: "prc_import"
+
+Link prcDocuments.supplierId to this stub
+
+This supplier:
+
+Does NOT appear in RFQ flows
+
+Does NOT appear in deal supplier selection
+
+EXISTS only to anchor PRC evidence
+
+3️⃣ Supplier Merge Path (Future-safe, no UI needed now)
+
+Design supplier model so that:
+
+A prc_only supplier can later be:
+
+Activated
+
+Merged into a real supplier
+
+All PRCs remain correctly linked
+
+No UI required now — just ensure data model allows this.
+
+4️⃣ UX Safeguards
+
+In PRC list and document view:
+
+If supplier is prc_only, show badge:
+
+“PRC-only supplier (not onboarded)”
+
+This prevents confusion for Ops.
+
+🚫 Explicitly DO NOT
+
+Do NOT block PRC upload due to missing supplier
+
+Do NOT require supplier onboarding before PRC ingestion
+
+Do NOT reuse Deal/RFQ supplier constraints here
+
+✅ Acceptance Criteria
+
+Before marking complete:
+
+I can upload a PRC with no suppliers configured
+
+PRC parses, enters review workflow, and publishes benchmarks
+
+Supplier dropdown is optional
+
+Stub suppliers are created cleanly and invisibly
+
+No RFQ or deal flows are affected
+
+This fix is required before ECOS benchmarking can be validated.

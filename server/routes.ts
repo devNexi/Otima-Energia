@@ -60,6 +60,51 @@ import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
 
+// Helper to extract supplier name from PRC filename
+function extractSupplierNameFromFilename(filename: string): string | null {
+  // Remove extension
+  const nameWithoutExt = filename.replace(/\.(pdf|png|jpg|jpeg)$/i, '');
+  
+  // Common PRC filename patterns:
+  // "PRC_SupplierName_2025-01.pdf"
+  // "SupplierName - PRC Jan 2025.pdf"
+  // "Circular_SupplierName_Janeiro_2025.pdf"
+  
+  // Try to extract from common patterns
+  const patterns = [
+    /^PRC[_\s-]+([^_\-0-9]+)/i,           // PRC_SupplierName_...
+    /^([^_\-0-9]+)[_\s-]+PRC/i,           // SupplierName_PRC_...
+    /^Circular[_\s-]+([^_\-0-9]+)/i,      // Circular_SupplierName_...
+    /^([A-Za-z\s]+)(?:[_\s-]+\d{4})/,     // SupplierName_2025...
+  ];
+  
+  for (const pattern of patterns) {
+    const match = nameWithoutExt.match(pattern);
+    if (match && match[1]) {
+      // Clean up: replace underscores with spaces, title case
+      const cleaned = match[1]
+        .replace(/[_-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
+      if (cleaned.length >= 3) {
+        return cleaned;
+      }
+    }
+  }
+  
+  // Fallback: if filename has meaningful text, use first part
+  const words = nameWithoutExt.replace(/[_-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !/^\d+$/.test(w));
+  if (words.length > 0 && words[0].length >= 3) {
+    return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+  }
+  
+  return null;
+}
+
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }
@@ -7888,12 +7933,16 @@ export async function registerRoutes(
         isDemo: isDemo === 'true' ? true : isDemo === 'false' ? false : undefined
       });
       
-      // Enrich with supplier names
+      // Enrich with supplier names and status
       const suppliers = await storage.getSuppliers();
-      const enriched = documents.map(doc => ({
-        ...doc,
-        supplierName: suppliers.find(s => s.id === doc.supplierId)?.name || 'Unknown'
-      }));
+      const enriched = documents.map(doc => {
+        const supplier = suppliers.find(s => s.id === doc.supplierId);
+        return {
+          ...doc,
+          supplierName: supplier?.name || 'Unknown',
+          supplierStatus: supplier?.status || 'active'
+        };
+      });
       
       res.json({ success: true, documents: enriched });
     } catch (error: any) {
@@ -7919,7 +7968,8 @@ export async function registerRoutes(
         success: true, 
         document: {
           ...document,
-          supplierName: supplier?.name || 'Unknown'
+          supplierName: supplier?.name || 'Unknown',
+          supplierStatus: supplier?.status || 'active'
         },
         rows 
       });
@@ -7989,15 +8039,9 @@ export async function registerRoutes(
       
       const { supplierId, referenceMonth, isDemo, submarketHint, source, notes, autoParse } = req.body;
       
-      // Validate required fields
-      if (!supplierId || !referenceMonth) {
-        return res.status(400).json({ success: false, error: "Missing supplierId or referenceMonth" });
-      }
-      
-      // Validate supplierId is numeric
-      const parsedSupplierId = parseInt(supplierId, 10);
-      if (isNaN(parsedSupplierId) || parsedSupplierId <= 0) {
-        return res.status(400).json({ success: false, error: "Invalid supplierId" });
+      // Validate required fields - only referenceMonth is required now
+      if (!referenceMonth) {
+        return res.status(400).json({ success: false, error: "Missing referenceMonth" });
       }
       
       // Validate referenceMonth format (YYYY-MM)
@@ -8013,10 +8057,37 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "Only PDF and image files are allowed" });
       }
       
-      // Get supplier for naming
-      const supplier = await storage.getSupplier(parsedSupplierId);
-      if (!supplier) {
-        return res.status(400).json({ success: false, error: "Supplier not found" });
+      // Handle supplier: if not provided, auto-create a prc_only stub
+      let supplier;
+      let parsedSupplierId: number;
+      
+      if (supplierId) {
+        parsedSupplierId = parseInt(supplierId, 10);
+        if (isNaN(parsedSupplierId) || parsedSupplierId <= 0) {
+          return res.status(400).json({ success: false, error: "Invalid supplierId" });
+        }
+        supplier = await storage.getSupplier(parsedSupplierId);
+        if (!supplier) {
+          return res.status(400).json({ success: false, error: "Supplier not found" });
+        }
+      } else {
+        // Extract supplier name from filename or create generic stub
+        const filename = file.originalname;
+        const extractedName = extractSupplierNameFromFilename(filename);
+        const stubName = extractedName || `Unknown PRC ${Date.now()}`;
+        const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        
+        // Create prc_only supplier stub
+        supplier = await storage.createSupplier({
+          name: stubName,
+          shortCode: stubShortCode,
+          isActive: false,
+          status: 'prc_only',
+          source: 'prc_import'
+        });
+        parsedSupplierId = supplier.id;
+        
+        console.log(`Created prc_only supplier stub: ${stubName} (ID: ${supplier.id})`);
       }
       
       // Upload to object storage
@@ -8032,7 +8103,7 @@ export async function registerRoutes(
       const objectStorage = new ObjectStorageService();
       await objectStorage.upload(storageKey, file.buffer, file.mimetype);
       
-      const fileUrl = `https://storage.googleapis.com/${bucketId}/${storageKey}`;
+      // Store relative key only - use signed URLs for access on-demand
       const sourceName = source || `PRC ${supplier.name} ${referenceMonth}`;
       const userId = await getSessionUserId(req);
       
@@ -8042,7 +8113,7 @@ export async function registerRoutes(
         referenceMonth,
         sourceName,
         fileStorageKey: storageKey,
-        fileUrl,
+        fileUrl: null, // Use signed URLs on-demand via fileStorageKey
         originalFilename: file.originalname,
         fileSizeBytes: file.size,
         uploadedByUserId: userId || null,
@@ -8135,6 +8206,30 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error verifying PRC document:", error);
       res.status(500).json({ success: false, error: "Failed to verify document" });
+    }
+  });
+  
+  // Get signed URL for PRC document file access
+  app.get("/api/prc/documents/:id/signed-url", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const document = await storage.getPrcDocument(parseInt(req.params.id));
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      if (!document.fileStorageKey) {
+        return res.status(404).json({ success: false, error: "Document has no associated file" });
+      }
+      
+      const objectStorage = new ObjectStorageService();
+      const signedUrl = await objectStorage.getSignedReadUrl(document.fileStorageKey, 3600); // 1 hour expiry
+      
+      res.json({ success: true, signedUrl, expiresIn: 3600 });
+    } catch (error: any) {
+      console.error("Error getting signed URL:", error);
+      res.status(500).json({ success: false, error: "Failed to get signed URL" });
     }
   });
   

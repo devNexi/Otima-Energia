@@ -36,6 +36,7 @@ interface PrcDocument {
   id: number;
   supplierId: number;
   supplierName?: string;
+  supplierStatus?: string;
   referenceMonth: string;
   originalFilename: string;
   fileUrl: string | null;
@@ -53,6 +54,8 @@ interface Supplier {
   id: number;
   name: string;
   shortCode: string;
+  status?: string;
+  source?: string;
 }
 
 interface FileUploadState {
@@ -97,7 +100,7 @@ export default function PrcUploadCenter() {
   const uploadMutation = useMutation({
     mutationFn: async ({ file, supplierId, referenceMonth, submarketHint, source, notes }: { 
       file: File;
-      supplierId: number;
+      supplierId?: number;
       referenceMonth: string;
       submarketHint: string;
       source: string;
@@ -105,7 +108,9 @@ export default function PrcUploadCenter() {
     }) => {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("supplierId", supplierId.toString());
+      if (supplierId) {
+        formData.append("supplierId", supplierId.toString());
+      }
       formData.append("referenceMonth", referenceMonth);
       formData.append("submarketHint", submarketHint);
       formData.append("source", source);
@@ -127,6 +132,7 @@ export default function PrcUploadCenter() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/prc/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
     }
   });
 
@@ -206,11 +212,6 @@ export default function PrcUploadCenter() {
       const item = uploadQueue[i];
       if (item.status !== "pending") continue;
 
-      if (!item.supplierId) {
-        updateQueueItem(i, { status: "error", error: "Supplier is required" });
-        continue;
-      }
-
       updateQueueItem(i, { status: "uploading", progress: 20 });
 
       try {
@@ -218,7 +219,7 @@ export default function PrcUploadCenter() {
         
         const result = await uploadMutation.mutateAsync({
           file: item.file,
-          supplierId: item.supplierId,
+          supplierId: item.supplierId || undefined,
           referenceMonth: item.referenceMonth,
           submarketHint: item.submarketHint,
           source: item.source,
@@ -394,13 +395,14 @@ export default function PrcUploadCenter() {
                                   
                                   <div className="grid grid-cols-2 gap-2 mb-2">
                                     <Select
-                                      value={item.supplierId?.toString() || ""}
-                                      onValueChange={(v) => updateQueueItem(index, { supplierId: parseInt(v) })}
+                                      value={item.supplierId?.toString() || "auto"}
+                                      onValueChange={(v) => updateQueueItem(index, { supplierId: v === "auto" ? null : parseInt(v) })}
                                     >
                                       <SelectTrigger className="h-8" data-testid={`select-supplier-${index}`}>
-                                        <SelectValue placeholder="Supplier *" />
+                                        <SelectValue placeholder="Supplier (optional)" />
                                       </SelectTrigger>
                                       <SelectContent>
+                                        <SelectItem value="auto">Auto-detect from filename</SelectItem>
                                         {suppliers.map(s => (
                                           <SelectItem key={s.id} value={s.id.toString()}>
                                             {s.name}
@@ -462,15 +464,16 @@ export default function PrcUploadCenter() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="default-supplier">Default Supplier</Label>
+                      <Label htmlFor="default-supplier">Default Supplier (optional)</Label>
                       <Select
-                        value={defaultSupplierId?.toString() || ""}
-                        onValueChange={(v) => setDefaultSupplierId(parseInt(v))}
+                        value={defaultSupplierId?.toString() || "auto"}
+                        onValueChange={(v) => setDefaultSupplierId(v === "auto" ? null : parseInt(v))}
                       >
                         <SelectTrigger id="default-supplier" data-testid="select-default-supplier">
-                          <SelectValue placeholder="Select supplier" />
+                          <SelectValue placeholder="Auto-detect from filename" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="auto">Auto-detect from filename</SelectItem>
                           {suppliers.map(s => (
                             <SelectItem key={s.id} value={s.id.toString()}>
                               {s.name}
@@ -579,7 +582,16 @@ export default function PrcUploadCenter() {
                               </span>
                             </Link>
                           </TableCell>
-                          <TableCell>{doc.supplierName || `Supplier #${doc.supplierId}`}</TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-2">
+                              {doc.supplierName || `Supplier #${doc.supplierId}`}
+                              {doc.supplierStatus === 'prc_only' && (
+                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                                  PRC-only
+                                </Badge>
+                              )}
+                            </span>
+                          </TableCell>
                           <TableCell>{doc.referenceMonth}</TableCell>
                           <TableCell>{getStatusBadge(doc.parseStatus)}</TableCell>
                           <TableCell>

@@ -207,6 +207,44 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  /**
+   * Upload a buffer directly to object storage
+   * @param key - The object key/path (e.g., "prc/2024-01/supplier_1234_file.pdf")
+   * @param buffer - The file buffer to upload
+   * @param contentType - The MIME type of the file
+   */
+  async upload(key: string, buffer: Buffer, contentType: string): Promise<void> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${key}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    
+    await file.save(buffer, {
+      contentType,
+      resumable: false,
+    });
+  }
+
+  /**
+   * Get a signed URL for reading an object
+   * @param key - The object key/path
+   * @param ttlSec - Time to live in seconds (default 3600)
+   */
+  async getSignedReadUrl(key: string, ttlSec: number = 3600): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${key}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "GET",
+      ttlSec,
+    });
+  }
 }
 
 function parseObjectPath(path: string): {
