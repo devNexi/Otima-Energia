@@ -37,7 +37,8 @@ export type ScenarioPack =
   | 'CREDIT_REJECTED'
   | 'WRONG_SIGNER'
   | 'COMMISSION_DISPUTE'
-  | 'OVERDUE_PAYMENT';
+  | 'OVERDUE_PAYMENT'
+  | 'ASSEMBLY_STUCK';
 
 export const SCENARIO_PACK_LABELS: Record<ScenarioPack, string> = {
   FULL_DATASET: 'Full Demo Dataset',
@@ -47,6 +48,7 @@ export const SCENARIO_PACK_LABELS: Record<ScenarioPack, string> = {
   WRONG_SIGNER: 'Wrong Signer Risk',
   COMMISSION_DISPUTE: 'Commission Dispute',
   OVERDUE_PAYMENT: 'Overdue Payment Recovery',
+  ASSEMBLY_STUCK: 'Assembly Stuck States (3 deals)',
 };
 
 const brazilianCompanyNames = [
@@ -1449,6 +1451,138 @@ async function seedFullDataset(): Promise<Record<string, number>> {
   return summary;
 }
 
+// ========== ASSEMBLY STUCK STATES ==========
+async function seedAssemblyStuck(): Promise<Record<string, number>> {
+  const summary: Record<string, number> = {};
+  
+  // Create 3 demo suppliers for quotes
+  const demoSuppliersList = [];
+  for (let i = 0; i < 3; i++) {
+    demoSuppliersList.push(await createDemoSupplier(`DEMO - Assembly Supplier ${i + 1}`, 700 + i));
+  }
+  summary.suppliers = demoSuppliersList.length;
+  
+  // === DEAL 1: Stuck at DOSSIER_DRAFT (no dossier created) ===
+  const client1 = await createDemoClient("TEST - Stuck No Dossier SA", 701);
+  const dealId1 = generateScenarioId('ASM', 'DEAL', 1);
+  const [deal1] = await db.insert(deals).values({
+    id: dealId1,
+    clientId: client1.id,
+    status: "rfq_preparation",
+    estimatedVolumeMwh: 120,
+    estimatedSavingsPercent: 12,
+    notes: "ASSEMBLY STUCK: No dossier created - cannot proceed to RFQ",
+    isDemo: true,
+  }).returning();
+  
+  // === DEAL 2: Stuck at DOSSIER_DRAFT (dossier in DRAFT status) ===
+  const client2 = await createDemoClient("TEST - Stuck Draft Dossier Ltd", 702);
+  const dealId2 = generateScenarioId('ASM', 'DEAL', 2);
+  const [deal2] = await db.insert(deals).values({
+    id: dealId2,
+    clientId: client2.id,
+    status: "rfq_preparation",
+    estimatedVolumeMwh: 85,
+    estimatedSavingsPercent: 8,
+    notes: "ASSEMBLY STUCK: Dossier in DRAFT - needs to be READY/LOCKED for RFQ",
+    isDemo: true,
+  }).returning();
+  
+  // Create DRAFT dossier for deal 2
+  await db.insert(clientDossiers).values({
+    clientId: client2.id,
+    dealId: dealId2,
+    status: "DRAFT",
+    distributorName: "CPFL",
+    tariffClass: "A4",
+    submarket: "SE/CO",
+    eligibilityType: "ACL_DIRECT",
+    contractedDemandKw: 200,
+    avgMonthlyConsumptionKwh: 85000,
+    isDemo: true,
+  });
+  summary.dossiers = 1;
+  
+  // === DEAL 3: Stuck at QUOTES_RECEIVED (only 1 eligible quote, needs 2) ===
+  const client3 = await createDemoClient("TEST - Stuck Insufficient Quotes Inc", 703);
+  const dealId3 = generateScenarioId('ASM', 'DEAL', 3);
+  const [deal3] = await db.insert(deals).values({
+    id: dealId3,
+    clientId: client3.id,
+    status: "quotes_received",
+    estimatedVolumeMwh: 150,
+    estimatedSavingsPercent: 15,
+    notes: "ASSEMBLY STUCK: Only 1 eligible quote - needs minimum 2 for proposal",
+    isDemo: true,
+  }).returning();
+  
+  // Create LOCKED dossier for deal 3
+  await db.insert(clientDossiers).values({
+    clientId: client3.id,
+    dealId: dealId3,
+    status: "LOCKED",
+    distributorName: "Cemig",
+    tariffClass: "A4",
+    submarket: "SE/CO",
+    eligibilityType: "ACL_DIRECT",
+    contractedDemandKw: 350,
+    avgMonthlyConsumptionKwh: 150000,
+    lockedAt: new Date().toISOString(),
+    lockedBy: "demo_user",
+    isDemo: true,
+  });
+  summary.dossiers = (summary.dossiers || 0) + 1;
+  
+  // Create RFQ dispatch for deal 3
+  await db.insert(rfqDispatches).values({
+    dealId: dealId3,
+    supplierId: demoSuppliersList[0].id,
+    channel: "EMAIL",
+    status: "RESPONDED",
+    sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    responseDeadline: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    respondedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    isDemo: true,
+  });
+  summary.dispatches = 1;
+  
+  // Create 1 eligible quote and 1 expired quote for deal 3
+  await db.insert(dealQuotes).values([
+    {
+      dealId: dealId3,
+      supplierId: demoSuppliersList[0].id,
+      supplierBasePrice: 280.00,
+      otimaMarginRmwh: 3.00,
+      clientEnergyPriceRmwh: 283.00,
+      spreadsheetUrl: null,
+      contractMonths: 24,
+      status: "VALID",
+      validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: "Eligible quote - valid for 7 more days",
+      isDemo: true,
+    },
+    {
+      dealId: dealId3,
+      supplierId: demoSuppliersList[1].id,
+      supplierBasePrice: 275.00,
+      otimaMarginRmwh: 3.00,
+      clientEnergyPriceRmwh: 278.00,
+      spreadsheetUrl: null,
+      contractMonths: 24,
+      status: "EXPIRED",
+      validUntil: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      notes: "EXPIRED - was cheaper but expired yesterday",
+      isDemo: true,
+    },
+  ]);
+  summary.quotes = 2;
+  
+  summary.clients = 3;
+  summary.deals = 3;
+  
+  return summary;
+}
+
 // ========== MAIN SEEDER FUNCTION ==========
 export async function seedDemoData(scenarioPacks?: ScenarioPack[]): Promise<{ success: boolean; summary: Record<string, number> }> {
   const packs = scenarioPacks && scenarioPacks.length > 0 ? scenarioPacks : ['FULL_DATASET' as ScenarioPack];
@@ -1479,6 +1613,9 @@ export async function seedDemoData(scenarioPacks?: ScenarioPack[]): Promise<{ su
           break;
         case 'OVERDUE_PAYMENT':
           packSummary = await seedOverduePayment();
+          break;
+        case 'ASSEMBLY_STUCK':
+          packSummary = await seedAssemblyStuck();
           break;
       }
       
