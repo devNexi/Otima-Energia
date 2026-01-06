@@ -1,7 +1,4 @@
 import { ArrowRight } from "lucide-react";
-import diagnosisImage from "@/assets/homepage/diagnosis.png";
-import compareImage from "@/assets/homepage/compare.png";
-import migrateImage from "@/assets/homepage/migrate.png";
 
 export function Process() {
   const handleScroll = (href: string) => {
@@ -51,14 +48,24 @@ export function Process() {
 
           {/* Steps Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-            {/* Step 1 */}
+            {/* Step 1 - Upload documents / energy profile */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden">
-                <img 
-                  src={diagnosisImage} 
-                  alt="Compartilhe seu consumo" 
-                  className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
-                />
+              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
+                <div className="text-center p-6">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="text-[#9e3ffd] font-medium">Análise energética</span>
+                </div>
               </div>
               <div className="mb-4">
                 <span className="text-5xl font-light text-[#c88ff5]">01</span>
@@ -71,14 +78,24 @@ export function Process() {
               </p>
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2 - Fetch proposals / handshake + pricing */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden">
-                <img 
-                  src={compareImage} 
-                  alt="Propostas com preço final" 
-                  className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
-                />
+              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
+                <div className="text-center p-6">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="text-[#9e3ffd] font-medium">Cotação de mercado</span>
+                </div>
               </div>
               <div className="mb-4">
                 <span className="text-5xl font-light text-[#c88ff5]">02</span>
@@ -91,14 +108,24 @@ export function Process() {
               </p>
             </div>
 
-            {/* Step 3 */}
+            {/* Step 3 - Compare options / decision */}
             <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden">
-                <img 
-                  src={migrateImage} 
-                  alt="Você compara e escolhe" 
-                  className="w-full h-48 object-cover"
-                />
+              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
+                <div className="text-center p-6">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="text-[#9e3ffd] font-medium">Comparação clara</span>
+                </div>
               </div>
               <div className="mb-4">
                 <span className="text-5xl font-light text-[#c88ff5]">03</span>
@@ -111,7 +138,7 @@ export function Process() {
               </p>
             </div>
 
-            {/* Step 4 */}
+            {/* Step 4 - Contract protection */}
             <div className="group">
               <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
                 <div className="text-center p-6">
