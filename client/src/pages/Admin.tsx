@@ -489,31 +489,29 @@ export default function Admin({ defaultTab }: AdminProps) {
                 {language === "pt" ? "Finanças" : "Finance"}
               </TabsTrigger>
             )}
-            {user?.role === "admin" && (
+          </TabsList>
+
+          {/* Footer Menu - Admin Governance Tabs */}
+          {user?.role === "admin" && (
+            <TabsList className="inline-flex h-auto gap-1 p-1 bg-muted rounded-lg mt-2" data-testid="tabs-footer">
               <TabsTrigger value="overview" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-overview">
                 <LayoutDashboard className="w-4 h-4" />
-                {language === "pt" ? "Visão" : "Overview"}
+                {language === "pt" ? "Visão Geral" : "Overview"}
               </TabsTrigger>
-            )}
-            {user?.role === "admin" && (
               <TabsTrigger value="audit-trail" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-audit-trail">
                 <BookOpen className="w-4 h-4" />
-                {language === "pt" ? "Auditoria" : "Audit"}
+                {language === "pt" ? "Auditoria" : "Audit Trail"}
               </TabsTrigger>
-            )}
-            {user?.role === "admin" && (
               <TabsTrigger value="integrations" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-integrations">
                 <LinkIcon className="w-4 h-4" />
                 {language === "pt" ? "Integrações" : "Integrations"}
               </TabsTrigger>
-            )}
-            {user?.role === "admin" && (
               <TabsTrigger value="prc" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-prc">
                 <TrendingUp className="w-4 h-4" />
                 PRCs
               </TabsTrigger>
-            )}
-          </TabsList>
+            </TabsList>
+          )}
 
           {/* Suppliers - first tab */}
           <TabsContent value="suppliers">
@@ -933,6 +931,140 @@ export default function Admin({ defaultTab }: AdminProps) {
           {user?.role === "admin" && (
             <TabsContent value="finance">
               <FinanceTab language={language} userRole={user?.role} />
+            </TabsContent>
+          )}
+          
+          {/* Overview - Executive KPIs - admin only */}
+          {user?.role === "admin" && (
+            <TabsContent value="overview">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <LayoutDashboard className="w-6 h-6" />
+                      {language === "pt" ? "Visão Executiva" : "Executive Overview"}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {language === "pt" 
+                        ? "Resumo de métricas e saúde do sistema" 
+                        : "Summary of key metrics and system health"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pipeline Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="w-5 h-5" />
+                      {language === "pt" ? "Pipeline de Negócios" : "Deal Pipeline"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Negócios Ativos" : "Active Deals"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                        <p className="text-2xl font-bold text-yellow-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Em Cotação" : "In RFQ"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <p className="text-2xl font-bold text-green-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Fechados (Mês)" : "Closed (Month)"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-red-50 rounded-lg">
+                        <p className="text-2xl font-bold text-red-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Em Risco" : "At Risk"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Financial Health */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      {language === "pt" ? "Saúde Financeira" : "Financial Health"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <p className="text-2xl font-bold text-green-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Recebido (Mês)" : "Received (Month)"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Pendente" : "Pending"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-red-50 rounded-lg">
+                        <p className="text-2xl font-bold text-red-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Faturas Atrasadas" : "Overdue Invoices"}</p>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <p className="text-2xl font-bold text-purple-700">-</p>
+                        <p className="text-sm text-muted-foreground">{language === "pt" ? "Comissão Prevista" : "Expected Commission"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Operations & System Status */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="w-5 h-5" />
+                        {language === "pt" ? "Operações" : "Operations"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                          <span>{language === "pt" ? "Fila de Montagem" : "Assembly Queue"}</span>
+                          <Badge>-</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                          <span>{language === "pt" ? "RFQs Pendentes" : "Pending RFQs"}</span>
+                          <Badge>-</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                          <span>{language === "pt" ? "Casos Abertos" : "Open Cases"}</span>
+                          <Badge>-</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <LinkIcon className="w-5 h-5" />
+                        {language === "pt" ? "Status do Sistema" : "System Status"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                          <span>Zoho CRM</span>
+                          <Badge className="bg-green-100 text-green-800">{language === "pt" ? "Conectado" : "Connected"}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                          <span>{language === "pt" ? "Banco de Dados" : "Database"}</span>
+                          <Badge className="bg-green-100 text-green-800">{language === "pt" ? "Saudável" : "Healthy"}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                          <span>{language === "pt" ? "Último PRC" : "Last PRC"}</span>
+                          <Badge variant="outline">-</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </TabsContent>
           )}
           
