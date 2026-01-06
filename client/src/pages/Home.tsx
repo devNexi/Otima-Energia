@@ -130,8 +130,8 @@ export default function Home() {
         <Process />
         <EcosSection />
         <TrustSection />
-        <Business />
         <Contact />
+        <Business />
       </main>
       <Footer />
       <WhatsAppButton />
