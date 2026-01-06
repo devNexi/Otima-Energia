@@ -50,13 +50,13 @@ export function Process() {
           <h2 className="dcvc-section-title mb-16">Como Funciona</h2>
 
           {/* Steps Grid */}
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             {/* Step 1 */}
             <div className="group">
               <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={diagnosisImage} 
-                  alt="Diagnóstico de energia" 
+                  alt="Compartilhe seu consumo" 
                   className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
                 />
               </div>
@@ -64,10 +64,10 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Envie sua conta de luz
+                Você compartilha seu consumo e perfil de contratação
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Nossa análise identifica perfil, elegibilidade, riscos e oportunidades — mesmo que a migração ainda não seja imediata.
+                Envie suas faturas e informações básicas para iniciarmos a análise do seu perfil energético.
               </p>
             </div>
 
@@ -76,7 +76,7 @@ export function Process() {
               <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={compareImage} 
-                  alt="Comparação de mercado" 
+                  alt="Propostas com preço final" 
                   className="w-full h-48 object-cover saturate-[1.3] contrast-[1.05]"
                 />
               </div>
@@ -84,10 +84,10 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Comparamos cenários e negociamos
+                Buscamos propostas com preços finais
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Comparamos cenários, explicamos diferenças contratuais (preço, prazo, indexação, flexibilidade) e negociamos com fornecedores.
+                Consultamos comercializadoras parceiras e trazemos ofertas com tudo incluído — sem taxas ocultas.
               </p>
             </div>
 
@@ -96,7 +96,7 @@ export function Process() {
               <div className="mb-6 rounded-xl overflow-hidden">
                 <img 
                   src={migrateImage} 
-                  alt="Migração e acompanhamento" 
+                  alt="Você compara e escolhe" 
                   className="w-full h-48 object-cover"
                 />
               </div>
@@ -104,18 +104,36 @@ export function Process() {
                 <span className="text-5xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Acompanhamos da decisão ao fornecimento
+                Você compara e escolhe a melhor opção
               </h3>
               <p className="text-[#736d77] leading-relaxed">
-                Acompanhamos da decisão ao fornecimento — e seguimos monitorando para evitar contratos mal posicionados.
+                Apresentamos as propostas de forma clara para você decidir o que faz mais sentido para o seu negócio.
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="group">
+              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
+                <div className="text-center p-6">
+                  <div className="w-16 h-16 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-8 h-8 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <span className="text-[#9e3ffd] font-medium">Proteção contratual</span>
+                </div>
+              </div>
+              <div className="mb-4">
+                <span className="text-5xl font-light text-[#c88ff5]">04</span>
+              </div>
+              <h3 className="text-xl font-medium text-gray-900 mb-3">
+                Garantimos a execução e protegemos seu contrato
+              </h3>
+              <p className="text-[#736d77] leading-relaxed">
+                Acompanhamos todo o processo e blindamos seu contrato contra renegociações forçadas.
               </p>
             </div>
           </div>
-
-          {/* Data-driven decision note */}
-          <p className="mt-8 text-lg text-[#9e3ffd] font-medium">
-            Decisão orientada por dados, não por pressão comercial.
-          </p>
 
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">

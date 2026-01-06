@@ -27,11 +27,11 @@ export function Hero() {
             Sua energia. Sua escolha. Sua economia.
           </p>
           <h1 className="dcvc-statement text-white max-w-4xl mb-6 leading-[1.3]">
-            Economia inteligente para a energia da sua empresa no{" "}
-            <span className="text-highlight inline-block mt-1">Mercado Livre</span>.
+            Ofertas reais. Preço final.{" "}
+            <span className="text-highlight inline-block mt-1">Sem surpresas</span>.
           </h1>
           <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
-            Analisamos sua conta, comparamos ofertas do mercado e estruturamos contratos com clareza, segurança e transparência — sem custo para sua empresa.
+            Comparamos condições de comercializadoras credenciadas e apresentamos propostas claras — com tudo incluído e sem taxas ocultas. Você escolhe a melhor para o seu negócio.
           </p>
           <Link 
             href="/seja-cliente"
@@ -43,6 +43,9 @@ export function Hero() {
           </Link>
           <p className="text-sm text-white/70 mt-4 max-w-xl">
             Economia potencial de até 40%, dependendo do perfil e das condições de contratação.
+          </p>
+          <p className="text-xs text-white/50 mt-6 max-w-xl">
+            Ótima Energia é uma iniciativa do ACR Group (CNPJ: 53.949.694/0001-20), com registro ativo na CCEE.
           </p>
         </div>
       </div>
