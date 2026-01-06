@@ -9967,6 +9967,142 @@ export async function registerRoutes(
     }
   });
   
+  // GET /api/invoices/overdue - Get overdue invoices for escalation
+  app.get("/api/invoices/overdue", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'VIEW_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to invoices" });
+      }
+      
+      const overdueInvoices = await storage.getOverdueInvoices();
+      
+      // Calculate days overdue and eligibility for reminder
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const enrichedInvoices = overdueInvoices.map(inv => {
+        const daysOverdue = Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (24 * 60 * 60 * 1000));
+        const lastReminder = inv.lastReminderSentAt ? new Date(inv.lastReminderSentAt).getTime() : 0;
+        const canSendReminder = !lastReminder || (Date.now() - lastReminder) > ONE_WEEK_MS;
+        
+        return {
+          ...inv,
+          daysOverdue,
+          canSendReminder,
+          reminderCount: inv.reminderCount || 0,
+          opsTaskCreated: inv.opsTaskCreated || false
+        };
+      });
+      
+      res.json(enrichedInvoices);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices/:id/send-reminder - Send overdue reminder (max 1/week)
+  app.post("/api/invoices/:id/send-reminder", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'SEND_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to send reminders" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      // Check if reminder was sent within the last week
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      if (invoice.lastReminderSentAt) {
+        const lastReminderTime = new Date(invoice.lastReminderSentAt).getTime();
+        if (Date.now() - lastReminderTime < ONE_WEEK_MS) {
+          const nextAllowed = new Date(lastReminderTime + ONE_WEEK_MS);
+          return res.status(400).json({ 
+            error: "Reminder already sent this week",
+            nextAllowedDate: nextAllowed.toISOString()
+          });
+        }
+      }
+      
+      // Mark reminder as sent
+      const updated = await storage.markReminderSent(invoice.id);
+      
+      // Log the event
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'REMINDER_SENT',
+        actorId: userId,
+        metadata: { 
+          reminderNumber: (invoice.reminderCount || 0) + 1,
+          method: 'manual'
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Reminder sent",
+        invoice: updated,
+        reminderCount: (invoice.reminderCount || 0) + 1
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices/:id/escalate - Create ops task for overdue invoice (MANAGE only)
+  app.post("/api/invoices/:id/escalate", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to escalate" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.opsTaskCreated) {
+        return res.status(400).json({ error: "Ops task already created for this invoice" });
+      }
+      
+      // Mark as escalated
+      const updated = await storage.markOpsTaskCreated(invoice.id);
+      
+      // Log the event
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'STATUS_CHANGE',
+        actorId: userId,
+        metadata: { 
+          action: 'escalated',
+          reason: req.body.reason || 'Overdue escalation'
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Invoice escalated - ops task created",
+        invoice: updated
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
   // GET /api/invoice-permissions - List all permissions (MANAGE only)
   app.get("/api/invoice-permissions", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;

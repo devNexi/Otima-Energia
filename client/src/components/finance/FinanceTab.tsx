@@ -45,6 +45,14 @@ interface Invoice {
   notes: string | null;
   createdAt: string | null;
   isDemo: boolean | null;
+  // Overdue escalation fields
+  lastReminderSentAt?: string | null;
+  reminderCount?: number;
+  opsTaskCreated?: boolean;
+  escalatedAt?: string | null;
+  // Enriched fields from API
+  daysOverdue?: number;
+  canSendReminder?: boolean;
 }
 
 interface InvoiceSummary {
@@ -227,6 +235,58 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
     }
   });
 
+  // Overdue invoices query
+  const { data: overdueInvoices = [] } = useQuery<Invoice[]>({
+    queryKey: ["/api/invoices/overdue"],
+    queryFn: async () => {
+      const res = await fetch("/api/invoices/overdue", {
+        headers: { "x-session-id": sessionId }
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!sessionId
+  });
+
+  // Send reminder mutation
+  const sendReminderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/invoices/${id}/send-reminder`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-session-id": sessionId 
+        }
+      });
+      if (!res.ok) throw new Error("Failed to send reminder");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/overdue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    }
+  });
+
+  // Escalate mutation
+  const escalateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/invoices/${id}/escalate`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-session-id": sessionId 
+        },
+        body: JSON.stringify({ reason: "Manual escalation" })
+      });
+      if (!res.ok) throw new Error("Failed to escalate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/overdue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    }
+  });
+
   const handleExportCsv = async () => {
     try {
       const response = await fetch("/api/invoices/export/csv", {
@@ -380,6 +440,76 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
           </CardContent>
         </Card>
       </div>
+
+      {/* Overdue Escalation Section */}
+      {overdueInvoices.length > 0 && (
+        <Card className="border-red-200 bg-red-50/30" data-testid="card-overdue-escalation">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="w-5 h-5" />
+              {language === "pt" ? "Faturas em Atraso" : "Overdue Invoices"} ({overdueInvoices.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {overdueInvoices.map((invoice) => (
+                <div 
+                  key={invoice.id} 
+                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
+                  data-testid={`overdue-invoice-${invoice.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-mono text-sm">{invoice.invoiceNumber}</p>
+                      <p className="text-sm text-gray-500">{invoice.dealId.substring(0, 8)}...</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">{formatCurrency(invoice.grossAmountBrl)}</p>
+                      <p className="text-sm text-red-600">
+                        {invoice.daysOverdue} {language === "pt" ? "dias em atraso" : "days overdue"}
+                      </p>
+                    </div>
+                    {invoice.opsTaskCreated && (
+                      <Badge className="bg-orange-100 text-orange-800" data-testid={`badge-escalated-${invoice.id}`}>
+                        {language === "pt" ? "Escalado" : "Escalated"}
+                      </Badge>
+                    )}
+                    {invoice.reminderCount && invoice.reminderCount > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {invoice.reminderCount} {language === "pt" ? "lembretes" : "reminders"}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => sendReminderMutation.mutate(invoice.id)}
+                      disabled={!invoice.canSendReminder || sendReminderMutation.isPending}
+                      data-testid={`button-send-reminder-${invoice.id}`}
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      {language === "pt" ? "Lembrete" : "Reminder"}
+                    </Button>
+                    {canManage && !invoice.opsTaskCreated && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => escalateMutation.mutate(invoice.id)}
+                        disabled={escalateMutation.isPending}
+                        data-testid={`button-escalate-${invoice.id}`}
+                      >
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        {language === "pt" ? "Escalar" : "Escalate"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

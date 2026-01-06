@@ -4357,6 +4357,12 @@ export const invoices = pgTable("invoices", {
   
   notes: text("notes"),
   
+  // Overdue escalation tracking
+  lastReminderSentAt: timestamp("last_reminder_sent_at"),
+  reminderCount: integer("reminder_count").default(0),
+  opsTaskCreated: boolean("ops_task_created").default(false),
+  escalatedAt: timestamp("escalated_at"),
+  
   createdBy: varchar("created_by", { length: 64 }),
   updatedBy: varchar("updated_by", { length: 64 }),
   createdAt: timestamp("created_at").defaultNow(),

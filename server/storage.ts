@@ -98,7 +98,7 @@ import {
   brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
   invoices, invoiceEvents, invoicePermissions
 } from "@shared/schema";
-import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
+import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 export interface IStorage {
@@ -711,6 +711,11 @@ export interface IStorage {
   getInvoicePermission(userId: string): Promise<InvoicePermission | undefined>;
   setInvoicePermission(userId: string, accessLevel: 'VIEW_ONLY' | 'SEND_ONLY' | 'MANAGE'): Promise<InvoicePermission>;
   getAllInvoicePermissions(): Promise<InvoicePermission[]>;
+  
+  // Overdue Escalation
+  getOverdueInvoices(): Promise<Invoice[]>;
+  markReminderSent(invoiceId: number): Promise<Invoice | undefined>;
+  markOpsTaskCreated(invoiceId: number): Promise<Invoice | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -4168,6 +4173,44 @@ export class Storage implements IStorage {
   
   async getAllInvoicePermissions(): Promise<InvoicePermission[]> {
     return await db.select().from(invoicePermissions);
+  }
+  
+  // Overdue Escalation
+  async getOverdueInvoices(): Promise<Invoice[]> {
+    const now = new Date();
+    return await db.select().from(invoices)
+      .where(
+        and(
+          lt(invoices.dueDate, now),
+          eq(invoices.status, 'SENT'),
+          eq(invoices.isDemo, false)
+        )
+      )
+      .orderBy(invoices.dueDate);
+  }
+  
+  async markReminderSent(invoiceId: number): Promise<Invoice | undefined> {
+    const result = await db.update(invoices)
+      .set({ 
+        lastReminderSentAt: new Date(),
+        reminderCount: sql`COALESCE(${invoices.reminderCount}, 0) + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
+    return result[0];
+  }
+  
+  async markOpsTaskCreated(invoiceId: number): Promise<Invoice | undefined> {
+    const result = await db.update(invoices)
+      .set({ 
+        opsTaskCreated: true,
+        escalatedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, invoiceId))
+      .returning();
+    return result[0];
   }
 }
 
