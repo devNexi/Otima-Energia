@@ -445,74 +445,101 @@ export default function Admin({ defaultTab }: AdminProps) {
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="inline-flex h-auto gap-1 p-1 bg-muted rounded-lg overflow-x-auto max-w-full">
-            <TabsTrigger value="suppliers" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-suppliers">
-              <Building2 className="w-4 h-4" />
-              {language === "pt" ? "Fornecedores" : "Suppliers"}
-            </TabsTrigger>
-            <TabsTrigger value="deals" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-deals">
-              <Briefcase className="w-4 h-4" />
-              {language === "pt" ? "Negócios" : "Deals"}
-            </TabsTrigger>
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="assembly-queue" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-assembly-queue">
-                <Target className="w-4 h-4" />
-                {language === "pt" ? "Montagem" : "Assembly"}
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-ecos-dashboard">
-              <Zap className="w-4 h-4" />
-              ECOS
-            </TabsTrigger>
-            <TabsTrigger value="rfqs" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-rfqs">
-              <Send className="w-4 h-4" />
-              RFQs
-            </TabsTrigger>
-            {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="ops-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-ops-dashboard">
-                <LayoutDashboard className="w-4 h-4" />
-                Ops
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="clients" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-clients">
-              <Users className="w-4 h-4" />
-              {t("admin.tab.clients")}
-            </TabsTrigger>
-            <TabsTrigger value="revenue" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-revenue">
-              <DollarSign className="w-4 h-4" />
-              {language === "pt" ? "Comissão" : "Commission"}
-            </TabsTrigger>
-            {user?.role === "admin" && (
-              <TabsTrigger value="finance" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-finance">
-                <Receipt className="w-4 h-4" />
-                {language === "pt" ? "Finanças" : "Finance"}
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex gap-6">
+          {/* Left Sidebar Navigation */}
+          <div className="w-48 shrink-0">
+            <div className="sticky top-4 space-y-4">
+              {/* Operational Workspace */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
+                  {language === "pt" ? "Operacional" : "Operational"}
+                </p>
+                <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1" data-testid="tabs-operational">
+                  <TabsTrigger value="deals" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-deals">
+                    <Briefcase className="w-4 h-4" />
+                    {language === "pt" ? "Negócios" : "Deals"}
+                  </TabsTrigger>
+                  <TabsTrigger value="suppliers" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-suppliers">
+                    <Building2 className="w-4 h-4" />
+                    {language === "pt" ? "Fornecedores" : "Suppliers"}
+                  </TabsTrigger>
+                  <TabsTrigger value="clients" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-clients">
+                    <Users className="w-4 h-4" />
+                    {t("admin.tab.clients")}
+                  </TabsTrigger>
+                  <TabsTrigger value="rfqs" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-rfqs">
+                    <Send className="w-4 h-4" />
+                    RFQs
+                  </TabsTrigger>
+                  {(user?.role === "ops" || user?.role === "admin") && (
+                    <TabsTrigger value="assembly-queue" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-assembly-queue">
+                      <Target className="w-4 h-4" />
+                      {language === "pt" ? "Montagem" : "Assembly"}
+                    </TabsTrigger>
+                  )}
+                  {(user?.role === "ops" || user?.role === "admin") && (
+                    <TabsTrigger value="ops-dashboard" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-ops-dashboard">
+                      <LayoutDashboard className="w-4 h-4" />
+                      Ops
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
 
-          {/* Footer Menu - Admin Governance Tabs */}
-          {user?.role === "admin" && (
-            <TabsList className="inline-flex h-auto gap-1 p-1 bg-muted rounded-lg mt-2" data-testid="tabs-footer">
-              <TabsTrigger value="overview" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-overview">
-                <LayoutDashboard className="w-4 h-4" />
-                {language === "pt" ? "Visão Geral" : "Overview"}
-              </TabsTrigger>
-              <TabsTrigger value="audit-trail" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-audit-trail">
-                <BookOpen className="w-4 h-4" />
-                {language === "pt" ? "Auditoria" : "Audit Trail"}
-              </TabsTrigger>
-              <TabsTrigger value="integrations" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-integrations">
-                <LinkIcon className="w-4 h-4" />
-                {language === "pt" ? "Integrações" : "Integrations"}
-              </TabsTrigger>
-              <TabsTrigger value="prc" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-prc">
-                <TrendingUp className="w-4 h-4" />
-                PRCs
-              </TabsTrigger>
-            </TabsList>
-          )}
+              {/* Analytics & Revenue */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
+                  {language === "pt" ? "Análise" : "Analytics"}
+                </p>
+                <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1" data-testid="tabs-analytics">
+                  <TabsTrigger value="ecos-dashboard" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-ecos-dashboard">
+                    <Zap className="w-4 h-4" />
+                    ECOS
+                  </TabsTrigger>
+                  <TabsTrigger value="revenue" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-revenue">
+                    <DollarSign className="w-4 h-4" />
+                    {language === "pt" ? "Comissão" : "Commission"}
+                  </TabsTrigger>
+                  {user?.role === "admin" && (
+                    <TabsTrigger value="finance" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-finance">
+                      <Receipt className="w-4 h-4" />
+                      {language === "pt" ? "Finanças" : "Finance"}
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
 
+              {/* Governance (Admin Only) */}
+              {user?.role === "admin" && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
+                    {language === "pt" ? "Governança" : "Governance"}
+                  </p>
+                  <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1" data-testid="tabs-governance">
+                    <TabsTrigger value="overview" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-overview">
+                      <LayoutDashboard className="w-4 h-4" />
+                      {language === "pt" ? "Visão Geral" : "Overview"}
+                    </TabsTrigger>
+                    <TabsTrigger value="audit-trail" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-audit-trail">
+                      <BookOpen className="w-4 h-4" />
+                      {language === "pt" ? "Auditoria" : "Audit"}
+                    </TabsTrigger>
+                    <TabsTrigger value="integrations" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-integrations">
+                      <LinkIcon className="w-4 h-4" />
+                      {language === "pt" ? "Integrações" : "Integrations"}
+                    </TabsTrigger>
+                    <TabsTrigger value="prc" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-prc">
+                      <TrendingUp className="w-4 h-4" />
+                      PRCs
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0">
           {/* Suppliers - first tab */}
           <TabsContent value="suppliers">
             <SupplierManager />
@@ -1112,6 +1139,7 @@ export default function Admin({ defaultTab }: AdminProps) {
               <PrcManagement />
             </TabsContent>
           )}
+          </div>
         </Tabs>
       </main>
     </div>
