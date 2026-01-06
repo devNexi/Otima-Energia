@@ -86,14 +86,13 @@ function TrustSection() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {trustCards.map((card, index) => {
-            const letters = ['A', 'B', 'C', 'D'];
             return (
               <div 
                 key={index}
                 className="bg-white p-6 rounded-xl"
               >
                 <div className="w-10 h-10 bg-[#9e3ffd]/10 rounded-lg flex items-center justify-center mb-4">
-                  <span className="text-[#9e3ffd] font-bold text-lg">{letters[index]}</span>
+                  <span className="text-[#9e3ffd] font-bold text-lg">{index + 1}</span>
                 </div>
                 <h3 className="text-lg font-semibold text-[#16163f] mb-2">
                   {card.title}
