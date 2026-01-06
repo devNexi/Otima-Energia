@@ -446,84 +446,71 @@ export default function Admin({ defaultTab }: AdminProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex flex-wrap gap-1">
-            {/* Suppliers - first tab, visible to all roles */}
-            <TabsTrigger value="suppliers" className="flex items-center gap-2" data-testid="tab-suppliers">
+          <TabsList className="inline-flex h-auto gap-1 p-1 bg-muted rounded-lg overflow-x-auto max-w-full">
+            <TabsTrigger value="suppliers" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-suppliers">
               <Building2 className="w-4 h-4" />
               {language === "pt" ? "Fornecedores" : "Suppliers"}
             </TabsTrigger>
-            {/* Deals - visible to all roles (primary workspace) */}
-            <TabsTrigger value="deals" className="flex items-center gap-2" data-testid="tab-deals">
+            <TabsTrigger value="deals" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-deals">
               <Briefcase className="w-4 h-4" />
               {language === "pt" ? "Negócios" : "Deals"}
             </TabsTrigger>
-            {/* Assembly Queue - visible to ops and admin */}
             {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="assembly-queue" className="flex items-center gap-2" data-testid="tab-assembly-queue">
+              <TabsTrigger value="assembly-queue" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-assembly-queue">
                 <Target className="w-4 h-4" />
-                {language === "pt" ? "Fila Montagem" : "Assembly Queue"}
+                {language === "pt" ? "Montagem" : "Assembly"}
               </TabsTrigger>
             )}
-            {/* ECOS Dashboard - visible to all roles */}
-            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-2" data-testid="tab-ecos-dashboard">
+            <TabsTrigger value="ecos-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-ecos-dashboard">
               <Zap className="w-4 h-4" />
               ECOS
             </TabsTrigger>
-            {/* RFQs (Quotes) - visible to all roles */}
-            <TabsTrigger value="rfqs" className="flex items-center gap-2" data-testid="tab-rfqs">
+            <TabsTrigger value="rfqs" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-rfqs">
               <Send className="w-4 h-4" />
-              {language === "pt" ? "RFQs / Cotações" : "RFQs / Quotes"}
+              RFQs
             </TabsTrigger>
-            {/* Ops Dashboard - visible to ops and admin */}
             {(user?.role === "ops" || user?.role === "admin") && (
-              <TabsTrigger value="ops-dashboard" className="flex items-center gap-2" data-testid="tab-ops-dashboard">
+              <TabsTrigger value="ops-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-ops-dashboard">
                 <LayoutDashboard className="w-4 h-4" />
-                {language === "pt" ? "Ops Dashboard" : "Ops Dashboard"}
+                Ops
               </TabsTrigger>
             )}
-            {/* Clients - visible to all roles */}
-            <TabsTrigger value="clients" className="flex items-center gap-2" data-testid="tab-clients">
+            <TabsTrigger value="clients" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-clients">
               <Users className="w-4 h-4" />
               {t("admin.tab.clients")}
             </TabsTrigger>
-            {/* Revenue/Commission - visible to all roles */}
-            <TabsTrigger value="revenue" className="flex items-center gap-2" data-testid="tab-revenue">
+            <TabsTrigger value="revenue" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-revenue">
               <DollarSign className="w-4 h-4" />
               {language === "pt" ? "Comissão" : "Commission"}
             </TabsTrigger>
-            {/* Finance - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="finance" className="flex items-center gap-2" data-testid="tab-finance">
+              <TabsTrigger value="finance" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-finance">
                 <Receipt className="w-4 h-4" />
                 {language === "pt" ? "Finanças" : "Finance"}
               </TabsTrigger>
             )}
-            {/* Admin Overview - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
+              <TabsTrigger value="overview" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-overview">
                 <LayoutDashboard className="w-4 h-4" />
-                {language === "pt" ? "Visão Geral" : "Overview"}
+                {language === "pt" ? "Visão" : "Overview"}
               </TabsTrigger>
             )}
-            {/* Audit Trail - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="audit-trail" className="flex items-center gap-2" data-testid="tab-audit-trail">
+              <TabsTrigger value="audit-trail" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-audit-trail">
                 <BookOpen className="w-4 h-4" />
-                {language === "pt" ? "Auditoria" : "Audit Trail"}
+                {language === "pt" ? "Auditoria" : "Audit"}
               </TabsTrigger>
             )}
-            {/* Integrations (Zoho Intake Logs) - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
+              <TabsTrigger value="integrations" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-integrations">
                 <LinkIcon className="w-4 h-4" />
                 {language === "pt" ? "Integrações" : "Integrations"}
               </TabsTrigger>
             )}
-            {/* PRC Ingestion - visible to admin only */}
             {user?.role === "admin" && (
-              <TabsTrigger value="prc" className="flex items-center gap-2" data-testid="tab-prc">
+              <TabsTrigger value="prc" className="flex items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap" data-testid="tab-prc">
                 <TrendingUp className="w-4 h-4" />
-                {language === "pt" ? "PRCs" : "PRCs"}
+                PRCs
               </TabsTrigger>
             )}
           </TabsList>
