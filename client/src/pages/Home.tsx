@@ -18,11 +18,11 @@ function EcosSection() {
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
               <p>
-                A verdadeira economia no Mercado Livre não está só na assinatura — está na renovação certa, na hora certa.
+                A verdadeira economia no Mercado Livre não está só na assinatura, está na renovação certa, na hora certa.
               </p>
               <p>
                 É aí que entra o <strong className="text-[#9e3ffd]">ECOS™</strong>, nosso sistema interno de inteligência de mercado.
-                Usamos o ECOS™ em dois momentos-chave:
+                Usamos o ECOS™ em dois momentos chave:
               </p>
               <ul className="space-y-3 ml-1">
                 <li className="flex items-start gap-3">
@@ -35,10 +35,10 @@ function EcosSection() {
                 </li>
               </ul>
               <p>
-                O ECOS™ é uma ferramenta só nossa — usada para te entregar ofertas mais justas, no momento certo, sem pressa e sem ruído.
+                O ECOS™ é uma ferramenta só nossa, usada para te entregar ofertas mais justas, no momento certo, sem pressa e sem ruído.
               </p>
               <p className="font-medium text-[#16163f]">
-                Porque economia de verdade é clareza nos momentos que importam — não interferência no meio do caminho.
+                Porque economia de verdade é clareza nos momentos que importam, não interferência no meio do caminho.
               </p>
             </div>
           </div>
@@ -58,7 +58,7 @@ function EcosSection() {
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Economia sustentável — sem monitoramento invasivo</span>
+                <span className="text-lg text-[#16163f]">Economia sustentável, sem monitoramento invasivo</span>
               </li>
             </ul>
           </div>
