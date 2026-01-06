@@ -98,6 +98,16 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
     reason: "",
     notes: ""
   });
+  
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    invoiceType: "UPFRONT" as "UPFRONT" | "MONTHLY" | "QUARTERLY" | "FINAL" | "SUCCESS_FEE",
+    grossAmountBrl: "",
+    paymentTrigger: "",
+    dueDate: "",
+    serviceDescription: "",
+    notes: ""
+  });
 
   const { data: dealData, isLoading } = useQuery({
     queryKey: [`/api/deals/${dealId}`],
@@ -143,6 +153,57 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         toast({
           title: language === "pt" ? "Erro" : "Error",
           description: data.error,
+          variant: "destructive"
+        });
+      }
+    }
+  });
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (data: {
+      dealId: string;
+      supplierId: number | null;
+      clientId: number | null;
+      invoiceType: string;
+      grossAmountBrl: string;
+      paymentTrigger: string;
+      dueDate: string;
+      serviceDescription: string;
+      notes: string;
+    }) => {
+      const sessionId = localStorage.getItem("sessionId") || "";
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-session-id": sessionId
+        },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.id) {
+        toast({
+          title: language === "pt" ? "Fatura criada" : "Invoice created",
+          description: language === "pt" 
+            ? `Fatura ${data.invoiceNumber} criada com sucesso.` 
+            : `Invoice ${data.invoiceNumber} created successfully.`
+        });
+        setInvoiceDialogOpen(false);
+        setInvoiceForm({
+          invoiceType: "UPFRONT",
+          grossAmountBrl: "",
+          paymentTrigger: "",
+          dueDate: "",
+          serviceDescription: "",
+          notes: ""
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      } else {
+        toast({
+          title: language === "pt" ? "Erro" : "Error",
+          description: data.error || "Failed to create invoice",
           variant: "destructive"
         });
       }
@@ -195,6 +256,48 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   };
 
   const getStateIndex = (state: string) => DEAL_STATES.indexOf(state as DealState);
+
+  const handleCreateInvoice = () => {
+    if (!invoiceForm.grossAmountBrl || !invoiceForm.dueDate || !invoiceForm.paymentTrigger) {
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: language === "pt" 
+          ? "Valor, vencimento e gatilho são obrigatórios" 
+          : "Amount, due date and trigger are required",
+        variant: "destructive"
+      });
+      return;
+    }
+    createInvoiceMutation.mutate({
+      dealId: deal.id,
+      supplierId: deal.supplierId || null,
+      clientId: deal.clientId || null,
+      invoiceType: invoiceForm.invoiceType,
+      grossAmountBrl: invoiceForm.grossAmountBrl,
+      paymentTrigger: invoiceForm.paymentTrigger,
+      dueDate: invoiceForm.dueDate,
+      serviceDescription: invoiceForm.serviceDescription || `Comissão - ${deal.client?.companyName || "Cliente"}`,
+      notes: invoiceForm.notes
+    });
+  };
+
+  const openInvoiceDialog = () => {
+    const defaultAmount = deal.expectedCommissionMonthly 
+      ? parseFloat(deal.expectedCommissionMonthly).toFixed(2)
+      : "";
+    const defaultDueDate = new Date();
+    defaultDueDate.setDate(defaultDueDate.getDate() + 30);
+    
+    setInvoiceForm({
+      invoiceType: deal.commissionPaymentType === "monthly" ? "MONTHLY" : "UPFRONT",
+      grossAmountBrl: defaultAmount,
+      paymentTrigger: "",
+      dueDate: defaultDueDate.toISOString().split("T")[0],
+      serviceDescription: `Comissão de intermediação - ${deal.client?.companyName || "Cliente"}`,
+      notes: ""
+    });
+    setInvoiceDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6" data-testid="deal-detail">
@@ -718,6 +821,132 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                     </p>
                   </div>
                 )}
+                
+                {/* Gerar Fatura Button */}
+                <div className="pt-4 border-t mt-4">
+                  <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        onClick={openInvoiceDialog}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        data-testid="button-generate-invoice"
+                      >
+                        <Receipt className="w-4 h-4 mr-2" />
+                        {language === "pt" ? "Gerar Fatura (Comissão)" : "Generate Invoice (Commission)"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {language === "pt" ? "Gerar Fatura de Comissão" : "Generate Commission Invoice"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {language === "pt" 
+                            ? "Preencha os dados da fatura. Valores pré-preenchidos com base no deal."
+                            : "Fill in invoice details. Values pre-filled based on deal data."}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Tipo de Fatura" : "Invoice Type"}</Label>
+                          <Select 
+                            value={invoiceForm.invoiceType} 
+                            onValueChange={(val) => setInvoiceForm(f => ({ ...f, invoiceType: val as any }))}
+                          >
+                            <SelectTrigger data-testid="select-invoice-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="UPFRONT">{language === "pt" ? "Adiantamento" : "Upfront"}</SelectItem>
+                              <SelectItem value="MONTHLY">{language === "pt" ? "Mensal" : "Monthly"}</SelectItem>
+                              <SelectItem value="QUARTERLY">{language === "pt" ? "Trimestral" : "Quarterly"}</SelectItem>
+                              <SelectItem value="FINAL">{language === "pt" ? "Final" : "Final"}</SelectItem>
+                              <SelectItem value="SUCCESS_FEE">{language === "pt" ? "Taxa de Sucesso" : "Success Fee"}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Valor (R$)" : "Amount (R$)"}</Label>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            value={invoiceForm.grossAmountBrl}
+                            onChange={(e) => setInvoiceForm(f => ({ ...f, grossAmountBrl: e.target.value }))}
+                            placeholder="0.00"
+                            data-testid="input-invoice-amount"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Gatilho de Pagamento" : "Payment Trigger"} *</Label>
+                          <Select 
+                            value={invoiceForm.paymentTrigger} 
+                            onValueChange={(val) => setInvoiceForm(f => ({ ...f, paymentTrigger: val }))}
+                          >
+                            <SelectTrigger data-testid="select-payment-trigger">
+                              <SelectValue placeholder={language === "pt" ? "Selecione o gatilho" : "Select trigger"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Ativação na CCEE">{language === "pt" ? "Ativação na CCEE" : "CCEE Activation"}</SelectItem>
+                              <SelectItem value="Assinatura do contrato">{language === "pt" ? "Assinatura do contrato" : "Contract Signed"}</SelectItem>
+                              <SelectItem value="Primeiro faturamento do cliente">{language === "pt" ? "Primeiro faturamento do cliente" : "First Client Billing"}</SelectItem>
+                              <SelectItem value="Mensal - conforme relatório">{language === "pt" ? "Mensal - conforme relatório" : "Monthly - per report"}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Data de Vencimento" : "Due Date"}</Label>
+                          <Input 
+                            type="date"
+                            value={invoiceForm.dueDate}
+                            onChange={(e) => setInvoiceForm(f => ({ ...f, dueDate: e.target.value }))}
+                            data-testid="input-invoice-due-date"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Descrição do Serviço" : "Service Description"}</Label>
+                          <Textarea 
+                            value={invoiceForm.serviceDescription}
+                            onChange={(e) => setInvoiceForm(f => ({ ...f, serviceDescription: e.target.value }))}
+                            rows={2}
+                            data-testid="input-service-description"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{language === "pt" ? "Notas" : "Notes"}</Label>
+                          <Textarea 
+                            value={invoiceForm.notes}
+                            onChange={(e) => setInvoiceForm(f => ({ ...f, notes: e.target.value }))}
+                            rows={2}
+                            data-testid="input-invoice-notes"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setInvoiceDialogOpen(false)}>
+                          {language === "pt" ? "Cancelar" : "Cancel"}
+                        </Button>
+                        <Button 
+                          onClick={handleCreateInvoice}
+                          disabled={createInvoiceMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700"
+                          data-testid="button-confirm-create-invoice"
+                        >
+                          {createInvoiceMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Receipt className="w-4 h-4 mr-2" />
+                          )}
+                          {language === "pt" ? "Criar Fatura" : "Create Invoice"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardContent>
             </Card>
           </div>

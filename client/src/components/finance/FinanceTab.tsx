@@ -38,6 +38,7 @@ interface Invoice {
   currency: string;
   serviceDescription: string | null;
   contractReference: string | null;
+  paymentTrigger: string | null;
   sentAt: string | null;
   paidAt: string | null;
   paymentReference: string | null;
@@ -89,7 +90,13 @@ const translations = {
     monthly: "Monthly",
     quarterly: "Quarterly",
     final: "Final",
-    successFee: "Success Fee"
+    successFee: "Success Fee",
+    paymentTrigger: "Payment Trigger",
+    selectTrigger: "Select trigger reason",
+    triggerCceeActivation: "CCEE Activation",
+    triggerContractSigned: "Contract Signed",
+    triggerFirstBilling: "First Client Billing",
+    triggerMonthlyReport: "Monthly - per report"
   },
   pt: {
     title: "Painel Financeiro",
@@ -120,7 +127,13 @@ const translations = {
     monthly: "Mensal",
     quarterly: "Trimestral",
     final: "Final",
-    successFee: "Taxa de Sucesso"
+    successFee: "Taxa de Sucesso",
+    paymentTrigger: "Gatilho de Pagamento",
+    selectTrigger: "Selecione o gatilho",
+    triggerCceeActivation: "Ativação na CCEE",
+    triggerContractSigned: "Assinatura do contrato",
+    triggerFirstBilling: "Primeiro faturamento do cliente",
+    triggerMonthlyReport: "Mensal - conforme relatório"
   }
 };
 
@@ -406,6 +419,7 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
                     <th className="text-left py-3 px-2 font-medium">{t.dealId}</th>
                     <th className="text-left py-3 px-2 font-medium">{t.invoiceType}</th>
                     <th className="text-right py-3 px-2 font-medium">{t.amount}</th>
+                    <th className="text-left py-3 px-2 font-medium">{t.paymentTrigger}</th>
                     <th className="text-left py-3 px-2 font-medium">{t.dueDate}</th>
                     <th className="text-left py-3 px-2 font-medium">{t.status}</th>
                     <th className="text-right py-3 px-2 font-medium">{t.actions}</th>
@@ -419,6 +433,9 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
                       <td className="py-3 px-2">{getInvoiceTypeLabel(invoice.invoiceType)}</td>
                       <td className="py-3 px-2 text-right font-medium">
                         {formatCurrency(invoice.grossAmountBrl)}
+                      </td>
+                      <td className="py-3 px-2 text-sm text-gray-600">
+                        {invoice.paymentTrigger || "-"}
                       </td>
                       <td className="py-3 px-2">
                         {invoice.dueDate ? format(new Date(invoice.dueDate), "dd/MM/yyyy") : "-"}

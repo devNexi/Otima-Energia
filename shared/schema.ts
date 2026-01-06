@@ -171,6 +171,8 @@ export const suppliers = pgTable("suppliers", {
   category: text("category"), // 'large', 'medium', 'small', 'renewable'
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
+  financeEmail: text("finance_email"), // billing@/financeiro@ for invoice sending
+  financeWhatsapp: text("finance_whatsapp"), // Optional WhatsApp for finance contact
   website: text("website"),
   commissionTerms: text("commission_terms"), // Standard terms with this supplier
   isActive: boolean("is_active").default(true),
@@ -4343,6 +4345,7 @@ export const invoices = pgTable("invoices", {
   
   serviceDescription: text("service_description"),
   contractReference: varchar("contract_reference", { length: 128 }),
+  paymentTrigger: text("payment_trigger"), // e.g. "Ativação na CCEE", "Assinatura do contrato"
   paymentInstructions: text("payment_instructions"),
   
   pdfUrl: text("pdf_url"),
