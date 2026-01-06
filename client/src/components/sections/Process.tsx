@@ -14,11 +14,14 @@ export function Process() {
       <section className="bg-[#eee7f1] py-16 lg:py-20">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
-            A maioria das empresas brasileiras paga mais do que deveria pela energia elétrica — não porque os preços são altos, mas porque o mercado é{" "}
-            <span className="text-highlight">opaco, fragmentado e difícil de comparar</span>.
+            A maioria das empresas brasileiras paga mais do que deveria pela energia,{" "}
+            <span className="text-highlight">não por falta de opções, mas por falta de clareza</span>.
+          </p>
+          <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-6">
+            O Mercado Livre é cheio de oportunidades, mas também de ruído: ofertas confusas, contratos ambíguos e vendedores que prometem o mundo.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            O problema não é o preço da energia — é a falta de visibilidade. O mercado livre é complexo, fragmentado e difícil de comparar. A Ótima Energia existe para estruturar decisões melhores, com análise técnica, comparação ampla e contratos bem posicionados.
+            A Ótima existe para tirar o peso das suas costas: comparamos ofertas reais, explicamos tudo com transparência e te entregamos só o que importa, uma decisão tranquila, sem arrependimentos depois.
           </p>
           <div className="flex flex-wrap gap-8 lg:gap-16 max-w-4xl">
             <div>
