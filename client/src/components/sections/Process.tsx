@@ -40,130 +40,155 @@ export function Process() {
         </div>
       </section>
 
-      {/* Process Steps Section */}
-      <section id="process" className="bg-white py-16 lg:py-20 border-t border-gray-200">
+      {/* Process Steps Section - Timeline Style */}
+      <section id="process" className="bg-white py-16 lg:py-24 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           {/* Section Title */}
-          <h2 className="dcvc-section-title mb-16">Como Funciona</h2>
+          <h2 className="dcvc-section-title mb-16 text-center">Como Funciona</h2>
 
-          {/* Steps Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-            {/* Step 1 - Upload documents / energy profile */}
-            <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
-                <div className="text-center p-6">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <span className="text-[#9e3ffd] font-medium">Análise energética</span>
-                </div>
+          {/* Desktop Timeline */}
+          <div className="hidden lg:block">
+            {/* Top row - Steps 2 and 4 content */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <div></div>
+              <div className="text-center px-4">
+                <span className="inline-block px-4 py-1 bg-[#9e3ffd] text-white text-sm font-medium rounded-full mb-3">
+                  Passo 02
+                </span>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Buscamos propostas com preços finais
+                </h3>
+                <p className="text-[#736d77] text-sm leading-relaxed">
+                  Consultamos comercializadoras parceiras e trazemos ofertas com tudo incluído — sem taxas ocultas.
+                </p>
               </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">01</span>
+              <div></div>
+              <div className="text-center px-4">
+                <span className="inline-block px-4 py-1 bg-[#df0af2] text-white text-sm font-medium rounded-full mb-3">
+                  Passo 04
+                </span>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Garantimos a execução e protegemos seu contrato
+                </h3>
+                <p className="text-[#736d77] text-sm leading-relaxed">
+                  Acompanhamos todo o processo e blindamos seu contrato contra renegociações forçadas.
+                </p>
               </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Você compartilha seu consumo e perfil de contratação
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Envie suas faturas e informações básicas para iniciarmos a análise do seu perfil energético.
-              </p>
             </div>
 
-            {/* Step 2 - Fetch proposals / handshake + pricing */}
-            <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
-                <div className="text-center p-6">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </div>
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                      </svg>
-                    </div>
+            {/* Timeline circles and connectors */}
+            <div className="relative flex items-center justify-between max-w-4xl mx-auto py-8">
+              {/* Connecting line */}
+              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-[#eee7f1] -translate-y-1/2"></div>
+              
+              {/* Step 1 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="w-3 h-3 bg-[#c88ff5] rounded-full mb-2"></div>
+                <div className="w-20 h-20 rounded-full border-[3px] border-dashed border-[#c88ff5] flex items-center justify-center bg-white">
+                  <div className="w-16 h-16 rounded-full bg-[#9e3ffd] flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">01</span>
                   </div>
-                  <span className="text-[#9e3ffd] font-medium">Cotação de mercado</span>
                 </div>
               </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">02</span>
+
+              {/* Step 2 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <svg className="w-4 h-4 text-[#9e3ffd] mb-2 rotate-180" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L8 6h8L12 2z"/>
+                </svg>
+                <div className="w-20 h-20 rounded-full border-[3px] border-dashed border-[#c88ff5] flex items-center justify-center bg-white">
+                  <div className="w-16 h-16 rounded-full bg-[#9e3ffd] flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">02</span>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Buscamos propostas com preços finais
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Consultamos comercializadoras parceiras e trazemos ofertas com tudo incluído — sem taxas ocultas.
-              </p>
+
+              {/* Step 3 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="w-3 h-3 bg-[#c88ff5] rounded-full mb-2"></div>
+                <div className="w-20 h-20 rounded-full border-[3px] border-dashed border-[#c88ff5] flex items-center justify-center bg-white">
+                  <div className="w-16 h-16 rounded-full bg-[#c88ff5] flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">03</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="relative z-10 flex flex-col items-center">
+                <svg className="w-4 h-4 text-[#df0af2] mb-2 rotate-180" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L8 6h8L12 2z"/>
+                </svg>
+                <div className="w-20 h-20 rounded-full border-[3px] border-dashed border-[#df0af2] flex items-center justify-center bg-white">
+                  <div className="w-16 h-16 rounded-full bg-[#df0af2] flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">04</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Step 3 - Compare options / decision */}
-            <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
-                <div className="text-center p-6">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                    </div>
-                    <div className="w-14 h-14 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center">
-                      <svg className="w-7 h-7 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                      </svg>
-                    </div>
-                  </div>
-                  <span className="text-[#9e3ffd] font-medium">Comparação clara</span>
-                </div>
+            {/* Bottom row - Steps 1 and 3 content */}
+            <div className="grid grid-cols-4 gap-4 mt-8">
+              <div className="text-center px-4">
+                <span className="inline-block px-4 py-1 bg-[#9e3ffd] text-white text-sm font-medium rounded-full mb-3">
+                  Passo 01
+                </span>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Você compartilha seu consumo e perfil de contratação
+                </h3>
+                <p className="text-[#736d77] text-sm leading-relaxed">
+                  Envie suas faturas e informações básicas para iniciarmos a análise do seu perfil energético.
+                </p>
               </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">03</span>
+              <div></div>
+              <div className="text-center px-4">
+                <span className="inline-block px-4 py-1 bg-[#c88ff5] text-white text-sm font-medium rounded-full mb-3">
+                  Passo 03
+                </span>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Você compara e escolhe a melhor opção
+                </h3>
+                <p className="text-[#736d77] text-sm leading-relaxed">
+                  Apresentamos as propostas de forma clara para você decidir o que faz mais sentido para o seu negócio.
+                </p>
               </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Você compara e escolhe a melhor opção
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Apresentamos as propostas de forma clara para você decidir o que faz mais sentido para o seu negócio.
-              </p>
-            </div>
-
-            {/* Step 4 - Contract protection */}
-            <div className="group">
-              <div className="mb-6 rounded-xl overflow-hidden bg-[#eee7f1] flex items-center justify-center h-48">
-                <div className="text-center p-6">
-                  <div className="w-16 h-16 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-8 h-8 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <span className="text-[#9e3ffd] font-medium">Proteção contratual</span>
-                </div>
-              </div>
-              <div className="mb-4">
-                <span className="text-5xl font-light text-[#c88ff5]">04</span>
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Garantimos a execução e protegemos seu contrato
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Acompanhamos todo o processo e blindamos seu contrato contra renegociações forçadas.
-              </p>
+              <div></div>
             </div>
           </div>
 
+          {/* Mobile Timeline - Vertical */}
+          <div className="lg:hidden space-y-8">
+            {[
+              { num: "01", title: "Você compartilha seu consumo e perfil de contratação", desc: "Envie suas faturas e informações básicas para iniciarmos a análise do seu perfil energético.", color: "#9e3ffd" },
+              { num: "02", title: "Buscamos propostas com preços finais", desc: "Consultamos comercializadoras parceiras e trazemos ofertas com tudo incluído — sem taxas ocultas.", color: "#9e3ffd" },
+              { num: "03", title: "Você compara e escolhe a melhor opção", desc: "Apresentamos as propostas de forma clara para você decidir o que faz mais sentido para o seu negócio.", color: "#c88ff5" },
+              { num: "04", title: "Garantimos a execução e protegemos seu contrato", desc: "Acompanhamos todo o processo e blindamos seu contrato contra renegociações forçadas.", color: "#df0af2" },
+            ].map((step, index) => (
+              <div key={index} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div 
+                    className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: step.color }}
+                  >
+                    <span className="text-white text-xl font-bold">{step.num}</span>
+                  </div>
+                  {index < 3 && <div className="w-0.5 h-full bg-[#eee7f1] mt-2"></div>}
+                </div>
+                <div className="pb-4">
+                  <span 
+                    className="inline-block px-3 py-1 text-white text-xs font-medium rounded-full mb-2"
+                    style={{ backgroundColor: step.color }}
+                  >
+                    Passo {step.num}
+                  </span>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{step.title}</h3>
+                  <p className="text-[#736d77] text-sm leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Eligibility Note */}
-          <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
+          <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl mx-auto">
             <p className="text-[#736d77]">
               <strong className="text-[#16163f]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.{" "}
               <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre o Mercado Livre</a>
