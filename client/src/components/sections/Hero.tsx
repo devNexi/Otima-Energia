@@ -27,8 +27,8 @@ export function Hero() {
             Sua energia. Sua escolha. Sua economia.
           </p>
           <h1 className="dcvc-statement text-white max-w-4xl mb-6 leading-[1.3]">
-            Ofertas reais. Preço final.{" "}
-            <span className="text-highlight inline-block mt-1">Sem surpresas</span>.
+            Conta menor. Mais controle.{" "}
+            <span className="text-highlight inline-block mt-1">Sem dor de cabeça</span>.
           </h1>
           <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
             Comparamos condições de comercializadoras credenciadas e apresentamos propostas claras — com tudo incluído e sem taxas ocultas. Você escolhe a melhor para o seu negócio.
