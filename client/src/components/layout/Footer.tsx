@@ -23,7 +23,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#eee7f1] py-8 lg:py-10 border-t border-gray-200">
+    <footer className="bg-white py-8 lg:py-10 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         {/* Large Navigation Links */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
