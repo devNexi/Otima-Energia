@@ -9631,5 +9631,384 @@ export async function registerRoutes(
     }
   });
 
+  // ============== FINANCE OS (INVOICING) ==============
+  
+  // Helper: Check invoice permission level
+  const checkInvoicePermission = async (userId: string, requiredLevel: 'VIEW_ONLY' | 'SEND_ONLY' | 'MANAGE'): Promise<boolean> => {
+    const user = await storage.getUser(userId);
+    // Admin role always has MANAGE access
+    if (user?.role === 'admin') return true;
+    
+    const permission = await storage.getInvoicePermission(userId);
+    if (!permission) return false;
+    
+    const levels = { 'VIEW_ONLY': 1, 'SEND_ONLY': 2, 'MANAGE': 3 };
+    return levels[permission.accessLevel] >= levels[requiredLevel];
+  };
+  
+  // GET /api/invoices - List all invoices with optional filters
+  app.get("/api/invoices", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'VIEW_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to invoices" });
+      }
+      
+      const { status, dealId, supplierId, isDemo } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (dealId) filters.dealId = dealId as string;
+      if (supplierId) filters.supplierId = parseInt(supplierId as string);
+      if (isDemo !== undefined) filters.isDemo = isDemo === 'true';
+      
+      const invoiceList = await storage.getInvoices(Object.keys(filters).length > 0 ? filters : undefined);
+      res.json(invoiceList);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // GET /api/invoices/summary - Get invoice summary stats
+  app.get("/api/invoices/summary", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'VIEW_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to invoices" });
+      }
+      
+      const isDemo = req.query.isDemo === 'true' ? true : req.query.isDemo === 'false' ? false : undefined;
+      const summary = await storage.getInvoiceSummary(isDemo);
+      res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // GET /api/invoices/:id - Get single invoice with events
+  app.get("/api/invoices/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'VIEW_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to invoices" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      const events = await storage.getInvoiceEvents(invoice.id);
+      res.json({ ...invoice, events });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices - Create new invoice
+  app.post("/api/invoices", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to create invoices" });
+      }
+      
+      const invoiceNumber = await storage.generateInvoiceNumber();
+      const invoice = await storage.createInvoice({
+        ...req.body,
+        invoiceNumber,
+        status: 'DRAFT'
+      });
+      
+      // Log creation event
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'CREATED',
+        actorId: userId,
+        metadata: { invoiceNumber }
+      });
+      
+      res.status(201).json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // PATCH /api/invoices/:id - Update invoice (MANAGE only, DRAFT only)
+  app.patch("/api/invoices/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to edit invoices" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.status !== 'DRAFT') {
+        return res.status(400).json({ error: "Can only edit DRAFT invoices" });
+      }
+      
+      const updated = await storage.updateInvoice(invoice.id, req.body);
+      
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'EDITED',
+        actorId: userId,
+        metadata: { changes: Object.keys(req.body) }
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices/:id/send - Send invoice (SEND_ONLY or MANAGE)
+  app.post("/api/invoices/:id/send", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'SEND_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to send invoices" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.status !== 'DRAFT') {
+        return res.status(400).json({ error: "Can only send DRAFT invoices" });
+      }
+      
+      const updated = await storage.updateInvoice(invoice.id, { 
+        status: 'SENT',
+        sentAt: new Date()
+      });
+      
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'SENT',
+        actorId: userId,
+        metadata: { sentAt: new Date().toISOString() }
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices/:id/settle - Mark invoice as PAID (MANAGE only)
+  app.post("/api/invoices/:id/settle", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to settle invoices" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.status !== 'SENT' && invoice.status !== 'OVERDUE') {
+        return res.status(400).json({ error: "Can only settle SENT or OVERDUE invoices" });
+      }
+      
+      const { paidAt, paymentReference } = req.body;
+      const updated = await storage.updateInvoice(invoice.id, { 
+        status: 'PAID',
+        paidAt: paidAt ? new Date(paidAt) : new Date(),
+        paymentReference
+      });
+      
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'PAYMENT_LOGGED',
+        actorId: userId,
+        metadata: { paidAt: paidAt || new Date().toISOString(), paymentReference }
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoices/:id/cancel - Cancel invoice (MANAGE only)
+  app.post("/api/invoices/:id/cancel", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to cancel invoices" });
+      }
+      
+      const invoice = await storage.getInvoice(parseInt(req.params.id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.status === 'PAID') {
+        return res.status(400).json({ error: "Cannot cancel PAID invoices" });
+      }
+      
+      const { reason } = req.body;
+      const updated = await storage.updateInvoice(invoice.id, { 
+        status: 'CANCELLED',
+        notes: invoice.notes ? `${invoice.notes}\n\nCancelled: ${reason || 'No reason provided'}` : `Cancelled: ${reason || 'No reason provided'}`
+      });
+      
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'CANCELLED',
+        actorId: userId,
+        metadata: { reason }
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // GET /api/invoices/export/csv - Export invoices as CSV for Conta Azul
+  app.get("/api/invoices/export/csv", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'VIEW_ONLY');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No access to invoices" });
+      }
+      
+      const { status, isDemo } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (isDemo !== undefined) filters.isDemo = isDemo === 'true';
+      
+      const invoiceList = await storage.getInvoices(Object.keys(filters).length > 0 ? filters : undefined);
+      
+      // CSV header for Conta Azul compatibility
+      const headers = [
+        'Numero_Fatura',
+        'Data_Emissao',
+        'Data_Vencimento',
+        'Cliente_ID',
+        'Fornecedor_ID',
+        'Tipo',
+        'Valor_Bruto_BRL',
+        'Status',
+        'Data_Pagamento',
+        'Referencia_Pagamento',
+        'Descricao_Servico',
+        'Referencia_Contrato',
+        'Notas'
+      ].join(';');
+      
+      const rows = invoiceList.map(inv => [
+        inv.invoiceNumber,
+        inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : '',
+        inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : '',
+        inv.clientId || '',
+        inv.supplierId || '',
+        inv.invoiceType,
+        inv.grossAmountBrl || '',
+        inv.status,
+        inv.paidAt ? new Date(inv.paidAt).toISOString().split('T')[0] : '',
+        inv.paymentReference || '',
+        (inv.serviceDescription || '').replace(/[\r\n;]/g, ' '),
+        inv.contractReference || '',
+        (inv.notes || '').replace(/[\r\n;]/g, ' ')
+      ].join(';'));
+      
+      const csv = [headers, ...rows].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="invoices-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // GET /api/invoice-permissions - List all permissions (MANAGE only)
+  app.get("/api/invoice-permissions", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to view permissions" });
+      }
+      
+      const permissions = await storage.getAllInvoicePermissions();
+      res.json(permissions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/invoice-permissions - Set user permission (MANAGE only)
+  app.post("/api/invoice-permissions", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to set permissions" });
+      }
+      
+      const { userId: targetUserId, accessLevel } = req.body;
+      if (!targetUserId || !['VIEW_ONLY', 'SEND_ONLY', 'MANAGE'].includes(accessLevel)) {
+        return res.status(400).json({ error: "Invalid userId or accessLevel" });
+      }
+      
+      const permission = await storage.setInvoicePermission(targetUserId, accessLevel);
+      res.json(permission);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
