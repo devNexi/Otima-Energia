@@ -118,7 +118,7 @@
   
   /* Highlighted text - solid background with proper line spacing */
   .text-highlight {
-    @apply bg-[var(--accent-pink)] text-white px-2 py-1;
+    @apply bg-[var(--primary-purple)] text-white px-2 py-1;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }

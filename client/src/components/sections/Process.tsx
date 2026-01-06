@@ -47,7 +47,7 @@ export function Process() {
       <section id="process" className="bg-white py-16 lg:py-20 border-t border-gray-200">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           {/* Section Title */}
-          <h2 className="dcvc-section-title mb-16 text-[#df0af2]">Como Funciona</h2>
+          <h2 className="dcvc-section-title mb-16">Como Funciona</h2>
 
           {/* Steps Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
@@ -71,7 +71,7 @@ export function Process() {
                 </div>
               </div>
               <div className="mb-4">
-                <span className="text-5xl font-light text-[#df0af2]">01</span>
+                <span className="text-5xl font-light text-[#c88ff5]">01</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Você compartilha seu consumo e perfil de contratação
@@ -101,7 +101,7 @@ export function Process() {
                 </div>
               </div>
               <div className="mb-4">
-                <span className="text-5xl font-light text-[#df0af2]">02</span>
+                <span className="text-5xl font-light text-[#c88ff5]">02</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Buscamos propostas com preços finais
@@ -131,7 +131,7 @@ export function Process() {
                 </div>
               </div>
               <div className="mb-4">
-                <span className="text-5xl font-light text-[#df0af2]">03</span>
+                <span className="text-5xl font-light text-[#c88ff5]">03</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Você compara e escolhe a melhor opção
@@ -154,7 +154,7 @@ export function Process() {
                 </div>
               </div>
               <div className="mb-4">
-                <span className="text-5xl font-light text-[#df0af2]">04</span>
+                <span className="text-5xl font-light text-[#c88ff5]">04</span>
               </div>
               <h3 className="text-xl font-medium text-gray-900 mb-3">
                 Garantimos a execução e protegemos seu contrato
@@ -180,10 +180,10 @@ export function Process() {
               className="dcvc-arrow-btn group inline-flex"
               data-testid="process-cta"
             >
-              <span className="w-10 h-10 bg-[#df0af2] flex items-center justify-center text-white transition-colors">
+              <span className="arrow">
                 <ArrowRight className="w-5 h-5" />
               </span>
-              <span className="text-[#df0af2] group-hover:text-[#9e3ffd] transition-colors">
+              <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
                 FAZER DIAGNÓSTICO GRATUITO
               </span>
             </a>
