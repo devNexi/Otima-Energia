@@ -85,22 +85,25 @@ function TrustSection() {
           Por que confiar no processo da Ótima Energia?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {trustCards.map((card, index) => (
-            <div 
-              key={index}
-              className="bg-white p-6 rounded-xl"
-            >
-              <div className="w-10 h-10 bg-[#9e3ffd]/10 rounded-lg flex items-center justify-center mb-4">
-                <CheckCircle className="w-5 h-5 text-[#9e3ffd]" />
+          {trustCards.map((card, index) => {
+            const letters = ['A', 'B', 'C', 'D'];
+            return (
+              <div 
+                key={index}
+                className="bg-white p-6 rounded-xl"
+              >
+                <div className="w-10 h-10 bg-[#9e3ffd]/10 rounded-lg flex items-center justify-center mb-4">
+                  <span className="text-[#9e3ffd] font-bold text-lg">{letters[index]}</span>
+                </div>
+                <h3 className="text-lg font-semibold text-[#16163f] mb-2">
+                  {card.title}
+                </h3>
+                <p className="text-[#736d77] text-sm leading-relaxed">
+                  {card.description}
+                </p>
               </div>
-              <h3 className="text-lg font-semibold text-[#16163f] mb-2">
-                {card.title}
-              </h3>
-              <p className="text-[#736d77] text-sm leading-relaxed">
-                {card.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
