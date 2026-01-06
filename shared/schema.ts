@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique, type AnyPgColumn, pgEnum, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -4278,3 +4278,144 @@ export const dealProposalViewsRelations = relations(dealProposalViews, ({ one })
 }));
 
 // ============== END PROPOSAL OS (Deal-Centric) ==============
+
+// ============== FINANCE OS LITE (INVOICING) ==============
+
+export const invoiceAccessLevelEnum = pgEnum("invoice_access_level", [
+  "VIEW_ONLY",
+  "SEND_ONLY", 
+  "MANAGE"
+]);
+
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "DRAFT",
+  "SENT",
+  "PAID",
+  "OVERDUE",
+  "CANCELLED"
+]);
+
+export const invoiceTypeEnum = pgEnum("invoice_type", [
+  "UPFRONT",
+  "MONTHLY", 
+  "QUARTERLY",
+  "FINAL",
+  "SUCCESS_FEE"
+]);
+
+export const invoiceEventTypeEnum = pgEnum("invoice_event_type", [
+  "CREATED",
+  "EDITED",
+  "SENT",
+  "REMINDER_SENT",
+  "PAYMENT_LOGGED",
+  "STATUS_CHANGE",
+  "CANCELLED"
+]);
+
+export const invoicePermissions = pgTable("invoice_permissions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 64 }).notNull(),
+  accessLevel: invoiceAccessLevelEnum("access_level").notNull().default("VIEW_ONLY"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvoicePermissionSchema = createInsertSchema(invoicePermissions);
+export type InsertInvoicePermission = z.infer<typeof insertInvoicePermissionSchema>;
+export type InvoicePermission = typeof invoicePermissions.$inferSelect;
+
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 64 }).notNull(),
+  supplierId: integer("supplier_id").references(() => suppliers.id),
+  clientId: integer("client_id").references(() => clients.id),
+  
+  invoiceNumber: varchar("invoice_number", { length: 32 }).notNull().unique(),
+  invoiceType: invoiceTypeEnum("invoice_type").notNull(),
+  status: invoiceStatusEnum("status").notNull().default("DRAFT"),
+  
+  issueDate: timestamp("issue_date").defaultNow(),
+  dueDate: timestamp("due_date").notNull(),
+  
+  grossAmountBrl: numeric("gross_amount_brl", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("BRL"),
+  
+  serviceDescription: text("service_description"),
+  contractReference: varchar("contract_reference", { length: 128 }),
+  paymentInstructions: text("payment_instructions"),
+  
+  pdfUrl: text("pdf_url"),
+  emailRecipients: text("email_recipients").array(),
+  
+  sentAt: timestamp("sent_at"),
+  paidAt: timestamp("paid_at"),
+  paymentReference: varchar("payment_reference", { length: 128 }),
+  
+  notes: text("notes"),
+  
+  createdBy: varchar("created_by", { length: 64 }),
+  updatedBy: varchar("updated_by", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  
+  isDemo: boolean("is_demo").default(false),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices);
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+export const invoiceEvents = pgTable("invoice_events", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull(),
+  eventType: invoiceEventTypeEnum("event_type").notNull(),
+  eventSource: varchar("event_source", { length: 32 }).notNull().default("system"),
+  actorId: varchar("actor_id", { length: 64 }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertInvoiceEventSchema = createInsertSchema(invoiceEvents);
+export type InsertInvoiceEvent = z.infer<typeof insertInvoiceEventSchema>;
+export type InvoiceEvent = typeof invoiceEvents.$inferSelect;
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  deal: one(deals, {
+    fields: [invoices.dealId],
+    references: [deals.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [invoices.supplierId],
+    references: [suppliers.id],
+  }),
+  client: one(clients, {
+    fields: [invoices.clientId],
+    references: [clients.id],
+  }),
+  createdByUser: one(users, {
+    fields: [invoices.createdBy],
+    references: [users.id],
+  }),
+  events: many(invoiceEvents),
+}));
+
+export const invoiceEventsRelations = relations(invoiceEvents, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceEvents.invoiceId],
+    references: [invoices.id],
+  }),
+  actor: one(users, {
+    fields: [invoiceEvents.actorId],
+    references: [users.id],
+  }),
+}));
+
+export const invoicePermissionsRelations = relations(invoicePermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [invoicePermissions.userId],
+    references: [users.id],
+  }),
+}));
+
+// ============== END FINANCE OS LITE ==============

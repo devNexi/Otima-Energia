@@ -1,0 +1,275 @@
+✅ BUILD #5 — GETTING PAID (FINANCE OS LITE)
+REPLIT SUPER PROMPT
+CONTEXT
+
+You are working inside the existing Ótima Energia admin portal.
+
+This system already includes:
+
+Deal OS (state machine)
+
+Commission OS (expected vs paid commissions)
+
+Supplier Playbooks (payment cadence, SLAs)
+
+Audit Trail
+
+Proposal & ECOS PDF generation
+
+Supplier contacts
+
+Demo/Sandbox mode
+
+The founder explicitly does not want to do finance manually.
+
+Your goal is to build a Founder-Friendly Finance Layer that:
+
+Issues invoices in one click
+
+Tracks who owes money and when
+
+Automates follow-ups
+
+Makes it impossible to “forget to charge”
+
+Integrates cleanly with Brazilian accounting tools later (ContaAzul / contador)
+
+⚠️ Do NOT build a full ERP.
+⚠️ Do NOT calculate taxes deeply.
+This is operational invoicing + collections, not accounting.
+
+🎯 CORE OBJECTIVES
+
+One-click invoice generation from a signed deal
+
+Zero manual calculation
+
+Clear status: Pending / Paid / Overdue
+
+Automatic reminders for unpaid invoices
+
+Founder sees money flow in one screen
+
+Ops can run finance without “thinking”
+
+1️⃣ DATA MODEL — FINANCE CORE (MINIMAL)
+New Tables
+invoices
+id
+deal_id
+supplier_id
+client_id
+
+invoice_number
+invoice_type          // 'UPFRONT', 'MONTHLY', 'QUARTERLY', 'FINAL'
+issue_date
+due_date
+
+gross_amount_r
+currency              // default BRL
+
+status                // DRAFT | SENT | PAID | OVERDUE | CANCELLED
+sent_at
+paid_at
+
+payment_reference     // PIX / TED / DOC / supplier ref
+notes
+
+created_by
+created_at
+
+invoice_events
+id
+invoice_id
+event_type            // CREATED | SENT | REMINDER_SENT | PAID | MARKED_OVERDUE
+event_source          // system | user
+metadata
+created_at
+
+2️⃣ INVOICE GENERATION (ONE CLICK)
+Trigger
+
+Available ONLY when:
+
+Deal state = CONTRACT_SIGNED
+
+Commission terms snapshot exists
+
+Logic
+
+Use existing Deal + Commission data:
+
+Total commission value
+
+Payment cadence (from Supplier Playbook)
+
+Upfront % or schedule
+
+Button
+
+“Gerar Fatura”
+
+System behavior
+
+Auto-calculates invoice amount
+
+Auto-sets due date (from playbook SLA)
+
+Generates branded PDF invoice
+
+Saves immutable snapshot
+
+Status = DRAFT
+
+3️⃣ PDF INVOICE (BRAZIL-FRIENDLY, SIMPLE)
+Requirements
+
+Use existing PDF generation stack
+
+Apply Ótima branding + logo
+
+Portuguese (BR)
+
+Must include:
+
+Ótima Energia (CNPJ placeholder OK)
+
+Supplier legal name + CNPJ
+
+Invoice number
+
+Service description:
+
+“Intermediação e consultoria em contratação de energia elétrica – ACL”
+
+Contract reference
+
+Amount (R$)
+
+Due date
+
+Payment instructions (free-text field)
+
+⚠️ Do NOT implement full NF-e logic now.
+
+4️⃣ SEND & TRACK (AUTOMATION)
+Button
+
+“Enviar Fatura”
+
+Behavior
+
+Sends email to:
+
+Supplier finance contact
+
+Attaches PDF
+
+Status → SENT
+
+Logs event
+
+Auto-Rules
+
+If SENT and due_date + 1 passed → status OVERDUE
+
+If OVERDUE:
+
+Auto-send reminder email
+
+Create Ops task: “Cobrar fatura atrasada”
+
+Flag on Ops Dashboard
+
+5️⃣ PAYMENT CONFIRMATION (SIMPLE)
+Two ways to mark paid:
+
+Manual button: “Marcar como Pago”
+
+(Future-ready) Bank integration hook
+
+On payment:
+
+Status → PAID
+
+paid_at timestamp
+
+Event logged
+
+Commission OS reconciliation updated
+
+6️⃣ FINANCE DASHBOARD (FOUNDER VIEW)
+New Tab: Financeiro
+
+Tiles:
+
+Total faturado (mês)
+
+Total recebido
+
+Total em aberto
+
+Total em atraso
+
+Tables:
+
+Open invoices
+
+Overdue invoices
+
+Paid (last 30 days)
+
+Founder can see in 30 seconds:
+
+“Who owes me money and how much.”
+
+7️⃣ ACCOUNTING BRIDGE (LIGHT, FUTURE-READY)
+DO NOT integrate deeply yet.
+
+Instead:
+
+Add Export CSV:
+
+invoice_number
+
+supplier
+
+issue_date
+
+due_date
+
+amount
+
+status
+
+This file is sent monthly to:
+
+ContaAzul
+
+or contador
+
+⚠️ This avoids rework and keeps you compliant.
+
+8️⃣ AUDIT & SAFETY
+
+All invoice actions logged
+
+Invoice data immutable after SENT
+
+Admin-only cancellation
+
+Demo mode supported
+
+✅ ACCEPTANCE CRITERIA
+
+Renan issues an invoice in < 60 seconds
+
+Founder never calculates numbers
+
+Overdue invoices are impossible to miss
+
+No spreadsheet needed
+
+No ERP needed
+
+Scales cleanly to 100+ deals
