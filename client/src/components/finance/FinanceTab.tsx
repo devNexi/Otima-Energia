@@ -214,8 +214,31 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
     }
   });
 
-  const handleExportCsv = () => {
-    window.open(`/api/invoices/export/csv?x-session-id=${sessionId}`, "_blank");
+  const handleExportCsv = async () => {
+    try {
+      const response = await fetch("/api/invoices/export/csv", {
+        method: "GET",
+        headers: {
+          "x-session-id": sessionId || "",
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoices-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("CSV export failed:", error);
+    }
   };
 
   const getStatusBadge = (status: string) => {
