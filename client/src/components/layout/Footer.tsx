@@ -23,12 +23,12 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#eee7f1] pt-12 pb-16 lg:pt-16 lg:pb-20 border-t border-gray-200">
+    <footer className="bg-[#eee7f1] py-8 lg:py-10 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         {/* Large Navigation Links */}
-        <div className="grid md:grid-cols-4 gap-8 mb-12">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           {/* Main Nav */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <Link 
               href="/solucoes"
               className="dcvc-footer-link block text-left"
@@ -51,8 +51,8 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Recursos</p>
-            <ul className="space-y-3">
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Recursos</p>
+            <ul className="space-y-1.5">
               <li><Link href="/lei-mercado-livre" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Mercado Livre de Energia</Link></li>
               <li><Link href="/renovacao-contrato" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Renovação e Migração</Link></li>
               <li><Link href="/faq" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors">Perguntas Frequentes</Link></li>
@@ -65,8 +65,8 @@ export function Footer() {
 
           {/* Services */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Serviços</p>
-            <ul className="space-y-3 text-[#736d77]">
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Serviços</p>
+            <ul className="space-y-1.5 text-[#736d77]">
               <li>Economia de Energia</li>
               <li>Energia Renovável</li>
               <li>Gestão Energética</li>
@@ -76,18 +76,18 @@ export function Footer() {
 
           {/* Location */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-6">Localização</p>
-            <div className="text-[#736d77] space-y-1">
+            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Localização</p>
+            <div className="text-[#736d77] space-y-0.5">
               <p>Rio de Janeiro</p>
               <p>Brasil</p>
-              <p className="mt-4">contato@otimaenergia.com.br</p>
+              <p className="mt-2">contato@otimaenergia.com.br</p>
               <p>+55 21 99999-9999</p>
             </div>
           </div>
         </div>
 
         {/* Bottom */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-8 border-t border-gray-300">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-6 border-t border-gray-300">
           {/* Logo */}
           <Link href="/">
             <img 
@@ -111,7 +111,7 @@ export function Footer() {
         </div>
 
         {/* Legal Info */}
-        <p className="text-xs text-gray-400 mt-6 text-center">
+        <p className="text-xs text-gray-400 mt-4 text-center">
           Ótima Energia é uma iniciativa do ACR Group (CNPJ: 53.949.694/0001-20), com registro ativo na CCEE.
         </p>
       </div>
