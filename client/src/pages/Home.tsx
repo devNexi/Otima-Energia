@@ -14,43 +14,44 @@ function EcosSection() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           <div>
             <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
-              Como garantimos economia contínua — não apenas no primeiro contrato
+              Como garantimos economia contínua
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
               <p>
-                A economia no Mercado Livre não termina na assinatura do contrato.
-                Preços mudam. Perfis de consumo variam. O mercado oscila.
+                A verdadeira economia no Mercado Livre não está só na assinatura — está na renovação certa, na hora certa.
               </p>
               <p>
-                O <strong className="text-[#9e3ffd]">ECOS™</strong> é o sistema de inteligência da Ótima Energia. Ele organiza dados, automatiza análises e cria um histórico auditável de decisões — reduzindo ruído, riscos e decisões mal informadas.
+                É aí que entra o <strong className="text-[#9e3ffd]">ECOS™</strong>, nosso sistema interno de inteligência de mercado.
+                Usamos o ECOS™ em dois momentos-chave:
               </p>
+              <ul className="space-y-3 ml-1">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  <span><strong className="text-[#16163f]">Na originação:</strong> para identificar se sua empresa está pagando acima do justo e quais comercializadoras têm as melhores condições para o seu perfil</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#9e3ffd] mt-1">•</span>
+                  <span><strong className="text-[#16163f]">Na renovação:</strong> para comparar seu contrato atual com o cenário de mercado e decidir, com dados, se vale a pena renegociar, trocar ou manter</span>
+                </li>
+              </ul>
               <p>
-                O ECOS acompanha continuamente o desempenho do seu contrato, compara sua posição com referências de mercado e indica ações apenas quando fazem sentido financeiro.
+                O ECOS™ é uma ferramenta só nossa — usada para te entregar ofertas mais justas, no momento certo, sem pressa e sem ruído.
               </p>
               <p className="font-medium text-[#16163f]">
-                ECOS™ não empurra mudanças. Ele mostra quando agir — e quando não agir.
+                Porque economia de verdade é clareza nos momentos que importam — não interferência no meio do caminho.
               </p>
             </div>
           </div>
-          <div className="bg-[#eee7f1] rounded-lg p-8 lg:p-10">
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Monitoramento contínuo de contratos</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Relatórios periódicos de posicionamento</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Proteção contra decisões precipitadas</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Economia sustentável no longo prazo</span>
-              </li>
-            </ul>
+          <div className="bg-[#eee7f1] rounded-lg p-8 lg:p-10 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-24 h-24 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-12 h-12 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <span className="text-[#9e3ffd] font-semibold text-xl">ECOS™</span>
+              <p className="text-[#736d77] mt-2 text-sm">Sistema de Inteligência de Mercado</p>
+            </div>
           </div>
         </div>
       </div>
