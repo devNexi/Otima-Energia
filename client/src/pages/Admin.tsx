@@ -21,6 +21,7 @@ import { DealRegistry } from "@/components/deals/DealRegistry";
 import { DealDetail } from "@/components/deals/DealDetail";
 import { OpsDashboardTab, RevenueTab } from "@/components/commission-os";
 import { AuditTrailTab } from "@/components/admin/AuditTrailTab";
+import { FinanceTab } from "@/components/finance/FinanceTab";
 import { 
   Users, 
   Inbox, 
@@ -38,6 +39,7 @@ import {
   DollarSign,
   Send,
   TrendingUp,
+  Receipt,
   Zap,
   LayoutDashboard,
   LineChart,
@@ -489,6 +491,13 @@ export default function Admin({ defaultTab }: AdminProps) {
               <DollarSign className="w-4 h-4" />
               {language === "pt" ? "Comissão" : "Commission"}
             </TabsTrigger>
+            {/* Finance - visible to admin only */}
+            {user?.role === "admin" && (
+              <TabsTrigger value="finance" className="flex items-center gap-2" data-testid="tab-finance">
+                <Receipt className="w-4 h-4" />
+                {language === "pt" ? "Finanças" : "Finance"}
+              </TabsTrigger>
+            )}
             {/* Admin Overview - visible to admin only */}
             {user?.role === "admin" && (
               <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
@@ -932,6 +941,13 @@ export default function Admin({ defaultTab }: AdminProps) {
           <TabsContent value="revenue">
             <RevenueTab language={language} />
           </TabsContent>
+          
+          {/* Finance - admin only */}
+          {user?.role === "admin" && (
+            <TabsContent value="finance">
+              <FinanceTab language={language} userRole={user?.role} />
+            </TabsContent>
+          )}
           
           {/* Audit Trail - admin only */}
           {user?.role === "admin" && (
