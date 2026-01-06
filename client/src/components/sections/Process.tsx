@@ -15,7 +15,7 @@ export function Process() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-gray-900 max-w-5xl mb-8">
             A maioria das empresas brasileiras paga mais do que deveria pela energia,{" "}
-            <span className="text-highlight">não por falta de opções, mas por falta de clareza</span>.
+            <span className="text-highlight-pink">não por falta de opções, mas por falta de clareza</span>.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-6">
             O Mercado Livre é cheio de oportunidades, mas também de ruído: ofertas confusas, contratos ambíguos e vendedores que prometem o mundo.
