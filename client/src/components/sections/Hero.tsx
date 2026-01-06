@@ -31,7 +31,7 @@ export function Hero() {
             <span className="text-highlight inline-block mt-1">Sem dor de cabeça</span>.
           </h1>
           <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mb-8">
-            Comparamos condições de comercializadoras credenciadas e apresentamos propostas claras — com tudo incluído e sem taxas ocultas. Você escolhe a melhor para o seu negócio.
+            A gente busca ofertas reais de comercializadoras sérias, apresenta tudo de forma clara e te acompanha até a ativação, sem enrolação, sem taxas escondidas.
           </p>
           <Link 
             href="/seja-cliente"
