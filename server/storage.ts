@@ -74,6 +74,9 @@ import {
   type DealProposalItem, type InsertDealProposalItem,
   type DealProposalSnapshot, type InsertDealProposalSnapshot,
   type DealProposalView, type InsertDealProposalView,
+  type Invoice, type InsertInvoice,
+  type InvoiceEvent, type InsertInvoiceEvent,
+  type InvoicePermission, type InsertInvoicePermission,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -92,7 +95,8 @@ import {
   userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
   opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots,
   prcDocuments, prcRows, prcPublishBatches,
-  brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews
+  brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
+  invoices, invoiceEvents, invoicePermissions
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -682,6 +686,31 @@ export interface IStorage {
   recordDealProposalView(data: InsertDealProposalView): Promise<DealProposalView>;
   getDealProposalViews(proposalId: string): Promise<DealProposalView[]>;
   incrementDealProposalViewCount(proposalId: string): Promise<void>;
+  
+  // ============== FINANCE OS (INVOICING) ==============
+  // Invoices
+  createInvoice(data: InsertInvoice): Promise<Invoice>;
+  getInvoices(filters?: { status?: string; dealId?: string; supplierId?: number; isDemo?: boolean }): Promise<Invoice[]>;
+  getInvoice(id: number): Promise<Invoice | undefined>;
+  updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  getInvoicesByDeal(dealId: string): Promise<Invoice[]>;
+  getInvoiceSummary(isDemo?: boolean): Promise<{
+    totalInvoiced: number;
+    totalReceived: number;
+    totalPending: number;
+    totalOverdue: number;
+    countByStatus: Record<string, number>;
+  }>;
+  generateInvoiceNumber(): Promise<string>;
+  
+  // Invoice Events
+  createInvoiceEvent(data: InsertInvoiceEvent): Promise<InvoiceEvent>;
+  getInvoiceEvents(invoiceId: number): Promise<InvoiceEvent[]>;
+  
+  // Invoice Permissions
+  getInvoicePermission(userId: string): Promise<InvoicePermission | undefined>;
+  setInvoicePermission(userId: string, accessLevel: 'VIEW_ONLY' | 'SEND_ONLY' | 'MANAGE'): Promise<InvoicePermission>;
+  getAllInvoicePermissions(): Promise<InvoicePermission[]>;
 }
 
 export class Storage implements IStorage {
@@ -4003,6 +4032,142 @@ export class Storage implements IStorage {
         lastViewedAt: new Date()
       })
       .where(eq(dealProposals.id, proposalId));
+  }
+  
+  // ============== FINANCE OS (INVOICING) ==============
+  
+  async createInvoice(data: InsertInvoice): Promise<Invoice> {
+    const result = await db.insert(invoices).values(data).returning();
+    return result[0];
+  }
+  
+  async getInvoices(filters?: { status?: string; dealId?: string; supplierId?: number; isDemo?: boolean }): Promise<Invoice[]> {
+    let query = db.select().from(invoices);
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(invoices.status, filters.status as any));
+    }
+    if (filters?.dealId) {
+      conditions.push(eq(invoices.dealId, filters.dealId));
+    }
+    if (filters?.supplierId) {
+      conditions.push(eq(invoices.supplierId, filters.supplierId));
+    }
+    if (filters?.isDemo !== undefined) {
+      conditions.push(eq(invoices.isDemo, filters.isDemo));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+    }
+    return await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+  }
+  
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    const result = await db.select().from(invoices).where(eq(invoices.id, id));
+    return result[0];
+  }
+  
+  async updateInvoice(id: number, data: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const result = await db.update(invoices)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(invoices.id, id))
+      .returning();
+    return result[0];
+  }
+  
+  async getInvoicesByDeal(dealId: string): Promise<Invoice[]> {
+    return await db.select().from(invoices)
+      .where(eq(invoices.dealId, dealId))
+      .orderBy(desc(invoices.createdAt));
+  }
+  
+  async getInvoiceSummary(isDemo?: boolean): Promise<{
+    totalInvoiced: number;
+    totalReceived: number;
+    totalPending: number;
+    totalOverdue: number;
+    countByStatus: Record<string, number>;
+  }> {
+    const demoCondition = isDemo !== undefined ? eq(invoices.isDemo, isDemo) : undefined;
+    
+    const allInvoices = demoCondition 
+      ? await db.select().from(invoices).where(demoCondition)
+      : await db.select().from(invoices);
+    
+    let totalInvoiced = 0;
+    let totalReceived = 0;
+    let totalPending = 0;
+    let totalOverdue = 0;
+    const countByStatus: Record<string, number> = {};
+    
+    for (const inv of allInvoices) {
+      const amount = parseFloat(String(inv.grossAmountBrl)) || 0;
+      totalInvoiced += amount;
+      
+      countByStatus[inv.status] = (countByStatus[inv.status] || 0) + 1;
+      
+      if (inv.status === 'PAID') {
+        totalReceived += amount;
+      } else if (inv.status === 'OVERDUE') {
+        totalOverdue += amount;
+      } else if (inv.status === 'SENT' || inv.status === 'DRAFT') {
+        totalPending += amount;
+      }
+    }
+    
+    return { totalInvoiced, totalReceived, totalPending, totalOverdue, countByStatus };
+  }
+  
+  async generateInvoiceNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    
+    const existingCount = await db.select({ count: sql<number>`count(*)` })
+      .from(invoices)
+      .where(sql`invoice_number LIKE ${`OE-${year}${month}-%`}`);
+    
+    const seq = (Number(existingCount[0]?.count || 0) + 1).toString().padStart(4, '0');
+    return `OE-${year}${month}-${seq}`;
+  }
+  
+  async createInvoiceEvent(data: InsertInvoiceEvent): Promise<InvoiceEvent> {
+    const result = await db.insert(invoiceEvents).values(data).returning();
+    return result[0];
+  }
+  
+  async getInvoiceEvents(invoiceId: number): Promise<InvoiceEvent[]> {
+    return await db.select().from(invoiceEvents)
+      .where(eq(invoiceEvents.invoiceId, invoiceId))
+      .orderBy(desc(invoiceEvents.createdAt));
+  }
+  
+  async getInvoicePermission(userId: string): Promise<InvoicePermission | undefined> {
+    const result = await db.select().from(invoicePermissions)
+      .where(eq(invoicePermissions.userId, userId));
+    return result[0];
+  }
+  
+  async setInvoicePermission(userId: string, accessLevel: 'VIEW_ONLY' | 'SEND_ONLY' | 'MANAGE'): Promise<InvoicePermission> {
+    const existing = await this.getInvoicePermission(userId);
+    
+    if (existing) {
+      const result = await db.update(invoicePermissions)
+        .set({ accessLevel, updatedAt: new Date() })
+        .where(eq(invoicePermissions.userId, userId))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(invoicePermissions)
+      .values({ userId, accessLevel })
+      .returning();
+    return result[0];
+  }
+  
+  async getAllInvoicePermissions(): Promise<InvoicePermission[]> {
+    return await db.select().from(invoicePermissions);
   }
 }
 
