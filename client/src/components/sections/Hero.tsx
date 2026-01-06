@@ -44,9 +44,6 @@ export function Hero() {
           <p className="text-sm text-white/70 mt-4 max-w-xl">
             Economia potencial de até 40%, dependendo do perfil e das condições de contratação.
           </p>
-          <p className="text-xs text-white/50 mt-6 max-w-xl">
-            Ótima Energia é uma iniciativa do ACR Group (CNPJ: 53.949.694/0001-20), com registro ativo na CCEE.
-          </p>
         </div>
       </div>
     </section>

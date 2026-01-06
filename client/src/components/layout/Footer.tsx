@@ -109,6 +109,11 @@ export function Footer() {
             <Link href="/termos" className="hover:text-[#df0af2] transition-colors">Termos de Uso</Link>
           </div>
         </div>
+
+        {/* Legal Info */}
+        <p className="text-xs text-gray-400 mt-6 text-center">
+          Ótima Energia é uma iniciativa do ACR Group (CNPJ: 53.949.694/0001-20), com registro ativo na CCEE.
+        </p>
       </div>
     </footer>
   );
