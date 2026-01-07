@@ -532,6 +532,12 @@ export default function Admin({ defaultTab }: AdminProps) {
                       <TrendingUp className="w-4 h-4" />
                       PRCs
                     </TabsTrigger>
+                    <Link href="/admin/settings">
+                      <div className="w-full justify-start gap-2 px-3 py-2 text-sm flex items-center rounded-md hover:bg-accent cursor-pointer">
+                        <Lock className="w-4 h-4" />
+                        {language === "pt" ? "Configurações" : "Settings"}
+                      </div>
+                    </Link>
                   </TabsList>
                 </div>
               )}
