@@ -398,6 +398,178 @@ export async function registerRoutes(
     }
   });
 
+  // ============== USER MANAGEMENT ENDPOINTS (Admin only) ==============
+  
+  // Helper to verify admin session
+  const requireAdminSession = async (req: Request, res: Response): Promise<{ userId: string; username: string } | null> => {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (!sessionId) {
+      res.status(401).json({ success: false, error: "Not authenticated" });
+      return null;
+    }
+    const session = await storage.getAdminSession(sessionId);
+    if (!session || new Date(session.expiresAt) < new Date()) {
+      res.status(401).json({ success: false, error: "Session expired" });
+      return null;
+    }
+    const user = await storage.getUser(session.userId);
+    if (!user || user.role !== 'admin') {
+      res.status(403).json({ success: false, error: "Admin access required" });
+      return null;
+    }
+    return { userId: user.id, username: user.username };
+  };
+
+  // Get all users
+  app.get("/api/users", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+      
+      const allUsers = await storage.getAllUsers();
+      res.json({ 
+        success: true, 
+        users: allUsers.map(u => ({ id: u.id, username: u.username, role: u.role }))
+      });
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch users" });
+    }
+  });
+
+  // Create new user
+  app.post("/api/users", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+      
+      const { username, password, role } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ success: false, error: "Username and password required" });
+      }
+      
+      const validRoles = ['admin', 'ops', 'sales'];
+      if (role && !validRoles.includes(role)) {
+        return res.status(400).json({ success: false, error: "Invalid role. Must be admin, ops, or sales" });
+      }
+      
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(409).json({ success: false, error: "Username already exists" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      const user = await storage.createUser({ username, password: hashedPassword, role: role || 'admin' });
+      
+      await storage.logAdminAction({
+        actor: admin.username,
+        actorIp: req.ip || null,
+        action: "create_user",
+        entityType: "user",
+        entityId: user.id,
+        detailsJson: { username, role: role || 'admin' }
+      });
+      
+      res.json({ success: true, user: { id: user.id, username: user.username, role: user.role } });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ success: false, error: "Failed to create user" });
+    }
+  });
+
+  // Update user
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+      
+      const { id } = req.params;
+      const { username, role, password } = req.body;
+      
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      const validRoles = ['admin', 'ops', 'sales'];
+      if (role && !validRoles.includes(role)) {
+        return res.status(400).json({ success: false, error: "Invalid role. Must be admin, ops, or sales" });
+      }
+      
+      if (username && username !== existingUser.username) {
+        const duplicate = await storage.getUserByUsername(username);
+        if (duplicate) {
+          return res.status(409).json({ success: false, error: "Username already exists" });
+        }
+      }
+      
+      const updateData: { username?: string; role?: string } = {};
+      if (username) updateData.username = username;
+      if (role) updateData.role = role;
+      
+      if (Object.keys(updateData).length > 0) {
+        await storage.updateUser(id, updateData);
+      }
+      
+      if (password) {
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        await storage.updateUserPassword(id, hashedPassword);
+      }
+      
+      const updatedUser = await storage.getUser(id);
+      
+      await storage.logAdminAction({
+        actor: admin.username,
+        actorIp: req.ip || null,
+        action: "update_user",
+        entityType: "user",
+        entityId: id,
+        detailsJson: { username, role, passwordChanged: !!password }
+      });
+      
+      res.json({ success: true, user: { id: updatedUser?.id, username: updatedUser?.username, role: updatedUser?.role } });
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ success: false, error: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+      
+      const { id } = req.params;
+      
+      if (id === admin.userId) {
+        return res.status(400).json({ success: false, error: "Cannot delete your own account" });
+      }
+      
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ success: false, error: "User not found" });
+      }
+      
+      await storage.deleteUser(id);
+      
+      await storage.logAdminAction({
+        actor: admin.username,
+        actorIp: req.ip || null,
+        action: "delete_user",
+        entityType: "user",
+        entityId: id,
+        detailsJson: { deletedUsername: existingUser.username }
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ success: false, error: "Failed to delete user" });
+    }
+  });
+
   // ============== LEAD ENDPOINTS ==============
   
   // Submit lead from website contact form
