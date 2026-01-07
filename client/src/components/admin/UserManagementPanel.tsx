@@ -36,12 +36,27 @@ export function UserManagementPanel() {
   const [editUsername, setEditUsername] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  
+  const getSessionId = () => {
+    const stored = localStorage.getItem('admin_session');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return parsed.sessionId || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ["/api/users"],
     queryFn: async () => {
+      const sid = getSessionId();
       const res = await fetch("/api/users", {
-        headers: { "x-session-id": sessionId || "" }
+        headers: { "x-session-id": sid || "" }
       });
       if (!res.ok) throw new Error("Failed to fetch users");
       return res.json();
@@ -51,11 +66,12 @@ export function UserManagementPanel() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: { username: string; password: string; role: string }) => {
+      const sid = getSessionId();
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-session-id": sessionId || ""
+          "x-session-id": sid || ""
         },
         body: JSON.stringify(data)
       });
@@ -80,12 +96,13 @@ export function UserManagementPanel() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { id: string; username?: string; password?: string; role?: string }) => {
+      const sid = getSessionId();
       const { id, ...updateData } = data;
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",
-          "x-session-id": sessionId || ""
+          "x-session-id": sid || ""
         },
         body: JSON.stringify(updateData)
       });
@@ -108,9 +125,10 @@ export function UserManagementPanel() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
+      const sid = getSessionId();
       const res = await fetch(`/api/users/${id}`, {
         method: "DELETE",
-        headers: { "x-session-id": sessionId || "" }
+        headers: { "x-session-id": sid || "" }
       });
       if (!res.ok) {
         const err = await res.json();
@@ -376,14 +394,25 @@ export function UserManagementPanel() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-password">Nova Senha (deixe vazio para manter)</Label>
-                <Input
-                  id="edit-password"
-                  type="password"
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                  placeholder="••••••••"
-                  data-testid="input-edit-password"
-                />
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showEditPassword ? "text" : "password"}
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="••••••••"
+                    data-testid="input-edit-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                  >
+                    {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Função</Label>
