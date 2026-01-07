@@ -19,7 +19,7 @@ interface User {
 }
 
 export function UserManagementPanel() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, sessionId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -40,18 +40,17 @@ export function UserManagementPanel() {
   const { data: usersData, isLoading } = useQuery({
     queryKey: ["/api/users"],
     queryFn: async () => {
-      const sessionId = localStorage.getItem("sessionId");
       const res = await fetch("/api/users", {
         headers: { "x-session-id": sessionId || "" }
       });
       if (!res.ok) throw new Error("Failed to fetch users");
       return res.json();
-    }
+    },
+    enabled: !!sessionId
   });
 
   const createUserMutation = useMutation({
     mutationFn: async (data: { username: string; password: string; role: string }) => {
-      const sessionId = localStorage.getItem("sessionId");
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { 
@@ -81,7 +80,6 @@ export function UserManagementPanel() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { id: string; username?: string; password?: string; role?: string }) => {
-      const sessionId = localStorage.getItem("sessionId");
       const { id, ...updateData } = data;
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
@@ -110,7 +108,6 @@ export function UserManagementPanel() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      const sessionId = localStorage.getItem("sessionId");
       const res = await fetch(`/api/users/${id}`, {
         method: "DELETE",
         headers: { "x-session-id": sessionId || "" }
