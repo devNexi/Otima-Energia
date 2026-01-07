@@ -1,10 +1,11 @@
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { DemoDataPanel } from "@/components/admin/DemoDataPanel";
 import { BrandKitPanel } from "@/components/admin/BrandKitPanel";
+import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
-import { Settings, Database, Shield, Globe, Palette } from "lucide-react";
+import { Settings, Database, Shield, Globe, Palette, Users } from "lucide-react";
 import { Redirect } from "wouter";
 
 export default function AdminSettings() {
@@ -46,8 +47,8 @@ export default function AdminSettings() {
               Brand Kit
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2" data-testid="tab-security">
-              <Shield className="h-4 w-4" />
-              Segurança
+              <Users className="h-4 w-4" />
+              Usuários
             </TabsTrigger>
             <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
               <Globe className="h-4 w-4" />
@@ -64,22 +65,7 @@ export default function AdminSettings() {
           </TabsContent>
 
           <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Segurança e Acesso
-                </CardTitle>
-                <CardDescription>
-                  Configurações de segurança e controle de acesso
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Configurações de segurança serão disponibilizadas em breve.
-                </p>
-              </CardContent>
-            </Card>
+            <UserManagementPanel />
           </TabsContent>
 
           <TabsContent value="integrations">

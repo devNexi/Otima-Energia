@@ -413,7 +413,12 @@ export async function registerRoutes(
       return null;
     }
     const user = await storage.getUser(session.userId);
-    if (!user || user.role !== 'admin') {
+    if (!user) {
+      res.status(403).json({ success: false, error: "User not found" });
+      return null;
+    }
+    const userRole = user.role || 'admin';
+    if (userRole !== 'admin') {
       res.status(403).json({ success: false, error: "Admin access required" });
       return null;
     }
@@ -447,6 +452,10 @@ export async function registerRoutes(
       
       if (!username || !password) {
         return res.status(400).json({ success: false, error: "Username and password required" });
+      }
+      
+      if (typeof password !== 'string' || password.length < 8) {
+        return res.status(400).json({ success: false, error: "Password must be at least 8 characters" });
       }
       
       const validRoles = ['admin', 'ops', 'sales'];
@@ -513,6 +522,9 @@ export async function registerRoutes(
       }
       
       if (password) {
+        if (typeof password !== 'string' || password.length < 8) {
+          return res.status(400).json({ success: false, error: "Password must be at least 8 characters" });
+        }
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
         await storage.updateUserPassword(id, hashedPassword);
       }
