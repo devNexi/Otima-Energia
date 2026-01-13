@@ -168,7 +168,7 @@ export function Process() {
           {/* Eligibility Note */}
           <div className="mt-12 p-6 bg-[#eee7f1] rounded-lg max-w-2xl">
             <p className="text-[#736d77]">
-              <strong className="text-[#16163f]">Elegibilidade:</strong> Atendemos empresas com contas acima de R$8.000/mês e demanda próxima de 500 kW (limite em redução). Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.{" "}
+              <strong className="text-[#16163f]">Elegibilidade:</strong> Após a mudança federal de jan/2024, empresas atendidas em Grupo A (média/alta tensão – ≥ 2,3 kV) podem migrar para o Mercado Livre por meio de uma comercializadora varejista. Se sua empresa ainda não for elegível, você já pode enviar seus dados para iniciar o diagnóstico.{" "}
               <a href="/lei-mercado-livre" className="text-[#9e3ffd] hover:underline">Saiba mais sobre o Mercado Livre</a>
             </p>
           </div>
