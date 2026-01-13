@@ -156,13 +156,13 @@ const STAGE_NEXT_STEPS: Record<string, (checklistStatus: any) => NextStep[]> = {
   ],
   CONTRACT_SIGNED: (status) => [
     {
-      id: "submit_registration",
-      label: "Submit Registration",
-      description: "Submit contract for registration and energy supply allocation.",
+      id: "submit_to_ccee",
+      label: "Submit to CCEE",
+      description: "Submit contract to CCEE for registration and energy supply allocation.",
       required: true,
       completed: status?.cceeSubmitted ?? false,
-      action: "submit_registration",
-      actionLabel: "Submit Registration",
+      action: "submit_ccee",
+      actionLabel: "Submit to CCEE",
       icon: Send
     },
     {

@@ -715,7 +715,7 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                                                 <span className="text-gray-500">{language === "pt" ? "Fonte:" : "Source:"}</span>{" "}
                                                 {decision.snapshotSourceType === "market_survey" ? (language === "pt" ? "Pesquisa de Mercado" : "Market Survey") :
                                                  decision.snapshotSourceType === "internal_deals" ? (language === "pt" ? "Negócios Internos" : "Internal Deals") :
-                                                 decision.snapshotSourceType === "ccee_data" ? (language === "pt" ? "Dados de Mercado" : "Market Data") :
+                                                 decision.snapshotSourceType === "ccee_data" ? "CCEE" :
                                                  decision.snapshotSourceType === "pld_derived" ? (language === "pt" ? "Derivado do PLD" : "PLD Derived") :
                                                  decision.snapshotSourceType}
                                               </p>

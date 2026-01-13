@@ -37,7 +37,7 @@ export function Tech() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold mb-2">Segurança e Compliance</h3>
-                  <p className="text-gray-400">Dados criptografados e processos auditados. Total conformidade com as normas regulatórias do setor elétrico.</p>
+                  <p className="text-gray-400">Dados criptografados e processos auditados. Total conformidade com as normas da ANEEL e CCEE.</p>
                 </div>
               </div>
 

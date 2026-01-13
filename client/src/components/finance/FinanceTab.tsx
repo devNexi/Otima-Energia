@@ -101,7 +101,7 @@ const translations = {
     successFee: "Success Fee",
     paymentTrigger: "Payment Trigger",
     selectTrigger: "Select trigger reason",
-    triggerCceeActivation: "Market Activation",
+    triggerCceeActivation: "CCEE Activation",
     triggerContractSigned: "Contract Signed",
     triggerFirstBilling: "First Client Billing",
     triggerMonthlyReport: "Monthly - per report"
@@ -138,7 +138,7 @@ const translations = {
     successFee: "Taxa de Sucesso",
     paymentTrigger: "Gatilho de Pagamento",
     selectTrigger: "Selecione o gatilho",
-    triggerCceeActivation: "Ativação no Mercado",
+    triggerCceeActivation: "Ativação na CCEE",
     triggerContractSigned: "Assinatura do contrato",
     triggerFirstBilling: "Primeiro faturamento do cliente",
     triggerMonthlyReport: "Mensal - conforme relatório"

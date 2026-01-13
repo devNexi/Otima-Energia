@@ -166,7 +166,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
       CLIENT_SWITCHED_SUPPLIER: "bg-gray-100 text-gray-800",
       SUPPLIER_WITHDREW: "bg-gray-100 text-gray-800",
       SUPPLIER_BACKED_OUT: "bg-gray-100 text-gray-800",
-      REGISTRATION_FAILED: "bg-red-100 text-red-800",
+      CCEE_REGISTRATION_FAILED: "bg-red-100 text-red-800",
       REGULATORY_BLOCK: "bg-red-100 text-red-800",
       PAYMENT_GUARANTEE_FAILED: "bg-red-100 text-red-800",
       START_DATE_DELAYED: "bg-blue-100 text-blue-800",
@@ -258,7 +258,7 @@ export function DealCasesTab({ dealId }: DealCasesTabProps) {
                       <SelectItem value="CLIENT_SWITCHED_SUPPLIER">Client Switched Supplier</SelectItem>
                       <SelectItem value="SUPPLIER_WITHDREW">Supplier Withdrew</SelectItem>
                       <SelectItem value="SUPPLIER_BACKED_OUT">Supplier Backed Out</SelectItem>
-                      <SelectItem value="REGISTRATION_FAILED">Registration Failed</SelectItem>
+                      <SelectItem value="CCEE_REGISTRATION_FAILED">CCEE Registration Failed</SelectItem>
                       <SelectItem value="REGULATORY_BLOCK">Regulatory Block</SelectItem>
                       <SelectItem value="PAYMENT_GUARANTEE_FAILED">Payment Guarantee Failed</SelectItem>
                       <SelectItem value="START_DATE_DELAYED">Start Date Delayed</SelectItem>

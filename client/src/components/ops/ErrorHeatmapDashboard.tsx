@@ -62,7 +62,7 @@ const ERROR_DESCRIPTIONS: Record<string, string> = {
   "SLA_BREACH": "SLA de fornecedor ultrapassado",
   "QUOTE_MISMATCH": "Termos da cotação não conferem",
   "COMPLIANCE_FAIL": "Falha na verificação de compliance",
-  "REGISTRATION_ERROR": "Erro no registro de mercado",
+  "CCEE_ERROR": "Erro no registro CCEE",
   "COMMISSION_DISCREPANCY": "Discrepância na comissão",
   "CONTRACT_TERMS": "Termos contratuais inconsistentes"
 };

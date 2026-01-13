@@ -111,7 +111,7 @@ export function Footer() {
 
         {/* Legal Info */}
         <p className="text-xs text-gray-400 mt-4 text-center">
-          Ótima Energia (CNPJ: 64.103.434/0001-08)
+          Ótima Energia (CNPJ: 64.103.434/0001-08), com registro ativo na CCEE.
         </p>
       </div>
     </footer>
