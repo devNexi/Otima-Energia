@@ -1,0 +1,141 @@
+A Ótima Energia Ltda. ("Ótima Energia", "nós", "nosso" ou "conosco") reconhece a importância da sua privacidade e está comprometida em proteger os seus Dados Pessoais.
+
+Esta Política de Privacidade ("Política") explica, de forma clara e objetiva, quais dados coletamos, como os utilizamos, com quem podemos compartilhá-los, por quanto tempo os armazenamos e quais são os seus direitos, sempre em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados – LGPD) e demais normas aplicáveis.
+
+1. Quem Somos
+
+Controladora: Ótima Energia Ltda.
+Site: https://otimaenergia.com
+
+E-mail para privacidade: privacidade@otimaenergia.com
+
+Contato geral: contato@otimaenergia.com
+
+2. Definições
+
+(sem alterações)
+
+3. Dados Pessoais que Coletamos
+
+Tratamos Dados Pessoais para viabilizar nossos serviços de diagnóstico, comparação e coordenação do processo no Mercado Livre de Energia, bem como para operar nosso Site e rotinas administrativas.
+
+Podemos coletar:
+
+3.1. Dados cadastrais e de identificação
+
+Nome, e-mail, telefone/WhatsApp, cargo, empresa, CNPJ da empresa (quando aplicável), endereço (quando necessário), documento de identificação (quando necessário para contratação).
+
+3.2. Dados de consumo e informações técnicas
+
+Dados de fatura/conta de energia, Unidade Consumidora (UC), histórico de consumo, demanda/contratação, informações do fornecimento, perfil de consumo e demais dados necessários para análises e simulações.
+
+3.3. Dados de navegação e tecnologia
+
+Endereço IP, data e hora de acesso, páginas visitadas, dispositivo, navegador, cookies, identificadores e registros de uso.
+
+3.4. Registros de comunicação (quando aplicável) — NOVO
+
+Podemos registrar informações fornecidas em contatos por telefone/WhatsApp/e-mail (por exemplo: nome do responsável, cargo, status Mercado Livre vs distribuidora, Grupo A/B informado, melhor horário para contato).
+Quando permitido e aplicável, ligações podem ser gravadas e/ou transcritas para fins de qualidade, segurança, comprovação e melhoria de processos.
+
+3.5. Dados financeiros e de pagamento (quando aplicável)
+
+Dados bancários e informações necessárias para faturamento/recebimento/pagamento, quando houver contratação e/ou obrigações administrativas correlatas.
+
+Observação importante: Em regra, nossos serviços são direcionados a empresas. Ainda assim, podemos tratar dados de pessoas naturais (ex.: representante legal, sócio, responsável financeiro, contato comercial).
+
+4. Fontes de Dados (inclui bases públicas) — NOVO
+
+Além dos dados fornecidos diretamente por você, podemos tratar dados de contato empresarial obtidos de fontes públicas e/ou bases acessíveis publicamente, para fins de prospecção B2B e atualização cadastral (por exemplo: registros empresariais e cadastros públicos que contenham telefone/e-mail comercial informado pela empresa).
+
+5. Finalidades e Bases Legais (LGPD)
+
+A seguir, exemplos das principais atividades de tratamento:
+
+Diagnóstico e análise de elegibilidade/perfil: procedimentos preliminares / execução de contrato.
+
+Modelagem de propostas e simulações: procedimentos preliminares / execução de contrato; legítimo interesse.
+
+Atendimento e comunicação operacional: procedimentos preliminares / execução de contrato; legítimo interesse.
+
+Contato inicial B2B e atualização cadastral (inclui chamadas telefônicas): legítimo interesse, observados direitos e expectativas do titular e mecanismos de oposição/descadastro.
+
+Segurança, prevenção a fraude e auditoria: legítimo interesse; cumprimento de obrigação legal quando aplicável.
+
+Melhoria de processos e qualidade do atendimento (inclui registros e, quando aplicável, gravação/transcrição): legítimo interesse.
+
+Marketing institucional: consentimento ou legítimo interesse, conforme o caso, com opção de descadastro.
+
+6. Contato por Telefone e Assistentes Virtuais (IA) — NOVO
+
+Podemos realizar contatos por telefone com números comerciais associados a empresas para:
+(i) confirmar dados cadastrais, (ii) identificar o responsável pela conta de energia, (iii) entender o status do fornecimento (Mercado Livre vs distribuidora) e (iv) encaminhar o atendimento ao time humano quando apropriado.
+
+Em alguns contatos, utilizamos assistentes virtuais para conduzir perguntas objetivas e registrar as respostas.
+No início do contato, buscamos uma confirmação de disponibilidade para prosseguir com perguntas rápidas (por exemplo: “Posso fazer duas perguntas rápidas sobre a conta de energia?”).
+Se você não quiser continuar, pode solicitar o encerramento do contato e o bloqueio de novos contatos.
+
+7. Cookies e Tecnologias Semelhantes
+
+(sem alterações)
+
+8. Links para Sites de Terceiros
+
+(sem alterações)
+
+9. Compartilhamento de Dados Pessoais
+
+Compartilhamos dados somente quando necessário, nos limites e finalidades desta Política, com:
+
+Prestadores de serviços (hospedagem, atendimento, analytics, nuvem, automação, assinatura eletrônica, e-mail, telefonia).
+
+Parceiros operacionais estritamente necessários quando você solicitar formalmente proposta/contratação que demande interação com agentes do setor.
+
+Autoridades públicas quando houver obrigação legal/regulatória ou ordem judicial.
+
+Exigimos, sempre que aplicável, padrões de segurança e confidencialidade compatíveis com a LGPD.
+
+10. Transferência Internacional de Dados
+
+(sem alterações)
+
+11. Transferência de Controle / Operações Societárias
+
+(sem alterações)
+
+12. Segurança da Informação
+
+(sem alterações)
+
+13. Retenção e Eliminação de Dados
+
+(sem alterações)
+
+14. Dados de Crianças e Adolescentes
+
+(sem alterações)
+
+15. Direitos do Titular
+
+(sem alterações, mas recomendo adicionar esta linha no final do item 15:)
+Você também pode solicitar oposição a determinados tratamentos baseados em legítimo interesse e solicitar bloqueio de contatos.
+
+16. Decisões Automatizadas e Perfilamento
+
+(sem alterações)
+
+17. Alterações desta Política
+
+(sem alterações)
+
+18. Contato
+
+E-mail para privacidade: privacidade@otimaenergia.com
+
+Contato geral: contato@otimaenergia.com
+
+19. Consentimento (Quando Aplicável)
+
+Quando o tratamento se basear em consentimento, você poderá recusá-lo ou revogá-lo a qualquer momento. A recusa pode limitar determinados recursos (ex.: envio de marketing).
+
+Ao interagir conosco e utilizar nossos canais, você declara estar ciente desta Política e autoriza o tratamento de seus dados nos termos aqui previstos, conforme a base legal aplicável a cada finalidade.

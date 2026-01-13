@@ -24,7 +24,7 @@ export default function Terms() {
             
             <h2 className="text-2xl font-medium text-[#16163f] mb-4">1. Introdução</h2>
             <p>
-              1.1. Estes Termos de Uso ("Termos") regulam o acesso e a utilização do site operado pela Ótima Energia Ltda. ("Ótima Energia", "nós", "nosso"), disponível em https://otimaenergia.com.br e de quaisquer páginas, formulários, áreas de acesso e conteúdos relacionados (em conjunto, o "Site").
+              1.1. Estes Termos de Uso ("Termos") regulam o acesso e a utilização do site operado pela Ótima Energia Ltda. ("Ótima Energia", "nós", "nosso"), disponível em https://otimaenergia.com e de quaisquer páginas, formulários, áreas de acesso e conteúdos relacionados (em conjunto, o "Site").
             </p>
             <p>
               1.2. Ao acessar, navegar, enviar informações, utilizar formulários, criar conta, acessar área restrita ou utilizar qualquer funcionalidade do Site, você ("Você" ou "Usuário") declara ter lido, entendido e concordado com estes Termos e com a Política de Privacidade do Site.
@@ -39,8 +39,9 @@ export default function Terms() {
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">2. Quem Somos</h2>
             <ul className="list-none pl-0 space-y-2">
               <li>2.1. <strong>Controladora/Responsável pelo Site:</strong> Ótima Energia Ltda.</li>
-              <li>2.2. <strong>Site:</strong> https://otimaenergia.com.br</li>
+              <li>2.2. <strong>Site:</strong> https://otimaenergia.com</li>
               <li>2.3. <strong>E-mail de contato:</strong> contato@otimaenergia.com</li>
+              <li>2.4. <strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com</li>
             </ul>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">3. Elegibilidade e Uso Permitido</h2>
@@ -57,13 +58,16 @@ export default function Terms() {
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">4. Descrição dos Serviços e Natureza das Informações</h2>
             <p>
-              4.1. A Ótima Energia atua como intermediadora e parceira de migração, contratação e otimização para empresas que desejam avaliar condições no Mercado Livre de Energia, inclusive com análise de faturas e elaboração de simulações e propostas.
+              4.1. A Ótima Energia atua como intermediadora comercial e coordenadora do processo para empresas que desejam avaliar condições no Mercado Livre de Energia, incluindo análise de faturas, organização de informações, solicitação e comparação de ofertas junto a parceiros comerciais e apoio na condução do fluxo de contratação.
             </p>
             <p>
-              4.2. As informações apresentadas no Site têm finalidade geral e podem ser atualizadas a qualquer momento. Mesmo quando fornecemos estimativas e simulações, resultados reais podem variar conforme perfil de consumo, condições contratuais, prazos, regras setoriais, disponibilidade de fornecedores e requisitos técnicos/regulatórios.
+              4.1.1. A Ótima Energia não é comercializadora de energia e não se torna parte do contrato de fornecimento celebrado entre o Usuário e o agente fornecedor/parceiro. A migração e suas etapas formais (quando aplicável) dependem de requisitos técnicos, cadastrais e regulatórios, e de procedimentos conduzidos pelos agentes responsáveis, podendo haver aprovações, prazos e exigências fora do controle da Ótima.
             </p>
             <p>
-              4.3. O "serviço de comparação" é gratuito para o empresário/empresa usuária do Site. A remuneração da Ótima Energia pode ocorrer por meio de comissões pagas por fornecedores e/ou parceiros, sem cobrança direta ao usuário, conforme aplicável e conforme instrumentos contratuais específicos.
+              4.2. As informações apresentadas no Site têm finalidade geral e podem ser atualizadas a qualquer momento. Mesmo quando fornecemos estimativas e simulações, resultados reais podem variar conforme perfil de consumo, condições contratuais, prazos, regras setoriais, disponibilidade de fornecedores e requisitos técnicos/regulatórios. A Ótima Energia não garante economia, aprovação, migração, elegibilidade, prazos ou aceitação de crédito por terceiros.
+            </p>
+            <p>
+              4.3. O serviço de comparação pode ser disponibilizado sem cobrança direta ao Usuário. A Ótima Energia pode ser remunerada por parceiros comerciais (por exemplo, agentes fornecedores), inclusive por valores incorporados ao preço final apresentado, conforme aplicável e conforme instrumentos contratuais específicos.
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">5. Cadastro, Formulários e Envio de Documentos</h2>
@@ -77,7 +81,7 @@ export default function Terms() {
               5.3. Caso você envie faturas ou dados de consumo, você declara estar autorizado a fazê-lo e compreende que tais dados serão tratados conforme nossa Política de Privacidade, para fins de diagnóstico, simulação, comunicação e eventual contratação.
             </p>
             <p>
-              5.4. Podemos recusar, bloquear ou excluir envios que estejam ilegíveis, incompletos, suspeitos, fraudulentos, ofensivos ou em desconformidade com estes Termos.
+              5.4. Podemos recusar, bloquear ou excluir envios que estejam ilegíveis, incompletos, suspeitos, fraudulentos, ofensivos ou em desconformidade com estes Termos, ou que apresentem risco técnico/segurança (por exemplo, arquivos maliciosos).
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">6. Licença de Uso do Site e Propriedade Intelectual</h2>
@@ -133,7 +137,8 @@ export default function Terms() {
               <li>b) decisões tomadas com base em informações gerais do Site;</li>
               <li>c) falhas decorrentes de terceiros (ex.: provedores de internet, hospedagem, ataques externos);</li>
               <li>d) incompatibilidades técnicas do dispositivo do usuário;</li>
-              <li>e) atrasos, indisponibilidades ou alterações regulatórias do setor elétrico que impactem prazos e condições.</li>
+              <li>e) atrasos, indisponibilidades ou alterações regulatórias do setor elétrico que impactem prazos e condições;</li>
+              <li>f) informações, preços, condições ou documentos fornecidos por terceiros (por exemplo, comercializadoras e demais agentes), ainda que a Ótima Energia organize tais informações para fins de comparação.</li>
             </ul>
             <p>
               10.3. Nada nestes Termos exclui responsabilidades que não possam ser excluídas pela legislação aplicável.
@@ -157,7 +162,7 @@ export default function Terms() {
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">13. Comunicações</h2>
             <p>
-              13.1. Podemos enviar comunicações operacionais relacionadas ao seu contato/diagnóstico (por e-mail, telefone, WhatsApp ou outros meios informados).
+              13.1. Podemos enviar comunicações operacionais relacionadas ao seu contato/diagnóstico e à condução do processo (por e-mail, telefone, WhatsApp ou outros meios informados).
             </p>
             <p>
               13.2. Comunicações de marketing dependerão da base legal aplicável e, quando necessário, do seu consentimento, com opção de descadastro.
