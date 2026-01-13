@@ -4,7 +4,6 @@ import { Hero } from "@/components/sections/Hero";
 import { Process } from "@/components/sections/Process";
 import { Business } from "@/components/sections/Business";
 import { Contact } from "@/components/sections/Contact";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
 import { CheckCircle } from "lucide-react";
 
 function EcosSection() {
@@ -134,7 +133,6 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
-      <WhatsAppButton />
     </div>
   );
 }

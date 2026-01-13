@@ -82,10 +82,6 @@ export function Contact() {
                 <p className="text-lg">contato@otimaenergia.com.br</p>
               </div>
               <div>
-                <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Telefone</p>
-                <p className="text-lg">+55 21 99999-9999</p>
-              </div>
-              <div>
                 <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Localização</p>
                 <p className="text-lg">Rio de Janeiro, Brasil</p>
               </div>

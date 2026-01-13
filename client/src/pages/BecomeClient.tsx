@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 import { ArrowRight, Upload, CheckCircle, Clock, TrendingDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -373,7 +373,7 @@ export default function BecomeClient() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

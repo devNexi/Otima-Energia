@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
@@ -111,7 +111,7 @@ export default function TermosParcerias() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

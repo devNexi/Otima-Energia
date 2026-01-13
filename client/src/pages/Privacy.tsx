@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 
 export default function Privacy() {
   return (
@@ -249,7 +249,7 @@ export default function Privacy() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

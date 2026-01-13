@@ -81,7 +81,6 @@ export function Footer() {
               <p>Rio de Janeiro</p>
               <p>Brasil</p>
               <p className="mt-2">contato@otimaenergia.com.br</p>
-              <p>+55 21 99999-9999</p>
             </div>
           </div>
         </div>
@@ -112,7 +111,7 @@ export function Footer() {
 
         {/* Legal Info */}
         <p className="text-xs text-gray-400 mt-4 text-center">
-          Ótima Energia é uma iniciativa do ACR Group (CNPJ: 53.949.694/0001-20), com registro ativo na CCEE.
+          Ótima Energia (CNPJ: 64.103.434/0001-08), com registro ativo na CCEE.
         </p>
       </div>
     </footer>

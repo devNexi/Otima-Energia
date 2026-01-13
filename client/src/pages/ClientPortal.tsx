@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 import { ArrowRight, BarChart2, FileText, TrendingDown, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
@@ -174,7 +174,7 @@ export default function ClientPortal() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

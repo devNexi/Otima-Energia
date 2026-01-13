@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 
 export default function Terms() {
   return (
@@ -206,7 +206,7 @@ export default function Terms() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 import { ArrowRight, Building2, Clock, FileText, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 
@@ -185,7 +185,7 @@ export default function RenovacaoContrato() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }

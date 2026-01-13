@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+
 import { ArrowRight, Check, Users, Repeat, DollarSign, Building2, GraduationCap, Heart, ShoppingCart, Factory, HardHat, Briefcase, Calculator, Wrench } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
@@ -451,7 +451,7 @@ export default function RedeLucros() {
       </section>
 
       <Footer />
-      <WhatsAppButton />
+      
     </div>
   );
 }
