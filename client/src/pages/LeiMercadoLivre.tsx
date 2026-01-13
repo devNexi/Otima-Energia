@@ -120,7 +120,7 @@ export default function LeiMercadoLivre() {
               <ul className="space-y-3 text-[#736d77]">
                 <li className="flex items-start gap-2">
                   <Building2 className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                  <span>Regulamentação prática pela ANEEL a partir de 2026</span>
+                  <span>Regulamentação prática a partir de 2026</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Building2 className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />

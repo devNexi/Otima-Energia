@@ -888,7 +888,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                               <SelectValue placeholder={language === "pt" ? "Selecione o gatilho" : "Select trigger"} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Ativação na CCEE">{language === "pt" ? "Ativação na CCEE" : "CCEE Activation"}</SelectItem>
+                              <SelectItem value="Ativação no Mercado">{language === "pt" ? "Ativação no Mercado" : "Market Activation"}</SelectItem>
                               <SelectItem value="Assinatura do contrato">{language === "pt" ? "Assinatura do contrato" : "Contract Signed"}</SelectItem>
                               <SelectItem value="Primeiro faturamento do cliente">{language === "pt" ? "Primeiro faturamento do cliente" : "First Client Billing"}</SelectItem>
                               <SelectItem value="Mensal - conforme relatório">{language === "pt" ? "Mensal - conforme relatório" : "Monthly - per report"}</SelectItem>
