@@ -331,7 +331,7 @@ export function BrandKitPanel() {
                   id="footerText"
                   value={currentKit.footerText || ""}
                   onChange={(e) => handleChange("footerText", e.target.value)}
-                  placeholder="Ótima Energia • contato@otimaenergia.com.br"
+                  placeholder="Ótima Energia • contato@otimaenergia.com"
                   rows={2}
                   data-testid="input-footer-text"
                 />

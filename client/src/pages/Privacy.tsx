@@ -215,7 +215,7 @@ export default function Privacy() {
               <li>revisão de decisões automatizadas (quando aplicável).</li>
             </ul>
             <p className="mt-4">
-              Para exercer seus direitos, entre em contato através do e-mail: <strong>privacidade@otimaenergia.com.br</strong>
+              Para exercer seus direitos, entre em contato através do e-mail: <strong>privacidade@otimaenergia.com</strong>
             </p>
             <p className="mt-2">
               Podemos solicitar comprovação de identidade e/ou informações adicionais para segurança. Responderemos dentro de prazos razoáveis e conforme exigências legais.
@@ -233,8 +233,8 @@ export default function Privacy() {
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">16. Contato</h2>
             <ul className="list-none pl-0 space-y-2">
-              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com.br</li>
-              <li><strong>Contato geral:</strong> contato@otimaenergia.com.br</li>
+              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com</li>
+              <li><strong>Contato geral:</strong> contato@otimaenergia.com</li>
             </ul>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">17. Consentimento (Quando Aplicável)</h2>

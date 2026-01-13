@@ -79,7 +79,7 @@ export function Contact() {
             <div className="space-y-6 text-[#736d77]">
               <div>
                 <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">E-mail</p>
-                <p className="text-lg">contato@otimaenergia.com.br</p>
+                <p className="text-lg">contato@otimaenergia.com</p>
               </div>
               <div>
                 <p className="text-sm tracking-wide text-gray-500 uppercase mb-1">Localização</p>

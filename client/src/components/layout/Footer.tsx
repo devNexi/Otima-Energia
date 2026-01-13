@@ -80,7 +80,7 @@ export function Footer() {
             <div className="text-[#736d77] space-y-0.5">
               <p>Rio de Janeiro</p>
               <p>Brasil</p>
-              <p className="mt-2">contato@otimaenergia.com.br</p>
+              <p className="mt-2">contato@otimaenergia.com</p>
             </div>
           </div>
         </div>

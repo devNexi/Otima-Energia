@@ -627,7 +627,7 @@ _Equipe Ótima Energia_`;
                   <Label className="text-sm font-medium">{t("rfo.email_reply")}</Label>
                   <Input
                     type="email"
-                    placeholder="renan@otimaenergia.com.br"
+                    placeholder="renan@otimaenergia.com"
                     value={replyEmail}
                     onChange={(e) => setReplyEmail(e.target.value)}
                     className="mt-2"

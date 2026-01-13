@@ -98,8 +98,8 @@ export default function Cookies() {
             </p>
             <ul className="list-none pl-0 space-y-2 mt-4">
               <li><strong>Ótima Energia Ltda.</strong></li>
-              <li><strong>E-mail:</strong> contato@otimaenergia.com.br</li>
-              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com.br</li>
+              <li><strong>E-mail:</strong> contato@otimaenergia.com</li>
+              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com</li>
             </ul>
           </div>
         </div>

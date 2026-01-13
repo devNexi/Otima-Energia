@@ -40,7 +40,7 @@ export default function Terms() {
             <ul className="list-none pl-0 space-y-2">
               <li>2.1. <strong>Controladora/Responsável pelo Site:</strong> Ótima Energia Ltda.</li>
               <li>2.2. <strong>Site:</strong> https://otimaenergia.com.br</li>
-              <li>2.3. <strong>E-mail de contato:</strong> contato@otimaenergia.com.br</li>
+              <li>2.3. <strong>E-mail de contato:</strong> contato@otimaenergia.com</li>
             </ul>
 
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">3. Elegibilidade e Uso Permitido</h2>
@@ -198,8 +198,8 @@ export default function Terms() {
             <h2 className="text-2xl font-medium text-[#16163f] mt-12 mb-4">18. Contato</h2>
             <p>Em caso de dúvidas, solicitações ou reclamações:</p>
             <ul className="list-none pl-0 space-y-2">
-              <li><strong>E-mail:</strong> contato@otimaenergia.com.br</li>
-              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com.br</li>
+              <li><strong>E-mail:</strong> contato@otimaenergia.com</li>
+              <li><strong>E-mail para privacidade:</strong> privacidade@otimaenergia.com</li>
             </ul>
           </div>
         </div>

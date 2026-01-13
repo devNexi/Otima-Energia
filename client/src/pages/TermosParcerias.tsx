@@ -104,7 +104,7 @@ export default function TermosParcerias() {
             <h2 className="text-xl font-semibold text-[#16163f] mt-8 mb-4">10. Contato</h2>
             <p>
               Para dúvidas sobre o programa, entre em contato através do email 
-              contato@otimaenergia.com.br ou pelo WhatsApp disponível em nosso site.
+              contato@otimaenergia.com ou pelo WhatsApp disponível em nosso site.
             </p>
           </div>
         </div>
