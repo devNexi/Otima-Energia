@@ -222,34 +222,37 @@ async function seedHappyPath(): Promise<Record<string, number>> {
   summary.dispatches = 3;
   summary.quotes = 3;
   
-  // Create commission events
+  // Create milestone-based commission events (50/50 model)
   await db.insert(dealCommissionEvents).values([
     {
       dealId: deal.id,
-      eventType: "UPFRONT" as const,
+      eventType: "MILESTONE_1" as const,
       eventIndex: 0,
       calcType: "fixed_amount",
-      calcInputs: { base_amount: 10000, volume_mwh: 1200 },
-      amountBrl: 10000,
+      calcInputs: { base_amount: 5000, volume_mwh: 1200, percent: 50 },
+      amountBrl: 5000,
       isEstimated: false,
-      dueCondition: "SUPPLY_LIVE",
-      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "PENDING" as const,
-      notes: "Happy path upfront commission",
+      dueCondition: "CONTRACT_SIGNED",
+      paymentTrigger: "50% due on Contract Signed",
+      expectedDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "CONFIRMED" as const,
+      confirmedAt: new Date(),
+      notes: "M1: Contract Signed - 50% milestone",
       isDemo: true,
     },
     {
       dealId: deal.id,
-      eventType: "MONTHLY" as const,
+      eventType: "MILESTONE_2" as const,
       eventIndex: 1,
-      calcType: "per_mwh",
-      calcInputs: { volume_mwh: 100, rate_rmwh: 3.0 },
-      amountBrl: 300,
-      isEstimated: true,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "FUTURE" as const,
-      notes: "Monthly commission month 1",
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 5000, volume_mwh: 1200, percent: 50 },
+      amountBrl: 5000,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      paymentTrigger: "50% due on CCEE Activation / Supply Live",
+      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PENDING" as const,
+      notes: "M2: Supply Live - 50% milestone",
       isDemo: true,
     }
   ]);
@@ -875,49 +878,53 @@ async function seedCommissionDispute(): Promise<Record<string, number>> {
   });
   summary.quotes = 1;
   
-  // Create commission events with disputed one
+  // Create milestone-based commission events with disputed adjustment
   await db.insert(dealCommissionEvents).values([
     {
       dealId: deal.id,
-      eventType: "UPFRONT" as const,
+      eventType: "MILESTONE_1" as const,
       eventIndex: 0,
       calcType: "fixed_amount",
-      calcInputs: { base_amount: 15000 },
-      amountBrl: 15000,
+      calcInputs: { base_amount: 7500, percent: 50 },
+      amountBrl: 7500,
+      isEstimated: false,
+      dueCondition: "CONTRACT_SIGNED",
+      paymentTrigger: "50% due on Contract Signed",
+      expectedDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PAID" as const,
+      paidDate: new Date(Date.now() - 85 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: "M1: Contract Signed - Paid",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MILESTONE_2" as const,
+      eventIndex: 1,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 7500, percent: 50 },
+      amountBrl: 7500,
       isEstimated: false,
       dueCondition: "SUPPLY_LIVE",
+      paymentTrigger: "50% due on CCEE Activation / Supply Live",
       expectedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: "PAID" as const,
       paidDate: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: "Upfront paid",
+      notes: "M2: Supply Live - Paid",
       isDemo: true,
     },
     {
       dealId: deal.id,
-      eventType: "MONTHLY" as const,
-      eventIndex: 1,
-      calcType: "per_mwh",
-      calcInputs: { volume_mwh: 125, rate_rmwh: 2.8 },
-      amountBrl: 350,
-      isEstimated: false,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "DISPUTED" as const,
-      notes: "DISPUTED - Supplier claims lower volume consumed (112 MWh vs 125 MWh contracted)",
-      isDemo: true,
-    },
-    {
-      dealId: deal.id,
-      eventType: "MONTHLY" as const,
+      eventType: "ADJUSTMENT" as const,
       eventIndex: 2,
       calcType: "per_mwh",
       calcInputs: { volume_mwh: 125, rate_rmwh: 2.8 },
       amountBrl: 350,
-      isEstimated: true,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date().toISOString().split('T')[0],
-      status: "PENDING" as const,
-      notes: "Pending month 2",
+      isEstimated: false,
+      dueCondition: "ADJUSTMENT",
+      paymentTrigger: "Volume adjustment based on usage reconciliation",
+      expectedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "DISPUTED" as const,
+      notes: "DISPUTED - Supplier claims lower volume consumed (112 MWh vs 125 MWh contracted)",
       isDemo: true,
     }
   ]);
@@ -1042,82 +1049,57 @@ async function seedOverduePayment(): Promise<Record<string, number>> {
   });
   summary.quotes = 1;
   
-  // Create commission events with OVERDUE ones
+  // Create milestone-based commission events with OVERDUE adjustment
   await db.insert(dealCommissionEvents).values([
     {
       dealId: deal.id,
-      eventType: "UPFRONT" as const,
+      eventType: "MILESTONE_1" as const,
       eventIndex: 0,
       calcType: "fixed_amount",
-      calcInputs: { base_amount: 8000 },
-      amountBrl: 8000,
+      calcInputs: { base_amount: 4000, percent: 50 },
+      amountBrl: 4000,
+      isEstimated: false,
+      dueCondition: "CONTRACT_SIGNED",
+      paymentTrigger: "50% due on Contract Signed",
+      expectedDate: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PAID" as const,
+      paidDate: new Date(Date.now() - 175 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      notes: "M1: Contract Signed - Paid",
+      isDemo: true,
+    },
+    {
+      dealId: deal.id,
+      eventType: "MILESTONE_2" as const,
+      eventIndex: 1,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 4000, percent: 50 },
+      amountBrl: 4000,
       isEstimated: false,
       dueCondition: "SUPPLY_LIVE",
+      paymentTrigger: "50% due on CCEE Activation / Supply Live",
       expectedDate: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: "PAID" as const,
       paidDate: new Date(Date.now() - 145 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: "Upfront paid on time",
+      notes: "M2: Supply Live - Paid",
       isDemo: true,
     },
     {
       dealId: deal.id,
-      eventType: "MONTHLY" as const,
-      eventIndex: 1,
-      calcType: "per_mwh",
-      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
-      amountBrl: 207.50,
-      isEstimated: false,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "PAID" as const,
-      paidDate: new Date(Date.now() - 115 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: "Month 1 paid",
-      isDemo: true,
-    },
-    {
-      dealId: deal.id,
-      eventType: "MONTHLY" as const,
+      eventType: "ADJUSTMENT" as const,
       eventIndex: 2,
       calcType: "per_mwh",
-      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
-      amountBrl: 207.50,
+      calcInputs: { volume_mwh: 622.50, rate_rmwh: 2.5 },
+      amountBrl: 622.50,
       isEstimated: false,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "OVERDUE" as const,
-      notes: "OVERDUE - Month 2 not paid (90 days overdue)",
-      isDemo: true,
-    },
-    {
-      dealId: deal.id,
-      eventType: "MONTHLY" as const,
-      eventIndex: 3,
-      calcType: "per_mwh",
-      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
-      amountBrl: 207.50,
-      isEstimated: false,
-      dueCondition: "MONTHLY",
+      dueCondition: "ADJUSTMENT",
+      paymentTrigger: "Volume adjustment for usage reconciliation",
       expectedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: "OVERDUE" as const,
-      notes: "OVERDUE - Month 3 not paid (60 days overdue)",
-      isDemo: true,
-    },
-    {
-      dealId: deal.id,
-      eventType: "MONTHLY" as const,
-      eventIndex: 4,
-      calcType: "per_mwh",
-      calcInputs: { volume_mwh: 83, rate_rmwh: 2.5 },
-      amountBrl: 207.50,
-      isEstimated: false,
-      dueCondition: "MONTHLY",
-      expectedDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "OVERDUE" as const,
-      notes: "OVERDUE - Month 4 not paid (30 days overdue)",
+      notes: "OVERDUE - Adjustment not paid (60 days overdue)",
       isDemo: true,
     }
   ]);
-  summary.commissionEvents = 5;
+  summary.commissionEvents = 3;
   
   // Create case for overdue recovery
   await db.insert(dealCases).values({
@@ -1351,39 +1333,42 @@ async function seedFullDataset(): Promise<Record<string, number>> {
   const demoCommissionEvents = [];
   
   for (const deal of wonDeals) {
-    const upfrontEvent = {
+    // M1: Contract Signed - 50%
+    const m1Event = {
       dealId: deal.id,
-      eventType: "UPFRONT" as const,
+      eventType: "MILESTONE_1" as const,
       eventIndex: 0,
       calcType: "fixed_amount",
-      calcInputs: { base_amount: 5000, volume_mwh: 100 },
-      amountBrl: 5000.00,
+      calcInputs: { base_amount: 2500, volume_mwh: 100, percent: 50 },
+      amountBrl: 2500.00,
       isEstimated: false,
-      dueCondition: "SUPPLY_LIVE",
-      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "PENDING" as const,
-      notes: "Demo upfront commission",
+      dueCondition: "CONTRACT_SIGNED",
+      paymentTrigger: "50% due on Contract Signed",
+      expectedDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "CONFIRMED" as const,
+      confirmedAt: new Date(),
+      notes: "M1: Contract Signed - 50% milestone",
       isDemo: true,
     };
-    demoCommissionEvents.push(upfrontEvent);
-
-    for (let month = 1; month <= 3; month++) {
-      const monthlyEvent = {
-        dealId: deal.id,
-        eventType: "MONTHLY" as const,
-        eventIndex: month,
-        calcType: "per_mwh",
-        calcInputs: { volume_mwh: 100, rate_rmwh: 2.5 },
-        amountBrl: 250.00,
-        isEstimated: true,
-        dueCondition: "MONTHLY",
-        expectedDate: new Date(Date.now() + (30 * month + 45) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: "FUTURE" as const,
-        notes: `Demo monthly commission - month ${month}`,
-        isDemo: true,
-      };
-      demoCommissionEvents.push(monthlyEvent);
-    }
+    demoCommissionEvents.push(m1Event);
+    
+    // M2: Supply Live - 50%
+    const m2Event = {
+      dealId: deal.id,
+      eventType: "MILESTONE_2" as const,
+      eventIndex: 1,
+      calcType: "fixed_amount",
+      calcInputs: { base_amount: 2500, volume_mwh: 100, percent: 50 },
+      amountBrl: 2500.00,
+      isEstimated: false,
+      dueCondition: "SUPPLY_LIVE",
+      paymentTrigger: "50% due on CCEE Activation / Supply Live",
+      expectedDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "PENDING" as const,
+      notes: "M2: Supply Live - 50% milestone",
+      isDemo: true,
+    };
+    demoCommissionEvents.push(m2Event);
   }
   
   const insertedCommissionEvents = await db.insert(dealCommissionEvents).values(demoCommissionEvents).returning();
