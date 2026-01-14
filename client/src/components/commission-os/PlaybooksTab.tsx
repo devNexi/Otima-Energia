@@ -24,6 +24,17 @@ interface SupplierPlaybook {
   version: number;
   isActive: boolean;
   updatedAt: string;
+  // Milestone Commission Model fields
+  commissionModel?: string;
+  milestone1Name?: string;
+  milestone1Percent?: number;
+  milestone1Trigger?: string;
+  milestone2Name?: string;
+  milestone2Percent?: number;
+  milestone2Trigger?: string;
+  adjustmentsOnly?: boolean;
+  paymentTermsNotes?: string;
+  defaultPaymentDueDays?: number;
 }
 
 export function PlaybooksTab() {
@@ -85,6 +96,17 @@ export function PlaybooksTab() {
     financeContact: "",
     quoteResponseHours: "48",
     paymentDaysAfterInvoice: "30",
+    // Milestone Commission Model (50/50 default)
+    commissionModel: "MILESTONE",
+    milestone1Name: "Contract Signed",
+    milestone1Percent: "50",
+    milestone1Trigger: "CONTRACT_SIGNED",
+    milestone2Name: "CCEE Activation / Supply Live",
+    milestone2Percent: "50",
+    milestone2Trigger: "SUPPLY_LIVE",
+    adjustmentsOnly: true,
+    paymentTermsNotes: "",
+    defaultPaymentDueDays: "7",
   });
 
   const createMutation = useMutation({
@@ -110,6 +132,17 @@ export function PlaybooksTab() {
         rules: {},
         isActive: true,
         updatedBy: user?.id || null,
+        // Milestone Commission Model
+        commissionModel: data.commissionModel || "MILESTONE",
+        milestone1Name: data.milestone1Name || "Contract Signed",
+        milestone1Percent: parseInt(data.milestone1Percent, 10) || 50,
+        milestone1Trigger: data.milestone1Trigger || "CONTRACT_SIGNED",
+        milestone2Name: data.milestone2Name || "CCEE Activation / Supply Live",
+        milestone2Percent: parseInt(data.milestone2Percent, 10) || 50,
+        milestone2Trigger: data.milestone2Trigger || "SUPPLY_LIVE",
+        adjustmentsOnly: data.adjustmentsOnly,
+        paymentTermsNotes: data.paymentTermsNotes || null,
+        defaultPaymentDueDays: parseInt(data.defaultPaymentDueDays, 10) || 7,
       };
 
       const res = await fetch(`/api/suppliers/${data.supplierId}/playbook`, {
@@ -167,6 +200,17 @@ export function PlaybooksTab() {
       financeContact: contacts.finance || "",
       quoteResponseHours: String(slaTargets.quoteResponseHours || 48),
       paymentDaysAfterInvoice: String(slaTargets.paymentDaysAfterInvoice || 30),
+      // Milestone Commission Model
+      commissionModel: playbook.commissionModel || "MILESTONE",
+      milestone1Name: playbook.milestone1Name || "Contract Signed",
+      milestone1Percent: String(playbook.milestone1Percent ?? 50),
+      milestone1Trigger: playbook.milestone1Trigger || "CONTRACT_SIGNED",
+      milestone2Name: playbook.milestone2Name || "CCEE Activation / Supply Live",
+      milestone2Percent: String(playbook.milestone2Percent ?? 50),
+      milestone2Trigger: playbook.milestone2Trigger || "SUPPLY_LIVE",
+      adjustmentsOnly: playbook.adjustmentsOnly ?? true,
+      paymentTermsNotes: playbook.paymentTermsNotes || "",
+      defaultPaymentDueDays: String(playbook.defaultPaymentDueDays ?? 7),
     });
     setEditingPlaybook(playbook);
     setShowCreateModal(true);
@@ -184,6 +228,16 @@ export function PlaybooksTab() {
       financeContact: "",
       quoteResponseHours: "48",
       paymentDaysAfterInvoice: "30",
+      commissionModel: "MILESTONE",
+      milestone1Name: "Contract Signed",
+      milestone1Percent: "50",
+      milestone1Trigger: "CONTRACT_SIGNED",
+      milestone2Name: "CCEE Activation / Supply Live",
+      milestone2Percent: "50",
+      milestone2Trigger: "SUPPLY_LIVE",
+      adjustmentsOnly: true,
+      paymentTermsNotes: "",
+      defaultPaymentDueDays: "7",
     });
   };
 
@@ -345,6 +399,41 @@ export function PlaybooksTab() {
                   <Label>Payment SLA (days after invoice)</Label>
                   <Input type="number" value={newPlaybook.paymentDaysAfterInvoice} onChange={(e) => setNewPlaybook({ ...newPlaybook, paymentDaysAfterInvoice: e.target.value })} />
                 </div>
+              </div>
+
+              <div className="border-t pt-4 mt-2">
+                <h4 className="font-semibold text-sm mb-3">Commission Terms (Milestone Model)</h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label>Milestone 1 Name</Label>
+                    <Input value={newPlaybook.milestone1Name} onChange={(e) => setNewPlaybook({ ...newPlaybook, milestone1Name: e.target.value })} placeholder="Contract Signed" />
+                  </div>
+                  <div>
+                    <Label>Milestone 1 %</Label>
+                    <Input type="number" min="0" max="100" value={newPlaybook.milestone1Percent} onChange={(e) => setNewPlaybook({ ...newPlaybook, milestone1Percent: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label>Milestone 2 Name</Label>
+                    <Input value={newPlaybook.milestone2Name} onChange={(e) => setNewPlaybook({ ...newPlaybook, milestone2Name: e.target.value })} placeholder="CCEE Activation / Supply Live" />
+                  </div>
+                  <div>
+                    <Label>Milestone 2 %</Label>
+                    <Input type="number" min="0" max="100" value={newPlaybook.milestone2Percent} onChange={(e) => setNewPlaybook({ ...newPlaybook, milestone2Percent: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Payment Due (days from invoice)</Label>
+                    <Input type="number" min="1" value={newPlaybook.defaultPaymentDueDays} onChange={(e) => setNewPlaybook({ ...newPlaybook, defaultPaymentDueDays: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Payment Terms Notes</Label>
+                    <Input value={newPlaybook.paymentTermsNotes} onChange={(e) => setNewPlaybook({ ...newPlaybook, paymentTermsNotes: e.target.value })} placeholder="Additional notes..." />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Default: 50% on Contract Signed, 50% on Supply Live. Adjustments-only reconciliation.</p>
               </div>
             </div>
             <DialogFooter>
