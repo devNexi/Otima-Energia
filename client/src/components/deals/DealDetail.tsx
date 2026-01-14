@@ -1064,54 +1064,78 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {deal.commissionEvents.map((event: any) => (
-                    <div key={event.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{event.eventType}</Badge>
-                          {event.eventIndex && <span className="text-sm text-gray-500">#{event.eventIndex}</span>}
+                  {deal.commissionEvents.map((event: any) => {
+                    const getMilestoneBadge = (type: string) => {
+                      if (type === 'MILESTONE_1') return { label: 'M1: Contract Signed', class: 'bg-violet-100 text-violet-800' };
+                      if (type === 'MILESTONE_2') return { label: 'M2: Supply Live', class: 'bg-blue-100 text-blue-800' };
+                      if (type === 'ADJUSTMENT') return { label: 'Adjustment', class: 'bg-orange-100 text-orange-800' };
+                      return { label: type?.replace(/_/g, ' ') || 'Unknown', class: 'bg-gray-100 text-gray-800' };
+                    };
+                    const milestoneInfo = getMilestoneBadge(event.eventType);
+                    
+                    return (
+                      <div key={event.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className={milestoneInfo.class}>{milestoneInfo.label}</Badge>
+                            {event.paymentTrigger && (
+                              <span className="text-sm text-gray-600">{event.paymentTrigger}</span>
+                            )}
+                          </div>
+                          <Badge className={
+                            event.status === "PAID" ? "bg-green-100 text-green-800" :
+                            event.status === "CONFIRMED" ? "bg-blue-100 text-blue-800" :
+                            event.status === "INVOICED" ? "bg-purple-100 text-purple-800" :
+                            event.status === "OVERDUE" ? "bg-red-100 text-red-800" :
+                            event.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+                            "bg-gray-100 text-gray-800"
+                          }>
+                            {event.status}
+                          </Badge>
                         </div>
-                        <Badge className={
-                          event.status === "PAID" ? "bg-green-100 text-green-800" :
-                          event.status === "OVERDUE" ? "bg-red-100 text-red-800" :
-                          event.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-                          "bg-gray-100 text-gray-800"
-                        }>
-                          {event.status}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Valor" : "Amount"}</p>
-                          <p className="font-medium">
-                            {event.amountBrl 
-                              ? `R$ ${parseFloat(event.amountBrl).toLocaleString("pt-BR")}`
-                              : event.amountFormula || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Data Esperada" : "Expected Date"}</p>
-                          <p className="font-medium">
-                            {event.expectedDate 
-                              ? new Date(event.expectedDate).toLocaleDateString("pt-BR")
-                              : "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Condição" : "Condition"}</p>
-                          <p className="font-medium">{event.dueCondition || "-"}</p>
-                        </div>
-                        {event.paidAt && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-gray-500">{language === "pt" ? "Pago em" : "Paid on"}</p>
-                            <p className="font-medium text-green-600">
-                              {new Date(event.paidAt).toLocaleDateString("pt-BR")}
+                            <p className="text-gray-500">{language === "pt" ? "Valor" : "Amount"}</p>
+                            <p className="font-medium">
+                              {event.amountBrl 
+                                ? `R$ ${parseFloat(event.amountBrl).toLocaleString("pt-BR")}`
+                                : event.amountRmwh 
+                                  ? `${parseFloat(event.amountRmwh).toFixed(4)} R$/MWh`
+                                  : event.amountFormula || "-"}
                             </p>
                           </div>
-                        )}
+                          <div>
+                            <p className="text-gray-500">{language === "pt" ? "Data Esperada" : "Expected Date"}</p>
+                            <p className="font-medium">
+                              {event.expectedDate 
+                                ? new Date(event.expectedDate).toLocaleDateString("pt-BR")
+                                : "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">{language === "pt" ? "Gatilho" : "Trigger"}</p>
+                            <p className="font-medium">{event.paymentTrigger || event.dueCondition || "-"}</p>
+                          </div>
+                          {event.paidAt && (
+                            <div>
+                              <p className="text-gray-500">{language === "pt" ? "Pago em" : "Paid on"}</p>
+                              <p className="font-medium text-green-600">
+                                {new Date(event.paidAt).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          )}
+                          {event.confirmedAt && !event.paidAt && (
+                            <div>
+                              <p className="text-gray-500">{language === "pt" ? "Confirmado em" : "Confirmed on"}</p>
+                              <p className="font-medium text-blue-600">
+                                {new Date(event.confirmedAt).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
