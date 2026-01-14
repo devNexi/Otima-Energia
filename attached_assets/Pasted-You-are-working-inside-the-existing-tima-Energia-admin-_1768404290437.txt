@@ -1,0 +1,246 @@
+You are working inside the existing Ótima Energia admin portal.
+
+Business decision (non-negotiable)
+
+We are switching to a milestone-based commission model for all suppliers:
+
+50% payable at CONTRACT_SIGNED (signature/onboarding accepted milestone)
+
+50% payable at SUPPLY_LIVE / CCEE activation (supply start milestone)
+
+Any “reconciliation” is adjustments-only (not a core third payment)
+
+This needs to be reflected consistently across:
+
+Supplier Playbooks (commercial terms)
+
+Commission OS (commission events & reconciliation)
+
+Finance OS Lite (invoice creation, sending, tracking, overdue reminders)
+
+Deal UI (milestone visibility)
+
+Do not add new products. Implement only these changes cleanly.
+
+1) SUPPLIER PLAYBOOKS — DEFAULT TO 50/50 MILESTONES
+1.1 Data model updates
+
+In supplier playbooks (or supplier commercial terms section), add/ensure these fields exist:
+
+commissionModel = "MILESTONE"
+
+milestone1Name = "Contract Signed"
+
+milestone1Percent = 50
+
+milestone1Trigger = "CONTRACT_SIGNED"
+
+milestone2Name = "CCEE Activation / Supply Live"
+
+milestone2Percent = 50
+
+milestone2Trigger = "SUPPLY_LIVE"
+
+adjustmentsOnly = true (meaning reconciliation is not a third tranche)
+
+paymentTermsNotes (text, optional)
+
+1.2 UI updates
+
+In Suppliers → Playbooks:
+
+Show a “Commission Terms” section with these milestone fields.
+
+Default any new playbook to 50/50.
+
+Make milestone fields editable only by admin.
+
+2) COMMISSION OS — GENERATE TWO COMMISSION EVENTS PER DEAL
+
+Your portal already tracks expected commission events. Update the logic so it is milestone-based.
+
+2.1 Commission event types
+
+For each deal, generate exactly two core commission events:
+
+Milestone 1 (50%)
+
+Trigger: CONTRACT_SIGNED
+
+Initial status: PENDING
+
+Milestone 2 (50%)
+
+Trigger: SUPPLY_LIVE
+
+Initial status: FUTURE
+
+Any variance / clawback / true-up becomes a separate ADJUSTMENT event only when detected (not created by default).
+
+2.2 Event lifecycle
+
+Use existing statuses; map them like this:
+
+Milestone 1: PENDING → INVOICED → PAID (or OVERDUE/DISPUTED)
+
+Milestone 2: FUTURE → PENDING → INVOICED → PAID (or OVERDUE/DISPUTED)
+
+2.3 Trigger points (critical)
+
+When deal transitions to CONTRACT_SIGNED:
+
+create Milestone 1 + Milestone 2 events (if they do not already exist)
+
+Milestone 1 becomes PENDING
+
+Milestone 2 remains FUTURE
+
+When deal transitions to SUPPLY_LIVE:
+
+Milestone 2 becomes PENDING
+
+2.4 Language cleanup (internal consistency)
+
+Replace any “80/20”, “upfront”, “reconciliation tranche” language in UI with:
+
+“Milestone 1 (Contract Signed)”
+
+“Milestone 2 (Supply Live / CCEE)”
+
+“Adjustment (if applicable)”
+
+3) FINANCE OS LITE — INVOICES FROM COMMISSION EVENTS (ONE CLICK)
+
+Finance OS should not calculate commission logic. It should invoice based on the commission events.
+
+3.1 Link invoices to commission events
+
+Add a nullable FK on invoices:
+
+commissionEventId (or dealCommissionEventId) referencing the commission events table.
+
+This ensures:
+
+One invoice corresponds to one milestone event
+
+Overdue reminders match the correct tranche
+
+3.2 One-click invoice creation
+
+Add “Create Invoice” actions:
+
+A) From Commission OS event row
+
+If event status = PENDING and not invoiced:
+
+show button: “Generate Invoice”
+
+creates invoice in DRAFT with:
+
+amount = 50% tranche value
+
+invoice_type = MILESTONE_1 or MILESTONE_2
+
+payment_trigger text (see 3.4)
+
+due_date based on supplier playbook default (e.g., +7 days)
+
+B) From Deal view (optional convenience)
+
+In Deal → Finance/Revenue panel:
+
+If Milestone 1 is pending and no invoice exists → “Generate Milestone 1 Invoice”
+
+If Milestone 2 pending and no invoice exists → “Generate Milestone 2 Invoice”
+
+3.3 Invoice types (update)
+
+Add invoice types:
+
+MILESTONE_1
+
+MILESTONE_2
+
+ADJUSTMENT (only when needed)
+
+Retain existing types if already in system; map them cleanly.
+
+3.4 Payment trigger text (required)
+
+Add/ensure a field on invoices:
+
+paymentTrigger (text)
+
+Default values:
+
+Milestone 1: “Pagamento referente ao marco: contrato assinado.”
+
+Milestone 2: “Pagamento referente ao marco: ativação CCEE / início do fornecimento.”
+
+Show this on invoice PDF + email template.
+
+3.5 Overdue handling
+
+If invoice is SENT and due_date passes:
+
+mark status = OVERDUE
+
+create invoice event: STATUS_CHANGE
+
+create task in Ops queue: “Invoice overdue — follow up”
+
+(optional) send reminder email max 1 per 7 days
+
+4) DEAL UI — SHOW MILESTONES CLEARLY
+
+In Deal detail and/or Deal Assembly:
+
+Show milestone badges:
+
+Milestone 1: Contract Signed (50%) — Pending/Invoiced/Paid
+
+Milestone 2: Supply Live/CCEE (50%) — Future/Pending/Invoiced/Paid
+
+This should help Ops and Founder see cashflow without opening Finance.
+
+5) DEMO DATA UPDATE (for testing)
+
+Update demo seeder to include at least:
+
+1 deal at CONTRACT_SIGNED with Milestone 1 invoice in DRAFT or SENT
+
+1 deal at SUPPLY_LIVE with Milestone 2 invoice in DRAFT
+
+1 overdue milestone invoice (status OVERDUE)
+
+Ensure all demo records are isDemo=true.
+
+6) ACCEPTANCE CRITERIA (must pass)
+
+New supplier playbook defaults to MILESTONE 50/50.
+
+On CONTRACT_SIGNED:
+
+Milestone 1 + Milestone 2 commission events are created
+
+Milestone 1 = PENDING; Milestone 2 = FUTURE
+
+On SUPPLY_LIVE:
+
+Milestone 2 flips to PENDING
+
+Finance invoices can be generated from PENDING commission events in one click.
+
+Invoices include payment trigger text and are branded.
+
+Overdue invoices create tasks and optional reminders.
+
+No lingering “80/20” language appears in UI.
+
+When complete, provide:
+
+brief changelog (schema + endpoints + UI)
+
+where to click to generate milestone invoices
+
+demo steps to verify end-to-end flow

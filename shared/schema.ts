@@ -2384,6 +2384,19 @@ export const supplierPlaybooks = pgTable("supplier_playbooks", {
   contacts: jsonb("contacts").default({}),
   slaTargets: jsonb("sla_targets").default({}),
   rules: jsonb("rules").default({}), // Lightweight rule engine storage
+  
+  // Milestone Commission Model (50/50 default)
+  commissionModel: text("commission_model").default("MILESTONE"), // 'MILESTONE', 'MONTHLY', 'HYBRID'
+  milestone1Name: text("milestone_1_name").default("Contract Signed"),
+  milestone1Percent: integer("milestone_1_percent").default(50),
+  milestone1Trigger: text("milestone_1_trigger").default("CONTRACT_SIGNED"),
+  milestone2Name: text("milestone_2_name").default("CCEE Activation / Supply Live"),
+  milestone2Percent: integer("milestone_2_percent").default(50),
+  milestone2Trigger: text("milestone_2_trigger").default("SUPPLY_LIVE"),
+  adjustmentsOnly: boolean("adjustments_only").default(true), // Reconciliation is adjustments-only, not third tranche
+  paymentTermsNotes: text("payment_terms_notes"),
+  defaultPaymentDueDays: integer("default_payment_due_days").default(7),
+  
   version: integer("version").default(1).notNull(),
   isActive: boolean("is_active").default(true),
   updatedBy: varchar("updated_by").references(() => users.id),
@@ -4302,7 +4315,10 @@ export const invoiceTypeEnum = pgEnum("invoice_type", [
   "MONTHLY", 
   "QUARTERLY",
   "FINAL",
-  "SUCCESS_FEE"
+  "SUCCESS_FEE",
+  "MILESTONE_1",
+  "MILESTONE_2",
+  "ADJUSTMENT"
 ]);
 
 export const invoiceEventTypeEnum = pgEnum("invoice_event_type", [
@@ -4332,6 +4348,7 @@ export const invoices = pgTable("invoices", {
   dealId: varchar("deal_id", { length: 64 }).notNull(),
   supplierId: integer("supplier_id").references(() => suppliers.id),
   clientId: integer("client_id").references(() => clients.id),
+  commissionEventId: integer("commission_event_id").references(() => dealCommissionEvents.id), // Link to milestone event
   
   invoiceNumber: varchar("invoice_number", { length: 32 }).notNull().unique(),
   invoiceType: invoiceTypeEnum("invoice_type").notNull(),
@@ -4405,6 +4422,10 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   createdByUser: one(users, {
     fields: [invoices.createdBy],
     references: [users.id],
+  }),
+  commissionEvent: one(dealCommissionEvents, {
+    fields: [invoices.commissionEventId],
+    references: [dealCommissionEvents.id],
   }),
   events: many(invoiceEvents),
 }));
