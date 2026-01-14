@@ -176,12 +176,18 @@ export function PlaybooksTab() {
 
   const getCadenceBadge = (cadence: string) => {
     const colors: Record<string, string> = {
-      UPFRONT: "bg-green-100 text-green-800",
+      MILESTONE: "bg-violet-100 text-violet-800",
       MONTHLY: "bg-blue-100 text-blue-800",
       QUARTERLY: "bg-purple-100 text-purple-800",
       MIXED: "bg-orange-100 text-orange-800",
     };
-    return <Badge className={colors[cadence] || "bg-gray-100"}>{cadence}</Badge>;
+    const labels: Record<string, string> = {
+      MILESTONE: "50/50 Milestone",
+      MONTHLY: "Monthly",
+      QUARTERLY: "Quarterly",
+      MIXED: "Mixed",
+    };
+    return <Badge className={colors[cadence] || "bg-gray-100"}>{labels[cadence] || cadence}</Badge>;
   };
 
   const isFormValid = newPlaybook.supplierId && newPlaybook.paymentCadence;

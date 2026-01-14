@@ -94,7 +94,9 @@ const translations = {
     dueDate: "Due Date",
     status: "Status",
     actions: "Actions",
-    upfront: "Upfront",
+    milestone1: "M1: Contract Signed",
+    milestone2: "M2: Supply Live",
+    adjustment: "Adjustment",
     monthly: "Monthly",
     quarterly: "Quarterly",
     final: "Final",
@@ -131,7 +133,9 @@ const translations = {
     dueDate: "Vencimento",
     status: "Status",
     actions: "Ações",
-    upfront: "Adiantamento",
+    milestone1: "M1: Contrato Assinado",
+    milestone2: "M2: Fornecimento Ativo",
+    adjustment: "Ajuste",
     monthly: "Mensal",
     quarterly: "Trimestral",
     final: "Final",
@@ -338,7 +342,9 @@ export function FinanceTab({ language = 'en', userRole = 'admin' }: FinanceTabPr
 
   const getInvoiceTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      UPFRONT: t.upfront,
+      MILESTONE_1: t.milestone1,
+      MILESTONE_2: t.milestone2,
+      ADJUSTMENT: t.adjustment,
       MONTHLY: t.monthly,
       QUARTERLY: t.quarterly,
       FINAL: t.final,

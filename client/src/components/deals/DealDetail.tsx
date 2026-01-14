@@ -101,7 +101,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
-    invoiceType: "UPFRONT" as "UPFRONT" | "MONTHLY" | "QUARTERLY" | "FINAL" | "SUCCESS_FEE",
+    invoiceType: "MILESTONE_1" as "MILESTONE_1" | "MILESTONE_2" | "ADJUSTMENT" | "MONTHLY" | "QUARTERLY" | "FINAL",
     grossAmountBrl: "",
     paymentTrigger: "",
     dueDate: "",
@@ -192,7 +192,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         });
         setInvoiceDialogOpen(false);
         setInvoiceForm({
-          invoiceType: "UPFRONT",
+          invoiceType: "MILESTONE_1",
           grossAmountBrl: "",
           paymentTrigger: "",
           dueDate: "",
@@ -289,7 +289,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
     defaultDueDate.setDate(defaultDueDate.getDate() + 30);
     
     setInvoiceForm({
-      invoiceType: deal.commissionPaymentType === "monthly" ? "MONTHLY" : "UPFRONT",
+      invoiceType: deal.commissionPaymentType === "monthly" ? "MONTHLY" : "MILESTONE_1",
       grossAmountBrl: defaultAmount,
       paymentTrigger: "",
       dueDate: defaultDueDate.toISOString().split("T")[0],
@@ -857,11 +857,12 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="UPFRONT">{language === "pt" ? "Adiantamento" : "Upfront"}</SelectItem>
+                              <SelectItem value="MILESTONE_1">{language === "pt" ? "M1: Contrato Assinado" : "M1: Contract Signed"}</SelectItem>
+                              <SelectItem value="MILESTONE_2">{language === "pt" ? "M2: Fornecimento Ativo" : "M2: Supply Live"}</SelectItem>
+                              <SelectItem value="ADJUSTMENT">{language === "pt" ? "Ajuste" : "Adjustment"}</SelectItem>
                               <SelectItem value="MONTHLY">{language === "pt" ? "Mensal" : "Monthly"}</SelectItem>
                               <SelectItem value="QUARTERLY">{language === "pt" ? "Trimestral" : "Quarterly"}</SelectItem>
                               <SelectItem value="FINAL">{language === "pt" ? "Final" : "Final"}</SelectItem>
-                              <SelectItem value="SUCCESS_FEE">{language === "pt" ? "Taxa de Sucesso" : "Success Fee"}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
