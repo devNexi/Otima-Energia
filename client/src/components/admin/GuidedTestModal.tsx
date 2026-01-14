@@ -242,8 +242,8 @@ export function GuidedTestModal({ open, onOpenChange }: GuidedTestModalProps) {
       id: 2,
       title: "2. Commission Events",
       description: happyPathDeal
-        ? `Review upfront + monthly commissions for deal ${happyPathDeal.id}`
-        : "Seed 'Happy Path' to see commission structure",
+        ? `Review milestone commissions (M1 + M2) for deal ${happyPathDeal.id}`
+        : "Seed 'Happy Path' to see milestone commission structure",
       icon: <DollarSign className="h-5 w-5" />,
       href: happyPathDeal ? `/admin/ops/deals/${happyPathDeal.id}` : "/admin/ops/revenue",
       action: "View Commissions",

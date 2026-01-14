@@ -1769,9 +1769,10 @@ export const dealCommissionEvents = pgTable("deal_commission_events", {
   id: serial("id").primaryKey(),
   dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
   
-  // Event type
-  eventType: text("event_type").notNull(), // 'UPFRONT', 'MONTHLY', 'RECONCILIATION', 'BONUS', 'PENALTY'
-  eventIndex: integer("event_index"), // For monthly: 1, 2, 3... etc
+  // Event type - Milestone commission model: M1 at CONTRACT_SIGNED (50%), M2 at SUPPLY_LIVE (50%)
+  eventType: text("event_type").notNull(), // 'MILESTONE_1', 'MILESTONE_2', 'ADJUSTMENT', 'MONTHLY', 'BONUS', 'PENALTY' (legacy: 'UPFRONT', 'RECONCILIATION')
+  eventIndex: integer("event_index"), // For milestone: 0=M1, 1=M2, 2+=adjustments
+  paymentTrigger: text("payment_trigger"), // e.g. "50% due on Contract Signed", "50% due on CCEE Activation"
   
   // Calculation type and inputs (explicit, not vibes)
   calcType: text("calc_type"), // 'fixed_amount', 'per_mwh', 'percent_spread', 'hybrid'
@@ -1781,6 +1782,7 @@ export const dealCommissionEvents = pgTable("deal_commission_events", {
   
   // Amount
   amountBrl: decimal("amount_brl", { precision: 14, scale: 2 }),
+  amountRmwh: decimal("amount_rmwh", { precision: 14, scale: 4 }), // Alternative: rate per MWh
   amountFormula: text("amount_formula"), // For calculated amounts: 'actual_consumption * commission_rate'
   isEstimated: boolean("is_estimated").default(true), // True until actual consumption known
   
@@ -1792,8 +1794,10 @@ export const dealCommissionEvents = pgTable("deal_commission_events", {
   status: text("status").default("FUTURE").notNull(), // 'FUTURE', 'PENDING', 'INVOICED', 'PAID', 'OVERDUE', 'DISPUTED', 'CANCELLED'
   
   // Payment tracking
+  confirmedAt: timestamp("confirmed_at"), // When milestone event was confirmed (e.g. CONTRACT_SIGNED date)
   invoicedAt: timestamp("invoiced_at"),
   invoiceNumber: text("invoice_number"),
+  paidDate: date("paid_date"), // Simple date paid (not timestamp)
   paidAt: timestamp("paid_at"),
   paidAmount: decimal("paid_amount", { precision: 14, scale: 2 }),
   paymentReference: text("payment_reference"),

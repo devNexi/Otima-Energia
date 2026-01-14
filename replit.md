@@ -36,7 +36,12 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Deal OS**: Revenue-control and deal-execution system with an explicit state machine, auditability, commission tracking, and immutable records.
 - **Client Dossier**: Canonical energy profile for each client, serving as the foundational data for RFQ workflows, with status gates and immutability after RFQ.
 - **RFQ Adapter Layer**: Multi-channel RFQ automation with templated messages and token replacement for various communication channels.
-- **Commission OS**: Usage tracking, reconciliation, and case management built on Deal OS, with detailed database tables and API endpoints for financial operations.
+- **Commission OS**: Milestone-based commission tracking with 50/50 payment model:
+  - **Milestone 1 (50%)**: Triggered at CONTRACT_SIGNED
+  - **Milestone 2 (50%)**: Triggered at SUPPLY_LIVE (CCEE Activation)
+  - **Adjustments-only reconciliation**: No monthly/quarterly recurring events
+  - **One-click invoice generation**: POST /api/commission-events/:id/generate-invoice
+  - Supplier Playbooks define milestone terms per supplier
 - **Notification System**: Email notification infrastructure for operational alerts (e.g., `DEAL_BLOCKED`, `SLA_BREACH`), utilizing a queue-based approach.
 - **Lost Deal Intelligence**: Structured taxonomy for tracking reasons for lost deals, including client, supplier, competitive, and process categories, with analytics API.
 - **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs), with multi-file drag-drop, metadata fields (supplier, reference month, submarket hint, source, notes), and document status tracking through the parse/verify/publish workflow.
