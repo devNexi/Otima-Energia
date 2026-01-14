@@ -42,6 +42,8 @@ import {
   zohoIntakeErrors,
   clients,
   deals,
+  dealCommissionEvents,
+  invoices,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState
@@ -4338,6 +4340,92 @@ export async function registerRoutes(
           lostByUserId: user?.id || null,
           lostNotes: lostNotes || null,
         });
+      }
+      
+      // MILESTONE COMMISSION EVENTS
+      // On CONTRACT_SIGNED: Create Milestone 1 (50%) commission event
+      if (toState === 'CONTRACT_SIGNED' && result.deal) {
+        const selectedQuote = await storage.getDealQuotes(req.params.id)
+          .then(quotes => quotes.find(q => q.status === 'ACCEPTED'));
+        
+        if (selectedQuote && selectedQuote.supplierId) {
+          // Get supplier playbook for milestone config
+          const playbook = await storage.getSupplierPlaybook(selectedQuote.supplierId);
+          const m1Percent = playbook?.milestone1Percent || 50;
+          const totalCommission = selectedQuote.brokerCommissionRmwh || 0;
+          const m1Amount = Number((totalCommission * m1Percent / 100).toFixed(4));
+          
+          await storage.createDealCommissionEvent({
+            dealId: req.params.id,
+            eventType: 'MILESTONE_1',
+            status: 'PENDING',
+            amountBrl: null,
+            amountRmwh: m1Amount,
+            expectedDate: new Date().toISOString().split('T')[0],
+            paymentTrigger: playbook?.milestone1Name || 'Contract Signed',
+            notes: `Milestone 1 (${m1Percent}%): ${playbook?.milestone1Name || 'Contract Signed'}`,
+          });
+          
+          await logAuditEvent({
+            actor: user?.username || triggeredBy,
+            actorRole: user?.role || null,
+            actorIp: req.ip || null,
+            userAgent: req.get("User-Agent") || null,
+            action: "COMMISSION_MILESTONE_CREATED",
+            entityType: "commission_event",
+            entityId: null,
+            dealId: req.params.id,
+            details: { milestone: 1, percent: m1Percent, amountRmwh: m1Amount }
+          });
+        }
+      }
+      
+      // On SUPPLY_LIVE: Mark Milestone 1 as CONFIRMED, create Milestone 2 (50%)
+      if (toState === 'SUPPLY_LIVE' && result.deal) {
+        // Get existing commission events for this deal
+        const existingEvents = await storage.getDealCommissionEvents(req.params.id);
+        const m1Event = existingEvents.find(e => e.eventType === 'MILESTONE_1' && e.status === 'PENDING');
+        
+        // Confirm Milestone 1
+        if (m1Event) {
+          await storage.updateDealCommissionEvent(m1Event.id, {
+            status: 'CONFIRMED',
+            confirmedAt: new Date(),
+          });
+        }
+        
+        const selectedQuote = await storage.getDealQuotes(req.params.id)
+          .then(quotes => quotes.find(q => q.status === 'ACCEPTED'));
+        
+        if (selectedQuote && selectedQuote.supplierId) {
+          const playbook = await storage.getSupplierPlaybook(selectedQuote.supplierId);
+          const m2Percent = playbook?.milestone2Percent || 50;
+          const totalCommission = selectedQuote.brokerCommissionRmwh || 0;
+          const m2Amount = Number((totalCommission * m2Percent / 100).toFixed(4));
+          
+          await storage.createDealCommissionEvent({
+            dealId: req.params.id,
+            eventType: 'MILESTONE_2',
+            status: 'PENDING',
+            amountBrl: null,
+            amountRmwh: m2Amount,
+            expectedDate: new Date().toISOString().split('T')[0],
+            paymentTrigger: playbook?.milestone2Name || 'CCEE Activation / Supply Live',
+            notes: `Milestone 2 (${m2Percent}%): ${playbook?.milestone2Name || 'CCEE Activation / Supply Live'}`,
+          });
+          
+          await logAuditEvent({
+            actor: user?.username || triggeredBy,
+            actorRole: user?.role || null,
+            actorIp: req.ip || null,
+            userAgent: req.get("User-Agent") || null,
+            action: "COMMISSION_MILESTONE_CREATED",
+            entityType: "commission_event",
+            entityId: null,
+            dealId: req.params.id,
+            details: { milestone: 2, percent: m2Percent, amountRmwh: m2Amount }
+          });
+        }
       }
       
       await logAuditEvent({
@@ -9933,6 +10021,102 @@ export async function registerRoutes(
     }
   });
   
+  // POST /api/commission-events/:id/generate-invoice - One-click invoice from commission event
+  app.post("/api/commission-events/:id/generate-invoice", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      
+      const hasAccess = await checkInvoicePermission(userId, 'MANAGE');
+      if (!hasAccess) {
+        return res.status(403).json({ error: "No permission to create invoices" });
+      }
+      
+      const eventId = parseInt(req.params.id);
+      
+      // Get the commission event
+      const events = await db.select().from(dealCommissionEvents).where(eq(dealCommissionEvents.id, eventId));
+      const commissionEvent = events[0];
+      
+      if (!commissionEvent) {
+        return res.status(404).json({ error: "Commission event not found" });
+      }
+      
+      // Check if invoice already exists for this event
+      const existingInvoices = await db.select().from(invoices).where(eq(invoices.commissionEventId, eventId));
+      if (existingInvoices.length > 0) {
+        return res.status(400).json({ error: "Invoice already exists for this commission event", invoiceId: existingInvoices[0].id });
+      }
+      
+      // Get deal details
+      const deal = await storage.getDeal(commissionEvent.dealId);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      
+      // Get accepted quote for supplier info
+      const quotes = await storage.getDealQuotes(commissionEvent.dealId);
+      const acceptedQuote = quotes.find(q => q.status === 'ACCEPTED');
+      
+      // Determine invoice type from event type
+      let invoiceType: 'MILESTONE_1' | 'MILESTONE_2' | 'ADJUSTMENT' = 'MILESTONE_1';
+      if (commissionEvent.eventType === 'MILESTONE_2') invoiceType = 'MILESTONE_2';
+      else if (commissionEvent.eventType === 'ADJUSTMENT') invoiceType = 'ADJUSTMENT';
+      
+      // Get supplier playbook for payment terms
+      const playbook = acceptedQuote?.supplierId ? await storage.getSupplierPlaybook(acceptedQuote.supplierId) : null;
+      const paymentDueDays = playbook?.defaultPaymentDueDays || 7;
+      
+      // Calculate due date
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + paymentDueDays);
+      
+      // Generate invoice number
+      const invoiceNumber = await storage.generateInvoiceNumber();
+      
+      // Create the invoice
+      const invoice = await storage.createInvoice({
+        dealId: commissionEvent.dealId,
+        supplierId: acceptedQuote?.supplierId || null,
+        clientId: deal.clientId || null,
+        commissionEventId: eventId,
+        invoiceNumber,
+        invoiceType,
+        status: 'DRAFT',
+        dueDate,
+        amountBrl: commissionEvent.amountBrl || null,
+        // Calculate MWh amount from R$/MWh and deal volume
+        description: `${commissionEvent.paymentTrigger || invoiceType} - ${deal.id}`,
+        notes: commissionEvent.notes || null,
+        createdBy: userId,
+      });
+      
+      // Update commission event with invoice reference
+      await storage.updateDealCommissionEvent(eventId, {
+        status: 'INVOICED',
+        invoicedAt: new Date(),
+      });
+      
+      // Log creation event
+      await storage.createInvoiceEvent({
+        invoiceId: invoice.id,
+        eventType: 'CREATED',
+        actorId: userId,
+        metadata: { 
+          invoiceNumber, 
+          fromCommissionEvent: eventId,
+          paymentTrigger: commissionEvent.paymentTrigger
+        }
+      });
+      
+      res.status(201).json({ success: true, invoice });
+    } catch (error: any) {
+      console.error("Error generating invoice from commission event:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // PATCH /api/invoices/:id - Update invoice (MANAGE only, DRAFT only)
   app.patch("/api/invoices/:id", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
