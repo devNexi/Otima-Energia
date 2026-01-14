@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,10 @@ interface CommissionEvent {
   dealId: string;
   eventType: string;
   amountBrl?: string;
+  amountRmwh?: string;
   expectedDate?: string;
   status: string;
+  paymentTrigger?: string;
 }
 
 interface OpsTasks {
@@ -48,6 +51,37 @@ interface OpsDashboardTabProps {
 export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
   const { sessionId } = useAuth();
   const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const generateInvoiceMutation = useMutation({
+    mutationFn: async (eventId: number) => {
+      const res = await fetch(`/api/commission-events/${eventId}/generate-invoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to generate invoice");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Invoice created", description: `Invoice ${data.invoice?.invoiceNumber || ''} generated successfully.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/ops/tasks/today"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const getMilestoneLabel = (eventType: string): string => {
+    if (eventType === 'MILESTONE_1') return 'M1: Contract Signed';
+    if (eventType === 'MILESTONE_2') return 'M2: Supply Live';
+    if (eventType === 'ADJUSTMENT') return 'Adjustment';
+    return eventType.replace(/_/g, ' ');
+  };
 
   // Scroll to section when KPI tile is clicked
   const scrollToSection = (sectionId: string) => {
@@ -298,23 +332,28 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Event ID</TableHead>
+                  <TableHead>Milestone</TableHead>
                   <TableHead>Deal</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount (BRL)</TableHead>
+                  <TableHead>Payment Trigger</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead>Expected Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {overdueCommission.map((e) => (
                   <TableRow key={e.id} data-testid={`row-overdue-commission-${e.id}`}>
-                    <TableCell className="font-mono">#{e.id}</TableCell>
+                    <TableCell>
+                      <Badge className={e.eventType === 'MILESTONE_1' ? 'bg-violet-100 text-violet-800' : e.eventType === 'MILESTONE_2' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100'}>
+                        {getMilestoneLabel(e.eventType)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{e.dealId.substring(0, 8)}...</TableCell>
-                    <TableCell>{e.eventType}</TableCell>
+                    <TableCell className="text-sm">{e.paymentTrigger || '-'}</TableCell>
                     <TableCell className="font-medium">
-                      {e.amountBrl ? `R$ ${parseFloat(e.amountBrl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                      {e.amountBrl ? `R$ ${parseFloat(e.amountBrl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
+                       e.amountRmwh ? `${parseFloat(e.amountRmwh).toFixed(4)} R$/MWh` : '-'}
                     </TableCell>
                     <TableCell>
                       {e.expectedDate ? format(new Date(e.expectedDate), 'MMM d, yyyy') : '-'}
@@ -325,16 +364,29 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {onNavigateToDeal && (
+                      <div className="flex gap-1">
                         <Button 
                           size="sm" 
-                          variant="ghost" 
-                          onClick={() => onNavigateToDeal(e.dealId)}
-                          data-testid={`button-view-commission-deal-${e.id}`}
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => generateInvoiceMutation.mutate(e.id)}
+                          disabled={generateInvoiceMutation.isPending}
+                          data-testid={`button-generate-invoice-${e.id}`}
                         >
-                          View Deal <ArrowRight className="w-4 h-4 ml-1" />
+                          {generateInvoiceMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3 mr-1" />}
+                          Invoice
                         </Button>
-                      )}
+                        {onNavigateToDeal && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => onNavigateToDeal(e.dealId)}
+                            data-testid={`button-view-commission-deal-${e.id}`}
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
