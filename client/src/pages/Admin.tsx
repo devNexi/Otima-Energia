@@ -455,21 +455,13 @@ export default function Admin({ defaultTab }: AdminProps) {
                   {language === "pt" ? "Operacional" : "Operational"}
                 </p>
                 <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1" data-testid="tabs-operational">
-                  <TabsTrigger value="deals" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-deals">
-                    <Briefcase className="w-4 h-4" />
-                    {language === "pt" ? "Negócios" : "Deals"}
-                  </TabsTrigger>
                   <TabsTrigger value="suppliers" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-suppliers">
                     <Building2 className="w-4 h-4" />
                     {language === "pt" ? "Fornecedores" : "Suppliers"}
                   </TabsTrigger>
-                  <TabsTrigger value="clients" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-clients">
-                    <Users className="w-4 h-4" />
-                    {t("admin.tab.clients")}
-                  </TabsTrigger>
-                  <TabsTrigger value="rfqs" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-rfqs">
-                    <Send className="w-4 h-4" />
-                    RFQs
+                  <TabsTrigger value="deals" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-deals">
+                    <Briefcase className="w-4 h-4" />
+                    {language === "pt" ? "Negócios" : "Deals"}
                   </TabsTrigger>
                   {(user?.role === "ops" || user?.role === "admin") && (
                     <TabsTrigger value="assembly-queue" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-assembly-queue">
@@ -477,6 +469,14 @@ export default function Admin({ defaultTab }: AdminProps) {
                       {language === "pt" ? "Montagem" : "Assembly"}
                     </TabsTrigger>
                   )}
+                  <TabsTrigger value="proposals" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-proposals">
+                    <FileText className="w-4 h-4" />
+                    {language === "pt" ? "Propostas" : "Proposals"}
+                  </TabsTrigger>
+                  <TabsTrigger value="clients" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-clients">
+                    <Users className="w-4 h-4" />
+                    {t("admin.tab.clients")}
+                  </TabsTrigger>
                   {(user?.role === "ops" || user?.role === "admin") && (
                     <TabsTrigger value="ops-dashboard" className="w-full justify-start gap-2 px-3 py-2 text-sm" data-testid="tab-ops-dashboard">
                       <LayoutDashboard className="w-4 h-4" />
@@ -822,7 +822,44 @@ export default function Admin({ defaultTab }: AdminProps) {
             </Card>
           </TabsContent>
 
-          {/* RFQs - visible to all */}
+          {/* Proposals - visible to all */}
+          <TabsContent value="proposals">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-violet-500" />
+                      {language === "pt" ? "Propostas Comerciais" : "Commercial Proposals"}
+                    </CardTitle>
+                    <CardDescription>
+                      {language === "pt" ? "Gerencie e acompanhe suas propostas comerciais" : "Manage and track your commercial proposals"}
+                    </CardDescription>
+                  </div>
+                  <Link href="/admin/proposals">
+                    <Button className="gap-2" data-testid="button-proposals-full">
+                      <Eye className="w-4 h-4" />
+                      {language === "pt" ? "Ver Todas" : "View All"}
+                    </Button>
+                  </Link>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="mb-4">{language === "pt" ? "Gerencie propostas a partir da página completa" : "Manage proposals from the full page"}</p>
+                    <Link href="/admin/proposals">
+                      <Button variant="outline" data-testid="button-go-to-proposals">
+                        {language === "pt" ? "Ir para Propostas" : "Go to Proposals"}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* RFQs - hidden from nav, kept for internal use */}
           <TabsContent value="rfqs">
             <div className="space-y-6">
               <Card>

@@ -1,0 +1,823 @@
+REPLIT SUPER PROMPT — “FULL PORTAL WORKFLOW QA + FIXES + PROPOSALS MODULE (MUST EXIST)”
+
+You are working inside the existing Ótima Energia admin portal codebase.
+
+Context / Non-negotiables
+
+The portal is the system of record for Deals, Dossiers, RFQs, Quotes, Proposals, Compliance, Commission, Finance.
+
+Zoho creates Deals (intake) → portal runs everything operational.
+
+Renan must have a dedicated Proposals section where proposals are:
+
+generated (using client baseline + quotes + uplift),
+
+stored,
+
+sent (email),
+
+tracked (sent/viewed),
+
+and downloadable as a beautiful on-brand PDF.
+
+Right now multiple workflows/buttons appear broken. Your job is to verify every workflow end-to-end and fix every broken path.
+
+PART 1 — “QA MODE”: TEST EVERY WORKFLOW + EVERY BUTTON
+1) Create an automated QA checklist (in code + visible to Admin)
+
+Add an Admin-only page: /admin/qa called Workflow QA Console.
+
+It must:
+
+List every major workflow area and every core button/action.
+
+Show a status per item: NOT TESTED / PASS / FAIL
+
+Allow “Run Test” buttons (manual triggers) and record:
+
+timestamp
+
+user
+
+result
+
+error message/stack if fail
+
+Store results in DB table qa_test_runs.
+
+DB: qa_test_runs
+
+id
+
+test_key (unique identifier e.g. clients.create, rfq.send, proposal.generate_pdf)
+
+status (PASS/FAIL)
+
+error_message (nullable)
+
+metadata_json (nullable)
+
+ran_by_user_id
+
+ran_at
+
+is_demo
+
+This does NOT need full automated browser testing. It can be API-driven + controlled UI clicks, but it must create a repeatable “did we check everything?” log.
+
+2) Define “the portal must work” acceptance criteria
+
+A “PASS” means:
+
+Button click triggers correct backend route
+
+Backend returns success
+
+DB state changes correctly
+
+UI updates correctly (optimistic or after refresh)
+
+Audit log entry is created when applicable
+
+No console errors
+
+No blank screens
+
+If any part breaks: mark FAIL, log error.
+
+3) End-to-end manual regression tests you MUST implement + run
+
+Use demo seeder to create a full dataset (clients, suppliers, deals, rfqs, quotes, prcs, proposals, finance, commission) and verify each flow.
+
+A) Suppliers
+
+Create supplier
+
+Edit supplier
+
+Supplier contacts CRUD
+
+Supplier playbook CRUD (with new differentiators fields already discussed: SLA, submarkets, products, RFQ format, docs, guarantees, credit turnaround, commission reporting cadence, variance true-up rules)
+
+Supplier appears in dropdown everywhere it should (PRC upload, RFQ selection, quote intake, etc.)
+
+B) Clients
+
+Create client
+
+Generate upload link
+
+Upload bill (file upload works)
+
+OCR parse runs
+
+Manual corrections save
+
+Dossier tab loads and status transitions work (draft → ready → locked)
+
+C) Deals
+
+Deal list loads
+
+Deal detail loads
+
+Deal state machine transitions work
+
+Blockers actually block (hard gate) where required
+
+Audit trail records state transitions
+
+D) RFQs / Blind auction
+
+Create RFQ
+
+Attach client dossier
+
+Dispatch RFQ to supplier panel
+
+Supplier tracking status updates
+
+Quote response intake works (paste/email, upload pdf, etc.)
+
+Quote recorded into dealQuotes immutable model correctly
+
+Quote selection works and locks where required
+
+E) ECOS (pre-sales insight)
+
+Deal ECOS snapshot creation works
+
+Snapshot history visible
+
+Generate ECOS PDF insight pack works
+
+Branding applied
+
+F) PRCs
+
+Go to /admin/prc
+
+Upload PRC doc (must not be blocked by missing supplier dropdown)
+
+Parse status flow works: uploaded → parsing → parsed → needs_review → verified → published
+
+Rows visible + manual row add works
+
+Publish to benchmarks works
+
+Benchmarks show linked evidence doc
+
+G) Commission OS
+
+Usage periods create/verify
+
+Reconciliation run works
+
+Disputes can be created
+
+H) Finance OS Lite
+
+Invoice create
+
+Invoice send
+
+Invoice mark paid
+
+CSV export works
+
+I) Integrations
+
+Zoho intake endpoint works and creates deal
+
+Read-only Zoho banner present
+
+No portal-side editing of Zoho lead fields (display only)
+
+PART 2 — FIX NAV + REMOVE LEADS + MAKE UX CONSISTENT
+1) Remove “Leads” from portal UI (again)
+
+There should be no Leads tab in left nav.
+
+If “leads” exists as legacy pages/components/routes, hide them behind admin-only feature flag or remove from navigation.
+
+2) Navigation order must match operational reality
+
+Left navigation order MUST be:
+
+Suppliers
+
+Deals
+
+RFQs
+
+Assembly
+
+Quotes (if still separate; otherwise fold into Deals)
+
+Proposals ✅ (NEW — see Part 3)
+
+Clients
+
+Commission
+
+Finance
+
+ECOS
+
+Governance/Overview/Audit/Settings/Integrations/PRCs
+
+Also:
+
+Ensure every nav item routes correctly.
+
+Ensure no dead links.
+
+PART 3 — BUILD THE MISSING PROPOSALS MODULE (REQUIRED)
+Objective
+
+Create a first-class module: /admin/proposals with:
+
+list view
+
+filters
+
+detail view
+
+“generate proposal” flow
+
+storage of generated proposals
+
+email sending + status tracking
+
+view tracking (basic)
+
+PDF regeneration
+
+on-brand design
+
+This must be separate from everything else and obvious for Renan.
+
+1) Data model
+
+If proposals table exists, ensure it supports:
+
+proposals
+
+id (uuid)
+
+deal_id
+
+client_id
+
+created_by_user_id
+
+status: DRAFT | GENERATED | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
+
+recommended_quote_id (dealQuotes id)
+
+baseline_consumption_mwh_12m
+
+baseline_supply_cost_12m
+
+baseline_is_annualized (bool)
+
+currency = BRL
+
+proposal_version (int)
+
+pdf_doc_id (foreign key to documents table OR file url)
+
+sent_to_email
+
+sent_at
+
+viewed_at
+
+view_count
+
+notes_internal
+
+created_at / updated_at
+
+is_demo
+
+proposal_quote_lines
+
+Each line = (supplier × term) row shown to customer
+
+id
+
+proposal_id
+
+deal_quote_id
+
+supplier_name (denormalized)
+
+energy_type
+
+term_months
+
+client_price_r_mwh
+
+savings_total_r
+
+savings_monthly_avg_r
+
+created_at
+
+proposal_events
+
+id
+
+proposal_id
+
+event_type: CREATED/GENERATED/SENT/VIEWED/ACCEPTED/REJECTED/REGENERATED
+
+metadata_json
+
+user_id
+
+created_at
+
+2) Proposal Generation UI (Renan-friendly)
+
+In Proposals module and also accessible from the Deal detail:
+
+Step-by-step wizard:
+
+Confirm baseline (auto from bills; allow manual edit + show “conservative estimate” banner if manual/annualized)
+
+Select eligible quote rows (each supplier×term)
+
+show “exclude” toggle
+
+show validity, energy type, term
+
+Input uplift/commission rules (internal only)
+
+either:
+
+uplift R$/MWh per quote row
+
+OR global uplift applied to selected rows
+
+Choose “Recommended option” (required)
+
+Generate PDF
+
+Preview PDF
+
+Send to client email (button)
+
+Proposal stored + status updated
+
+Hard rule:
+
+PDF must show client_price only, never supplier base price or uplift.
+
+3) Savings calculations (use the “Option A” logic already approved)
+
+Per quote row:
+
+proposed_cost_12m = MWh_annual × client_price_r_mwh
+
+savings_12m = baseline_supply_cost_12m − proposed_cost_12m
+
+savings_total = savings_12m × (term_months / 12)
+
+savings_monthly_avg = savings_total / term_months
+If savings_total < 0 → label “Aumento estimado no período: R$ X”
+
+Include the baseline transparency line in PDF.
+
+4) PDF output must be ON BRAND (website look + logo)
+
+Apply brand kit:
+
+Use Ótima logo
+
+Typography/colors aligned with website theme
+
+Professional layout, minimal clutter, sales collateral feel
+
+PDF sections:
+A) Executive summary (best savings)
+B) Current baseline summary
+C) Comparison table (all selected quotes)
+D) Recommended option + why
+E) Next steps
+Footnote disclaimers (supply component only)
+
+5) Sending + tracking
+
+Add email send action:
+
+POST /api/proposals/:id/send
+
+records SENT event
+
+stores recipient email
+
+attaches branded PDF
+
+Add view tracking:
+
+simplest: unique view link requiring no login
+
+increments view_count and sets viewed_at
+
+status becomes VIEWED
+(If too much, do “opened via signed URL” tracking as v1.)
+
+PART 4 — FIX “PRC upload has no suppliers” ROOT CAUSE
+
+Supplier dropdown is empty → means supplier seed or query is broken.
+
+Fix:
+
+Ensure suppliers exist in demo and production
+
+Ensure supplier list endpoint works and returns active suppliers
+
+Ensure PRC upload modal calls correct endpoint and handles empty state gracefully:
+
+If none exist: show “Add supplier first” link to Suppliers tab
+
+PART 5 — DELIVERY REQUIREMENTS
+
+Provide a short QA report in /admin/qa showing PASS/FAIL for every workflow item.
+
+Proposals module must exist and be reachable from nav + deal detail.
+
+Demo seeder must include:
+
+at least 5 proposals across statuses (DRAFT/GENERATED/SENT/VIEWED)
+
+No obvious broken buttons remain (anything broken must be fixed, not hidden).
+
+QUESTIONS YOU MUST ANSWER IN YOUR FINAL MESSAGE
+
+Where is the Proposals module in the nav and how does Renan access it?
+
+What is the happy-path flow from Deal → Quotes → Proposal → Send?
+
+Which workflows still require human steps (e.g., supplier reply via email) vs automated?
+
+What you should send Replit right now (extra 2 lines)
+
+After you paste the prompt, add:
+
+“Do NOT tell me it’s done unless /admin/qa shows PASS on all critical flows.”
+
+“Proposals must be a top-level nav item and also accessible inside a Deal.”
+
+If you want, paste what you’re seeing that’s “not working properly” (which specific buttons / what happens when you click), and I’ll tighten this prompt further into a pinpoint bug list (but the above will already force them to discover and fix it systematically).
+
+Why is there an RFQ's and Quotes? Surely that's the same?
+
+Short answer: they are related, but they are not the same thing, and keeping them distinct is actually correct for how the Brazilian market works. What is wrong right now is how visible and confusing that distinction is for Renan.
+
+Let me break it down cleanly, then tell you what to do in the portal.
+
+The clean mental model (this is the key)
+RFQ = outbound intent
+
+“Here is the structured request we sent to suppliers.”
+
+Quote = inbound reality
+
+“Here is what suppliers actually sent back.”
+
+They sit on opposite sides of the supplier boundary.
+
+Why they must be separate (even if Renan never thinks about it)
+1. RFQs are one-to-many
+
+One RFQ → sent to 5, 10, 20 suppliers
+
+Each supplier may:
+
+respond
+
+not respond
+
+respond late
+
+respond with multiple terms (24/36/60 months)
+
+2. Quotes are many-to-one
+
+Many quotes → belong to one RFQ
+
+Quotes arrive:
+
+by email
+
+WhatsApp
+
+PDF
+
+Excel
+
+portal form
+
+Quotes are messy, inconsistent, and must be captured immutably (your Deal OS logic)
+
+3. Operational truth
+
+In Brazil:
+
+You cannot assume a quote exists just because an RFQ was sent
+
+You must track:
+
+who received the RFQ
+
+who replied
+
+who ghosted
+
+who replied out of format
+
+who sent multiple variants
+
+That’s impossible if RFQs and Quotes are the same object.
+
+Why it feels wrong right now (and you’re right to question it)
+
+The UX is wrong, not the data model.
+
+Right now:
+
+Renan sees “RFQs” and “Quotes” as two separate top-level tabs
+
+That forces him to understand internal plumbing
+
+That’s bad
+
+Renan should never need to think:
+
+“Am I in RFQs or Quotes?”
+
+The correct UX (this is what you should tell Replit next)
+🔥 Rule: RFQs should almost disappear from Renan’s mental model
+What Renan should see instead
+Deals → Quotes (primary working surface)
+
+Inside a Deal:
+
+“Send RFQ” button
+
+“Quotes received” table
+
+“Waiting on suppliers” indicators
+
+“Add quote manually” button
+
+RFQ exists behind the scenes.
+
+How this should be structured in the portal
+1. Keep RFQs as a system object (DO NOT DELETE)
+
+RFQs are required for:
+
+SLA tracking
+
+supplier scorecards
+
+proof of origin
+
+non-circumvention
+
+Mercado Transparente later
+
+2. Remove RFQs from primary navigation for Ops/Sales
+
+RFQs should be:
+
+hidden from Renan
+
+visible only:
+
+inside a Deal
+
+or in an Admin/Ops view if needed
+
+3. Quotes become the primary surface
+
+Rename / position Quotes as:
+
+“Supplier Responses” (optional label change)
+
+Each quote shows:
+
+supplier
+
+term
+
+price
+
+validity
+
+status
+
+selection action
+
+The single sentence explanation (use this with your team)
+
+RFQs are what we send. Quotes are what we get back.
+Renan works with quotes. The system worries about RFQs.
+
+What I recommend you do next (very concrete)
+Ask Replit to do one small but high-impact change:
+
+Move RFQs out of the main navigation for non-admin users.
+RFQs should only be visible:
+
+inside a Deal
+
+or in Admin/Ops views
+
+And:
+
+Make “Quotes” the primary working tab for Renan, where:
+
+RFQs are triggered
+
+supplier response status is visible
+
+quotes are added/normalized/selected
+
+This keeps:
+
+your architecture correct
+
+your UX sane
+
+your future Mercado Transparente vision intact
+
+Final reassurance
+
+You were right to question this.
+But the answer is not to merge them — it’s to hide the distinction from humans.
+
+You’ve actually built the right backend model already.
+Now you just need to finish the UX abstraction layer so Renan never has to think about it.
+
+If you want, next I can:
+
+write the exact nav change prompt for Replit, or
+
+design the ideal “Deal → Quotes” screen layout so this becomes obvious and idiot-proof.
+
+Ok let's call them supplier quotes
+
+Perfect — that’s the right call 👍
+“Supplier Quotes” is the clearest, least ambiguous naming and maps cleanly to how Renan actually works.
+
+Here’s how I’d lock this in properly so it doesn’t regress later.
+
+Final Naming & Mental Model (authoritative)
+✅ Supplier Quotes
+
+What suppliers actually sent back in response to a request.
+This is Renan’s main working surface.
+
+🚫 RFQs
+
+Internal system objects used to manage outbound requests and SLAs.
+Not a primary user concept.
+
+What this means in practice (no ambiguity)
+1. Navigation (very important)
+
+Left nav for Renan / Ops should be:
+
+Suppliers
+
+Deals
+
+Supplier Quotes
+
+Assembly
+
+Clients
+
+ECOS
+
+Commission
+
+Finance
+
+Ops / Governance
+
+RFQs should NOT appear as a top-level nav item for Renan.
+
+If RFQs exist in the nav at all:
+
+Admin-only
+
+Or nested under Suppliers → RFQ Activity (advanced view)
+
+2. Inside a Deal (this is where RFQs live)
+
+Inside a Deal, Renan should see:
+
+Primary tab: Supplier Quotes
+
+Within this tab:
+
+Button: “Request quotes from suppliers”
+
+This creates RFQs behind the scenes
+
+Section: Supplier Response Status
+
+Supplier A – Waiting
+
+Supplier B – Responded
+
+Supplier C – No response (SLA breached)
+
+Table: Supplier Quotes
+
+Each row = one supplier × one term
+
+Renan never clicks “RFQ”.
+He clicks “Request quotes”.
+
+3. Data model stays exactly as-is (this is key)
+
+You do not change:
+
+quoteRequests
+
+rfoRequests
+
+dealQuotes
+
+RFQ SLA tracking
+
+Supplier scorecards
+
+You change labels and surfacing only.
+
+This preserves:
+
+auditability
+
+non-circumvention proof
+
+Mercado Transparente future
+
+supplier trust
+
+4. Terminology lock (write this into the codebase)
+
+Add a short internal glossary entry (even as comments):
+
+RFQ (internal):
+A system-level outbound request sent to one or more suppliers.
+Used for SLA tracking, proof of origin, and supplier analytics.
+Not shown as a primary concept to sales users.
+
+Supplier Quote (user-facing):
+A response received from a supplier, stored immutably.
+This is the primary object used for comparison, selection, and proposals.
+
+
+This prevents future dev confusion.
+
+5. What to tell Replit (short + precise)
+
+You can literally send this:
+
+Rename all user-facing references from “Quotes” to “Supplier Quotes”.
+
+Remove “RFQs” from the main navigation for non-admin users.
+RFQs should exist only:
+
+behind the “Request quotes” action
+
+inside Deal context
+
+or in admin-only views
+
+Renan’s primary workflow must be:
+Deal → Supplier Quotes → Select → Proposal → Assembly
+
+Why this matters more than it seems
+
+This single naming decision:
+
+reduces cognitive load for Renan
+
+prevents onboarding mistakes
+
+makes demos 10× clearer
+
+aligns perfectly with your sales narrative
+
+keeps your backend “Mercado Transparente–ready”
+
+You’ve just removed an entire category of confusion.
