@@ -32,6 +32,7 @@ import PrcReviewPage from "@/pages/PrcReviewPage";
 import EcosValidationPage from "@/pages/EcosValidationPage";
 import AdminSettings from "@/pages/AdminSettings";
 import QaConsole from "@/pages/QaConsole";
+import ProposalView from "@/pages/ProposalView";
 import NotFound from "@/pages/not-found";
 import PublicProposal from "@/pages/PublicProposal";
 
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/termos-parcerias" component={TermosParcerias} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/proposta/:publicId" component={PublicProposal} />
+      <Route path="/proposal/view/:token" component={ProposalView} />
       
       {/* Admin routes - redirect /admin to /admin/deals */}
       <Route path="/admin">{() => <Redirect to="/admin/deals" />}</Route>

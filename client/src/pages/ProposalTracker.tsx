@@ -102,7 +102,9 @@ export default function ProposalTracker() {
   const { data: proposalsData, isLoading } = useQuery({
     queryKey: ["/api/proposals"],
     queryFn: async () => {
-      const res = await fetch("/api/proposals");
+      const res = await fetch("/api/proposals", {
+        headers: { "x-session-id": sessionId || "" },
+      });
       if (!res.ok) throw new Error("Failed to fetch proposals");
       return res.json();
     },
@@ -112,7 +114,10 @@ export default function ProposalTracker() {
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       const res = await fetch(`/api/proposals/${id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-session-id": sessionId || "" 
+        },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update status");
