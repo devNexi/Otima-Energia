@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Select, 
   SelectContent, 
@@ -18,7 +20,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 import { 
   FileText, 
   ArrowLeft, 
@@ -30,9 +41,15 @@ import {
   TrendingUp,
   MoreVertical,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  ChevronRight,
+  ChevronLeft,
+  Building,
+  Zap,
+  DollarSign
 } from "lucide-react";
-import type { Proposal } from "@shared/schema";
+import type { Proposal, Client, SupplierQuote } from "@shared/schema";
 
 type ProposalStatus = "all" | "draft" | "sent" | "viewed" | "negotiating" | "accepted" | "rejected" | "expired";
 
@@ -49,8 +66,38 @@ const statusColors: Record<string, string> = {
 export default function ProposalTracker() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { sessionId } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<ProposalStatus>("all");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string>("");
+  const [validityDays, setValidityDays] = useState("30");
+
+  const { data: clientsData } = useQuery({
+    queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const res = await fetch("/api/clients", {
+        headers: { "x-session-id": sessionId || "" },
+      });
+      if (!res.ok) return { clients: [] };
+      return res.json();
+    },
+  });
+  const clients: Client[] = clientsData?.clients || [];
+
+  const { data: quotesData } = useQuery({
+    queryKey: ["/api/supplier-quotes"],
+    queryFn: async () => {
+      const res = await fetch("/api/supplier-quotes", {
+        headers: { "x-session-id": sessionId || "" },
+      });
+      if (!res.ok) return { quotes: [] };
+      return res.json();
+    },
+  });
+  const quotes: SupplierQuote[] = quotesData?.quotes || [];
 
   const { data: proposalsData, isLoading } = useQuery({
     queryKey: ["/api/proposals"],
@@ -94,6 +141,72 @@ export default function ProposalTracker() {
       : "0",
   };
 
+  const createProposalMutation = useMutation({
+    mutationFn: async (data: {
+      clientId: number;
+      quoteId: number;
+      validUntil: string;
+    }) => {
+      const selectedClient = clients.find((c) => c.id === data.clientId);
+      const selectedQuote = quotes.find((q) => q.id === data.quoteId);
+      
+      if (!selectedClient || !selectedQuote) {
+        throw new Error("Client or quote not found");
+      }
+
+      const payload = {
+        clientId: data.clientId,
+        quoteId: data.quoteId,
+        validUntil: data.validUntil,
+        proposalDate: new Date().toISOString().split("T")[0],
+        clientName: selectedClient.companyName,
+        clientCnpj: selectedClient.cnpj || undefined,
+        supplierName: (selectedQuote as any).supplierName || "Unknown Supplier",
+        status: "draft",
+      };
+
+      const res = await fetch("/api/proposals", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-session-id": sessionId || "" 
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create proposal");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/proposals"] });
+      setCreateDialogOpen(false);
+      setWizardStep(1);
+      setSelectedClientId("");
+      setSelectedQuoteId("");
+      toast({ title: "Proposta criada com sucesso!" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Erro ao criar proposta", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleCreateProposal = () => {
+    const validUntilDate = new Date();
+    validUntilDate.setDate(validUntilDate.getDate() + parseInt(validityDays));
+    
+    createProposalMutation.mutate({
+      clientId: parseInt(selectedClientId),
+      quoteId: parseInt(selectedQuoteId),
+      validUntil: validUntilDate.toISOString().split("T")[0],
+    });
+  };
+
   const copyLink = (token: string) => {
     const link = `${window.location.origin}/proposal/view/${token}`;
     navigator.clipboard.writeText(link);
@@ -130,6 +243,14 @@ export default function ProposalTracker() {
                 <p className="text-sm text-gray-500">Acompanhe suas propostas comerciais</p>
               </div>
             </div>
+            <Button 
+              onClick={() => setCreateDialogOpen(true)} 
+              className="gap-2"
+              data-testid="button-create-proposal"
+            >
+              <Plus className="h-4 w-4" />
+              Nova Proposta
+            </Button>
           </div>
         </div>
       </div>
@@ -332,6 +453,194 @@ export default function ProposalTracker() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Proposal Wizard Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-600" />
+              Nova Proposta Comercial
+            </DialogTitle>
+            <DialogDescription>
+              Passo {wizardStep} de 3 - {wizardStep === 1 ? "Selecione o cliente" : wizardStep === 2 ? "Selecione a cotação" : "Confirme os dados"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {/* Step indicators */}
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    step === wizardStep 
+                      ? "bg-emerald-600 text-white" 
+                      : step < wizardStep 
+                        ? "bg-emerald-100 text-emerald-600" 
+                        : "bg-gray-100 text-gray-400"
+                  }`}>
+                    {step < wizardStep ? <CheckCircle className="h-4 w-4" /> : step}
+                  </div>
+                  {step < 3 && (
+                    <div className={`w-8 h-0.5 ${step < wizardStep ? "bg-emerald-400" : "bg-gray-200"}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Step 1: Select Client */}
+            {wizardStep === 1 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                  <Building className="h-4 w-4" />
+                  Selecione o cliente para a proposta
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client">Cliente</Label>
+                  <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                    <SelectTrigger data-testid="select-client">
+                      <SelectValue placeholder="Selecione um cliente..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.companyName} - {client.cnpj || "Sem CNPJ"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {clients.length === 0 && (
+                  <p className="text-sm text-amber-600">
+                    Nenhum cliente cadastrado. Crie um cliente antes de criar propostas.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Select Quote */}
+            {wizardStep === 2 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                  <Zap className="h-4 w-4" />
+                  Selecione a cotação de fornecedor
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quote">Cotação</Label>
+                  <Select value={selectedQuoteId} onValueChange={setSelectedQuoteId}>
+                    <SelectTrigger data-testid="select-quote">
+                      <SelectValue placeholder="Selecione uma cotação..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quotes.map((quote) => (
+                        <SelectItem key={quote.id} value={quote.id.toString()}>
+                          {(quote as any).supplierName || `Quote #${quote.id}`} - 
+                          {quote.pricePerMwh ? ` R$ ${quote.pricePerMwh}/MWh` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {quotes.length === 0 && (
+                  <p className="text-sm text-amber-600">
+                    Nenhuma cotação disponível. Solicite cotações aos fornecedores primeiro.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Confirm & Settings */}
+            {wizardStep === 3 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                  <DollarSign className="h-4 w-4" />
+                  Confirme os dados da proposta
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Cliente:</span>
+                    <span className="font-medium">
+                      {clients.find(c => c.id === parseInt(selectedClientId))?.companyName || "-"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Cotação:</span>
+                    <span className="font-medium">
+                      {quotes.find(q => q.id === parseInt(selectedQuoteId))?.id || "-"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="validity">Validade da proposta (dias)</Label>
+                  <Select value={validityDays} onValueChange={setValidityDays}>
+                    <SelectTrigger data-testid="select-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 dias</SelectItem>
+                      <SelectItem value="15">15 dias</SelectItem>
+                      <SelectItem value="30">30 dias</SelectItem>
+                      <SelectItem value="45">45 dias</SelectItem>
+                      <SelectItem value="60">60 dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex justify-between">
+            <div>
+              {wizardStep > 1 && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setWizardStep(wizardStep - 1)}
+                  data-testid="button-wizard-back"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setCreateDialogOpen(false);
+                  setWizardStep(1);
+                  setSelectedClientId("");
+                  setSelectedQuoteId("");
+                }}
+              >
+                Cancelar
+              </Button>
+              {wizardStep < 3 ? (
+                <Button 
+                  onClick={() => setWizardStep(wizardStep + 1)}
+                  disabled={
+                    (wizardStep === 1 && !selectedClientId) ||
+                    (wizardStep === 2 && !selectedQuoteId)
+                  }
+                  data-testid="button-wizard-next"
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleCreateProposal}
+                  disabled={createProposalMutation.isPending}
+                  data-testid="button-create-proposal-submit"
+                >
+                  {createProposalMutation.isPending ? "Criando..." : "Criar Proposta"}
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
