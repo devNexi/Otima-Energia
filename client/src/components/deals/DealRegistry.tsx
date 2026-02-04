@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,35 +87,19 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
   const { data: dealsData, isLoading: dealsLoading } = useQuery({
     queryKey: ["/api/deals"],
-    queryFn: async () => {
-      const res = await fetch("/api/deals");
-      return res.json();
-    }
   });
 
   const { data: dashboardData } = useQuery({
     queryKey: ["/api/deals/dashboard"],
-    queryFn: async () => {
-      const res = await fetch("/api/deals/dashboard");
-      return res.json();
-    }
   });
 
   const { data: clientsData } = useQuery({
     queryKey: ["/api/clients"],
-    queryFn: async () => {
-      const res = await fetch("/api/clients");
-      return res.json();
-    }
   });
 
   const createDealMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch("/api/deals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("POST", "/api/deals", data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -143,9 +128,9 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
     }
   });
 
-  const deals = dealsData?.deals || [];
-  const dashboard = dashboardData?.dashboard;
-  const clients = clientsData?.clients || [];
+  const deals = (dealsData as any)?.deals || [];
+  const dashboard = (dashboardData as any)?.dashboard;
+  const clients = (clientsData as any)?.clients || [];
 
   const filteredDeals = deals.filter((deal: any) => {
     if (statusFilter !== "all" && deal.status !== statusFilter) return false;
