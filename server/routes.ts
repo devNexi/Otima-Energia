@@ -4039,6 +4039,30 @@ export async function registerRoutes(
     }
   });
 
+  // Get assembly queue (bulk) - must be before :id routes
+  app.get("/api/deals/assembly-queue", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const userId = req.session?.userId;
+      const userRole = req.session?.role;
+      
+      const filters: any = {};
+      if (req.query.stage) filters.stage = req.query.stage as string;
+      if (req.query.blockedOnly === 'true') filters.blockedOnly = true;
+      if (req.query.needsActionToday === 'true') filters.needsActionToday = true;
+      if (req.query.myDeals === 'true' && userRole !== 'admin') {
+        filters.userId = userId;
+      }
+      
+      const queue = await assemblyEngine.getAssemblyQueue(filters);
+      res.json({ success: true, queue, total: queue.length });
+    } catch (error: any) {
+      console.error("Error getting assembly queue:", error);
+      res.status(500).json({ success: false, error: "Failed to get assembly queue" });
+    }
+  });
+
   // Get single deal with full details
   app.get("/api/deals/:id", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -9025,33 +9049,42 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Failed to get assembly status" });
     }
   });
-  
-  // Get assembly queue (bulk)
-  app.get("/api/deals/assembly-queue", async (req, res) => {
-    if (!await validateDealOsSession(req, res)) return;
-    
-    try {
-      const userId = req.session?.userId;
-      const userRole = req.session?.role;
-      
-      const filters: any = {};
-      if (req.query.stage) filters.stage = req.query.stage as string;
-      if (req.query.blockedOnly === 'true') filters.blockedOnly = true;
-      if (req.query.needsActionToday === 'true') filters.needsActionToday = true;
-      if (req.query.myDeals === 'true' && userRole !== 'admin') {
-        filters.userId = userId;
-      }
-      
-      const queue = await assemblyEngine.getAssemblyQueue(filters);
-      res.json({ success: true, queue, total: queue.length });
-    } catch (error: any) {
-      console.error("Error getting assembly queue:", error);
-      res.status(500).json({ success: false, error: "Failed to get assembly queue" });
-    }
-  });
 
   // ============== DEAL PROPOSALS (Proposal OS) ==============
   
+  // Get all proposals across all deals
+  app.get("/api/deal-proposals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const proposals = await storage.getAllDealProposals();
+      res.json({ success: true, proposals });
+    } catch (error: any) {
+      console.error("Error getting all proposals:", error);
+      res.status(500).json({ success: false, error: "Failed to get proposals" });
+    }
+  });
+
+  // Get single proposal with details
+  app.get("/api/deal-proposals/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const proposal = await storage.getDealProposal(req.params.id);
+      if (!proposal) {
+        return res.status(404).json({ success: false, error: "Proposal not found" });
+      }
+      
+      const items = await storage.getDealProposalItems(proposal.id);
+      const snapshot = await storage.getDealProposalSnapshot(proposal.id);
+      
+      res.json({ success: true, proposal, items, snapshot });
+    } catch (error: any) {
+      console.error("Error getting proposal:", error);
+      res.status(500).json({ success: false, error: "Failed to get proposal" });
+    }
+  });
+
   // Get proposals for a deal
   app.get("/api/deals/:dealId/proposals", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;

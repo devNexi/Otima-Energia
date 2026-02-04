@@ -670,6 +670,7 @@ export interface IStorage {
   // ============== DEAL PROPOSALS (Proposal OS) ==============
   createDealProposal(data: InsertDealProposal): Promise<DealProposal>;
   getDealProposals(dealId: string): Promise<DealProposal[]>;
+  getAllDealProposals(): Promise<DealProposal[]>;
   getDealProposal(id: string): Promise<DealProposal | undefined>;
   getDealProposalByPublicId(publicId: string): Promise<DealProposal | undefined>;
   updateDealProposal(id: string, data: Partial<InsertDealProposal>): Promise<DealProposal | undefined>;
@@ -3972,6 +3973,11 @@ export class Storage implements IStorage {
   async getDealProposals(dealId: string): Promise<DealProposal[]> {
     return await db.select().from(dealProposals)
       .where(eq(dealProposals.dealId, dealId))
+      .orderBy(desc(dealProposals.createdAt));
+  }
+
+  async getAllDealProposals(): Promise<DealProposal[]> {
+    return await db.select().from(dealProposals)
       .orderBy(desc(dealProposals.createdAt));
   }
   

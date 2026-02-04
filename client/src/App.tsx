@@ -26,6 +26,7 @@ import RedeLucros from "@/pages/RedeLucros";
 import TermosParcerias from "@/pages/TermosParcerias";
 import SupplierManager from "@/pages/SupplierManager";
 import ProposalTracker from "@/pages/ProposalTracker";
+import ProposalsManager from "@/pages/ProposalsManager";
 import BenchmarkManager from "@/pages/BenchmarkManager";
 import PrcUploadCenter from "@/pages/PrcUploadCenter";
 import PrcReviewPage from "@/pages/PrcReviewPage";
@@ -71,7 +72,8 @@ function Router() {
       <Route path="/admin/overview" component={() => <Admin defaultTab="overview" />} />
       <Route path="/admin/audit" component={() => <Admin defaultTab="audit-trail" />} />
       <Route path="/admin/integrations" component={() => <Admin defaultTab="integrations" />} />
-      <Route path="/admin/proposals" component={ProposalTracker} />
+      <Route path="/admin/proposals" component={ProposalsManager} />
+      <Route path="/admin/proposals-legacy" component={ProposalTracker} />
       <Route path="/admin/benchmarks" component={BenchmarkManager} />
       <Route path="/admin/prc" component={PrcUploadCenter} />
       <Route path="/admin/prc/review/:id" component={PrcReviewPage} />

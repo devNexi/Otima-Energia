@@ -1,0 +1,227 @@
+You’ve made great progress. Now I need you to QA every workflow end-to-end and fix anything broken or incomplete, especially Proposals, because Renan must be able to generate, store, and send client-ready proposals from Supplier Quotes.
+
+0) Non-negotiable: Terminology + UX
+
+The user-facing term must be Supplier Quotes (not Quotes, not RFQ).
+
+RFQs must not appear as a top-level nav item for non-admin users.
+
+RFQs can exist internally for SLA tracking and auditing, but only visible:
+
+inside a deal context (advanced subpanel), or
+
+in Admin/QA tools.
+
+1) Navigation final order (role-aware)
+
+For Ops/Sales (Renan):
+
+Suppliers
+
+Deals
+
+Assembly
+
+Supplier Quotes
+
+Proposals
+
+Clients
+
+ECOS
+
+Commission
+
+Finance
+(+ Governance items as applicable)
+
+For Admin only:
+
+QA Console
+
+PRCs
+
+Integrations
+
+Settings
+
+Audit
+
+⚠️ Confirm that “Supplier Quotes” is a real page/tab (not just renamed UI) that maps to the operational quote objects in Deal OS.
+
+2) Proposals MUST be a complete “sales collateral” module (not a tracker)
+
+Right now you built a wizard + public view. Good. But Renan needs the full lifecycle:
+
+A) Proposal must be created from multiple supplier quotes
+
+A proposal should support 1..N quote options, not only 1 quote.
+
+Each option is supplier × term and should display:
+
+supplier name
+
+product type (conv/incentivada)
+
+term months
+
+client price (uplifted)
+
+savings over term (R$)
+
+savings avg monthly (R$)
+
+Renan must be able to mark one option as Recommended.
+
+B) Proposal must be generated into a branded PDF and stored
+
+Add a “Generate PDF” button.
+
+Store the generated PDF as a document record linked to the proposal.
+
+Proposal list page must show:
+
+status (DRAFT / GENERATED / SENT / VIEWED / ACCEPTED / REJECTED)
+
+last sent date
+
+view count
+
+validity end date
+
+related deal/client
+
+C) “Send proposal” must be first-class (email + audit)
+
+Add “Send” button inside proposal:
+
+sends email to client contact(s)
+
+includes public link
+
+attaches PDF
+
+logs event in audit trail + proposal events
+
+flips status → SENT
+
+Public view should log VIEWED event and set status → VIEWED if not already.
+
+D) Public proposal view must be client-safe
+
+The public page must NEVER show:
+
+supplier base price
+
+commissions/uplift breakdown
+
+internal notes
+Only client-facing price + savings + next steps.
+
+E) Proposal must be linked to Deal + Client
+
+Every proposal must reference dealId and clientId.
+
+If proposal is created from a Client screen, it should require selecting a deal (or auto-select open deal).
+
+3) QA Console: convert into a “smoke test runner” that checks UI buttons too
+
+You already built /admin/qa. Now do this:
+
+A) Add a “Guided Smoke Test” mode
+
+A checklist-based guided flow that validates:
+
+Create demo supplier
+
+Create demo client
+
+Upload bill OCR (or mock)
+
+Create deal
+
+Request quote (internal RFQ)
+
+Record supplier quote
+
+Generate proposal with 2+ options
+
+Generate PDF
+
+Send proposal
+
+Open public link → logs view
+
+Select winning quote → move deal forward
+
+Invoice milestone creation (if enabled)
+
+Each step should have:
+
+“Run check” button
+
+pass/fail
+
+error reason + link to fix area
+
+B) Add “UI button integrity checks”
+
+At minimum, ensure these buttons work without silent failures:
+
+New Client
+
+Generate Link
+
+Upload Bill
+
+Request Quotes
+
+New Supplier Quote
+
+Create Proposal
+
+Generate Proposal PDF
+
+Send Proposal
+
+View Proposal link
+
+Assembly actions (move state, unblock, etc.)
+
+4) Ensure Assembly is truly complete
+
+Confirm:
+
+Assembly Queue shows deals needing action and blocked deals
+
+Filtering works
+
+“Next step widgets” show correct recommended action
+
+Blocker checks prevent invalid transitions
+
+If anything is missing, fix it now.
+
+5) Acceptance Criteria (must meet all)
+
+Renan can go from Deal → Supplier Quotes → Proposal → Send in < 3 minutes.
+
+Proposal supports multiple quote options and shows savings per term.
+
+Proposal PDF is on-brand and stored in portal.
+
+Public link is safe and tracked (views).
+
+QA Console can validate all critical workflows end-to-end.
+
+Return:
+
+What broke during testing + what you fixed
+
+Any remaining “known issues” (must be short list)
+
+Where proposals live in nav + how Renan uses them step-by-step
+
+Small note (don’t ignore)
+
+The Proposal tab must not be hidden behind Clients only. Renan needs a dedicated Proposals section where everything he has generated/sent can be found and re-sent.

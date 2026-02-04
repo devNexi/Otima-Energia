@@ -26,6 +26,12 @@ import {
   Settings,
   AlertTriangle,
   Loader2,
+  Target,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
 
 type TestStatus = "pending" | "running" | "passed" | "failed";
@@ -128,6 +134,399 @@ const categoryIcons: Record<string, React.ReactNode> = {
   finance: <Clipboard className="h-4 w-4" />,
 };
 
+type SmokeStep = {
+  id: string;
+  title: string;
+  description: string;
+  instructions: string[];
+  checkEndpoint?: string;
+  checkMethod?: string;
+  link?: string;
+  status: "pending" | "in_progress" | "passed" | "skipped";
+  notes?: string;
+};
+
+type SmokeWorkflow = {
+  id: string;
+  name: string;
+  description: string;
+  steps: SmokeStep[];
+};
+
+const smokeWorkflows: SmokeWorkflow[] = [
+  {
+    id: "deal_lifecycle",
+    name: "Deal Lifecycle",
+    description: "Test end-to-end deal creation, qualification, and progression",
+    steps: [
+      {
+        id: "dl_1",
+        title: "Navigate to Deals",
+        description: "Open the Deals page and verify it loads correctly",
+        instructions: [
+          "Click 'Deals' in the navigation menu",
+          "Verify the deal list loads without errors",
+          "Check that filters (status, owner) are visible",
+        ],
+        link: "/admin?tab=deals",
+        status: "pending",
+      },
+      {
+        id: "dl_2",
+        title: "Create New Deal",
+        description: "Create a test deal with required fields",
+        instructions: [
+          "Click 'New Deal' button",
+          "Fill in client name, contact, and company",
+          "Select a deal owner",
+          "Save the deal",
+        ],
+        link: "/admin?tab=deals",
+        status: "pending",
+      },
+      {
+        id: "dl_3",
+        title: "Open Deal Details",
+        description: "View and verify deal detail page",
+        instructions: [
+          "Click on the newly created deal",
+          "Verify all sections load: Overview, Dossier, Quotes, Timeline",
+          "Check that actions menu shows available transitions",
+        ],
+        status: "pending",
+      },
+      {
+        id: "dl_4",
+        title: "Advance Deal Stage",
+        description: "Progress the deal through qualification",
+        instructions: [
+          "Click on 'Mark Qualified' or similar action",
+          "Verify the stage updates in the UI",
+          "Check that the audit timeline shows the transition",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "supplier_quotes",
+    name: "Supplier Quotes",
+    description: "Test quote request, entry, and management",
+    steps: [
+      {
+        id: "sq_1",
+        title: "Navigate to Supplier Quotes",
+        description: "Open the Supplier Quotes page",
+        instructions: [
+          "Click 'Supplier Quotes' in the navigation",
+          "Verify the quotes list loads",
+          "Check filters work (supplier, status)",
+        ],
+        link: "/admin?tab=supplier-quotes",
+        status: "pending",
+      },
+      {
+        id: "sq_2",
+        title: "Create Quote Request",
+        description: "Initiate a new quote request for a deal",
+        instructions: [
+          "Select a deal that needs quotes",
+          "Click 'Request Quote' or similar",
+          "Select suppliers to request quotes from",
+          "Verify RFQ records are created",
+        ],
+        status: "pending",
+      },
+      {
+        id: "sq_3",
+        title: "Enter Quote Details",
+        description: "Record a supplier's quote response",
+        instructions: [
+          "Open a pending quote request",
+          "Enter pricing details: base price, term, product type",
+          "Save the quote",
+          "Verify it appears in the quotes list",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "proposals",
+    name: "Proposals",
+    description: "Test proposal generation, PDF, and client sending",
+    steps: [
+      {
+        id: "pr_1",
+        title: "Navigate to Proposals",
+        description: "Open the Proposals page",
+        instructions: [
+          "Click 'Proposals' in the navigation",
+          "Verify the proposals list loads",
+          "Check status badges display correctly",
+        ],
+        link: "/admin/proposals",
+        status: "pending",
+      },
+      {
+        id: "pr_2",
+        title: "Create New Proposal",
+        description: "Create a proposal for a deal with quotes",
+        instructions: [
+          "Click 'New Proposal' button",
+          "Select a deal with approved quotes",
+          "Add quote items to the proposal",
+          "Mark one as recommended",
+          "Save as draft",
+        ],
+        status: "pending",
+      },
+      {
+        id: "pr_3",
+        title: "Generate PDF",
+        description: "Generate and preview the proposal PDF",
+        instructions: [
+          "Open the draft proposal",
+          "Click 'Generate PDF' button",
+          "Verify PDF generates successfully",
+          "Check status updates to GENERATED",
+        ],
+        status: "pending",
+      },
+      {
+        id: "pr_4",
+        title: "Send to Client",
+        description: "Send the proposal to the client",
+        instructions: [
+          "Click 'Send' button",
+          "Verify email is sent",
+          "Check status updates to SENT",
+          "Verify public link is generated",
+        ],
+        status: "pending",
+      },
+      {
+        id: "pr_5",
+        title: "Verify Public View",
+        description: "Test the client-facing proposal view",
+        instructions: [
+          "Copy the public link",
+          "Open in incognito window",
+          "Verify proposal displays correctly",
+          "Confirm NO internal data visible (base prices, margins)",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "commission",
+    name: "Commission Tracking",
+    description: "Test commission event creation and milestone tracking",
+    steps: [
+      {
+        id: "cm_1",
+        title: "Navigate to Commission",
+        description: "Open the Commission page",
+        instructions: [
+          "Click 'Commission' in the navigation",
+          "Verify commission events load",
+          "Check milestone filters work",
+        ],
+        link: "/admin?tab=revenue",
+        status: "pending",
+      },
+      {
+        id: "cm_2",
+        title: "View Commission Details",
+        description: "Open a commission event to view details",
+        instructions: [
+          "Click on a commission event",
+          "Verify milestone info displays (M1/M2)",
+          "Check amount calculations are correct",
+          "Verify linked deal information",
+        ],
+        status: "pending",
+      },
+      {
+        id: "cm_3",
+        title: "Generate Invoice",
+        description: "Test invoice generation for a commission",
+        instructions: [
+          "Select a commission event with PENDING status",
+          "Click 'Generate Invoice' button",
+          "Verify invoice is created",
+          "Check status updates correctly",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "assembly_queue",
+    name: "Assembly Queue",
+    description: "Test the assembly queue for blocked deals",
+    steps: [
+      {
+        id: "aq_1",
+        title: "Navigate to Assembly",
+        description: "Open the Assembly Queue page",
+        instructions: [
+          "Click 'Assembly' in the navigation",
+          "Verify blocked deals list loads",
+          "Check that block reasons are visible",
+        ],
+        link: "/admin?tab=assembly-queue",
+        status: "pending",
+      },
+      {
+        id: "aq_2",
+        title: "Filter Blocked Deals",
+        description: "Test filtering capabilities",
+        instructions: [
+          "Use status filter to show different block types",
+          "Filter by owner if available",
+          "Verify counts update correctly",
+        ],
+        status: "pending",
+      },
+      {
+        id: "aq_3",
+        title: "Resolve a Block",
+        description: "Take action on a blocked deal",
+        instructions: [
+          "Click on a blocked deal",
+          "Review the required action",
+          "Complete the required step or mark as resolved",
+          "Verify deal leaves the queue",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "button_integrity",
+    name: "UI Button Integrity",
+    description: "Verify all critical action buttons exist and are clickable",
+    steps: [
+      {
+        id: "bi_1",
+        title: "Navigation Buttons",
+        description: "Verify main navigation links work",
+        instructions: [
+          "Click each item in the navigation menu",
+          "Verify each page loads without errors",
+          "Check that back buttons return to previous page",
+          "Verify logout button works correctly",
+        ],
+        link: "/admin",
+        status: "pending",
+      },
+      {
+        id: "bi_2",
+        title: "Deal Action Buttons",
+        description: "Test deal-related action buttons",
+        instructions: [
+          "Open a deal detail page",
+          "Test 'Edit' button opens edit form",
+          "Test stage transition buttons are clickable",
+          "Test 'Create Proposal' button",
+          "Verify all modals close properly",
+        ],
+        link: "/admin?tab=deals",
+        status: "pending",
+      },
+      {
+        id: "bi_3",
+        title: "Proposal Action Buttons",
+        description: "Test proposal management buttons",
+        instructions: [
+          "Navigate to Proposals page",
+          "Test 'New Proposal' button",
+          "Test 'Generate PDF' button on a draft",
+          "Test 'Send' button on a generated proposal",
+          "Test 'View' button to preview public link",
+        ],
+        link: "/admin/proposals",
+        status: "pending",
+      },
+      {
+        id: "bi_4",
+        title: "Quote Entry Buttons",
+        description: "Test supplier quote entry buttons",
+        instructions: [
+          "Navigate to Supplier Quotes page",
+          "Test 'Add Quote' or 'New Quote' button",
+          "Test 'Edit' button on existing quote",
+          "Test 'Approve' and 'Reject' buttons",
+          "Verify form submit buttons work",
+        ],
+        link: "/admin?tab=supplier-quotes",
+        status: "pending",
+      },
+      {
+        id: "bi_5",
+        title: "Admin Action Buttons",
+        description: "Test administrative action buttons",
+        instructions: [
+          "Navigate to Governance > PRC tab",
+          "Test PRC upload button and document actions",
+          "Check audit trail loads correctly",
+          "Test integrations settings if available",
+          "Verify dangerous actions have confirmation dialogs",
+        ],
+        link: "/admin?tab=prc",
+        status: "pending",
+      },
+    ],
+  },
+  {
+    id: "data_display",
+    name: "Data Display Verification",
+    description: "Verify data displays correctly across all views",
+    steps: [
+      {
+        id: "dd_1",
+        title: "Dashboard Stats",
+        description: "Verify dashboard statistics are accurate",
+        instructions: [
+          "Navigate to the main dashboard",
+          "Check that deal counts match actual deals",
+          "Verify revenue figures format correctly",
+          "Check that charts load properly",
+        ],
+        link: "/admin",
+        status: "pending",
+      },
+      {
+        id: "dd_2",
+        title: "List Pagination",
+        description: "Test list views with many records",
+        instructions: [
+          "Go to Clients or Deals list",
+          "Verify pagination works if many records",
+          "Test sorting by different columns",
+          "Verify search/filter updates results",
+        ],
+        link: "/admin?tab=clients",
+        status: "pending",
+      },
+      {
+        id: "dd_3",
+        title: "Detail Views",
+        description: "Verify detail pages show complete data",
+        instructions: [
+          "Open a deal detail page",
+          "Check all sections expand/collapse",
+          "Verify linked data (client, quotes) displays",
+          "Check timestamps format correctly",
+        ],
+        status: "pending",
+      },
+    ],
+  },
+];
+
 const statusColors: Record<TestStatus, string> = {
   pending: "bg-gray-100 text-gray-700",
   running: "bg-blue-100 text-blue-700",
@@ -144,6 +543,10 @@ export default function QaConsole() {
   const [customBody, setCustomBody] = useState("");
   const [customResult, setCustomResult] = useState<string>("");
   const [isRunningAll, setIsRunningAll] = useState(false);
+  
+  const [workflows, setWorkflows] = useState<SmokeWorkflow[]>(smokeWorkflows);
+  const [expandedWorkflow, setExpandedWorkflow] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<{ workflowId: string; stepId: string } | null>(null);
 
   const runTest = async (test: TestCase): Promise<TestCase> => {
     const startTime = Date.now();
@@ -219,6 +622,82 @@ export default function QaConsole() {
 
   const handleReset = () => {
     setTestCases(defaultTestCases);
+  };
+
+  const handleStartStep = (workflowId: string, stepId: string) => {
+    setCurrentStep({ workflowId, stepId });
+    setWorkflows(prev => prev.map(w => 
+      w.id === workflowId 
+        ? { ...w, steps: w.steps.map(s => s.id === stepId ? { ...s, status: "in_progress" as const } : s) }
+        : w
+    ));
+    setExpandedWorkflow(workflowId);
+  };
+
+  const handlePassStep = (workflowId: string, stepId: string) => {
+    setWorkflows(prev => prev.map(w => {
+      if (w.id !== workflowId) return w;
+      const stepIndex = w.steps.findIndex(s => s.id === stepId);
+      const updatedSteps = w.steps.map((s, i) => {
+        if (s.id === stepId) return { ...s, status: "passed" as const };
+        if (i === stepIndex + 1 && s.status === "pending") return { ...s, status: "in_progress" as const };
+        return s;
+      });
+      return { ...w, steps: updatedSteps };
+    }));
+    
+    const workflow = workflows.find(w => w.id === workflowId);
+    const stepIndex = workflow?.steps.findIndex(s => s.id === stepId) ?? -1;
+    const nextStep = workflow?.steps[stepIndex + 1];
+    
+    if (nextStep) {
+      setCurrentStep({ workflowId, stepId: nextStep.id });
+    } else {
+      setCurrentStep(null);
+      toast({
+        title: "Workflow Complete",
+        description: `${workflow?.name} smoke test passed!`,
+      });
+    }
+  };
+
+  const handleSkipStep = (workflowId: string, stepId: string) => {
+    setWorkflows(prev => prev.map(w => {
+      if (w.id !== workflowId) return w;
+      const stepIndex = w.steps.findIndex(s => s.id === stepId);
+      const updatedSteps = w.steps.map((s, i) => {
+        if (s.id === stepId) return { ...s, status: "skipped" as const };
+        if (i === stepIndex + 1 && s.status === "pending") return { ...s, status: "in_progress" as const };
+        return s;
+      });
+      return { ...w, steps: updatedSteps };
+    }));
+    
+    const workflow = workflows.find(w => w.id === workflowId);
+    const stepIndex = workflow?.steps.findIndex(s => s.id === stepId) ?? -1;
+    const nextStep = workflow?.steps[stepIndex + 1];
+    
+    if (nextStep) {
+      setCurrentStep({ workflowId, stepId: nextStep.id });
+    } else {
+      setCurrentStep(null);
+    }
+  };
+
+  const handleResetWorkflow = (workflowId: string) => {
+    setWorkflows(prev => prev.map(w => 
+      w.id === workflowId 
+        ? { ...w, steps: w.steps.map(s => ({ ...s, status: "pending" as const })) }
+        : w
+    ));
+    setCurrentStep(null);
+  };
+
+  const getWorkflowProgress = (workflow: SmokeWorkflow) => {
+    const passed = workflow.steps.filter(s => s.status === "passed").length;
+    const skipped = workflow.steps.filter(s => s.status === "skipped").length;
+    const total = workflow.steps.length;
+    return { passed, skipped, total, percentage: Math.round(((passed + skipped) / total) * 100) };
   };
 
   const handleCustomRequest = async () => {
@@ -364,11 +843,188 @@ export default function QaConsole() {
           </Card>
         </div>
 
-        <Tabs defaultValue="tests" className="space-y-4">
+        <Tabs defaultValue="smoke" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="tests">Test Suite</TabsTrigger>
-            <TabsTrigger value="custom">Custom Request</TabsTrigger>
+            <TabsTrigger value="smoke" data-testid="tab-smoke-test">
+              <Target className="h-4 w-4 mr-2" />
+              Guided Smoke Test
+            </TabsTrigger>
+            <TabsTrigger value="tests" data-testid="tab-api-tests">Test Suite</TabsTrigger>
+            <TabsTrigger value="custom" data-testid="tab-custom">Custom Request</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="smoke">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-violet-600" />
+                    Guided Smoke Tests
+                  </CardTitle>
+                  <CardDescription>
+                    Step-by-step workflow validation. Follow each step and mark as passed or skipped.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {workflows.map(workflow => {
+                    const progress = getWorkflowProgress(workflow);
+                    const isExpanded = expandedWorkflow === workflow.id;
+                    
+                    return (
+                      <div key={workflow.id} className="border rounded-lg overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                          onClick={() => setExpandedWorkflow(isExpanded ? null : workflow.id)}
+                          data-testid={`workflow-header-${workflow.id}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 text-violet-600">
+                              {progress.percentage === 100 ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : progress.percentage > 0 ? (
+                                <Clock className="h-4 w-4" />
+                              ) : (
+                                <Target className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">{workflow.name}</div>
+                              <div className="text-sm text-gray-500">{workflow.description}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm text-gray-500">
+                              {progress.passed}/{progress.total} passed
+                              {progress.skipped > 0 && `, ${progress.skipped} skipped`}
+                            </div>
+                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-emerald-500 transition-all duration-300"
+                                style={{ width: `${progress.percentage}%` }}
+                              />
+                            </div>
+                            {isExpanded ? (
+                              <ChevronUp className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className="border-t">
+                            <div className="p-4 space-y-3">
+                              {workflow.steps.map((step, idx) => (
+                                <div 
+                                  key={step.id}
+                                  className={`p-4 rounded-lg border ${
+                                    step.status === "in_progress" 
+                                      ? "border-violet-300 bg-violet-50" 
+                                      : step.status === "passed"
+                                      ? "border-emerald-200 bg-emerald-50"
+                                      : step.status === "skipped"
+                                      ? "border-gray-200 bg-gray-50"
+                                      : "border-gray-200"
+                                  }`}
+                                  data-testid={`step-${step.id}`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-sm font-medium">
+                                          {idx + 1}
+                                        </span>
+                                        <span className="font-medium">{step.title}</span>
+                                        {step.status === "passed" && (
+                                          <Badge className="bg-emerald-100 text-emerald-700">Passed</Badge>
+                                        )}
+                                        {step.status === "skipped" && (
+                                          <Badge className="bg-gray-100 text-gray-600">Skipped</Badge>
+                                        )}
+                                        {step.status === "in_progress" && (
+                                          <Badge className="bg-violet-100 text-violet-700">In Progress</Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-gray-600 mt-1 ml-8">{step.description}</p>
+                                      
+                                      {step.status === "in_progress" && (
+                                        <div className="mt-3 ml-8">
+                                          <div className="text-sm font-medium text-gray-700 mb-2">Instructions:</div>
+                                          <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
+                                            {step.instructions.map((instruction, i) => (
+                                              <li key={i}>{instruction}</li>
+                                            ))}
+                                          </ol>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 ml-4">
+                                      {step.link && step.status === "in_progress" && (
+                                        <Link href={step.link}>
+                                          <Button size="sm" variant="outline" data-testid={`button-go-${step.id}`}>
+                                            <ExternalLink className="h-4 w-4 mr-1" />
+                                            Go
+                                          </Button>
+                                        </Link>
+                                      )}
+                                      {step.status === "pending" && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          onClick={() => handleStartStep(workflow.id, step.id)}
+                                          data-testid={`button-start-${step.id}`}
+                                        >
+                                          <Play className="h-4 w-4 mr-1" />
+                                          Start
+                                        </Button>
+                                      )}
+                                      {step.status === "in_progress" && (
+                                        <>
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={() => handleSkipStep(workflow.id, step.id)}
+                                            data-testid={`button-skip-${step.id}`}
+                                          >
+                                            Skip
+                                          </Button>
+                                          <Button 
+                                            size="sm"
+                                            onClick={() => handlePassStep(workflow.id, step.id)}
+                                            className="bg-emerald-600 hover:bg-emerald-700"
+                                            data-testid={`button-pass-${step.id}`}
+                                          >
+                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                            Pass
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="p-4 border-t bg-gray-50 flex justify-end">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleResetWorkflow(workflow.id)}
+                                data-testid={`button-reset-${workflow.id}`}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reset Workflow
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="tests">
             <Card>
