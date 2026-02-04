@@ -18,6 +18,7 @@ import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
+import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
 import { NextStepsWidget, useWorkflowGates } from "@/components/ops/NextStepsWidget";
@@ -94,6 +95,8 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const queryClient = useQueryClient();
   
   const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
+  const [clientPriceQuote, setClientPriceQuote] = useState<any>(null);
+  const [clientPriceModalOpen, setClientPriceModalOpen] = useState(false);
   const [transitionForm, setTransitionForm] = useState({
     reason: "",
     notes: ""
@@ -993,20 +996,32 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                           )}
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Preço" : "Price"}</p>
-                          <p className="font-medium">
+                          <p className="text-gray-500">{language === "pt" ? "Preço Base" : "Base Price"}</p>
+                          <p className="font-medium text-gray-600">
                             {quote.baseEnergyPriceRmwh 
                               ? `R$ ${parseFloat(quote.baseEnergyPriceRmwh).toFixed(2)}/MWh`
                               : "-"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Comissão" : "Commission"}</p>
+                          <p className="text-gray-500">{language === "pt" ? "Preço ao Cliente" : "Client Price"}</p>
+                          {quote.clientEnergyPriceRmwh ? (
+                            <p className="font-semibold text-green-700">
+                              R$ {parseFloat(quote.clientEnergyPriceRmwh).toFixed(2)}/MWh
+                            </p>
+                          ) : (
+                            <p className="text-orange-600 text-xs">
+                              {language === "pt" ? "Não definido" : "Not set"}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-gray-500">{language === "pt" ? "Margem" : "Margin"}</p>
                           <p className="font-medium">
-                            {quote.commissionValueRmwh 
-                              ? `R$ ${parseFloat(quote.commissionValueRmwh).toFixed(4)}/MWh`
+                            {quote.upliftValue 
+                              ? `${quote.upliftType === "PERCENT" ? "" : "R$ "}${parseFloat(quote.upliftValue).toFixed(2)}${quote.upliftType === "PERCENT" ? "%" : "/MWh"}`
                               : "-"}
                           </p>
                         </div>
@@ -1019,12 +1034,38 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Recebida" : "Received"}</p>
-                          <p className="font-medium">
-                            {new Date(quote.receivedAt).toLocaleDateString("pt-BR")}
-                          </p>
+                          <p className="text-gray-500">{language === "pt" ? "Status" : "Status"}</p>
+                          {quote.isProposalEligible ? (
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              {language === "pt" ? "Elegível" : "Eligible"}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">
+                              {language === "pt" ? "Sem preço cliente" : "No client price"}
+                            </Badge>
+                          )}
                         </div>
                       </div>
+                      
+                      {!quote.isRejected && !quote.isSelected && (
+                        <div className="mt-3 pt-3 border-t flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={quote.clientEnergyPriceRmwh ? "outline" : "default"}
+                            onClick={() => {
+                              setClientPriceQuote({ ...quote, dealId: dealId });
+                              setClientPriceModalOpen(true);
+                            }}
+                            data-testid={`set-client-price-btn-${quote.id}`}
+                          >
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            {quote.clientEnergyPriceRmwh 
+                              ? (language === "pt" ? "Ajustar Preço" : "Adjust Price")
+                              : (language === "pt" ? "Definir Preço ao Cliente" : "Set Client Price")
+                            }
+                          </Button>
+                        </div>
+                      )}
                       {quote.selectionReason && (
                         <p className="text-sm text-green-600 mt-2">
                           <strong>{language === "pt" ? "Motivo seleção:" : "Selection reason:"}</strong> {quote.selectionReason}
@@ -1266,6 +1307,12 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <DealEcosTab dealId={dealId} />
         </TabsContent>
       </Tabs>
+
+      <SetClientPriceModal
+        quote={clientPriceQuote}
+        open={clientPriceModalOpen}
+        onOpenChange={setClientPriceModalOpen}
+      />
     </div>
   );
 }

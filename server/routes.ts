@@ -9383,21 +9383,22 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal quote not found" });
       }
       
+      // CRITICAL: Quote must have client price set (isProposalEligible = true)
+      if (!dealQuote.isProposalEligible || !dealQuote.clientEnergyPriceRmwh) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Quote must have client price set before adding to proposal. Go to Quotes tab and click 'Set Client Price'." 
+        });
+      }
+      
       // Get supplier name
       const supplier = await storage.getSupplier(dealQuote.supplierId);
       const supplierName = supplier?.name || 'Unknown Supplier';
       
-      // Calculate final price based on margin
-      const basePrice = parseFloat(dealQuote.baseEnergyPriceRmwh || '0');
-      const marginType = req.body.marginType || 'ADD_R_PER_MWH';
-      const marginValue = parseFloat(req.body.marginValue || '0');
-      
-      let finalPrice: number;
-      if (marginType === 'ADD_R_PER_MWH') {
-        finalPrice = basePrice + marginValue;
-      } else {
-        finalPrice = basePrice * (1 + marginValue / 100);
-      }
+      // Use pre-set client price (already includes Ótima margin)
+      const finalPrice = parseFloat(dealQuote.clientEnergyPriceRmwh);
+      const marginType = dealQuote.upliftType || 'R_PER_MWH';
+      const marginValue = parseFloat(dealQuote.upliftValue || '0');
       
       // Term is required - use from request or quote
       const termMonths = req.body.termMonths || dealQuote.termMonths || 12;

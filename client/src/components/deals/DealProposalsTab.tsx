@@ -29,14 +29,15 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-interface DealQuote {
+interface EligibleQuote {
   id: string;
   supplierId: number;
   supplierName?: string;
   energyType: string;
-  baseEnergyPriceRmwh: string;
+  clientEnergyPriceRmwh: string;
   validUntil: string;
-  status: string;
+  termMonths: number;
+  priceStructure: string | null;
 }
 
 interface ProposalItem {
@@ -96,8 +97,6 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [newItemForm, setNewItemForm] = useState({
     dealQuoteId: "",
-    marginType: "ADD_R_PER_MWH",
-    marginValue: "0",
     isRecommended: false,
     publicNotes: ""
   });
@@ -110,10 +109,10 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
     }
   });
 
-  const { data: quotesData } = useQuery({
-    queryKey: [`/api/deals/${dealId}/quotes`],
+  const { data: eligibleQuotesData } = useQuery({
+    queryKey: [`/api/deals/${dealId}/eligible-quotes`],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/quotes`);
+      const res = await fetch(`/api/deals/${dealId}/eligible-quotes`);
       return res.json();
     }
   });
@@ -128,7 +127,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
   });
 
   const proposals: Proposal[] = proposalsData?.proposals || [];
-  const quotes: DealQuote[] = quotesData?.quotes || [];
+  const eligibleQuotes: EligibleQuote[] = eligibleQuotesData?.quotes || [];
   const items: ProposalItem[] = proposalDetails?.items || [];
 
   const createProposalMutation = useMutation({
@@ -167,8 +166,6 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
         setAddItemDialogOpen(false);
         setNewItemForm({
           dealQuoteId: "",
-          marginType: "ADD_R_PER_MWH",
-          marginValue: "0",
           isRecommended: false,
           publicNotes: ""
         });
@@ -254,16 +251,6 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
     toast.success("Link copiado!");
   };
 
-  const calculateFinalPrice = (quote: DealQuote) => {
-    const basePrice = parseFloat(quote.baseEnergyPriceRmwh);
-    const marginValue = parseFloat(newItemForm.marginValue || "0");
-    if (newItemForm.marginType === "ADD_R_PER_MWH") {
-      return basePrice + marginValue;
-    } else {
-      return basePrice * (1 + marginValue / 100);
-    }
-  };
-
   if (loadingProposals) {
     return (
       <div className="flex justify-center p-8">
@@ -278,12 +265,12 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Propostas Comerciais</h3>
           <p className="text-sm text-muted-foreground">
-            Crie e gerencie propostas para o cliente com base nas cotações recebidas
+            Crie propostas com base em cotações com preço ao cliente definido
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="create-proposal-btn">
+            <Button data-testid="create-proposal-btn" disabled={eligibleQuotes.length === 0}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Proposta
             </Button>
@@ -318,6 +305,21 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
           </DialogContent>
         </Dialog>
       </div>
+
+      {eligibleQuotes.length === 0 && (
+        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3">
+          <DollarSign className="w-5 h-5 text-orange-500 mt-0.5" />
+          <div>
+            <p className="font-medium text-orange-800">
+              Nenhuma cotação elegível para propostas
+            </p>
+            <p className="text-sm text-orange-600 mt-1">
+              Antes de criar propostas, acesse a aba "Cotações" e defina o preço ao cliente 
+              clicando em "Definir Preço ao Cliente" em cada cotação que deseja incluir.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-1">
@@ -487,7 +489,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                       <h4 className="text-sm font-medium">Itens da Proposta</h4>
                       <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" disabled={quotes.length === 0}>
+                          <Button size="sm" variant="outline" disabled={eligibleQuotes.length === 0}>
                             <Plus className="w-4 h-4 mr-1" />
                             Adicionar Cotação
                           </Button>
@@ -496,89 +498,78 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                           <DialogHeader>
                             <DialogTitle>Adicionar Cotação à Proposta</DialogTitle>
                             <DialogDescription>
-                              Selecione uma cotação e configure a margem para o cliente
+                              Selecione uma cotação com preço ao cliente já definido
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label>Cotação do Fornecedor</Label>
-                              <Select
-                                value={newItemForm.dealQuoteId}
-                                onValueChange={(v) => setNewItemForm(f => ({ ...f, dealQuoteId: v }))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione uma cotação" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {quotes.map((q) => (
-                                    <SelectItem key={q.id} value={q.id}>
-                                      {q.supplierName || `Fornecedor ${q.supplierId}`} - R$ {q.baseEnergyPriceRmwh}/MWh
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Tipo de Margem</Label>
-                                <Select
-                                  value={newItemForm.marginType}
-                                  onValueChange={(v) => setNewItemForm(f => ({ ...f, marginType: v }))}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="ADD_R_PER_MWH">R$/MWh (fixo)</SelectItem>
-                                    <SelectItem value="ADD_PERCENT">% (percentual)</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                            {eligibleQuotes.length === 0 ? (
+                              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
+                                <DollarSign className="w-8 h-8 mx-auto text-orange-500 mb-2" />
+                                <p className="text-sm font-medium text-orange-800">
+                                  Nenhuma cotação elegível
+                                </p>
+                                <p className="text-xs text-orange-600 mt-1">
+                                  Defina o preço ao cliente nas cotações antes de criar propostas
+                                </p>
                               </div>
-                              <div className="space-y-2">
-                                <Label>Valor da Margem</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={newItemForm.marginValue}
-                                  onChange={(e) => setNewItemForm(f => ({ ...f, marginValue: e.target.value }))}
-                                  placeholder={newItemForm.marginType === "ADD_R_PER_MWH" ? "5.00" : "3"}
-                                />
-                              </div>
-                            </div>
-
-                            {newItemForm.dealQuoteId && (
-                              <div className="p-3 bg-muted rounded-lg">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-muted-foreground">Preço Final Cliente:</span>
-                                  <span className="text-lg font-bold text-primary">
-                                    R$ {calculateFinalPrice(quotes.find(q => q.id === newItemForm.dealQuoteId)!).toFixed(2)}/MWh
-                                  </span>
+                            ) : (
+                              <>
+                                <div className="space-y-2">
+                                  <Label>Cotação Elegível</Label>
+                                  <Select
+                                    value={newItemForm.dealQuoteId}
+                                    onValueChange={(v) => setNewItemForm(f => ({ ...f, dealQuoteId: v }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecione uma cotação" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {eligibleQuotes.map((q) => (
+                                        <SelectItem key={q.id} value={q.id}>
+                                          {q.supplierName || `Fornecedor ${q.supplierId}`} - R$ {parseFloat(q.clientEnergyPriceRmwh).toFixed(2)}/MWh
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
-                              </div>
+
+                                {newItemForm.dealQuoteId && (
+                                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-green-700">Preço ao Cliente:</span>
+                                      <span className="text-lg font-bold text-green-800">
+                                        R$ {parseFloat(eligibleQuotes.find(q => q.id === newItemForm.dealQuoteId)?.clientEnergyPriceRmwh || "0").toFixed(2)}/MWh
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Este valor inclui a margem Ótima e será exibido ao cliente
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id="isRecommended"
+                                    checked={newItemForm.isRecommended}
+                                    onCheckedChange={(c) => setNewItemForm(f => ({ ...f, isRecommended: !!c }))}
+                                  />
+                                  <Label htmlFor="isRecommended" className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-amber-500" />
+                                    Marcar como recomendada
+                                  </Label>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label>Notas para o cliente (opcional)</Label>
+                                  <Textarea
+                                    value={newItemForm.publicNotes}
+                                    onChange={(e) => setNewItemForm(f => ({ ...f, publicNotes: e.target.value }))}
+                                    placeholder="Observações que aparecerão na proposta"
+                                    rows={2}
+                                  />
+                                </div>
+                              </>
                             )}
-
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="isRecommended"
-                                checked={newItemForm.isRecommended}
-                                onCheckedChange={(c) => setNewItemForm(f => ({ ...f, isRecommended: !!c }))}
-                              />
-                              <Label htmlFor="isRecommended" className="flex items-center gap-1">
-                                <Star className="w-4 h-4 text-amber-500" />
-                                Marcar como recomendada
-                              </Label>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>Notas para o cliente (opcional)</Label>
-                              <Textarea
-                                value={newItemForm.publicNotes}
-                                onChange={(e) => setNewItemForm(f => ({ ...f, publicNotes: e.target.value }))}
-                                placeholder="Observações que aparecerão na proposta"
-                                rows={2}
-                              />
-                            </div>
                           </div>
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setAddItemDialogOpen(false)}>
@@ -622,7 +613,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                                   )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                  {item.productType || "Energia"} • Margem: {item.marginType === "ADD_R_PER_MWH" ? `R$ ${item.marginValue}/MWh` : `${item.marginValue}%`}
+                                  {item.productType || "Energia"}
                                 </p>
                               </div>
                               <div className="flex items-center gap-4">
