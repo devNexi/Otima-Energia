@@ -1711,6 +1711,15 @@ export const dealQuotes = pgTable("deal_quotes", {
   // Client-facing uplifted price (base + commission markup) - ONLY this shown to client
   clientEnergyPriceRmwh: decimal("client_energy_price_rmwh", { precision: 10, scale: 4 }),
   
+  // Uplift tracking (INTERNAL ONLY - never shown to client)
+  upliftType: text("uplift_type"), // 'R_PER_MWH' or 'PERCENT' - how margin was applied
+  upliftValue: decimal("uplift_value", { precision: 10, scale: 4 }), // The actual uplift amount/percentage
+  clientPriceSetBy: text("client_price_set_by"), // User who set the client price
+  clientPriceSetAt: timestamp("client_price_set_at"), // When client price was set
+  
+  // Proposal eligibility gate - MUST be true to use in proposals
+  isProposalEligible: boolean("is_proposal_eligible").default(false),
+  
   // Term for proposal grouping (each supplier×term = distinct quote row)
   termMonths: integer("term_months"),
   

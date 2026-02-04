@@ -353,6 +353,15 @@ export interface IStorage {
   updateDealQuote(id: string, data: Partial<InsertDealQuote>): Promise<DealQuote | undefined>;
   selectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined>;
   rejectDealQuote(quoteId: string, reason: string): Promise<DealQuote | undefined>;
+  setDealQuoteClientPrice(quoteId: string, data: {
+    clientEnergyPriceRmwh: string;
+    upliftType: string;
+    upliftValue: string;
+    clientPriceSetBy: string;
+    clientPriceSetAt: Date;
+    isProposalEligible: boolean;
+  }): Promise<DealQuote | undefined>;
+  getProposalEligibleQuotes(dealId: string): Promise<DealQuote[]>;
   
   // Deal Commission Events
   createDealCommissionEvent(event: InsertDealCommissionEvent): Promise<DealCommissionEvent>;
@@ -2048,6 +2057,38 @@ export class Storage implements IStorage {
       .where(eq(dealQuotes.id, quoteId))
       .returning();
     return result[0];
+  }
+
+  async setDealQuoteClientPrice(quoteId: string, data: {
+    clientEnergyPriceRmwh: string;
+    upliftType: string;
+    upliftValue: string;
+    clientPriceSetBy: string;
+    clientPriceSetAt: Date;
+    isProposalEligible: boolean;
+  }): Promise<DealQuote | undefined> {
+    const result = await db.update(dealQuotes)
+      .set({
+        clientEnergyPriceRmwh: data.clientEnergyPriceRmwh,
+        upliftType: data.upliftType,
+        upliftValue: data.upliftValue,
+        clientPriceSetBy: data.clientPriceSetBy,
+        clientPriceSetAt: data.clientPriceSetAt,
+        isProposalEligible: data.isProposalEligible
+      })
+      .where(eq(dealQuotes.id, quoteId))
+      .returning();
+    return result[0];
+  }
+
+  async getProposalEligibleQuotes(dealId: string): Promise<DealQuote[]> {
+    return await db.select().from(dealQuotes)
+      .where(and(
+        eq(dealQuotes.dealId, dealId),
+        eq(dealQuotes.isProposalEligible, true),
+        eq(dealQuotes.isRejected, false)
+      ))
+      .orderBy(desc(dealQuotes.createdAt));
   }
 
   // Deal Commission Events

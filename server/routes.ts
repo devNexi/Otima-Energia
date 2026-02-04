@@ -4663,6 +4663,92 @@ export async function registerRoutes(
     }
   });
 
+  // Set client price on a quote (apply Ótima commission margin)
+  app.post("/api/deals/:dealId/quotes/:quoteId/set-client-price", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
+    try {
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = await storage.getAdminSession(sessionId);
+      const user = session ? await storage.getUser(session.userId) : null;
+      
+      const { upliftType, upliftValue } = req.body;
+      
+      if (!upliftType || upliftValue === undefined || upliftValue === null) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Uplift type and value are required" 
+        });
+      }
+      
+      if (!['R_PER_MWH', 'PERCENT'].includes(upliftType)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Uplift type must be 'R_PER_MWH' or 'PERCENT'" 
+        });
+      }
+      
+      const quote = await storage.getDealQuote(req.params.quoteId);
+      if (!quote) {
+        return res.status(404).json({ success: false, error: "Quote not found" });
+      }
+      
+      if (!quote.baseEnergyPriceRmwh) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Quote has no base price - cannot calculate client price" 
+        });
+      }
+      
+      const basePrice = parseFloat(quote.baseEnergyPriceRmwh);
+      let clientPrice: number;
+      
+      if (upliftType === 'R_PER_MWH') {
+        clientPrice = basePrice + parseFloat(upliftValue);
+      } else {
+        clientPrice = basePrice * (1 + parseFloat(upliftValue) / 100);
+      }
+      
+      const updatedQuote = await storage.setDealQuoteClientPrice(req.params.quoteId, {
+        clientEnergyPriceRmwh: clientPrice.toFixed(4),
+        upliftType,
+        upliftValue: upliftValue.toString(),
+        clientPriceSetBy: user?.id || 'system',
+        clientPriceSetAt: new Date(),
+        isProposalEligible: true
+      });
+      
+      const deal = await storage.getDeal(req.params.dealId);
+      
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "CLIENT_PRICE_SET",
+        entityType: "quote",
+        entityId: quote.id,
+        dealId: req.params.dealId,
+        clientId: deal?.clientId || null,
+        detailsJson: { 
+          upliftType, 
+          upliftValue: parseFloat(upliftValue),
+          basePrice,
+          clientPrice,
+          supplierId: quote.supplierId 
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        quote: updatedQuote,
+        clientPrice: clientPrice.toFixed(4)
+      });
+    } catch (error: any) {
+      console.error("Error setting client price:", error);
+      res.status(500).json({ success: false, error: "Failed to set client price" });
+    }
+  });
+
   // --- Deal Commission Events ---
 
   // Get commission events for a deal
@@ -9126,14 +9212,20 @@ export async function registerRoutes(
       const quotes = await storage.getDealQuotes(req.params.dealId);
       const today = new Date().toISOString().split('T')[0];
       
-      // Filter eligible quotes
+      // Filter eligible quotes - MUST have client price set (isProposalEligible = true)
       const eligibleQuotes = quotes.filter(q => {
+        // CRITICAL: Must have client price set to be proposal-eligible
+        if (!q.isProposalEligible) return false;
+        if (!q.clientEnergyPriceRmwh) return false;
+        
         // Exclude expired
         if (q.validUntil && q.validUntil < today) return false;
         if (q.isExpired) return false;
         
-        // Exclude incomplete (must have clientEnergyPriceRmwh or baseEnergyPriceRmwh and termMonths)
-        if (!q.clientEnergyPriceRmwh && !q.baseEnergyPriceRmwh) return false;
+        // Exclude rejected quotes
+        if (q.isRejected) return false;
+        
+        // Exclude incomplete (must have termMonths)
         if (!q.termMonths) return false;
         
         // Exclude risk-flagged
@@ -9146,10 +9238,7 @@ export async function registerRoutes(
       const suppliers = await storage.getSuppliers();
       const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
       
-      // Only return quotes with client pricing set (never expose base price)
-      const quotesWithClientPrice = eligibleQuotes.filter(q => q.clientEnergyPriceRmwh);
-      
-      const enrichedQuotes = quotesWithClientPrice.map(q => ({
+      const enrichedQuotes = eligibleQuotes.map(q => ({
         id: q.id,
         supplierId: q.supplierId,
         supplierName: supplierMap.get(q.supplierId) || 'Unknown Supplier',

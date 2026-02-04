@@ -1,0 +1,339 @@
+You are working inside the existing Ótima Energia Portal.
+
+This system already includes:
+
+Suppliers (varejistas)
+
+Deals (human-controlled, post-Zoho)
+
+Supplier Quotes (immutable, Deal OS)
+
+ECOS (pre-sales insights)
+
+Assembly Queue
+
+Commission OS
+
+Finance OS Lite
+
+QA Console
+
+Your task is to finalise and enforce the correct sales workflow so that:
+
+Ótima commission is explicitly baked into prices before proposals
+
+Proposals are clean, client-facing sales collateral
+
+No internal pricing, margin, or supplier base price can ever leak
+
+Renan’s workflow is simple, safe, and impossible to misuse
+
+This is not cosmetic work — this is core revenue protection logic.
+
+🧠 CORE PRINCIPLE (NON-NEGOTIABLE)
+Supplier Quotes ≠ Client Prices ≠ Proposals
+
+You must enforce three distinct layers:
+
+Supplier Quote (Immutable, Internal)
+
+Client Price Option (Mutable, Sales Layer)
+
+Proposal (Client-Facing Output)
+
+A proposal can only be created from client price options, never directly from supplier quotes.
+
+1️⃣ SUPPLIER QUOTES (IMMUTABLE – CONFIRM & ENFORCE)
+
+Supplier quotes already exist in dealQuotes.
+
+Rules (must be enforced everywhere):
+
+Supplier quotes are read-only after creation
+
+Raw quote JSON, files, hashes, provenance are never modified
+
+Supplier base price is internal only
+
+Supplier quote cannot be sent to a client or used in a proposal directly
+
+UI copy must clearly label these as:
+
+“Cotação do fornecedor (uso interno)”
+
+2️⃣ CLIENT PRICE OPTIONS (NEW / ENFORCED SALES LAYER)
+Purpose
+
+This is where Renan bakes in Ótima commission.
+
+This step must exist before proposal creation.
+
+Required Data Model (new or extended)
+
+Create a client-facing quote option entity (name it clearly, e.g.):
+
+deal_client_quote_options
+
+Required fields:
+
+deal_id
+
+supplier_quote_id (reference)
+
+supplier_name (display only)
+
+energy_type (convencional / incentivada)
+
+term_months
+
+client_price_r$/mwh ✅ (MANDATORY)
+
+uplift_type (R$/MWh or % — INTERNAL ONLY)
+
+uplift_value (INTERNAL ONLY)
+
+created_by
+
+created_at
+
+is_proposal_eligible (boolean, auto = true once client price set)
+
+Explicitly store:
+❌ NO supplier base price
+❌ NO commission exposure in client context
+
+Required UI Changes (CRITICAL)
+
+Inside Deal → Supplier Quotes:
+
+Each supplier quote card/row must have a button:
+
+“Definir Preço ao Cliente” / “Aplicar Margem Ótima”
+
+Clicking opens a modal/form:
+
+Input:
+
+uplift in R$/MWh (primary)
+
+OR uplift % (secondary)
+
+System calculates:
+
+client_price_r$/mwh
+
+Show:
+
+“Preço ao cliente” (large, clear)
+
+Hide:
+
+base price
+
+margin math from client-facing views
+
+Action button:
+✅ Salvar Preço ao Cliente
+
+After save:
+
+Quote status becomes “Pronto para Proposta”
+
+Proposal eligibility flag = true
+
+Guardrails
+
+A supplier quote cannot be added to a proposal unless:
+
+client_price_r$/mwh exists
+
+Editing client price:
+
+allowed
+
+tracked in audit log
+
+Supplier quote remains immutable underneath
+
+3️⃣ PROPOSALS SYSTEM (FIRST-CLASS, SEPARATE TAB)
+Proposals must be:
+
+A dedicated top-level navigation item
+
+Completely separate from supplier quotes
+
+Renan’s primary sales workspace
+
+Navigation order must be:
+Suppliers → Deals → Assembly → Proposals → Clients → Finance
+
+Proposal Creation Flow (MANDATORY)
+
+Proposals → Nova Proposta
+
+Step 1 — Select Deal
+Step 2 — Select Client Price Options only
+(step must NOT show supplier quotes without client price)
+
+Step 3 — Proposal Settings
+
+Validity (7 / 15 / 30 / 45 / 60 days)
+
+Select one option as Recomendado
+
+Optional preset “Por que recomendamos” reasons
+
+Step 4 — Generate
+
+Generate branded PDF
+
+Status = DRAFT
+
+Actions:
+
+Send proposal
+
+Track views
+
+Accept / Reject (manual for now)
+
+4️⃣ PROPOSAL PDF RULES (ABSOLUTE)
+The PDF must show ONLY:
+
+Supplier name
+
+Energy type
+
+Term
+
+Client price (R$/MWh)
+
+Savings (R$) vs baseline
+
+Monthly + total savings framing
+
+Recommended option badge
+
+Next steps
+
+The PDF must NEVER show:
+
+❌ Supplier base price
+❌ Uplift
+❌ Commission
+❌ Internal notes
+❌ ECOS raw benchmarks
+
+This is sales collateral, not an admin report.
+
+5️⃣ BRANDING (MANDATORY)
+
+All generated PDFs (Proposals + ECOS Insight Packs) must:
+
+Use website brand colours
+
+Use Ótima logo
+
+Use consistent typography
+
+Look client-ready (board-level)
+
+No default styles. No placeholders.
+
+6️⃣ QA & WORKFLOW INTEGRITY (HARD REQUIREMENT)
+
+Use the QA Console to validate:
+
+Critical flows that MUST pass:
+
+Supplier quote added → cannot be sent to client
+
+Supplier quote → client price added → proposal eligible
+
+Proposal creation blocked if no client price exists
+
+Proposal PDF contains no internal pricing
+
+Assembly Queue links resolve correctly
+
+No broken routes or dead buttons
+
+Add (or confirm):
+
+Guided Smoke Test for:
+
+Quote → Client Price → Proposal → PDF → View
+
+Button existence checks for:
+
+“Definir Preço ao Cliente”
+
+“Nova Proposta”
+
+“Gerar PDF”
+
+“Enviar Proposta”
+
+If any workflow breaks:
+
+It must fail loudly
+
+With actionable error text
+
+7️⃣ LANGUAGE & UX PRINCIPLES
+
+Assume Renan:
+
+Is not technical
+
+Is selling live on calls
+
+Needs zero ambiguity
+
+Therefore:
+
+Clear labels
+
+No internal jargon in client paths
+
+Tooltips explain why, not just what
+
+✅ ACCEPTANCE CRITERIA
+
+This build is complete only when:
+
+Renan must apply commission before proposal creation
+
+Proposals are clean, beautiful, and client-safe
+
+No internal pricing can leak accidentally
+
+A brand-new user can:
+
+Add a quote
+
+Bake in margin
+
+Generate a proposal
+
+Send it
+— without training
+
+🧠 PHILOSOPHY (DO NOT IGNORE)
+
+You are not building “features”.
+
+You are building:
+
+Revenue protection
+
+Sales velocity
+
+Trust with suppliers
+
+Trust with clients
+
+This separation (supplier quote → client price → proposal)
+is foundational for Ótima today and Mercado Transparente tomorrow.
+
+Build it cleanly, enforce it strictly.
