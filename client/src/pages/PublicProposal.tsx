@@ -97,10 +97,10 @@ export default function PublicProposal() {
         backgroundColor: brandKit?.lightBgColor || "#eee7f1"
       }}
     >
-      <header className="py-8 px-4 bg-white border-b">
+      <header className="py-4 px-4 bg-white border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={brandKit?.logoUrl || logoFull} alt={brandKit?.brandName || "Ótima Energia"} className="h-16" />
+          <div className="overflow-hidden h-12">
+            <img src={brandKit?.logoUrl || logoFull} alt={brandKit?.brandName || "Ótima Energia"} className="h-20 -mt-4 object-contain" />
           </div>
           {brandKit?.tagline && (
             <span className="text-sm hidden sm:block" style={{ color: brandKit?.textColor || "#736d77" }}>
