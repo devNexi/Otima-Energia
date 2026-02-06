@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, FileText, Star, CheckCircle2, Clock, Calendar, AlertTriangle } from "lucide-react";
+import logoFull from "@/assets/branding/logo-full-large.png";
 
 interface ProposalSnapshot {
   proposal: {
@@ -102,16 +103,7 @@ export default function PublicProposal() {
       >
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {brandKit?.logoUrl ? (
-              <img src={brandKit.logoUrl} alt={brandKit.brandName} className="h-10" />
-            ) : (
-              <span 
-                className="text-2xl font-bold"
-                style={{ color: brandKit?.primaryColor || "#9e3ffd" }}
-              >
-                {brandKit?.brandName || "Ótima Energia"}
-              </span>
-            )}
+            <img src={brandKit?.logoUrl || logoFull} alt={brandKit?.brandName || "Ótima Energia"} className="h-12" />
           </div>
           {brandKit?.tagline && (
             <span className="text-sm text-white/70 hidden sm:block">

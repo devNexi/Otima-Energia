@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Star, CheckCircle2, Calendar, Clock, TrendingDown, Zap, Shield, AlertTriangle } from "lucide-react";
+import logoFull from "@/assets/branding/logo-full-large.png";
 
 const brandKit = {
   brandName: "Ótima Energia",
@@ -83,12 +84,7 @@ export default function ProposalPreview() {
         style={{ backgroundColor: brandKit.darkColor }}
       >
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span
-            className="text-2xl font-bold"
-            style={{ color: brandKit.primaryColor }}
-          >
-            {brandKit.brandName}
-          </span>
+          <img src={logoFull} alt="Ótima Energia" className="h-12" />
           <span className="text-sm text-white/70 hidden sm:block">
             {brandKit.tagline}
           </span>
