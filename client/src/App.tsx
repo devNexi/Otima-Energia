@@ -39,6 +39,7 @@ import ProposalView from "@/pages/ProposalView";
 import NotFound from "@/pages/not-found";
 import PublicProposal from "@/pages/PublicProposal";
 import ProposalPreview from "@/pages/ProposalPreview";
+import QuoteInbox from "@/pages/QuoteInbox";
 
 function Router() {
   return (
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/admin/qa" component={QaConsole} />
       <Route path="/admin/qa/history" component={QaHistory} />
       <Route path="/admin/walkthrough" component={RenanWalkthrough} />
+      <Route path="/admin/quote-inbox" component={QuoteInbox} />
       <Route component={NotFound} />
     </Switch>
   );

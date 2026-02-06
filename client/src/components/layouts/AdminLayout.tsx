@@ -17,7 +17,8 @@ import {
   Send,
   Link2,
   Layers,
-  ClipboardList
+  ClipboardList,
+  Inbox
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -49,6 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const opsNavItems: NavItem[] = [
     { label: "ECOS", href: "/admin/ecos", icon: <Zap className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
     { label: "RFQs / Cotações", href: "/admin/rfqs", icon: <Send className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
+    { label: "Quote Inbox", href: "/admin/quote-inbox", icon: <Inbox className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
   ];
 
   const adminNavItems: NavItem[] = [

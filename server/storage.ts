@@ -4321,6 +4321,11 @@ export class Storage implements IStorage {
     return result[0];
   }
 
+  async getInboundEmail(id: number): Promise<InboundEmail | undefined> {
+    const result = await db.select().from(inboundEmails).where(eq(inboundEmails.id, id));
+    return result[0];
+  }
+
   async getInboundEmails(): Promise<InboundEmail[]> {
     return db.select().from(inboundEmails).orderBy(desc(inboundEmails.receivedAt)).limit(100);
   }

@@ -9900,6 +9900,157 @@ export async function registerRoutes(
     }
   });
 
+  // Parse an inbound email to extract quote fields
+  app.post("/api/inbound/emails/:id/parse", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops'])) return;
+    
+    try {
+      const { parseQuoteFromText } = await import('./quoteParseEngine');
+      const email = await storage.getInboundEmail(parseInt(req.params.id));
+      if (!email) {
+        return res.status(404).json({ success: false, error: "Email not found" });
+      }
+      
+      const parsed = parseQuoteFromText(email.textBody || email.htmlBody || '', email.subject || '');
+      
+      res.json({ success: true, parsed, email });
+    } catch (error: any) {
+      console.error("Error parsing inbound email:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // Confirm parsed email → create deal quote
+  const confirmInboundSchema = z.object({
+    dealId: z.string().min(1, "dealId is required"),
+    supplierId: z.string().min(1, "supplierId is required").or(z.number()),
+    energyPriceRmwh: z.string().optional().default(""),
+    contractDurationMonths: z.string().optional().default(""),
+    energyType: z.string().optional().default(""),
+    priceStructure: z.string().optional().default(""),
+    validUntil: z.string().optional().default(""),
+    quoteReference: z.string().optional().default(""),
+    volume: z.string().optional().default(""),
+  });
+  
+  app.post("/api/inbound/emails/:id/confirm", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    
+    try {
+      const validation = confirmInboundSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ success: false, error: validation.error.errors.map(e => e.message).join(', ') });
+      }
+      
+      const { dealId, supplierId: rawSupplierId, energyPriceRmwh, contractDurationMonths, energyType, 
+              priceStructure, validUntil, quoteReference, volume } = validation.data;
+      
+      const supplierId = typeof rawSupplierId === 'number' ? rawSupplierId : parseInt(rawSupplierId);
+      if (isNaN(supplierId)) {
+        return res.status(400).json({ success: false, error: "Invalid supplierId" });
+      }
+      
+      const emailId = parseInt(req.params.id);
+      const email = await storage.getInboundEmail(emailId);
+      if (!email) {
+        return res.status(404).json({ success: false, error: "Email not found" });
+      }
+      
+      const deal = await storage.getDeal(dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+      
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier) {
+        return res.status(404).json({ success: false, error: "Supplier not found" });
+      }
+      
+      const crypto = await import('crypto');
+      const rawQuoteJson = {
+        source: 'inbound_email',
+        inboundEmailId: emailId,
+        fromEmail: email.fromEmail,
+        fromName: email.fromName,
+        subject: email.subject,
+        receivedAt: email.receivedAt,
+        parsedFields: {
+          energyPriceRmwh,
+          contractDurationMonths,
+          energyType,
+          priceStructure,
+          validUntil,
+          quoteReference,
+          volume,
+        }
+      };
+      
+      const rawQuoteHash = crypto.createHash('sha256')
+        .update(JSON.stringify(rawQuoteJson))
+        .digest('hex');
+      
+      const userId = (req as any).session?.userId || 'system';
+      
+      const parsedTermMonths = contractDurationMonths ? parseInt(contractDurationMonths) : undefined;
+      
+      const dealQuote = await storage.createDealQuote({
+        dealId,
+        supplierId,
+        quoteReference: quoteReference || `INBOUND-${emailId}`,
+        rawQuoteJson,
+        rawQuoteHash,
+        rawQuoteSource: 'email',
+        receivedVia: 'email',
+        receivedFromName: email.fromName || undefined,
+        receivedFromEmail: email.fromEmail || undefined,
+        energyType: energyType || undefined,
+        priceStructure: priceStructure || undefined,
+        baseEnergyPriceRmwh: energyPriceRmwh || undefined,
+        termMonths: parsedTermMonths && !isNaN(parsedTermMonths) ? parsedTermMonths : undefined,
+        validUntil: validUntil || undefined,
+        normalizedBy: `user:${userId}`,
+        normalizedAt: new Date(),
+        normalizationConfidence: '0.80',
+      });
+      
+      await storage.updateInboundEmail(emailId, {
+        status: 'PROCESSED',
+        dealId,
+        quoteId: dealQuote.id,
+        processedAt: new Date(),
+      } as any);
+      
+      await logAuditEvent({
+        action: 'inbound_email_confirmed',
+        entityType: 'deal_quote',
+        entityId: dealQuote.id,
+        userId,
+        changes: { inboundEmailId: emailId, dealId, supplierId },
+        source: 'portal'
+      });
+      
+      res.json({ success: true, dealQuote });
+    } catch (error: any) {
+      console.error("Error confirming inbound email:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // Dismiss/archive an inbound email
+  app.post("/api/inbound/emails/:id/dismiss", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops'])) return;
+    
+    try {
+      const updated = await storage.updateInboundEmail(parseInt(req.params.id), {
+        status: 'DISMISSED',
+        processedAt: new Date(),
+      } as any);
+      res.json({ success: true, email: updated });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ============== END INBOUND EMAIL PARSE ==============
 
   // Generate proposal PDF with brand kit styling
