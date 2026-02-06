@@ -79,9 +79,9 @@ export default function ProposalPreview() {
         backgroundColor: brandKit.lightBgColor,
       }}
     >
-      <header className="py-6 px-4 bg-white border-b">
+      <header className="py-8 px-4 bg-white border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <img src={logoFull} alt="Ótima Energia" className="h-12" />
+          <img src={logoFull} alt="Ótima Energia" className="h-16" />
           <span className="text-sm hidden sm:block" style={{ color: brandKit.textColor }}>
             {brandKit.tagline}
           </span>
