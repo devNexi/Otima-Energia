@@ -362,7 +362,7 @@ export function BrandKitPanel() {
                   id="websiteUrl"
                   value={currentKit.websiteUrl || ""}
                   onChange={(e) => handleChange("websiteUrl", e.target.value)}
-                  placeholder="https://otimaenergia.com.br"
+                  placeholder="https://otimaenergia.com"
                   data-testid="input-website-url"
                 />
               </div>

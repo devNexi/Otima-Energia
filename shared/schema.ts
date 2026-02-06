@@ -4041,7 +4041,7 @@ export const brandKit = pgTable("brand_kit", {
   faviconUrl: text("favicon_url"),
   
   // Footer content
-  footerText: text("footer_text").default("Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil"),
+  footerText: text("footer_text").default("Ótima Energia • contato@otimaenergia.com • Rio de Janeiro - Brasil"),
   footerPhone: text("footer_phone"),
   footerAddress: text("footer_address"),
   

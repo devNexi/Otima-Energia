@@ -15,7 +15,7 @@ const brandKit = {
   fontFamily: "Inter",
   logoUrl: null,
   footerText: null,
-  websiteUrl: "https://otimaenergia.com.br",
+  websiteUrl: "https://otimaenergia.com",
 };
 
 const mockProposal = {
@@ -79,13 +79,10 @@ export default function ProposalPreview() {
         backgroundColor: brandKit.lightBgColor,
       }}
     >
-      <header
-        className="py-6 px-4"
-        style={{ backgroundColor: brandKit.darkColor }}
-      >
+      <header className="py-6 px-4 bg-white border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <img src={logoFull} alt="Ótima Energia" className="h-12" />
-          <span className="text-sm text-white/70 hidden sm:block">
+          <span className="text-sm hidden sm:block" style={{ color: brandKit.textColor }}>
             {brandKit.tagline}
           </span>
         </div>

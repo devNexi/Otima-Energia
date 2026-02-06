@@ -67,7 +67,7 @@ export function BrandedLayout({
     footerText: null,
     footerPhone: null,
     footerAddress: null,
-    websiteUrl: "https://otimaenergia.com.br"
+    websiteUrl: "https://otimaenergia.com"
   };
 
   const kit = brandKit || defaultKit;

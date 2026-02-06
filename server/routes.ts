@@ -1461,7 +1461,7 @@ export async function registerRoutes(
       const deadline = new Date();
       deadline.setDate(deadline.getDate() + deadlineDays);
 
-      const replyEmail = req.body.replyEmail || 'contato@otimaenergia.com.br';
+      const replyEmail = req.body.replyEmail || 'contato@otimaenergia.com';
       
       const rfoData = {
         clientId,
@@ -5034,7 +5034,7 @@ export async function registerRoutes(
       const lightBgColor = brandKit?.lightBgColor || '#eee7f1';
       const fontFamily = brandKit?.fontFamily || 'Inter';
       const brandName = brandKit?.brandName || 'Ótima Energia';
-      const footerText = brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com.br';
+      const footerText = brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com';
       
       // Generate HTML for PDF
       const html = `
@@ -9999,7 +9999,7 @@ export async function registerRoutes(
           </div>
           
           <div class="footer">
-            ${brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil'}
+            ${brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com • Rio de Janeiro - Brasil'}
           </div>
         </body>
         </html>

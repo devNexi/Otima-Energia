@@ -3986,7 +3986,7 @@ export class Storage implements IStorage {
       lightBgColor: '#eee7f1',
       textColor: '#736d77',
       fontFamily: 'Inter',
-      footerText: 'Ótima Energia • contato@otimaenergia.com.br • Rio de Janeiro - Brasil',
+      footerText: 'Ótima Energia • contato@otimaenergia.com • Rio de Janeiro - Brasil',
       websiteUrl: 'https://otimaenergia.com'
     }).returning();
     
