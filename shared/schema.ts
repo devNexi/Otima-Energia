@@ -4494,3 +4494,43 @@ export const qaTestRunsRelations = relations(qaTestRuns, ({ one }) => ({
 }));
 
 // ============== END QA TEST RUNS ==============
+
+// ============== INBOUND EMAIL LOG ==============
+
+export const inboundEmails = pgTable("inbound_emails", {
+  id: serial("id").primaryKey(),
+  
+  fromEmail: text("from_email"),
+  fromName: text("from_name"),
+  toEmail: text("to_email"),
+  subject: text("subject"),
+  textBody: text("text_body"),
+  htmlBody: text("html_body"),
+  
+  envelope: jsonb("envelope"),
+  headers: text("headers"),
+  
+  attachmentCount: integer("attachment_count").default(0),
+  attachmentNames: jsonb("attachment_names"),
+  
+  status: text("status").default("PENDING").notNull(),
+  dealId: varchar("deal_id", { length: 255 }),
+  quoteId: varchar("quote_id", { length: 255 }),
+  
+  processedAt: timestamp("processed_at"),
+  errorMessage: text("error_message"),
+  
+  rawPayload: jsonb("raw_payload"),
+  
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+});
+
+export const insertInboundEmailSchema = createInsertSchema(inboundEmails).omit({
+  id: true,
+  receivedAt: true,
+});
+
+export type InsertInboundEmail = z.infer<typeof insertInboundEmailSchema>;
+export type InboundEmail = typeof inboundEmails.$inferSelect;
+
+// ============== END INBOUND EMAIL LOG ==============

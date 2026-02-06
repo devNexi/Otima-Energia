@@ -9837,6 +9837,71 @@ export async function registerRoutes(
     }
   });
 
+  // ============== INBOUND EMAIL PARSE (SendGrid Webhook) ==============
+  
+  const inboundUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+  
+  app.post("/api/inbound/quote", inboundUpload.any(), async (req, res) => {
+    try {
+      const fromField = req.body?.from || '';
+      const toField = req.body?.to || '';
+      const subject = req.body?.subject || '';
+      const textBody = req.body?.text || '';
+      const htmlBody = req.body?.html || '';
+      const envelope = req.body?.envelope ? JSON.parse(req.body.envelope) : null;
+      const headers = req.body?.headers || '';
+      
+      const fromMatch = fromField.match(/(?:"?([^"]*)"?\s)?<?([^>]+@[^>]+)>?/);
+      const fromName = fromMatch?.[1] || '';
+      const fromEmail = fromMatch?.[2] || fromField;
+      
+      const files = (req.files as Express.Multer.File[]) || [];
+      const attachmentNames = files.map(f => f.originalname || f.fieldname);
+      
+      const rawPayload: Record<string, any> = {};
+      for (const key of Object.keys(req.body || {})) {
+        if (!['html', 'text', 'headers'].includes(key)) {
+          rawPayload[key] = req.body[key];
+        }
+      }
+      
+      const inboundEmail = await storage.createInboundEmail({
+        fromEmail,
+        fromName,
+        toEmail: toField,
+        subject,
+        textBody,
+        htmlBody,
+        envelope,
+        headers,
+        attachmentCount: files.length,
+        attachmentNames,
+        status: 'PENDING',
+        rawPayload,
+      });
+      
+      console.log(`[INBOUND] Email received from ${fromEmail}, subject: "${subject}", attachments: ${files.length}, logged as ID: ${inboundEmail.id}`);
+      
+      res.status(200).json({ success: true, id: inboundEmail.id });
+    } catch (error: any) {
+      console.error("[INBOUND] Error processing inbound email:", error);
+      res.status(200).json({ success: false, error: error.message });
+    }
+  });
+  
+  app.get("/api/inbound/emails", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops'])) return;
+    
+    try {
+      const emails = await storage.getInboundEmails();
+      res.json({ success: true, emails });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============== END INBOUND EMAIL PARSE ==============
+
   // Generate proposal PDF with brand kit styling
   app.get("/api/proposals/:proposalId/pdf", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;

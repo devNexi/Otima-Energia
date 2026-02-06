@@ -78,6 +78,7 @@ import {
   type InvoiceEvent, type InsertInvoiceEvent,
   type InvoicePermission, type InsertInvoicePermission,
   type QaTestRun, type InsertQaTestRun,
+  type InboundEmail, type InsertInboundEmail,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -98,7 +99,8 @@ import {
   prcDocuments, prcRows, prcPublishBatches,
   brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
   invoices, invoiceEvents, invoicePermissions,
-  qaTestRuns
+  qaTestRuns,
+  inboundEmails
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -735,6 +737,11 @@ export interface IStorage {
   // QA Test Runs
   createQaTestRun(data: InsertQaTestRun): Promise<QaTestRun>;
   getQaTestRuns(filters?: { dateFrom?: string; dateTo?: string; isDemo?: boolean; testKey?: string }): Promise<QaTestRun[]>;
+
+  // Inbound Emails
+  createInboundEmail(data: InsertInboundEmail): Promise<InboundEmail>;
+  getInboundEmails(): Promise<InboundEmail[]>;
+  updateInboundEmail(id: number, data: Partial<InboundEmail>): Promise<InboundEmail | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -4307,6 +4314,20 @@ export class Storage implements IStorage {
       return db.select().from(qaTestRuns).where(and(...conditions)).orderBy(desc(qaTestRuns.ranAt)).limit(500);
     }
     return db.select().from(qaTestRuns).orderBy(desc(qaTestRuns.ranAt)).limit(500);
+  }
+  // Inbound Emails
+  async createInboundEmail(data: InsertInboundEmail): Promise<InboundEmail> {
+    const result = await db.insert(inboundEmails).values(data).returning();
+    return result[0];
+  }
+
+  async getInboundEmails(): Promise<InboundEmail[]> {
+    return db.select().from(inboundEmails).orderBy(desc(inboundEmails.receivedAt)).limit(100);
+  }
+
+  async updateInboundEmail(id: number, data: Partial<InboundEmail>): Promise<InboundEmail | undefined> {
+    const result = await db.update(inboundEmails).set(data).where(eq(inboundEmails.id, id)).returning();
+    return result[0];
   }
 }
 
