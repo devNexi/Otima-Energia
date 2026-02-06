@@ -54,3 +54,8 @@ ENABLE_DEMO_MODE = "true"
 
 [userenv.shared]
 ZOHO_INTAKE_KEY = "J7qK9xR2vN4mP8sT5wY3bL6cE1aH0fUz"
+SMTP_HOST = "smtp.sendgrid.net"
+SMTP_PORT = "587"
+SMTP_USER = "apikey"
+SMTP_FROM_EMAIL = "ops@otimaenergia.com"
+SMTP_FROM_NAME = "Ótima Energia"

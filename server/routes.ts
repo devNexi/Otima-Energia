@@ -9647,7 +9647,7 @@ export async function registerRoutes(
             const brandKit = await storage.getBrandKit();
             
             await transporter.sendMail({
-              from: process.env.SMTP_FROM || '"Ótima Energia" <propostas@otimaenergia.com>',
+              from: `"${process.env.SMTP_FROM_NAME || 'Ótima Energia'}" <${process.env.SMTP_FROM_EMAIL || 'ops@otimaenergia.com'}>`,
               to: recipientEmail,
               subject: `Proposta Comercial - Ótima Energia`,
               html: `

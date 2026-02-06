@@ -1,0 +1,63 @@
+The walkthrough guide at /admin/walkthrough is well-structured but needs to be formalized into a depersonalized, scalable Standard Operating Procedure (SOP). It must be ready for new hires and serve as the official process document. Update the page in-place with the following changes.
+
+MANDATORY CHANGES
+Title & Header:
+
+Change: "How Renan Uses the Ótima Portal" → "Ótima Portal: Deal Execution SOP (Standard Operating Procedure)"
+
+Add Subtitle: "Version 1.0 | For Sales & Operations Teams"
+
+Add Header Principle: "Core Principle: The portal operates on three pricing layers: Supplier Price (Internal) → Customer Price (+ Margin) → Proposal (Client-Facing). The client never sees internal economics."
+
+Depersonalize All Content:
+
+Replace every instance of "Renan" with "the Account Executive (AE)".
+
+Replace every instance of "you" (referring to the user) with "the AE" or "the Operations Manager" based on context.
+
+Replace informal directives ("Go to...", "Click on...") with formal procedures ("Navigate to...", "Select...").
+
+Remove Security Risk:
+
+Delete the specific API endpoint POST /api/intake/zoho/deal from the text.
+
+Replace with: "When a lead is qualified in Zoho CRM, the system automatically creates a corresponding deal in the portal via the integrated workflow."
+
+Define Roles Clearly:
+
+At the top, after the title, add a "Primary Roles" section:
+
+text
+**Primary Roles:**
+*   **Account Executive (AE):** Responsible for Steps 1-9 (Deal Creation through Proposal Send).
+*   **Operations Manager (Ops):** Responsible for Steps 10-12 (Contract Closure through Commission Collection).
+Enhance Key Sections with Official Rules:
+
+In "2. Creating the Client Dossier", add a hard rule as a highlighted note:
+
+¶ Rule: A Dossier must be in the LOCKED state before any RFQ can be sent to suppliers.
+
+In "3. Receiving Quotes", add a process note as a call-out box:
+
+¶ Process Note: Current Method: Manual Entry. Future State: Quotes sent to rfq@otimaenergia.com will be parsed automatically.
+
+Restructure the "Summary Flow":
+
+Make the summary a proper process diagram legend.
+
+Change "How Renan Uses..." to "Deal Execution Summary Flow".
+
+Ensure each step name (Lead/Zoho, Dossier, etc.) matches the subsequent section headers exactly.
+
+FORMATTING & TONE
+Maintain the step-by-step structure but use more formal language.
+
+Keep tips but label them as "Best Practice:".
+
+Ensure all terminology is consistent (use "Deal," not "Business"; "Dossier," not "File").
+
+FINAL OUTPUT REQUIREMENT
+Do not create a new page. Update the existing /admin/walkthrough page content directly.
+The final guide must look like an official company document, not a personal note.
+
+Confirm by replying with the first 3 lines of the updated guide's new title and header. Then proceed to execute.
