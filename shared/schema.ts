@@ -4117,6 +4117,8 @@ export const dealProposals = pgTable("deal_proposals", {
   viewCount: integer("view_count").default(0),
   lastViewedAt: timestamp("last_viewed_at"),
   sentAt: timestamp("sent_at"),
+  sentToEmail: text("sent_to_email"),
+  sentMessage: text("sent_message"),
   
   // Audit
   createdByUserId: text("created_by_user_id").references(() => users.id).notNull(),
@@ -4462,3 +4464,33 @@ export const invoicePermissionsRelations = relations(invoicePermissions, ({ one 
 }));
 
 // ============== END FINANCE OS LITE ==============
+
+// ============== QA TEST RUNS ==============
+
+export const qaTestRuns = pgTable("qa_test_runs", {
+  id: serial("id").primaryKey(),
+  testKey: text("test_key").notNull(), // e.g., 'suppliers.create', 'bills.upload', 'proposal.generate_pdf'
+  status: text("status").notNull(), // 'PASS' or 'FAIL'
+  errorMessage: text("error_message"),
+  metadataJson: jsonb("metadata_json"), // Additional context (duration, assertions, etc.)
+  ranByUserId: varchar("ran_by_user_id").references(() => users.id),
+  ranAt: timestamp("ran_at").defaultNow().notNull(),
+  isDemo: boolean("is_demo").default(false),
+});
+
+export const insertQaTestRunSchema = createInsertSchema(qaTestRuns).omit({
+  id: true,
+  ranAt: true,
+});
+
+export type InsertQaTestRun = z.infer<typeof insertQaTestRunSchema>;
+export type QaTestRun = typeof qaTestRuns.$inferSelect;
+
+export const qaTestRunsRelations = relations(qaTestRuns, ({ one }) => ({
+  ranBy: one(users, {
+    fields: [qaTestRuns.ranByUserId],
+    references: [users.id],
+  }),
+}));
+
+// ============== END QA TEST RUNS ==============

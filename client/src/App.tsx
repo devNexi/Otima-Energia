@@ -33,6 +33,8 @@ import PrcReviewPage from "@/pages/PrcReviewPage";
 import EcosValidationPage from "@/pages/EcosValidationPage";
 import AdminSettings from "@/pages/AdminSettings";
 import QaConsole from "@/pages/QaConsole";
+import QaHistory from "@/pages/QaHistory";
+import RenanWalkthrough from "@/pages/RenanWalkthrough";
 import ProposalView from "@/pages/ProposalView";
 import NotFound from "@/pages/not-found";
 import PublicProposal from "@/pages/PublicProposal";
@@ -82,6 +84,8 @@ function Router() {
       <Route path="/admin/ecos/validation" component={EcosValidationPage} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/qa" component={QaConsole} />
+      <Route path="/admin/qa/history" component={QaHistory} />
+      <Route path="/admin/walkthrough" component={RenanWalkthrough} />
       <Route component={NotFound} />
     </Switch>
   );

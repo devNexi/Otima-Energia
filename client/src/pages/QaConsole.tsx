@@ -32,6 +32,7 @@ import {
   ChevronUp,
   ExternalLink,
   Eye,
+  History,
 } from "lucide-react";
 
 type TestStatus = "pending" | "running" | "passed" | "failed";
@@ -862,6 +863,12 @@ export default function QaConsole() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Link href="/admin/qa/history">
+                <Button variant="outline" data-testid="link-qa-history">
+                  <History className="h-4 w-4 mr-2" />
+                  History
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
                 onClick={handleReset}

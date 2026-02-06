@@ -1,0 +1,99 @@
+We are launching Ótima Energia now. Your mission is to harden the core, validate all workflows, and then eliminate Renan's biggest manual bottlenecks. This is a phased siege. No external platforms or speculative features until Phases 0 & 1 are demonstrably complete.
+
+PHASE 0: LAUNCH LOCKDOWN (THIS WEEK)
+Goal: Make the system auditable and prove it works for Renan's core workflow, including the correct 50/50 commission triggers.
+
+TASK 0.1: COMPLETE THE QA PERSISTENCE LAYER
+Action: Create the qa_test_runs table. Modify every test endpoint to insert a row on every execution.
+
+Deliverable: A QA History View at /admin/qa/history with filters for date and is_demo.
+
+TASK 0.2: BUILD THE CRITICAL WORKFLOW VALIDATION TESTS
+Build these tests, ensuring they insert into qa_test_runs:
+
+bills.upload_ocr_flow: Upload bill → assert OCR job enqueued → assert parsed fields saved → assert dossier can reach locked.
+
+quotes.immutable_intake: Quote intake → assert dealQuote record created with non-null rawQuoteHash.
+
+proposals.client_price_gate: Attempt to create a proposal from a quote where isProposalEligible=false. Test must fail. Then, set clientEnergyPriceRmwh & isProposalEligible=true and test success.
+
+proposals.pdf_security: Generate a proposal PDF → programmatically scan its text/content to confirm absence of internal field names (basePrice, uplift, commission). Test passes only if leak-proof.
+
+prc.supplier_dropdown: Load PRC upload page → assert supplier dropdown populates from DB. If empty, assert UI shows: "Cadastre um fornecedor primeiro" with link.
+
+finance.commission_triggers (NEW CORRECTED TEST): This test must validate the exact commercial rule:
+
+When a deal moves to status "CONTRACT_SIGNED", the system must auto-create a draft invoice for 50% of the total commission.
+
+When a deal later moves to status "CCEE_ACTIVE", the system must auto-create a second draft invoice for the remaining 50%.
+
+Assert that no other status changes trigger an invoice.
+
+zoho.intake_banner: Create a deal via Zoho intake → assert UI displays the banner: "Originated from Zoho CRM • Operational control lives in Ótima Portal" and fields are read-only.
+
+TASK 0.3: FINALIZE THE PROPÓSTAS MODULE
+Action: Implement in /admin/proposals:
+
+Email Send: Integrate with SendGrid. Button: "Enviar Proposta por Email."
+View Tracking: Log viewed_at when PDF link is accessed. Display in detail view.
+TASK 0.4: CREATE THE "RENAN WALKTHROUGH"
+Action: Write a concise, step-by-step guide that includes the two-step invoicing process.
+
+PHASE 0 EXIT CRITERIA:
+✅ All 7 critical QA tests in Task 0.2 pass, especially the new finance.commission_triggers test.
+✅ /admin/qa/history shows full test logs.
+✅ Renan can complete the walkthrough without workarounds.
+
+PHASE 1: THE ÓTIMA EFFICIENCY ENGINE (NEXT 90 DAYS)
+Trigger: Phase 0 is complete.
+Goal: Eliminate Renan's biggest manual pains. No external features.
+
+PRIORITY 1: QUOTE INTAKE ORCHESTRATOR
+Problem: Quotes arrive via WhatsApp/Email/PDF → manual data entry.
+
+Build Spec:
+
+Configure rfq@otimaenergia.com with SendGrid Inbound Parse.
+Build "Quote Inbox" module in admin area.
+Parse Engine: Reuse OCR/parsing logic. Extract key fields.
+Review UI: Side-by-side view of original email/PDF and parsed fields. One-click "Confirm" populates the deal's quote matrix.
+Success Metric: Quote processing time 15 min → 2 min.
+
+PRIORITY 2: SUPPLIER CRM MODULE
+Build Spec:
+
+Add "Suppliers" tab with contact info, notes.
+Auto-log Interactions: Sending an RFQ or receiving a quote via the Inbox auto-creates a timestamped note.
+Auto-calculate KPIs: Display Average Response Time and Quote Win Rate per supplier.
+Follow-up Dashboard: Highlight suppliers with no contact in >7 days or overdue quotes.
+PHASE 1 EXIT CRITERIA:
+✅ Ótima is processing 50+ deals/month with the same team.
+✅ Renan spends <10% of his time on manual data entry.
+
+YOUR MARCHING ORDERS
+START NOW (Phase 0):
+
+Execute Task 0.1: Create qa_test_runs and history view.
+
+Execute Task 0.2: Build the 7 critical workflow validation tests, with special emphasis on the corrected finance.commission_triggers test (50% on CONTRACT_SIGNED, 50% on CCEE_ACTIVE).
+
+Execute Task 0.3: Add SendGrid email send & view tracking to Propostas.
+
+Execute Task 0.4: Write the Renan Walkthrough.
+
+DO NOT START (Until Phase 0 Exit Criteria Met):
+
+Quote Inbox email pipeline (Priority 1).
+
+Supplier CRM module (Priority 2).
+
+ANY external-facing feature.
+
+CONFIRM & PROCEED
+Reply with your confirmed execution plan:
+
+The estimated hours for Phase 0, Task 0.1 (QA Persistence).
+
+The specific database fields and status enums you will use to implement the finance.commission_triggers test.
+
+Your commitment: "We will not proceed to Phase 1 priorities until /admin/qa shows PASS for all 7 critical workflow tests, including the corrected 50/50 commission trigger test."

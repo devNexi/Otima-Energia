@@ -77,6 +77,7 @@ import {
   type Invoice, type InsertInvoice,
   type InvoiceEvent, type InsertInvoiceEvent,
   type InvoicePermission, type InsertInvoicePermission,
+  type QaTestRun, type InsertQaTestRun,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -96,7 +97,8 @@ import {
   opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots,
   prcDocuments, prcRows, prcPublishBatches,
   brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
-  invoices, invoiceEvents, invoicePermissions
+  invoices, invoiceEvents, invoicePermissions,
+  qaTestRuns
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -729,6 +731,10 @@ export interface IStorage {
   getOverdueInvoices(): Promise<Invoice[]>;
   markReminderSent(invoiceId: number): Promise<Invoice | undefined>;
   markOpsTaskCreated(invoiceId: number): Promise<Invoice | undefined>;
+
+  // QA Test Runs
+  createQaTestRun(data: InsertQaTestRun): Promise<QaTestRun>;
+  getQaTestRuns(filters?: { dateFrom?: string; dateTo?: string; isDemo?: boolean; testKey?: string }): Promise<QaTestRun[]>;
 }
 
 export class Storage implements IStorage {
@@ -4274,6 +4280,33 @@ export class Storage implements IStorage {
       .where(eq(invoices.id, invoiceId))
       .returning();
     return result[0];
+  }
+
+  // QA Test Runs
+  async createQaTestRun(data: InsertQaTestRun): Promise<QaTestRun> {
+    const result = await db.insert(qaTestRuns).values(data).returning();
+    return result[0];
+  }
+  
+  async getQaTestRuns(filters?: { dateFrom?: string; dateTo?: string; isDemo?: boolean; testKey?: string }): Promise<QaTestRun[]> {
+    const conditions = [];
+    if (filters?.dateFrom) {
+      conditions.push(gte(qaTestRuns.ranAt, new Date(filters.dateFrom)));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(qaTestRuns.ranAt, new Date(filters.dateTo)));
+    }
+    if (filters?.isDemo !== undefined) {
+      conditions.push(eq(qaTestRuns.isDemo, filters.isDemo));
+    }
+    if (filters?.testKey) {
+      conditions.push(eq(qaTestRuns.testKey, filters.testKey));
+    }
+    
+    if (conditions.length > 0) {
+      return db.select().from(qaTestRuns).where(and(...conditions)).orderBy(desc(qaTestRuns.ranAt)).limit(500);
+    }
+    return db.select().from(qaTestRuns).orderBy(desc(qaTestRuns.ranAt)).limit(500);
   }
 }
 
