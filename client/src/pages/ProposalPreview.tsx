@@ -175,9 +175,13 @@ export default function ProposalPreview() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-white/20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-4 border-t border-white/20">
               <div>
-                <p className="text-white/60 text-sm">Custo Anual Estimado</p>
+                <p className="text-white/60 text-sm">Custo Mensal Est.</p>
+                <p className="text-white font-semibold">R$ {(parseFloat(recommended.annualEnergyCost.replace(/\./g, '').replace(',', '.')) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div>
+                <p className="text-white/60 text-sm">Custo Anual Est.</p>
                 <p className="text-white font-semibold">R$ {recommended.annualEnergyCost}</p>
               </div>
               <div>
@@ -244,9 +248,13 @@ export default function ProposalPreview() {
                         <p className="text-xs text-muted-foreground">por MWh</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 pt-3 border-t text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t text-sm">
                       <div>
-                        <p className="text-gray-500">Custo Anual</p>
+                        <p className="text-gray-500">Custo Mensal Est.</p>
+                        <p className="font-medium">R$ {(parseFloat(item.annualEnergyCost.replace(/\./g, '').replace(',', '.')) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Custo Anual Est.</p>
                         <p className="font-medium">R$ {item.annualEnergyCost}</p>
                       </div>
                       <div>

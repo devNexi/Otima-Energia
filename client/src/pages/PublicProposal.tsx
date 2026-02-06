@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, FileText, Star, CheckCircle2, Clock, Calendar, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Star, CheckCircle2, Clock, Calendar, AlertTriangle, TrendingDown } from "lucide-react";
 import logoFull from "@/assets/branding/logo-full-large.png";
 
 interface ProposalSnapshot {
@@ -17,6 +17,10 @@ interface ProposalSnapshot {
     supplierName: string;
     productType: string | null;
     finalEnergyPriceRmwh: string;
+    clientEnergyPriceRmwh: string;
+    termMonths: number;
+    proposedCost12m: string | null;
+    savings12m: string | null;
     isRecommended: boolean;
     publicNotes: string | null;
   }>;
@@ -163,17 +167,42 @@ export default function PublicProposal() {
             <div className="flex items-end justify-between flex-wrap gap-4">
               <div>
                 <h3 className="text-2xl font-bold text-white">{recommendedItem.supplierName}</h3>
-                <p className="text-white/80">{recommendedItem.productType || "Energia Convencional"}</p>
+                <p className="text-white/80">{recommendedItem.productType || "Energia Convencional"} • {recommendedItem.termMonths} meses</p>
               </div>
               <div className="text-right">
                 <p className="text-4xl font-bold text-white">
-                  R$ {parseFloat(recommendedItem.finalEnergyPriceRmwh).toFixed(2)}
+                  R$ {parseFloat(recommendedItem.clientEnergyPriceRmwh || recommendedItem.finalEnergyPriceRmwh).toFixed(2)}
                 </p>
                 <p className="text-white/70">por MWh</p>
               </div>
             </div>
+
+            {recommendedItem.proposedCost12m && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-4 border-t border-white/20">
+                <div>
+                  <p className="text-white/60 text-sm">Custo Mensal Est.</p>
+                  <p className="text-white font-semibold">R$ {(parseFloat(recommendedItem.proposedCost12m) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">Custo Anual Est.</p>
+                  <p className="text-white font-semibold">R$ {parseFloat(recommendedItem.proposedCost12m).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                {recommendedItem.savings12m && parseFloat(recommendedItem.savings12m) > 0 && (
+                  <>
+                    <div>
+                      <p className="text-white/60 text-sm">Economia Anual</p>
+                      <p className="text-white font-semibold flex items-center gap-1">
+                        <TrendingDown className="w-4 h-4" />
+                        R$ {parseFloat(recommendedItem.savings12m).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {recommendedItem.publicNotes && (
-              <p className="mt-4 text-white/80 text-sm italic">
+              <p className="mt-4 text-white/80 text-sm italic bg-white/10 rounded-lg p-3">
                 "{recommendedItem.publicNotes}"
               </p>
             )}
@@ -192,11 +221,11 @@ export default function PublicProposal() {
               {otherItems.map((item) => (
                 <Card key={item.id} className="bg-white">
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="font-semibold text-lg">{item.supplierName}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {item.productType || "Energia Convencional"}
+                          {item.productType || "Energia Convencional"} • {item.termMonths} meses
                         </p>
                       </div>
                       <div className="text-right">
@@ -204,13 +233,34 @@ export default function PublicProposal() {
                           className="text-2xl font-bold"
                           style={{ color: brandKit?.primaryColor || "#9e3ffd" }}
                         >
-                          R$ {parseFloat(item.finalEnergyPriceRmwh).toFixed(2)}
+                          R$ {parseFloat(item.clientEnergyPriceRmwh || item.finalEnergyPriceRmwh).toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">por MWh</p>
                       </div>
                     </div>
+                    {item.proposedCost12m && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t text-sm">
+                        <div>
+                          <p className="text-gray-500">Custo Mensal Est.</p>
+                          <p className="font-medium">R$ {(parseFloat(item.proposedCost12m) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Custo Anual Est.</p>
+                          <p className="font-medium">R$ {parseFloat(item.proposedCost12m).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        {item.savings12m && parseFloat(item.savings12m) > 0 && (
+                          <div>
+                            <p className="text-gray-500">Economia Anual</p>
+                            <p className="font-medium text-emerald-600 flex items-center gap-1">
+                              <TrendingDown className="w-3 h-3" />
+                              R$ {parseFloat(item.savings12m).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {item.publicNotes && (
-                      <p className="mt-3 text-sm text-muted-foreground italic">
+                      <p className="mt-3 text-sm text-muted-foreground italic bg-gray-50 rounded p-2">
                         "{item.publicNotes}"
                       </p>
                     )}
