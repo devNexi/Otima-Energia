@@ -1,0 +1,164 @@
+We are launching Ótima Energia as a high-performance energy brokerage. Our Deal OS portal is nearly complete but requires final hardening and critical workflow enforcement. All development must focus on internal operational robustness and user-centric flows. This audit serves two purposes: 1) Confirm and complete the launch-ready state, and 2) Prioritize the post-launch build sequence to eliminate manual friction. The goal is to make Renan invincible.
+
+PART 1: IMMEDIATE PRE-LAUNCH CRITICAL FIXES (WEEK 1)
+Mandate: Complete these items before any commercial deal is processed. These are blockers for a professional launch.
+
+1. QA CONSOLE: PERSISTENT VALIDATION LAYER
+Objective: Move from ad-hoc testing to auditable, historical validation.
+
+Implementation:
+
+Create the qa_test_runs table exactly as specified:
+
+id, test_key (e.g., suppliers.create, bills.upload, proposal.generate_pdf), status (PASS/FAIL), error_message, metadata_json, ran_by_user_id, ran_at, is_demo.
+
+Modify all QA test endpoints: Every "Run Test" must insert a row. "Run All" inserts one row per test_key.
+
+Build a QA History View: Add filters by date range and is_demo flag to the /admin/qa interface.
+
+Success Metric: /admin/qa shows a timestamped log of every test run, proving system health over time.
+
+2. WORKFLOW STATE VALIDATION (UPGRADED QA TESTS)
+Upgrade QA tests to validate real database state and business logic, not just HTTP 200 responses. Implement tests for:
+
+A) Bills/OCR/Dossier Flow:
+
+Test: Upload bill → assert OCR parsing job is created → assert parsed fields are saved to DB.
+
+Test: Manual corrections are saved and versioned.
+
+Test: Dossier can move from draft → ready → locked and locks associated data.
+
+B) Supplier Quotes (Immutable Audit Trail):
+
+Test: Quote intake (from any source) creates a dealQuote record.
+
+Test: rawQuoteHash is stored and is non-null.
+
+Test: Normalized price/term fields exist in the record (even if initially marked as partial).
+
+C) PROPOSAL WORKFLOW - ENFORCE "CLIENT-PRICE-FIRST" (NON-NEGOTIABLE):
+
+Business Logic: Proposals cannot be created directly from raw supplier quotes. Implement this mandatory flow:
+
+Renan receives supplier quotes (immutable records).
+Renan clicks "Definir Preço ao Cliente / Aplicar Margem Ótima" for each chosen quote.
+System creates a separate client_price_option layer storing the final R$/MWh shown to the client.
+The proposal wizard only allows selection from these client_price_option records.
+QA Tests to Build:
+
+proposal.create FAILS if the selected quote lacks a linked client_price_option.
+
+proposal.pdf PASSES and the generated PDF must be scanned to confirm it contains NO internal fields (base price, commission, uplift calculations).
+
+D) PRC Upload Fix:
+
+Fix supplier dropdown: It must load existing suppliers from the suppliers table.
+
+If no suppliers exist, show clear UI message: "Cadastre um fornecedor primeiro" with a link to the Suppliers tab.
+
+E) Finance OS Lite Flow:
+
+Test: Create invoice → send → mark paid → export CSV. Validate data integrity in each step.
+
+F) Zoho Intake Integration:
+
+Test: Intake from Zoho creates a deal with a zohoLeadId (enforce uniqueness).
+
+UI: A clear banner must be visible on such deals: "Originated from Zoho CRM • Operational control lives in Ótima Portal".
+
+All originating Zoho fields must be read-only within the portal.
+
+3. RENAN-FRIENDLY PROPOSALS MODULE
+Navigation: Ensure "Propostas" is a top-level nav item.
+
+Dedicated Page: /admin/proposals must exist with: list view, filters (by status, client), detail view.
+
+Core Actions: From this page, Renan must be able to: Generate PDF, Send email, track status (sent, viewed), and see view tracking analytics.
+
+4. DEFINITION OF "DONE" FOR LAUNCH
+Do not consider this task complete until:
+
+/admin/qa shows PASS for all critical tests listed above (A through F).
+
+The happy path works end-to-end without manual DB intervention: Supplier Quote → Apply Client Price/Margin → Create Proposal → Generate PDF → Send via Email.
+
+You have produced the "How Renan Uses It" walkthrough (see Part 3).
+
+PART 2: POST-LAUNCH PRIORITY BUILD (WEEKS 2-6)
+Mandate: Once the portal is stable, focus 100% on eliminating the biggest manual, repetitive bottlenecks for Renan and the back-office. Do not work on external portals or market dashboards.
+
+PRIORITY 1: THE "QUOTE INTAKE ORCHESTRATOR"
+Problem: Renan gets quotes via WhatsApp/Email/PDF. Manual data entry is slow and error-prone.
+
+Build Spec:
+
+Configure dedicated email: rfq@otimaenergia.com.br.
+Build "Quote Inbox" module in the admin area.
+Connect email to OCR/Parsing Engine (leverage existing Dossiê/PRC logic). Extract: Supplier Name, Price (R$/MWh), Term, Modality, Client Reference.
+Build Review & Confirm UI: Show parsed vs. original. One-click confirmation auto-populates the deal's quote matrix.
+Log source email, original file, extraction confidence, corrections.
+Success Metric: Quote processing time reduced from 15+ minutes to under 2.
+
+PRIORITY 2: THE "SUPPLIER CRM" MODULE
+Problem: Supplier interactions and performance are tribal knowledge.
+
+Build Spec:
+
+Add "Suppliers" section with contact info, notes, interaction logging (Call, Email, Meeting).
+Auto-link interactions: Sending an RFQ or receiving a quote via the Inbox logs an interaction.
+Auto-calculate KPIs: Display Supplier's Average Response Time and Quote Win Rate.
+Build "Follow-up Dashboard": Show suppliers with no contact in X days or overdue quotes.
+Success Metric: Renan can instantly see his top 3 most reliable suppliers and 5 most overdue follow-ups.
+
+PRIORITY 3: THE "COMMISSION & RENEWAL AUTOMATOR"
+Problem: Revenue leakage from missed invoicing and renewals.
+
+Build Spec:
+
+Invoice Trigger: Auto-create draft invoice upon deal status change to "CCEE Active".
+Renewal Alert: Auto-flag deals in Assembly Queue where contract ends within 90 days.
+Clawback Tracker: Add field to Commission OS to log clawbacks.
+PART 3: FINAL DELIVERABLE - THE "RENAN WALKTHROUGH"
+Create a concise, step-by-step guide titled "How Renan Uses the Ótima Portal." Base it on the completed, tested system. Structure:
+
+Starting a Deal: From Zoho lead or manual entry.
+
+Creating the Dossiê: Upload bill, verify data, lock it.
+
+Getting Quotes: Using the new Quote Inbox (post-Priority 1) or manual entry.
+
+Preparing the Proposal: The mandatory "Definir Preço ao Cliente" step, then using the Propostas module.
+
+Closing & Getting Paid: Contract signing, status update, and automated invoice trigger.
+
+YOUR REQUIRED FEEDBACK FORMAT
+Respond with the following structure. Be technical and specific.
+
+Audit Summary:
+
+List each component from Part 1. For each, state: Status (Complete/Partial) / Stability / Immediate Bug to Fix.
+
+Pre-Launch Critical Path:
+
+Confirm understanding of the "client-price-first" proposal enforcement. Detail the required DB schema changes for the client_price_option layer.
+
+Provide the single most complex technical challenge in implementing the full QA suite (Part 1.2).
+
+Build Scope & Estimate for Priority 1 (Quote Intake Orchestrator):
+
+A. Recommended library/Service for the rfq@ email parsing pipeline.
+
+B. Required additions to the database schema.
+
+C. Estimated development hours for a working MVP.
+
+D. One major technical risk (e.g., handling multi-format attachments).
+
+One-Line Commands:
+
+Start: [The very first dev task, e.g., "Create theqa_test_runstable and migration"]
+
+Stop: [Any current work not related to Part 1 or Part 2 Priorities]
+
+Defer: [Any feature request that involves external user access (brokers/suppliers)]
