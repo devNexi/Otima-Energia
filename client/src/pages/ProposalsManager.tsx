@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { Link } from "wouter";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { 
   Select, 
   SelectContent, 
@@ -33,15 +34,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { 
   FileText, 
-  ArrowLeft, 
   Eye, 
   Send, 
   CheckCircle, 
   XCircle,
   Clock,
-  TrendingUp,
   MoreVertical,
   Copy,
   ExternalLink,
@@ -54,7 +54,13 @@ import {
   Loader2,
   AlertCircle,
   Mail,
-  FileDown
+  FileDown,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Info,
+  Shield,
+  Calendar
 } from "lucide-react";
 
 interface DealProposal {
@@ -71,6 +77,7 @@ interface DealProposal {
   proposalTitle: string | null;
   preparedByName: string | null;
   recommendedItemId: number | null;
+  recommendedReason: string | null;
   pdfDocId: number | null;
   baselineConsumptionMwh12m: string | null;
   baselineEnergySupplyCost12m: string | null;
@@ -83,10 +90,12 @@ interface ProposalItem {
   productType: string;
   termMonths: number;
   finalPriceRmwh: string;
+  finalEnergyPriceRmwh: string;
   annualEnergyCost: string | null;
   savingsAnnual: string | null;
   savingsPercent: string | null;
   isRecommended?: boolean;
+  publicNotes?: string | null;
 }
 
 interface Deal {
@@ -95,6 +104,19 @@ interface Deal {
   clientName?: string;
   companyName?: string;
   status: string;
+}
+
+interface EligibleQuote {
+  id: string;
+  dealId: string;
+  supplierId: number;
+  supplier?: { name: string };
+  supplierName?: string;
+  energyType?: string;
+  termMonths?: number;
+  clientEnergyPriceRmwh: string;
+  validUntil?: string;
+  isProposalEligible: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -117,18 +139,46 @@ const statusLabels: Record<string, string> = {
   EXPIRED: "Expirada",
 };
 
+const validityPresets = [
+  { label: "7 dias", days: 7 },
+  { label: "15 dias", days: 15 },
+  { label: "30 dias", days: 30 },
+  { label: "45 dias", days: 45 },
+  { label: "60 dias", days: 60 },
+];
+
+const recommendedReasons = [
+  "Melhor custo-benefício no período contratual",
+  "Menor preço por MWh entre as opções apresentadas",
+  "Fornecedor com melhor histórico de atendimento",
+  "Prazo contratual mais adequado ao perfil de consumo",
+  "Melhor combinação de preço, prazo e confiabilidade",
+  "Economia significativa em comparação ao mercado cativo",
+];
+
 export default function ProposalsManager() {
   const { t, language } = useI18n();
   const { toast } = useToast();
-  const { sessionId } = useAuth();
+  const { sessionId, user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
   const [selectedProposal, setSelectedProposal] = useState<DealProposal | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedDealId, setSelectedDealId] = useState<string>("");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState("");
   const [sendMessage, setSendMessage] = useState("");
+
+  // Wizard state
+  const [wizSelectedDealId, setWizSelectedDealId] = useState("");
+  const [wizSelectedQuotes, setWizSelectedQuotes] = useState<string[]>([]);
+  const [wizRecommendedQuoteId, setWizRecommendedQuoteId] = useState("");
+  const [wizValidityDays, setWizValidityDays] = useState("30");
+  const [wizRecommendedReason, setWizRecommendedReason] = useState("");
+  const [wizCustomReason, setWizCustomReason] = useState("");
+  const [wizPreparedBy, setWizPreparedBy] = useState(user?.username || "");
+  const [wizProposalTitle, setWizProposalTitle] = useState("");
+  const [wizCustomNotes, setWizCustomNotes] = useState("");
 
   const { data: proposalsData, isLoading } = useQuery({
     queryKey: ["/api/deal-proposals"],
@@ -154,6 +204,19 @@ export default function ProposalsManager() {
   });
   const deals: Deal[] = dealsData?.deals || [];
 
+  const { data: eligibleQuotesData } = useQuery({
+    queryKey: [`/api/deals/${wizSelectedDealId}/eligible-quotes`],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${wizSelectedDealId}/eligible-quotes`, {
+        headers: { "x-session-id": sessionId || "" },
+      });
+      if (!res.ok) return { quotes: [] };
+      return res.json();
+    },
+    enabled: !!wizSelectedDealId,
+  });
+  const eligibleQuotes: EligibleQuote[] = eligibleQuotesData?.quotes || [];
+
   const { data: proposalDetailData } = useQuery({
     queryKey: ["/api/deal-proposals", selectedProposal?.id],
     queryFn: async () => {
@@ -167,61 +230,71 @@ export default function ProposalsManager() {
     enabled: !!selectedProposal,
   });
 
-  const createProposalMutation = useMutation({
-    mutationFn: async (dealId: string) => {
-      const res = await fetch(`/api/deals/${dealId}/proposals`, {
+  const createAndBuildMutation = useMutation({
+    mutationFn: async () => {
+      const validUntil = new Date(Date.now() + parseInt(wizValidityDays) * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const reason = wizRecommendedReason === "custom" ? wizCustomReason : wizRecommendedReason;
+
+      const createRes = await fetch(`/api/deals/${wizSelectedDealId}/proposals`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "x-session-id": sessionId || "" 
         },
         body: JSON.stringify({
-          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          validUntil,
+          proposalTitle: wizProposalTitle || undefined,
+          preparedByName: wizPreparedBy || undefined,
+          customNotes: wizCustomNotes || undefined,
+          recommendedReason: reason || undefined,
         }),
       });
-      if (!res.ok) {
-        const err = await res.json();
+      if (!createRes.ok) {
+        const err = await createRes.json();
         throw new Error(err.error || "Failed to create proposal");
       }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deal-proposals"] });
-      setCreateDialogOpen(false);
-      setSelectedDealId("");
-      toast({ title: "Proposta criada com sucesso!" });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Erro ao criar proposta", 
-        description: error.message,
-        variant: "destructive" 
-      });
-    },
-  });
+      const { proposal } = await createRes.json();
 
-  const generatePdfMutation = useMutation({
-    mutationFn: async (proposalId: string) => {
-      const res = await fetch(`/api/proposals/${proposalId}/generate`, {
+      for (const quoteId of wizSelectedQuotes) {
+        const addRes = await fetch(`/api/proposals/${proposal.id}/items`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-session-id": sessionId || "" 
+          },
+          body: JSON.stringify({
+            dealQuoteId: quoteId,
+            isRecommended: quoteId === wizRecommendedQuoteId,
+          }),
+        });
+        if (!addRes.ok) {
+          const err = await addRes.json();
+          throw new Error(err.error || `Failed to add quote ${quoteId}`);
+        }
+      }
+
+      const genRes = await fetch(`/api/proposals/${proposal.id}/generate`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "x-session-id": sessionId || "" 
         },
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to generate PDF");
+      if (!genRes.ok) {
+        const err = await genRes.json();
+        throw new Error(err.error || "Failed to generate proposal");
       }
-      return res.json();
+
+      return proposal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deal-proposals"] });
-      toast({ title: "PDF gerado com sucesso!" });
+      resetWizard();
+      toast({ title: "Proposta criada e gerada com sucesso!" });
     },
     onError: (error: any) => {
       toast({ 
-        title: "Erro ao gerar PDF", 
+        title: "Erro ao criar proposta", 
         description: error.message,
         variant: "destructive" 
       });
@@ -260,6 +333,20 @@ export default function ProposalsManager() {
     },
   });
 
+  const resetWizard = () => {
+    setWizardOpen(false);
+    setWizardStep(1);
+    setWizSelectedDealId("");
+    setWizSelectedQuotes([]);
+    setWizRecommendedQuoteId("");
+    setWizValidityDays("30");
+    setWizRecommendedReason("");
+    setWizCustomReason("");
+    setWizPreparedBy(user?.username || "");
+    setWizProposalTitle("");
+    setWizCustomNotes("");
+  };
+
   const filteredProposals = proposals.filter((p) => {
     if (filter === "all") return true;
     return p.status === filter;
@@ -294,42 +381,47 @@ export default function ProposalsManager() {
     return deal?.companyName || deal?.clientName || `Deal ${dealId.slice(0, 8)}`;
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/admin">
-                <Button variant="ghost" size="sm" data-testid="link-back-admin">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-emerald-600" />
-                  {language === "pt" ? "Propostas Comerciais" : "Commercial Proposals"}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {language === "pt" ? "Gerencie e envie propostas para clientes" : "Manage and send proposals to clients"}
-                </p>
-              </div>
-            </div>
-            <Button 
-              onClick={() => setCreateDialogOpen(true)} 
-              className="gap-2"
-              data-testid="button-create-proposal"
-            >
-              <Plus className="h-4 w-4" />
-              {language === "pt" ? "Nova Proposta" : "New Proposal"}
-            </Button>
-          </div>
-        </div>
-      </div>
+  const toggleQuoteSelection = (quoteId: string) => {
+    setWizSelectedQuotes(prev => 
+      prev.includes(quoteId) 
+        ? prev.filter(id => id !== quoteId)
+        : [...prev, quoteId]
+    );
+    if (wizRecommendedQuoteId === quoteId && wizSelectedQuotes.includes(quoteId)) {
+      setWizRecommendedQuoteId("");
+    }
+  };
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  const activeDeals = deals.filter(d => !["CLOSED_WON", "CLOSED_LOST"].includes(d.status));
+
+  const canProceedStep1 = !!wizSelectedDealId;
+  const canProceedStep2 = wizSelectedQuotes.length > 0;
+  const canProceedStep3 = !!wizValidityDays && (wizSelectedQuotes.length === 1 || !!wizRecommendedQuoteId);
+
+  return (
+    <AdminLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-testid="text-page-title">
+              <FileText className="h-6 w-6 text-emerald-600" />
+              Propostas Comerciais
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Gerencie e envie propostas para clientes
+            </p>
+          </div>
+          <Button 
+            onClick={() => setWizardOpen(true)} 
+            className="gap-2"
+            data-testid="button-nova-proposta"
+          >
+            <Plus className="h-4 w-4" />
+            Nova Proposta
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-2">
@@ -390,7 +482,7 @@ export default function ProposalsManager() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>{language === "pt" ? "Todas as Propostas" : "All Proposals"}</CardTitle>
+              <CardTitle>Todas as Propostas</CardTitle>
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-40" data-testid="select-filter">
                   <SelectValue />
@@ -414,13 +506,11 @@ export default function ProposalsManager() {
                 Carregando...
               </div>
             ) : filteredProposals.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-12 text-gray-500">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>{language === "pt" ? "Nenhuma proposta encontrada" : "No proposals found"}</p>
-                <p className="text-sm mt-2">
-                  {language === "pt" 
-                    ? "Crie uma proposta a partir de um negócio com cotações" 
-                    : "Create a proposal from a deal with quotes"}
+                <p className="font-medium">Nenhuma proposta encontrada</p>
+                <p className="text-sm mt-2 text-gray-400">
+                  Clique em "Nova Proposta" para criar sua primeira proposta comercial
                 </p>
               </div>
             ) : (
@@ -428,8 +518,7 @@ export default function ProposalsManager() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Negócio/Cliente</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Título</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600">Negócio / Cliente</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-600">Views</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-600">Validade</th>
@@ -447,10 +536,7 @@ export default function ProposalsManager() {
                       >
                         <td className="px-4 py-3">
                           <div className="font-medium">{getDealName(proposal.dealId)}</div>
-                          <div className="text-xs text-gray-500">ID: {proposal.id.slice(0, 8)}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {proposal.proposalTitle || "Proposta Comercial"}
+                          <div className="text-xs text-gray-400">#{proposal.publicId?.substring(0, 8) || proposal.id.slice(0, 8)}</div>
                         </td>
                         <td className="px-4 py-3">
                           <Badge className={statusColors[proposal.status] || "bg-gray-100"}>
@@ -492,16 +578,7 @@ export default function ProposalsManager() {
                                   <DropdownMenuSeparator />
                                 </>
                               )}
-                              {proposal.status === "DRAFT" && (
-                                <DropdownMenuItem 
-                                  onClick={() => generatePdfMutation.mutate(proposal.id)}
-                                  disabled={generatePdfMutation.isPending}
-                                >
-                                  <FileDown className="h-4 w-4 mr-2" />
-                                  Gerar PDF
-                                </DropdownMenuItem>
-                              )}
-                              {["DRAFT", "GENERATED"].includes(proposal.status) && (
+                              {["GENERATED", "SENT", "VIEWED"].includes(proposal.status) && (
                                 <DropdownMenuItem 
                                   onClick={() => {
                                     setSelectedProposal(proposal);
@@ -513,7 +590,7 @@ export default function ProposalsManager() {
                                 </DropdownMenuItem>
                               )}
                               {proposal.pdfDocId && (
-                                <DropdownMenuItem onClick={() => window.open(`/api/documents/${proposal.pdfDocId}/download`, "_blank")}>
+                                <DropdownMenuItem onClick={() => window.open(`/api/proposals/${proposal.id}/pdf`, "_blank")}>
                                   <Download className="h-4 w-4 mr-2" />
                                   Baixar PDF
                                 </DropdownMenuItem>
@@ -531,73 +608,355 @@ export default function ProposalsManager() {
         </Card>
       </div>
 
-      {/* Create Proposal Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+      {/* Multi-Step Wizard Dialog */}
+      <Dialog open={wizardOpen} onOpenChange={(open) => { if (!open) resetWizard(); }}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-emerald-600" />
-              {language === "pt" ? "Nova Proposta" : "New Proposal"}
+              Nova Proposta — Passo {wizardStep} de 4
             </DialogTitle>
             <DialogDescription>
-              {language === "pt" 
-                ? "Selecione um negócio para criar uma proposta" 
-                : "Select a deal to create a proposal"}
+              {wizardStep === 1 && "Selecione o negócio para a proposta"}
+              {wizardStep === 2 && "Selecione as opções de preço ao cliente"}
+              {wizardStep === 3 && "Configure os detalhes da proposta"}
+              {wizardStep === 4 && "Revise e gere a proposta"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>{language === "pt" ? "Negócio" : "Deal"}</Label>
-              <Select value={selectedDealId} onValueChange={setSelectedDealId}>
-                <SelectTrigger data-testid="select-deal">
-                  <SelectValue placeholder={language === "pt" ? "Selecione um negócio..." : "Select a deal..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {deals.filter(d => !["CLOSED_WON", "CLOSED_LOST"].includes(d.status)).map((deal) => (
-                    <SelectItem key={deal.id} value={deal.id}>
-                      {deal.companyName || deal.clientName || `Deal ${deal.id.slice(0, 8)}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Step indicators */}
+          <div className="flex items-center gap-1 px-2">
+            {[1, 2, 3, 4].map(step => (
+              <div key={step} className="flex-1 flex items-center gap-1">
+                <div className={`h-2 flex-1 rounded-full ${
+                  step <= wizardStep ? 'bg-emerald-500' : 'bg-gray-200'
+                }`} />
+              </div>
+            ))}
+          </div>
 
-            {deals.filter(d => !["CLOSED_WON", "CLOSED_LOST"].includes(d.status)).length === 0 && (
-              <div className="p-4 bg-amber-50 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div className="py-4 min-h-[300px]">
+            {/* Step 1: Select Deal */}
+            {wizardStep === 1 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Negócio</Label>
+                  <p className="text-sm text-gray-500">Selecione o negócio que contém as cotações com preço ao cliente definido.</p>
+                  <Select value={wizSelectedDealId} onValueChange={(v) => { setWizSelectedDealId(v); setWizSelectedQuotes([]); setWizRecommendedQuoteId(""); }}>
+                    <SelectTrigger data-testid="wizard-select-deal">
+                      <SelectValue placeholder="Selecione um negócio..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeDeals.map((deal) => (
+                        <SelectItem key={deal.id} value={deal.id}>
+                          {deal.companyName || deal.clientName || `Deal ${deal.id.slice(0, 8)}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {activeDeals.length === 0 && (
+                  <div className="p-4 bg-amber-50 rounded-lg flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800">Nenhum negócio ativo</p>
+                      <p className="text-sm text-amber-600">
+                        Crie um negócio com cotações de fornecedores antes de gerar propostas.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {wizSelectedDealId && eligibleQuotes.length === 0 && (
+                  <div className="p-4 bg-amber-50 rounded-lg flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800">Nenhuma cotação com preço ao cliente</p>
+                      <p className="text-sm text-amber-600">
+                        Acesse o negócio, vá na aba "Cotações" e clique em "Definir Preço ao Cliente" em pelo menos uma cotação.
+                      </p>
+                      <Link href={`/admin/deals`}>
+                        <Button variant="link" size="sm" className="mt-2 p-0 h-auto text-amber-700">
+                          Ir para Negócios <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {wizSelectedDealId && eligibleQuotes.length > 0 && (
+                  <div className="p-3 bg-emerald-50 rounded-lg flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm text-emerald-700 font-medium">
+                      {eligibleQuotes.length} {eligibleQuotes.length === 1 ? 'cotação elegível' : 'cotações elegíveis'} encontrada{eligibleQuotes.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Select Client Price Options */}
+            {wizardStep === 2 && (
+              <div className="space-y-4">
                 <div>
-                  <p className="font-medium text-amber-800">
-                    {language === "pt" ? "Nenhum negócio ativo" : "No active deals"}
+                  <Label className="text-base font-medium">Opções de Preço ao Cliente</Label>
+                  <p className="text-sm text-gray-500 mt-1">Selecione as cotações que deseja incluir na proposta. Apenas cotações com preço ao cliente definido são exibidas.</p>
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-lg flex items-start gap-2">
+                  <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <p className="text-sm text-blue-700">
+                    Os preços abaixo já incluem a comissão da Ótima. O cliente verá apenas o "Preço Final".
                   </p>
-                  <p className="text-sm text-amber-600">
-                    {language === "pt" 
-                      ? "Crie um negócio com cotações de fornecedores antes de gerar propostas." 
-                      : "Create a deal with supplier quotes before generating proposals."}
-                  </p>
+                </div>
+
+                <div className="space-y-3 max-h-[280px] overflow-y-auto">
+                  {eligibleQuotes.map(quote => {
+                    const isSelected = wizSelectedQuotes.includes(quote.id);
+                    return (
+                      <div
+                        key={quote.id}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-emerald-500 bg-emerald-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => toggleQuoteSelection(quote.id)}
+                        data-testid={`wizard-quote-${quote.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'
+                            }`}>
+                              {isSelected && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">{quote.supplier?.name || quote.supplierName || 'Fornecedor'}</p>
+                              <p className="text-xs text-gray-500">
+                                {quote.energyType || 'Convencional'} • {quote.termMonths || 12} meses
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-lg text-emerald-700">
+                              R$ {parseFloat(quote.clientEnergyPriceRmwh).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">por MWh</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {wizSelectedQuotes.length === 0 && (
+                  <p className="text-sm text-amber-600">Selecione pelo menos uma cotação para continuar.</p>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Settings */}
+            {wizardStep === 3 && (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Validade da Proposta</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {validityPresets.map(preset => (
+                      <Button
+                        key={preset.days}
+                        size="sm"
+                        variant={wizValidityDays === String(preset.days) ? "default" : "outline"}
+                        onClick={() => setWizValidityDays(String(preset.days))}
+                        data-testid={`wizard-validity-${preset.days}`}
+                      >
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {wizSelectedQuotes.length > 1 && (
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium">Opção Recomendada</Label>
+                    <p className="text-sm text-gray-500">Qual cotação será destacada como "Recomendada" para o cliente?</p>
+                    <Select value={wizRecommendedQuoteId} onValueChange={setWizRecommendedQuoteId}>
+                      <SelectTrigger data-testid="wizard-recommended-quote">
+                        <SelectValue placeholder="Selecione a opção recomendada..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wizSelectedQuotes.map(qId => {
+                          const q = eligibleQuotes.find(eq => eq.id === qId);
+                          return (
+                            <SelectItem key={qId} value={qId}>
+                              {q?.supplier?.name || q?.supplierName || 'Fornecedor'} — R$ {q ? parseFloat(q.clientEnergyPriceRmwh).toFixed(2) : '?'}/MWh
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Por que recomendamos?</Label>
+                  <Select value={wizRecommendedReason} onValueChange={setWizRecommendedReason}>
+                    <SelectTrigger data-testid="wizard-recommended-reason">
+                      <SelectValue placeholder="Selecione um motivo (opcional)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recommendedReasons.map(reason => (
+                        <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                      ))}
+                      <SelectItem value="custom">Outro (personalizado)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {wizRecommendedReason === "custom" && (
+                    <Input
+                      value={wizCustomReason}
+                      onChange={(e) => setWizCustomReason(e.target.value)}
+                      placeholder="Digite o motivo da recomendação..."
+                      data-testid="wizard-custom-reason"
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Preparado por</Label>
+                  <Input
+                    value={wizPreparedBy}
+                    onChange={(e) => setWizPreparedBy(e.target.value)}
+                    placeholder="Nome do consultor"
+                    data-testid="wizard-prepared-by"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notas para o cliente (opcional)</Label>
+                  <Textarea
+                    value={wizCustomNotes}
+                    onChange={(e) => setWizCustomNotes(e.target.value)}
+                    placeholder="Informações adicionais que serão exibidas na proposta..."
+                    rows={2}
+                    data-testid="wizard-notes"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Review */}
+            {wizardStep === 4 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <h3 className="font-medium text-emerald-800 mb-3">Resumo da Proposta</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Negócio</p>
+                      <p className="font-medium">{getDealName(wizSelectedDealId)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Validade</p>
+                      <p className="font-medium">{wizValidityDays} dias</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Opções incluídas</p>
+                      <p className="font-medium">{wizSelectedQuotes.length} cotação(ões)</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Preparado por</p>
+                      <p className="font-medium">{wizPreparedBy || "-"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Opções selecionadas</h4>
+                  {wizSelectedQuotes.map(qId => {
+                    const q = eligibleQuotes.find(eq => eq.id === qId);
+                    const isRec = qId === wizRecommendedQuoteId || (wizSelectedQuotes.length === 1);
+                    return (
+                      <div key={qId} className={`p-3 rounded-lg border ${isRec ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium">{q?.supplier?.name || q?.supplierName || 'Fornecedor'}</span>
+                            {isRec && (
+                              <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                                <Star className="h-3 w-3 mr-1" />
+                                Recomendada
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="font-bold text-emerald-700">
+                            R$ {q ? parseFloat(q.clientEnergyPriceRmwh).toFixed(2) : '?'}/MWh
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-lg flex items-start gap-2">
+                  <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-700">
+                    <p className="font-medium">Proteção de receita ativa</p>
+                    <p>A proposta mostrará apenas o preço final ao cliente. Nenhum preço base ou margem será exposto.</p>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => createProposalMutation.mutate(selectedDealId)}
-              disabled={!selectedDealId || createProposalMutation.isPending}
-              data-testid="button-create-proposal-submit"
-            >
-              {createProposalMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Criando...
-                </>
-              ) : (
-                "Criar Proposta"
+          <DialogFooter className="flex justify-between">
+            <div>
+              {wizardStep > 1 && (
+                <Button variant="ghost" onClick={() => setWizardStep(s => s - 1)} data-testid="wizard-btn-back">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Voltar
+                </Button>
               )}
-            </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={resetWizard}>
+                Cancelar
+              </Button>
+              {wizardStep < 4 ? (
+                <Button
+                  onClick={() => setWizardStep(s => s + 1)}
+                  disabled={
+                    (wizardStep === 1 && !canProceedStep1) ||
+                    (wizardStep === 1 && eligibleQuotes.length === 0) ||
+                    (wizardStep === 2 && !canProceedStep2) ||
+                    (wizardStep === 3 && !canProceedStep3)
+                  }
+                  data-testid="wizard-btn-next"
+                >
+                  Próximo
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => createAndBuildMutation.mutate()}
+                  disabled={createAndBuildMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  data-testid="wizard-btn-generate"
+                >
+                  {createAndBuildMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Gerar Proposta
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -608,18 +967,16 @@ export default function ProposalsManager() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-blue-600" />
-              {language === "pt" ? "Enviar Proposta" : "Send Proposal"}
+              Enviar Proposta
             </DialogTitle>
             <DialogDescription>
-              {language === "pt" 
-                ? "Envie a proposta por email para o cliente" 
-                : "Send the proposal via email to the client"}
+              Envie a proposta por email para o cliente
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">{language === "pt" ? "Email do destinatário" : "Recipient email"}</Label>
+              <Label htmlFor="email">Email do destinatário</Label>
               <Input
                 id="email"
                 type="email"
@@ -630,12 +987,12 @@ export default function ProposalsManager() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="message">{language === "pt" ? "Mensagem personalizada (opcional)" : "Custom message (optional)"}</Label>
+              <Label htmlFor="message">Mensagem personalizada (opcional)</Label>
               <Textarea
                 id="message"
                 value={sendMessage}
                 onChange={(e) => setSendMessage(e.target.value)}
-                placeholder={language === "pt" ? "Adicione uma mensagem personalizada..." : "Add a custom message..."}
+                placeholder="Adicione uma mensagem personalizada..."
                 rows={3}
                 data-testid="textarea-send-message"
               />
@@ -695,13 +1052,13 @@ export default function ProposalsManager() {
                 {proposalDetailData?.items?.length > 0 ? (
                   <div className="space-y-3">
                     {proposalDetailData.items.map((item: ProposalItem) => (
-                      <Card key={item.id} className={item.id === selectedProposal?.recommendedItemId ? "border-emerald-500 border-2" : ""}>
+                      <Card key={item.id} className={item.isRecommended ? "border-emerald-500 border-2" : ""}>
                         <CardContent className="pt-4">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <Building className="h-4 w-4 text-gray-500" />
                               <span className="font-medium">{item.supplierName}</span>
-                              {item.id === selectedProposal?.recommendedItemId && (
+                              {item.isRecommended && (
                                 <Badge className="bg-emerald-100 text-emerald-700">
                                   <Star className="h-3 w-3 mr-1" />
                                   Recomendada
@@ -710,24 +1067,19 @@ export default function ProposalsManager() {
                             </div>
                             <Badge variant="outline">{item.productType}</Badge>
                           </div>
-                          <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div className="grid grid-cols-3 gap-4 text-sm">
                             <div>
                               <p className="text-gray-500">Prazo</p>
                               <p className="font-medium">{item.termMonths} meses</p>
                             </div>
                             <div>
-                              <p className="text-gray-500">Preço</p>
-                              <p className="font-medium">R$ {parseFloat(item.finalPriceRmwh).toFixed(2)}/MWh</p>
+                              <p className="text-gray-500">Preço Final</p>
+                              <p className="font-medium text-emerald-700">R$ {parseFloat(item.finalEnergyPriceRmwh || item.finalPriceRmwh).toFixed(2)}/MWh</p>
                             </div>
                             <div>
-                              <p className="text-gray-500">Custo Anual</p>
-                              <p className="font-medium">{formatCurrency(item.annualEnergyCost)}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500">Economia</p>
+                              <p className="text-gray-500">Economia Anual</p>
                               <p className="font-medium text-emerald-600">
                                 {formatCurrency(item.savingsAnnual)}
-                                {item.savingsPercent && ` (${parseFloat(item.savingsPercent).toFixed(1)}%)`}
                               </p>
                             </div>
                           </div>
@@ -739,7 +1091,6 @@ export default function ProposalsManager() {
                   <div className="text-center py-8 text-gray-500">
                     <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>Nenhuma opção de cotação adicionada</p>
-                    <p className="text-sm mt-2">Adicione cotações de fornecedores a esta proposta</p>
                   </div>
                 )}
               </TabsContent>
@@ -763,6 +1114,12 @@ export default function ProposalsManager() {
                       <p className="text-sm text-gray-500">Preparado por</p>
                       <p className="font-medium">{selectedProposal?.preparedByName || "-"}</p>
                     </div>
+                    {selectedProposal?.recommendedReason && (
+                      <div>
+                        <p className="text-sm text-gray-500">Por que recomendamos</p>
+                        <p className="font-medium text-emerald-700">{selectedProposal.recommendedReason}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -793,26 +1150,26 @@ export default function ProposalsManager() {
               )}
             </div>
             <div className="flex gap-2">
-              {selectedProposal?.status === "DRAFT" && (
-                <Button 
-                  variant="outline"
-                  onClick={() => generatePdfMutation.mutate(selectedProposal.id)}
-                  disabled={generatePdfMutation.isPending}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Gerar PDF
-                </Button>
-              )}
-              {selectedProposal && ["DRAFT", "GENERATED"].includes(selectedProposal.status) && (
-                <Button onClick={() => setSendDialogOpen(true)}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar
-                </Button>
+              {["GENERATED", "SENT", "VIEWED"].includes(selectedProposal?.status || "") && (
+                <>
+                  <Button variant="outline" asChild>
+                    <a href={`/api/proposals/${selectedProposal?.id}/pdf`} download>
+                      <Download className="h-4 w-4 mr-2" />
+                      PDF
+                    </a>
+                  </Button>
+                  <Button
+                    onClick={() => setSendDialogOpen(true)}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar Proposta
+                  </Button>
+                </>
               )}
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 }

@@ -15,7 +15,9 @@ import {
   Building2,
   Zap,
   Send,
-  Link2
+  Link2,
+  Layers,
+  ClipboardList
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -38,11 +40,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const mainNavItems: NavItem[] = [
     { label: "Fornecedores", href: "/admin/suppliers", icon: <Building2 className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
     { label: "Negócios", href: "/admin/deals", icon: <Briefcase className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
-    { label: "ECOS", href: "/admin/ecos", icon: <Zap className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
-    { label: "RFQs / Cotações", href: "/admin/rfqs", icon: <Send className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
-    { label: "Ops Dashboard", href: "/admin/ops-dashboard", icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin', 'ops'] },
+    { label: "Montagem", href: "/admin/ops-dashboard", icon: <Layers className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
+    { label: "Propostas", href: "/admin/proposals", icon: <ClipboardList className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
     { label: "Clientes", href: "/admin/clients", icon: <Users className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
     { label: "Comissão", href: "/admin/commission", icon: <DollarSign className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
+  ];
+
+  const opsNavItems: NavItem[] = [
+    { label: "ECOS", href: "/admin/ecos", icon: <Zap className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
+    { label: "RFQs / Cotações", href: "/admin/rfqs", icon: <Send className="w-4 h-4" />, roles: ['admin', 'ops', 'sales'] },
   ];
 
   const adminNavItems: NavItem[] = [
@@ -56,13 +62,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     user && item.roles.includes(user.role)
   );
 
+  const filteredOpsNav = opsNavItems.filter(item =>
+    user && item.roles.includes(user.role)
+  );
+
   const filteredAdminNav = adminNavItems.filter(item => 
     user && item.roles.includes(user.role)
   );
 
   const isActive = (href: string) => {
     if (location === href) return true;
-    if (href !== '/admin/deals' && href !== '/admin/overview' && location.startsWith(href)) return true;
+    if (href !== '/admin/deals' && href !== '/admin/overview' && href !== '/admin/proposals' && location.startsWith(href)) return true;
     return false;
   };
 
@@ -101,6 +111,32 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </Link>
           ))}
+
+          {filteredOpsNav.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <div className="flex items-center gap-2 px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <Zap className="w-3 h-3" />
+                  <span>Operações</span>
+                </div>
+              </div>
+              {filteredOpsNav.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <div
+                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg cursor-pointer transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                    data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-').replace(/\//g, '-')}`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
+              ))}
+            </>
+          )}
 
           {filteredAdminNav.length > 0 && (
             <>

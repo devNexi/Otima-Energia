@@ -41,6 +41,7 @@ import {
   Check,
   X,
   Briefcase,
+  Shield,
   ShieldCheck,
   Send,
   BarChart3
@@ -959,12 +960,20 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         <TabsContent value="quotes">
           <Card>
             <CardHeader>
-              <CardTitle>{language === "pt" ? "Cotações de Fornecedores" : "Supplier Quotes"}</CardTitle>
-              <CardDescription>
-                {language === "pt" 
-                  ? "Cotações recebidas para este deal"
-                  : "Quotes received for this deal"}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{language === "pt" ? "Cotações de Fornecedores" : "Supplier Quotes"}</CardTitle>
+                  <CardDescription>
+                    {language === "pt" 
+                      ? "Cotações recebidas para este deal"
+                      : "Quotes received for this deal"}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  {language === "pt" ? "Uso interno" : "Internal use"}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               {!deal.quotes || deal.quotes.length === 0 ? (
@@ -998,7 +1007,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Preço Base" : "Base Price"}</p>
+                          <p className="text-gray-500">{language === "pt" ? "Cotação do fornecedor" : "Supplier quote"} <span className="text-amber-600 text-[10px]">(uso interno)</span></p>
                           <p className="font-medium text-gray-600">
                             {quote.baseEnergyPriceRmwh 
                               ? `R$ ${parseFloat(quote.baseEnergyPriceRmwh).toFixed(2)}/MWh`
@@ -1018,7 +1027,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                           )}
                         </div>
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Margem" : "Margin"}</p>
+                          <p className="text-gray-500">{language === "pt" ? "Margem" : "Margin"} <span className="text-amber-600 text-[10px]">(uso interno)</span></p>
                           <p className="font-medium">
                             {quote.upliftValue 
                               ? `${quote.upliftType === "PERCENT" ? "" : "R$ "}${parseFloat(quote.upliftValue).toFixed(2)}${quote.upliftType === "PERCENT" ? "%" : "/MWh"}`
