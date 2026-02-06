@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Star, CheckCircle2, Calendar, Clock, TrendingDown, Zap, Shield } from "lucide-react";
+import { Star, CheckCircle2, Calendar, Clock, TrendingDown, Zap, Shield, AlertTriangle } from "lucide-react";
 
 const brandKit = {
   brandName: "Ótima Energia",
@@ -124,6 +124,16 @@ export default function ProposalPreview() {
               <Clock className="w-4 h-4" />
               Válida até {new Date(mockProposal.validUntil).toLocaleDateString("pt-BR")}
             </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg mb-6 border-2 border-amber-400 bg-amber-50 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-900 text-sm">Preços válidos por 24 horas</p>
+            <p className="text-amber-700 text-sm mt-0.5">
+              Os preços apresentados nesta proposta refletem condições de mercado e são válidos por <strong>24 horas</strong> a partir da data de emissão. Após esse prazo, os valores podem ser atualizados conforme variações do mercado de energia.
+            </p>
           </div>
         </div>
 

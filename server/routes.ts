@@ -9963,6 +9963,14 @@ export async function registerRoutes(
             <div class="client-name">${client?.companyName || snapshotData.client?.company || 'Cliente'}</div>
           </div>
           
+          <div style="border: 2px solid #f59e0b; background: #fffbeb; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start;">
+            <span style="font-size: 20px;">⚠️</span>
+            <div>
+              <div style="font-weight: 600; color: #92400e; font-size: 13px; margin-bottom: 4px;">Preços válidos por 24 horas</div>
+              <div style="color: #a16207; font-size: 12px;">Os preços apresentados nesta proposta refletem condições de mercado e são válidos por 24 horas a partir da data de emissão. Após esse prazo, os valores podem ser atualizados conforme variações do mercado de energia.</div>
+            </div>
+          </div>
+          
           <div class="section-title">Opções de Fornecimento</div>
           
           ${items.map((item: any) => `

@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, FileText, Star, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { Loader2, FileText, Star, CheckCircle2, Clock, Calendar, AlertTriangle } from "lucide-react";
 
 interface ProposalSnapshot {
   proposal: {
@@ -147,6 +147,16 @@ export default function PublicProposal() {
               <Calendar className="w-4 h-4" />
               Gerada em {new Date(snapshot.generatedAt).toLocaleDateString("pt-BR")}
             </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg mb-6 border-2 border-amber-400 bg-amber-50 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-900 text-sm">Preços válidos por 24 horas</p>
+            <p className="text-amber-700 text-sm mt-0.5">
+              Os preços apresentados nesta proposta refletem condições de mercado e são válidos por <strong>24 horas</strong> a partir da data de emissão. Após esse prazo, os valores podem ser atualizados conforme variações do mercado de energia.
+            </p>
           </div>
         </div>
 
