@@ -36,6 +36,7 @@ import QaConsole from "@/pages/QaConsole";
 import ProposalView from "@/pages/ProposalView";
 import NotFound from "@/pages/not-found";
 import PublicProposal from "@/pages/PublicProposal";
+import ProposalPreview from "@/pages/ProposalPreview";
 
 function Router() {
   return (
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/termos-parcerias" component={TermosParcerias} />
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/proposta/:publicId" component={PublicProposal} />
+      <Route path="/proposta-preview" component={ProposalPreview} />
       <Route path="/proposal/view/:token" component={ProposalView} />
       
       {/* Admin routes - redirect /admin to /admin/deals */}
