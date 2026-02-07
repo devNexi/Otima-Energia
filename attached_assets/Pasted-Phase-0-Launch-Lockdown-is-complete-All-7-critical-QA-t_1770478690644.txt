@@ -1,0 +1,131 @@
+Phase 0 (Launch Lockdown) is complete. All 7 critical QA tests pass. We are now executing Phase 1: The Ótima Efficiency Engine. This spec is for Priority 2: Supplier CRM Module. Do not begin work until you confirm this module does not already exist.
+
+IMMEDIATE PREREQUISITE CHECK
+Before writing any code, answer:
+
+Does a suppliers database table already exist? If yes, list its schema.
+
+Does a /admin/suppliers route or navigation item exist? If yes, describe its current functionality.
+
+Are there any existing logs or tables tracking supplier interactions (e.g., supplier_contacts, interactions)?
+
+If any of the above exist, update this spec to extend them—do not duplicate.
+
+1. CORE DATABASE SCHEMA
+If no suppliers table exists, create it with these fields:
+
+sql
+TABLE suppliers:
+- id (uuid, primary key)
+- created_at
+- updated_at
+- name (text, not null) -- e.g., "Thymos Energia"
+- alias (text, nullable) -- e.g., "thymos"
+- is_active (boolean, default true)
+- contact_name (text)
+- contact_email (text)
+- contact_phone (text)
+- notes (text)
+- metadata_json (jsonb) -- for future flexibility
+If no interaction logging exists, create this table:
+
+sql
+TABLE supplier_interactions:
+- id (uuid, primary key)
+- created_at
+- supplier_id (foreign key to suppliers.id)
+- interaction_type (text) -- ENUM: 'RFQ_SENT', 'QUOTE_RECEIVED', 'CALL', 'EMAIL', 'MEETING', 'NOTE'
+- interaction_source (text) -- e.g., 'quote_inbox', 'manual_entry', 'zoho_crm'
+- deal_id (foreign key to deals.id, nullable)
+- rfq_id (foreign key to rfqs.id, nullable)
+- note (text) -- For manual notes or automated context (e.g., "Quote received via email for Deal #123")
+- metadata_json (jsonb) -- e.g., {'quote_value': 50000, 'response_time_hours': 48}
+2. USER INTERFACE & NAVIGATION
+A. Navigation & Main View
+
+Add a top-level navigation item: "Fornecedores" (Suppliers).
+
+The main page (/admin/suppliers) is a table/list view with columns:
+
+Nome (with link to detail)
+
+Contato Principal
+
+Última Interação (date of most recent supplier_interactions)
+
+Tempo Médio de Resposta (in hours, see KPIs below)
+
+Taxa de Sucesso (percentage, see KPIs below)
+
+Status (Active/Inactive badge)
+
+Above the table: a prominent "+ Novo Fornecedor" button.
+
+B. Supplier Detail Page
+
+Route: /admin/suppliers/:id
+
+Tab 1: Overview: Display core contact info and notes (editable).
+
+Tab 2: Interações (Log): Chronological list of all supplier_interactions for this supplier. Each log entry must show:
+
+Type (with icon)
+
+Date
+
+Linked Deal/RFQ ID (as a clickable link if applicable)
+
+Automated or manual note.
+
+Tab 3: KPIs & Analytics: Display calculated metrics (see Section 3).
+
+3. AUTOMATED LOGGING & KPI CALCULATION
+A. Auto-Log Interactions (CRITICAL)
+The system must automatically create supplier_interactions records for:
+
+RFQ Sent: When an RFQ is dispatched via the system, log RFQ_SENT. Link the rfq_id and deal_id.
+
+Quote Received: When a quote is confirmed via the Quote Inbox (Priority 1), log QUOTE_RECEIVED. Link the deal_id. Store the response_time_hours in metadata_json (calculated from RFQ sent time to quote received time).
+
+Manual Logging: On the supplier detail page, provide a quick form for Renan to log a CALL, EMAIL, MEETING, or NOTE.
+
+B. Auto-Calculate KPIs
+Calculate and display the following for each supplier:
+
+Average Response Time (h): The mean response_time_hours from all QUOTE_RECEIVED interactions where that data is available.
+
+Quote Win Rate (%): (Number of deals won where supplier's quote was selected) / (Number of RFQs sent to this supplier) * 100.
+
+Requires linking final deal.supplier_awarded_id to the supplier table.
+
+4. FOLLOW-UP DASHBOARD
+On the main /admin/suppliers page, implement a separate, highlighted section at the top called "Ações Pendentes".
+
+This section lists two types of suppliers:
+
+Sem Contato > 7 Dias: Suppliers with is_active = true and no supplier_interactions in the last 7 days.
+
+Cotações Atrasadas: Suppliers with an RFQ_SENT log in the last 30 days, but no subsequent QUOTE_RECEIVED log, and where the linked RFQ's deadline has passed.
+
+Each listed supplier should have a "Registrar Contato" button that opens a quick log form.
+
+5. SUCCESS METRICS & DEFINITION OF DONE
+This module is complete when:
+✅ All Database Tables are created and integrated.
+✅ Navigation and UI are fully functional as per spec.
+✅ Auto-Logging is live: RFQ sends and Quote Inbox confirmations create interaction records without manual input.
+✅ KPI Calculation is live and displaying accurate data in the UI.
+✅ Follow-up Dashboard is visible and correctly identifies lagging suppliers.
+✅ QA Test Passes: A new test suppliers.crm_auto_logging verifies that creating an RFQ auto-generates an interaction log.
+
+YOUR CONFIRMED PLAN
+Reply with:
+
+Prerequisite Check Result: Do the suppliers and logging tables exist? (Yes/No with schema).
+
+Technical Approach: Briefly describe how you will hook into the RFQ dispatch and Quote Inbox confirmation events to trigger the auto-logging.
+
+Estimated Hours: For the complete build as described.
+
+Your Commitment: "We will build the Supplier CRM Module as specified. We will not proceed to any other Phase 1 tasks until the suppliers.crm_auto_logging QA test passes and Renan can verify the Follow-up Dashboard is working."
+
