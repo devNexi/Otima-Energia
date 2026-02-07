@@ -1,0 +1,85 @@
+Data foundation verified. Build the Supplier Intelligence Module as an analytical layer on top of existing tables (suppliers, rfq_dispatches, dealQuotes, deals). Do not create new log tables. Enhance the existing /admin/suppliers interface.
+
+1. CORE PRINCIPLE: SINGLE SOURCE OF TRUTH
+RFQ Sent Log: rfq_dispatches table.
+
+Quote Received Log: dealQuotes table.
+
+Supplier Win Log: deals.selectedQuoteId → dealQuotes.supplierId.
+
+All KPIs and logs must be derived from these tables using SQL joins.
+
+2. ENHANCE SUPPLIER DETAIL PAGE (/admin/suppliers/:id)
+Add three new tabs to the existing supplier detail view:
+
+Tab 1: Visão Geral (Overview)
+Keep existing contact info. Add two new components at the top:
+
+KPI Summary Cards:
+
+Tempo Médio de Resposta: AVG(dealQuotes.received_at - rfq_dispatches.sent_at) for this supplier, in hours. Display as "XX horas".
+Taxa de Sucesso (Win Rate): Calculate as:
+(Number of deals where dealQuotes.supplier_id = :supplierId AND dealQuotes.isSelected = true) / (Number of rfq_dispatches where supplier_id = :supplierId)
+Display as a percentage (e.g., "24%"). Show the raw numbers in a tooltip (e.g., "5/21 RFQs won").
+Tab 2: Histórico de Interações (NEW)
+Chronological, unified log from existing data.
+
+Data Source: UNION query between:
+
+rfq_dispatches (type: 'RFQ_ENVIADA')
+dealQuotes (type: 'COTAÇÃO_RECEBIDA')
+Future: supplier_contacts updates (type: 'OBSERVAÇÃO')
+Columns for each entry: Data/Hora | Tipo | Detalhes (e.g., "RFQ para Deal #123") | Ações (link to deal)
+
+Critical: For 'COTAÇÃO_RECEBIDA' entries, display the calculated response_time_hours in the details.
+
+Tab 3: Desempenho (Performance) (NEW)
+Advanced analytics.
+
+Response Time Distribution: A simple bar chart showing count of quotes received in buckets (<24h, 24-48h, 48-72h, >72h).
+
+Win Rate Trend: Line chart showing win rate per month (last 6 months).
+
+3. BUILD THE "FORNECEDORES" DASHBOARD ENHANCEMENTS
+On the main /admin/suppliers list page, add:
+
+A. KPI Columns in the Main Table:
+
+Add columns: "Resp. Média (h)" and "Taxa Sucesso %". Populate with the KPI logic from Tab 1.
+
+B. "Ações Pendentes" Dashboard (Top of Page):
+A separate, highlighted panel showing:
+
+Cotações Atrasadas: Suppliers with an rfq_dispatches record from the last 30 days where sent_at > 7 days ago AND there is no corresponding dealQuotes record with the same rfqDispatchId.
+
+Sem Contato Recente: Suppliers with isActive = true and no rfq_dispatches or dealQuotes activity in the last 14 days.
+
+For each listed supplier, show a "Registrar Contato" button that opens a quick form to add a note to supplier_contacts.
+
+4. CRITICAL: PERFORMANCE & INDEXING
+These queries will run on large tables. Create indexes before deployment:
+
+idx_rfq_dispatches_supplier_id_sent_at
+
+idx_dealquotes_supplier_id_received_at
+
+idx_dealquotes_rfq_dispatch_id
+
+idx_deals_selected_quote_id
+
+5. SUCCESS METRICS & DEFINITION OF DONE
+This module is complete when:
+✅ KPI Calculations are live, accurate, and performant on the Supplier Detail page.
+✅ Histórico de Interações Tab displays a unified, chronological log from rfq_dispatches and dealQuotes.
+✅ "Ações Pendentes" Dashboard is live and correctly identifies suppliers needing follow-up.
+✅ QA Test Passes: A new test suppliers.intelligence_kpis verifies the win rate and response time calculations for a known test supplier.
+✅ No New Log Tables: The system uses only existing tables (rfq_dispatches, dealQuotes).
+
+YOUR CONFIRMED PLAN & FIRST TASK
+Reply with:
+
+The exact SQL query you will use to calculate the Win Rate (%) for a given supplier_id. (Use the verified schema).
+
+The exact SQL query to identify suppliers for the "Cotações Atrasadas" list in the dashboard.
+
+Your Commitment: "We will build the Supplier Intelligence Module as specified, deriving all data from existing tables. We will create the necessary database indexes first. We will not proceed to other Phase 1 tasks until the suppliers.intelligence_kpis QA test passes and the 'Ações Pendentes' dashboard is operational."
