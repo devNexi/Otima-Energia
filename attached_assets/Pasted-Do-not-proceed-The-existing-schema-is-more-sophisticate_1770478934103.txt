@@ -1,0 +1,62 @@
+Do not proceed. The existing schema is more sophisticated than expected, but you're about to architect it wrong. You're treating this as a simple logging project when it's a data unification and intelligence project.
+
+🚨 Critical Architectural Flaws in Your Approach
+You're Creating a Redundant Log (supplier_interactions). The rfq_dispatches table is already your interaction log for RFQs. Adding a separate log creates two sources of truth. You must augment and query rfq_dispatches, not ignore it.
+
+Your KPI Logic is Fundamentally Broken. Your "Quote Win Rate" formula (deals won) / (RFQs sent) is wrong and will produce useless data. An RFQ can have 5 suppliers. If you send 100 RFQs to Supplier X and they lose 90 but win 10, their win rate is 10%, not some fraction of your total deals. Your formula doesn't account for this. You need supplier_quote -> deal linkage.
+
+You're Ignoring the Core Data Relationship. The critical link for KPIs is between a specific supplier's quote and the final awarded deal. You need to ensure the dealQuotes table has a supplier_id foreign key (it likely does). If not, this is your first task, not building logs.
+
+✅ The Correct, Robust Build Sequence
+Step 0: Data Foundation (MANDATORY PRE-BUILD)
+
+Audit the dealQuotes table. Confirm it has a supplier_id column linking to the suppliers table. If it does not, add it now. Every quote must be attributable to one supplier.
+
+Audit the deals table. Confirm it has an awarded_supplier_id or winning_quote_id column that indicates which supplier/quote won. If not, add it. This is non-negotiable for calculating win rates.
+
+Step 1: Augment Existing Tables (Do NOT create supplier_interactions)
+
+Add to rfq_dispatches: Ensure it has supplier_id and deal_id. It now becomes your authoritative RFQ_SENT log.
+
+Add to dealQuotes: Ensure it has received_at timestamp. It now becomes your authoritative QUOTE_RECEIVED log. Calculate response_time_hours between the related rfq_dispatches.sent_at and this timestamp.
+
+Step 2: Build KPIs from Correct Data Sources
+
+Average Response Time: AVG(dealQuotes.received_at - rfq_dispatches.sent_at) for each supplier, joined via supplier_id.
+
+Quote Win Rate: (COUNT of deals where deal.awarded_supplier_id = supplier.id) / (COUNT of rfq_dispatches where rfq_dispatches.supplier_id = supplier.id).
+
+This is the correct formula. It measures how often they win when they compete.
+
+Step 3: Build the UI as an Intelligence Layer
+
+Supplier Detail Page (/admin/suppliers/:id): Create the new tabbed view.
+
+KPI Tab: Run and display the queries from Step 2.
+
+Interaction Log Tab: Query and display a unified chronological log from:
+
+rfq_dispatches (RFQ Sent)
+
+dealQuotes (Quote Received)
+
+supplier_contacts updates (Manual Notes) -- you may need to add a logged_at and note field here.
+
+Follow-up Dashboard: Query rfq_dispatches for suppliers with no corresponding dealQuotes record after >7 days and where the RFQ deadline has passed.
+
+📋 Your Revised, Correct Prerequisite Check
+Answer these before writing a single line of new code:
+
+Schema Verification:
+
+Does dealQuotes have supplier_id (FK to suppliers.id)? Yes/No
+
+Does dealQuotes have received_at? Yes/No
+
+Does deals have awarded_supplier_id or winning_quote_id? Yes/No
+
+If the answer to ANY is NO, your first task is to run these schema migrations. This is Phase 0-level critical. The CRM module cannot function without this data integrity.
+
+Do not proceed with the build until you confirm the data foundation is solid. Building on a broken data model will create false KPIs, misleading dashboards, and require a full rewrite in 3 months.
+
+Reply with the verified schema answers.
