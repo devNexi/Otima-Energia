@@ -3685,7 +3685,7 @@ export class Storage implements IStorage {
       JOIN suppliers s ON s.id = rd.supplier_id
       LEFT JOIN deal_quotes dq ON dq.rfq_dispatch_id = rd.id
       WHERE rd.sent_at > NOW() - INTERVAL '30 days'
-        AND rd.sent_at < NOW() - INTERVAL '7 days'
+        AND rd.due_at < NOW()
         AND dq.id IS NULL
         AND s.is_active = true
         AND rd.status NOT IN ('DRAFT', 'CLOSED')
