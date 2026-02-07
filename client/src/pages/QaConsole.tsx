@@ -122,6 +122,24 @@ const defaultTestCases: TestCase[] = [
     category: "finance",
     status: "pending",
   },
+  {
+    id: "supplier-intel-1",
+    name: "Supplier Intelligence - List KPIs",
+    description: "Verify /api/suppliers/intelligence/list-kpis returns supplier performance data",
+    endpoint: "/api/suppliers/intelligence/list-kpis",
+    method: "GET",
+    category: "suppliers",
+    status: "pending",
+  },
+  {
+    id: "supplier-intel-2",
+    name: "Supplier Intelligence - Pending Actions",
+    description: "Verify /api/suppliers/intelligence/pending-actions returns overdue quotes and inactive suppliers",
+    endpoint: "/api/suppliers/intelligence/pending-actions",
+    method: "GET",
+    category: "suppliers",
+    status: "pending",
+  },
 ];
 
 const categoryIcons: Record<string, React.ReactNode> = {

@@ -27,10 +27,15 @@ import {
   User,
   ArrowLeft,
   Languages,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Trophy,
+  ExternalLink,
+  Eye
 } from "lucide-react";
 import { Link } from "wouter";
 import { SupplierOpsProfile } from "@/components/suppliers/SupplierOpsProfile";
+import { apiRequest } from "@/lib/queryClient";
 
 type SupplierContact = {
   id: number;
@@ -111,6 +116,25 @@ export default function SupplierManager() {
       return res.json();
     }
   });
+
+  const { data: listKpis } = useQuery({
+    queryKey: ["/api/suppliers/intelligence/list-kpis"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/suppliers/intelligence/list-kpis");
+      return res.json();
+    }
+  });
+
+  const { data: pendingActions } = useQuery({
+    queryKey: ["/api/suppliers/intelligence/pending-actions"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/suppliers/intelligence/pending-actions");
+      return res.json();
+    }
+  });
+
+  const kpiMap = new Map<number, { avgResponseHours: number | null; winRate: number; wins: number; totalRfqs: number }>();
+  (listKpis?.kpis || []).forEach((k: any) => kpiMap.set(k.supplierId, k));
 
   const createContactMutation = useMutation({
     mutationFn: async (data: { supplierId: number; contact: typeof contactForm }) => {
@@ -265,22 +289,92 @@ export default function SupplierManager() {
           </Button>
         </div>
 
+        {/* Ações Pendentes Dashboard */}
+        {pendingActions && (pendingActions.overdueQuotes?.length > 0 || pendingActions.noRecentContact?.length > 0) && (
+          <Card className="mb-6 border-amber-200 bg-amber-50/50" data-testid="panel-pending-actions">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-amber-800">
+                <AlertTriangle className="h-5 w-5" />
+                {language === "pt" ? "Ações Pendentes" : "Pending Actions"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {pendingActions.overdueQuotes?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-900 mb-2">
+                      {language === "pt" ? "Cotações Atrasadas" : "Overdue Quotes"} ({pendingActions.overdueQuotes.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {pendingActions.overdueQuotes.map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between bg-white rounded p-2 border border-amber-100 text-sm" data-testid={`overdue-${i}`}>
+                          <div>
+                            <span className="font-medium">{item.supplierName}</span>
+                            <span className="text-gray-500 ml-2">Deal #{String(item.dealId).slice(0, 8)}</span>
+                            <Badge variant="destructive" className="ml-2 text-xs">{item.daysSinceSent}d</Badge>
+                          </div>
+                          <Link href={`/admin/suppliers/${item.supplierId}`}>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" data-testid={`link-overdue-supplier-${i}`}>
+                              <Eye className="h-3 w-3 mr-1" /> {language === "pt" ? "Ver" : "View"}
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {pendingActions.noRecentContact?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-amber-900 mb-2">
+                      {language === "pt" ? "Sem Contato Recente" : "No Recent Contact"} ({pendingActions.noRecentContact.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {pendingActions.noRecentContact.slice(0, 8).map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between bg-white rounded p-2 border border-amber-100 text-sm" data-testid={`no-contact-${i}`}>
+                          <div>
+                            <span className="font-medium">{item.supplierName}</span>
+                            {item.daysSinceActivity != null && (
+                              <span className="text-gray-500 ml-2">{item.daysSinceActivity}d {language === "pt" ? "sem atividade" : "inactive"}</span>
+                            )}
+                            {item.daysSinceActivity == null && (
+                              <span className="text-gray-400 ml-2">{language === "pt" ? "Nunca contatado" : "Never contacted"}</span>
+                            )}
+                          </div>
+                          <Link href={`/admin/suppliers/${item.supplierId}`}>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" data-testid={`link-no-contact-supplier-${i}`}>
+                              <Eye className="h-3 w-3 mr-1" /> {language === "pt" ? "Ver" : "View"}
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {suppliers.map((supplier) => (
+            {suppliers.map((supplier) => {
+              const kpi = kpiMap.get(supplier.id);
+              return (
               <Card key={supplier.id} className="hover:shadow-md transition-shadow" data-testid={`card-supplier-${supplier.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-5 w-5 text-gray-400" />
                       <div>
-                        <CardTitle className="text-base" data-testid={`text-supplier-name-${supplier.id}`}>
-                          {supplier.name}
-                        </CardTitle>
+                        <Link href={`/admin/suppliers/${supplier.id}`}>
+                          <CardTitle className="text-base hover:text-blue-600 cursor-pointer" data-testid={`text-supplier-name-${supplier.id}`}>
+                            {supplier.name}
+                          </CardTitle>
+                        </Link>
                         <CardDescription className="text-xs">
                           {supplier.shortCode}
                           {supplier.category && (
@@ -291,15 +385,34 @@ export default function SupplierManager() {
                         </CardDescription>
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => openAddContact(supplier.id)}
-                      data-testid={`button-add-contact-${supplier.id}`}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/admin/suppliers/${supplier.id}`}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" data-testid={`button-view-detail-${supplier.id}`}>
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => openAddContact(supplier.id)}
+                        data-testid={`button-add-contact-${supplier.id}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
+                  {kpi && kpi.totalRfqs > 0 && (
+                    <div className="flex gap-2 mt-2" data-testid={`kpi-badges-${supplier.id}`}>
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Clock className="h-3 w-3" />
+                        {kpi.avgResponseHours != null ? `${kpi.avgResponseHours}h` : "—"}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Trophy className="h-3 w-3" />
+                        {kpi.winRate}%
+                      </Badge>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {supplier.contacts && supplier.contacts.length > 0 ? (
@@ -407,7 +520,8 @@ export default function SupplierManager() {
                   />
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
 

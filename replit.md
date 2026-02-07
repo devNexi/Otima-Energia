@@ -45,6 +45,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Notification System**: Email notification infrastructure for operational alerts (e.g., `DEAL_BLOCKED`, `SLA_BREACH`), utilizing a queue-based approach.
 - **Lost Deal Intelligence**: Structured taxonomy for tracking reasons for lost deals, including client, supplier, competitive, and process categories, with analytics API.
 - **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs), with multi-file drag-drop, metadata fields (supplier, reference month, submarket hint, source, notes), and document status tracking through the parse/verify/publish workflow.
+- **Supplier Intelligence Module**: Analytics layer over existing tables (rfq_dispatches, deal_quotes, deals). KPIs derived via SQL joins — no separate interaction log table. Supplier detail page at `/admin/suppliers/:id` with 3 tabs (Overview+KPIs, Interaction History, Performance). Main supplier list enhanced with KPI badges and Ações Pendentes dashboard. Win rate formula: `wins / totalRfqs` per supplier. Response time: `AVG(dealQuotes.received_at - rfqDispatches.sent_at)`. QA test: `suppliers.intelligence_kpis`.
 
 ### Authentication & Authorization
 - **Role-Based Access Control**: `admin`, `ops`, `sales` roles.

@@ -7127,6 +7127,52 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Failed to generate scorecard" });
     }
   });
+
+  // --- Supplier Intelligence ---
+  app.get("/api/suppliers/:id/intelligence/kpis", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      if (isNaN(supplierId)) return res.status(400).json({ success: false, error: "Invalid supplier ID" });
+      const kpis = await storage.getSupplierKpis(supplierId);
+      res.json({ success: true, kpis });
+    } catch (error: any) {
+      console.error("Error fetching supplier KPIs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch supplier KPIs" });
+    }
+  });
+
+  app.get("/api/suppliers/:id/intelligence/history", async (req, res) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      if (isNaN(supplierId)) return res.status(400).json({ success: false, error: "Invalid supplier ID" });
+      const limit = parseInt(req.query.limit as string) || 50;
+      const history = await storage.getSupplierInteractionHistory(supplierId, limit);
+      res.json({ success: true, history });
+    } catch (error: any) {
+      console.error("Error fetching supplier history:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch supplier history" });
+    }
+  });
+
+  app.get("/api/suppliers/intelligence/pending-actions", async (req, res) => {
+    try {
+      const actions = await storage.getPendingSupplierActions();
+      res.json({ success: true, ...actions });
+    } catch (error: any) {
+      console.error("Error fetching pending actions:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch pending actions" });
+    }
+  });
+
+  app.get("/api/suppliers/intelligence/list-kpis", async (req, res) => {
+    try {
+      const kpis = await storage.getSupplierListKpis();
+      res.json({ success: true, kpis });
+    } catch (error: any) {
+      console.error("Error fetching supplier list KPIs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch supplier list KPIs" });
+    }
+  });
   
   // --- Dossier Edit Logs ---
   app.get("/api/dossiers/:dossierId/edit-logs", async (req, res) => {
@@ -11228,6 +11274,59 @@ export async function registerRoutes(
             break;
           }
           
+          case "suppliers.intelligence_kpis": {
+            const kpiSuppliers = await storage.getSupplierListKpis();
+            metadata.suppliersWithRfqs = kpiSuppliers.length;
+            
+            if (kpiSuppliers.length === 0) {
+              throw new Error("No suppliers with RFQ data found. Send an RFQ to a supplier first.");
+            }
+            
+            const testSupplier = kpiSuppliers[0];
+            const detailKpis = await storage.getSupplierKpis(testSupplier.supplierId);
+            
+            metadata.testSupplierId = testSupplier.supplierId;
+            metadata.listKpi = testSupplier;
+            metadata.detailKpi = detailKpis;
+            
+            if (testSupplier.winRate < 0 || testSupplier.winRate > 100) {
+              throw new Error(`Win rate out of bounds: ${testSupplier.winRate}%`);
+            }
+            if (testSupplier.wins > testSupplier.totalRfqs) {
+              throw new Error(`Wins (${testSupplier.wins}) exceeds total RFQs (${testSupplier.totalRfqs})`);
+            }
+            
+            if (detailKpis.winRate !== testSupplier.winRate) {
+              throw new Error(`Win rate mismatch: list=${testSupplier.winRate}% vs detail=${detailKpis.winRate}%`);
+            }
+            if (detailKpis.totalRfqs !== testSupplier.totalRfqs) {
+              throw new Error(`Total RFQs mismatch: list=${testSupplier.totalRfqs} vs detail=${detailKpis.totalRfqs}`);
+            }
+            
+            const history = await storage.getSupplierInteractionHistory(testSupplier.supplierId, 100);
+            metadata.historyEntries = history.length;
+            
+            const rfqEntries = history.filter(h => h.type === 'RFQ_ENVIADA');
+            const quoteEntries = history.filter(h => h.type === 'COTAÇÃO_RECEBIDA');
+            metadata.rfqEntries = rfqEntries.length;
+            metadata.quoteEntries = quoteEntries.length;
+            
+            if (rfqEntries.length === 0) {
+              throw new Error("No RFQ_ENVIADA entries in history despite having RFQ dispatches");
+            }
+            
+            for (const q of quoteEntries) {
+              if (q.responseTimeHours != null && q.responseTimeHours < 0) {
+                throw new Error(`Negative response time: ${q.responseTimeHours}h for quote in deal ${q.dealId}`);
+              }
+            }
+            
+            metadata.winRateFormula = "wins / totalRfqs (per supplier, not per deal)";
+            metadata.responseTimeFormula = "AVG(dealQuotes.received_at - rfqDispatches.sent_at)";
+            metadata.assertion = `Supplier ${testSupplier.supplierId}: win rate ${testSupplier.winRate}% (${testSupplier.wins}/${testSupplier.totalRfqs}), avg response ${testSupplier.avgResponseHours ?? 'N/A'}h. History: ${rfqEntries.length} RFQs, ${quoteEntries.length} quotes. List and detail KPIs match.`;
+            break;
+          }
+
           case "zoho.intake_banner": {
             const allDeals = await storage.getDeals();
             const zohoDeals = allDeals.filter((d: any) => d.zohoLeadId);

@@ -603,6 +603,51 @@ export interface IStorage {
     winRate: number;
     avgPrice: number;
   }>>;
+
+  // Supplier Intelligence KPIs
+  getSupplierKpis(supplierId: number): Promise<{
+    avgResponseHours: number | null;
+    winRate: number;
+    wins: number;
+    totalRfqs: number;
+    totalQuotes: number;
+    responseTimeBuckets: { bucket: string; count: number }[];
+    winRateTrend: { month: string; winRate: number; wins: number; rfqs: number }[];
+  }>;
+
+  getSupplierInteractionHistory(supplierId: number, limit?: number): Promise<Array<{
+    type: 'RFQ_ENVIADA' | 'COTAÇÃO_RECEBIDA';
+    dateTime: Date;
+    details: string;
+    dealId: string | null;
+    responseTimeHours: number | null;
+    meta: Record<string, any>;
+  }>>;
+
+  getPendingSupplierActions(): Promise<{
+    overdueQuotes: Array<{
+      supplierId: number;
+      supplierName: string;
+      dealId: string;
+      sentAt: Date;
+      daysSinceSent: number;
+      rfqDispatchId: number;
+    }>;
+    noRecentContact: Array<{
+      supplierId: number;
+      supplierName: string;
+      lastActivityAt: Date | null;
+      daysSinceActivity: number | null;
+    }>;
+  }>;
+
+  getSupplierListKpis(): Promise<Array<{
+    supplierId: number;
+    avgResponseHours: number | null;
+    winRate: number;
+    wins: number;
+    totalRfqs: number;
+  }>>;
   
   // ============== OPS GUARDRAILS ==============
   
@@ -3475,6 +3520,252 @@ export class Storage implements IStorage {
     });
     
     return scorecards;
+  }
+
+  async getSupplierKpis(supplierId: number): Promise<{
+    avgResponseHours: number | null;
+    winRate: number;
+    wins: number;
+    totalRfqs: number;
+    totalQuotes: number;
+    responseTimeBuckets: { bucket: string; count: number }[];
+    winRateTrend: { month: string; winRate: number; wins: number; rfqs: number }[];
+  }> {
+    const avgResp = await db
+      .select({
+        avgHours: sql<number>`AVG(EXTRACT(EPOCH FROM (${dealQuotes.receivedAt} - ${rfqDispatches.sentAt})) / 3600)`
+      })
+      .from(dealQuotes)
+      .innerJoin(rfqDispatches, eq(dealQuotes.rfqDispatchId, rfqDispatches.id))
+      .where(eq(dealQuotes.supplierId, supplierId));
+
+    const winData = await db
+      .select({
+        wins: sql<number>`COUNT(DISTINCT ${dealQuotes.dealId}) FILTER (WHERE ${dealQuotes.isSelected} = true)`,
+        totalRfqs: sql<number>`COUNT(DISTINCT ${rfqDispatches.id})`,
+        totalQuotes: sql<number>`COUNT(DISTINCT ${dealQuotes.id})`
+      })
+      .from(rfqDispatches)
+      .leftJoin(dealQuotes, and(eq(dealQuotes.rfqDispatchId, rfqDispatches.id), eq(dealQuotes.supplierId, rfqDispatches.supplierId)))
+      .where(eq(rfqDispatches.supplierId, supplierId));
+
+    const wins = Number(winData[0]?.wins) || 0;
+    const totalRfqs = Number(winData[0]?.totalRfqs) || 0;
+    const totalQuotes = Number(winData[0]?.totalQuotes) || 0;
+    const winRate = totalRfqs > 0 ? Math.round((wins / totalRfqs) * 100) : 0;
+
+    const bucketRows = await db.execute(sql`
+      SELECT 
+        CASE 
+          WHEN hours < 24 THEN '<24h'
+          WHEN hours < 48 THEN '24-48h'
+          WHEN hours < 72 THEN '48-72h'
+          ELSE '>72h'
+        END AS bucket,
+        COUNT(*)::int AS count
+      FROM (
+        SELECT EXTRACT(EPOCH FROM (dq.received_at - rd.sent_at)) / 3600 AS hours
+        FROM deal_quotes dq
+        INNER JOIN rfq_dispatches rd ON dq.rfq_dispatch_id = rd.id
+        WHERE dq.supplier_id = ${supplierId} AND rd.sent_at IS NOT NULL
+      ) sub
+      GROUP BY bucket
+      ORDER BY MIN(hours)
+    `);
+
+    const trendRows = await db.execute(sql`
+      SELECT 
+        to_char(rd.sent_at, 'YYYY-MM') AS month,
+        COUNT(DISTINCT rd.id)::int AS rfqs,
+        COUNT(DISTINCT dq.deal_id) FILTER (WHERE dq.is_selected = true)::int AS wins
+      FROM rfq_dispatches rd
+      LEFT JOIN deal_quotes dq ON dq.rfq_dispatch_id = rd.id AND dq.supplier_id = rd.supplier_id
+      WHERE rd.supplier_id = ${supplierId} 
+        AND rd.sent_at >= NOW() - INTERVAL '6 months'
+        AND rd.sent_at IS NOT NULL
+      GROUP BY to_char(rd.sent_at, 'YYYY-MM')
+      ORDER BY month
+    `);
+
+    return {
+      avgResponseHours: avgResp[0]?.avgHours != null ? Math.round(Number(avgResp[0].avgHours)) : null,
+      winRate,
+      wins,
+      totalRfqs,
+      totalQuotes,
+      responseTimeBuckets: (bucketRows.rows || []).map((r: any) => ({ bucket: r.bucket, count: Number(r.count) })),
+      winRateTrend: (trendRows.rows || []).map((r: any) => ({
+        month: r.month,
+        winRate: Number(r.rfqs) > 0 ? Math.round((Number(r.wins) / Number(r.rfqs)) * 100) : 0,
+        wins: Number(r.wins),
+        rfqs: Number(r.rfqs)
+      }))
+    };
+  }
+
+  async getSupplierInteractionHistory(supplierId: number, limit = 50): Promise<Array<{
+    type: 'RFQ_ENVIADA' | 'COTAÇÃO_RECEBIDA';
+    dateTime: Date;
+    details: string;
+    dealId: string | null;
+    responseTimeHours: number | null;
+    meta: Record<string, any>;
+  }>> {
+    const rows = await db.execute(sql`
+      (
+        SELECT 
+          'RFQ_ENVIADA' AS type,
+          rd.sent_at AS date_time,
+          CONCAT('RFQ para Deal #', rd.deal_id, ' via ', rd.channel_used) AS details,
+          rd.deal_id,
+          NULL::float AS response_time_hours,
+          jsonb_build_object('channel', rd.channel_used, 'status', rd.status, 'dispatchId', rd.id) AS meta
+        FROM rfq_dispatches rd
+        WHERE rd.supplier_id = ${supplierId} AND rd.sent_at IS NOT NULL
+      )
+      UNION ALL
+      (
+        SELECT
+          'COTAÇÃO_RECEBIDA' AS type,
+          dq.received_at AS date_time,
+          CONCAT('Cotação recebida para Deal #', dq.deal_id, 
+            CASE WHEN dq.base_energy_price_rmwh IS NOT NULL 
+              THEN CONCAT(' • R$', ROUND(dq.base_energy_price_rmwh::numeric, 2), '/MWh')
+              ELSE '' END,
+            CASE WHEN dq.is_selected THEN ' ★ VENCEDORA' ELSE '' END
+          ) AS details,
+          dq.deal_id,
+          CASE WHEN rd2.sent_at IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (dq.received_at - rd2.sent_at)) / 3600
+            ELSE NULL END AS response_time_hours,
+          jsonb_build_object('quoteId', dq.id, 'price', dq.base_energy_price_rmwh, 'isSelected', dq.is_selected, 'energyType', dq.energy_type) AS meta
+        FROM deal_quotes dq
+        LEFT JOIN rfq_dispatches rd2 ON dq.rfq_dispatch_id = rd2.id
+        WHERE dq.supplier_id = ${supplierId}
+      )
+      ORDER BY date_time DESC
+      LIMIT ${limit}
+    `);
+
+    return (rows.rows || []).map((r: any) => ({
+      type: r.type as 'RFQ_ENVIADA' | 'COTAÇÃO_RECEBIDA',
+      dateTime: new Date(r.date_time),
+      details: r.details,
+      dealId: r.deal_id,
+      responseTimeHours: r.response_time_hours != null ? Math.round(Number(r.response_time_hours) * 10) / 10 : null,
+      meta: r.meta || {}
+    }));
+  }
+
+  async getPendingSupplierActions(): Promise<{
+    overdueQuotes: Array<{
+      supplierId: number;
+      supplierName: string;
+      dealId: string;
+      sentAt: Date;
+      daysSinceSent: number;
+      rfqDispatchId: number;
+    }>;
+    noRecentContact: Array<{
+      supplierId: number;
+      supplierName: string;
+      lastActivityAt: Date | null;
+      daysSinceActivity: number | null;
+    }>;
+  }> {
+    const overdueRows = await db.execute(sql`
+      SELECT DISTINCT ON (rd.supplier_id, rd.deal_id)
+        rd.supplier_id,
+        s.name AS supplier_name,
+        rd.deal_id,
+        rd.sent_at,
+        EXTRACT(DAY FROM NOW() - rd.sent_at)::int AS days_since_sent,
+        rd.id AS rfq_dispatch_id
+      FROM rfq_dispatches rd
+      JOIN suppliers s ON s.id = rd.supplier_id
+      LEFT JOIN deal_quotes dq ON dq.rfq_dispatch_id = rd.id
+      WHERE rd.sent_at > NOW() - INTERVAL '30 days'
+        AND rd.sent_at < NOW() - INTERVAL '7 days'
+        AND dq.id IS NULL
+        AND s.is_active = true
+        AND rd.status NOT IN ('DRAFT', 'CLOSED')
+      ORDER BY rd.supplier_id, rd.deal_id, rd.sent_at DESC
+    `);
+
+    const noContactRows = await db.execute(sql`
+      SELECT 
+        s.id AS supplier_id,
+        s.name AS supplier_name,
+        GREATEST(
+          (SELECT MAX(rd.sent_at) FROM rfq_dispatches rd WHERE rd.supplier_id = s.id),
+          (SELECT MAX(dq.received_at) FROM deal_quotes dq WHERE dq.supplier_id = s.id)
+        ) AS last_activity_at,
+        EXTRACT(DAY FROM NOW() - GREATEST(
+          (SELECT MAX(rd.sent_at) FROM rfq_dispatches rd WHERE rd.supplier_id = s.id),
+          (SELECT MAX(dq.received_at) FROM deal_quotes dq WHERE dq.supplier_id = s.id)
+        ))::int AS days_since_activity
+      FROM suppliers s
+      WHERE s.is_active = true
+        AND s.is_demo = false
+        AND NOT EXISTS (
+          SELECT 1 FROM rfq_dispatches rd 
+          WHERE rd.supplier_id = s.id AND rd.sent_at > NOW() - INTERVAL '14 days'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM deal_quotes dq 
+          WHERE dq.supplier_id = s.id AND dq.received_at > NOW() - INTERVAL '14 days'
+        )
+      ORDER BY last_activity_at ASC NULLS FIRST
+    `);
+
+    return {
+      overdueQuotes: (overdueRows.rows || []).map((r: any) => ({
+        supplierId: Number(r.supplier_id),
+        supplierName: r.supplier_name,
+        dealId: r.deal_id,
+        sentAt: new Date(r.sent_at),
+        daysSinceSent: Number(r.days_since_sent),
+        rfqDispatchId: Number(r.rfq_dispatch_id)
+      })),
+      noRecentContact: (noContactRows.rows || []).map((r: any) => ({
+        supplierId: Number(r.supplier_id),
+        supplierName: r.supplier_name,
+        lastActivityAt: r.last_activity_at ? new Date(r.last_activity_at) : null,
+        daysSinceActivity: r.days_since_activity != null ? Number(r.days_since_activity) : null
+      }))
+    };
+  }
+
+  async getSupplierListKpis(): Promise<Array<{
+    supplierId: number;
+    avgResponseHours: number | null;
+    winRate: number;
+    wins: number;
+    totalRfqs: number;
+  }>> {
+    const rows = await db.execute(sql`
+      SELECT 
+        rd.supplier_id,
+        AVG(EXTRACT(EPOCH FROM (dq.received_at - rd.sent_at)) / 3600)::float AS avg_response_hours,
+        COUNT(DISTINCT rd.id)::int AS total_rfqs,
+        COUNT(DISTINCT dq.deal_id) FILTER (WHERE dq.is_selected = true)::int AS wins
+      FROM rfq_dispatches rd
+      LEFT JOIN deal_quotes dq ON dq.rfq_dispatch_id = rd.id AND dq.supplier_id = rd.supplier_id
+      WHERE rd.sent_at IS NOT NULL
+      GROUP BY rd.supplier_id
+    `);
+
+    return (rows.rows || []).map((r: any) => {
+      const totalRfqs = Number(r.total_rfqs) || 0;
+      const wins = Number(r.wins) || 0;
+      return {
+        supplierId: Number(r.supplier_id),
+        avgResponseHours: r.avg_response_hours != null ? Math.round(Number(r.avg_response_hours)) : null,
+        winRate: totalRfqs > 0 ? Math.round((wins / totalRfqs) * 100) : 0,
+        wins,
+        totalRfqs
+      };
+    });
   }
   
   // ============== OPS GUARDRAILS ==============

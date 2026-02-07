@@ -25,6 +25,7 @@ import Insights from "@/pages/Insights";
 import RedeLucros from "@/pages/RedeLucros";
 import TermosParcerias from "@/pages/TermosParcerias";
 import SupplierManager from "@/pages/SupplierManager";
+import SupplierDetail from "@/pages/SupplierDetail";
 import ProposalTracker from "@/pages/ProposalTracker";
 import ProposalsManager from "@/pages/ProposalsManager";
 import BenchmarkManager from "@/pages/BenchmarkManager";
@@ -67,6 +68,7 @@ function Router() {
       
       {/* Admin routes - redirect /admin to /admin/deals */}
       <Route path="/admin">{() => <Redirect to="/admin/deals" />}</Route>
+      <Route path="/admin/suppliers/:id" component={SupplierDetail} />
       <Route path="/admin/suppliers" component={SupplierManager} />
       <Route path="/admin/deals" component={() => <Admin defaultTab="deals" />} />
       <Route path="/admin/ecos" component={() => <Admin defaultTab="ecos-dashboard" />} />
