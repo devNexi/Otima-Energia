@@ -9,9 +9,10 @@ export function Navbar() {
   const isHomePage = location === "/";
 
   const navLinks = [
+    { name: "SOBRE", href: "/sobre", isPage: true },
     { name: "SOLUÇÕES", href: "/solucoes", isPage: true },
     { name: "MERCADO LIVRE", href: "/lei-mercado-livre", isPage: true },
-    { name: "SOBRE", href: "/sobre", isPage: true },
+    { name: "ENERGIA POR ASSINATURA", href: "/energia-por-assinatura-gdl", isPage: true },
     { name: "FAQ", href: "/faq", isPage: true },
     { name: "PORTAL", href: "/portal-cliente", isPage: true },
     { name: "SEJA CLIENTE", href: "/seja-cliente", isPage: true },
