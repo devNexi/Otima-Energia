@@ -614,7 +614,7 @@ export default function ProposalsManager() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-emerald-600" />
-              Nova Proposta — Passo {wizardStep} de 4
+              Nova Proposta, Passo {wizardStep} de 4
             </DialogTitle>
             <DialogDescription>
               {wizardStep === 1 && "Selecione o negócio para a proposta"}
@@ -791,7 +791,7 @@ export default function ProposalsManager() {
                           const q = eligibleQuotes.find(eq => eq.id === qId);
                           return (
                             <SelectItem key={qId} value={qId}>
-                              {q?.supplier?.name || q?.supplierName || 'Fornecedor'} — R$ {q ? parseFloat(q.clientEnergyPriceRmwh).toFixed(2) : '?'}/MWh
+                              {q?.supplier?.name || q?.supplierName || 'Fornecedor'}, R$ {q ? parseFloat(q.clientEnergyPriceRmwh).toFixed(2) : '?'}/MWh
                             </SelectItem>
                           );
                         })}

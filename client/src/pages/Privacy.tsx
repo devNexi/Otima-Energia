@@ -25,7 +25,7 @@ export default function Privacy() {
               A Ótima Energia Ltda. ("Ótima Energia", "nós", "nosso" ou "conosco") reconhece a importância da sua privacidade e está comprometida em proteger os seus Dados Pessoais.
             </p>
             <p className="mb-12">
-              Esta Política de Privacidade ("Política") explica, de forma clara e objetiva, quais dados coletamos, como os utilizamos, com quem podemos compartilhá-los, por quanto tempo os armazenamos e quais são os seus direitos, sempre em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados – LGPD) e demais normas aplicáveis.
+              Esta Política de Privacidade ("Política") explica, de forma clara e objetiva, quais dados coletamos, como os utilizamos, com quem podemos compartilhá-los, por quanto tempo os armazenamos e quais são os seus direitos, sempre em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados, LGPD) e demais normas aplicáveis.
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mb-4">1. Quem Somos</h2>

@@ -726,7 +726,7 @@ export default function BenchmarkManager() {
               <>
                 <DialogHeader>
                   <DialogTitle>
-                    {t("benchmarks.detail.header")} — {viewingBenchmark.segment} · {viewingBenchmark.region} · {viewingBenchmark.contractLengthMonths}m
+                    {t("benchmarks.detail.header")}, {viewingBenchmark.segment} · {viewingBenchmark.region} · {viewingBenchmark.contractLengthMonths}m
                   </DialogTitle>
                 </DialogHeader>
 

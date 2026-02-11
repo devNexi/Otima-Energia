@@ -21,7 +21,7 @@ export default function LeiMercadoLivre() {
                 O Mercado Livre de Energia representa uma das maiores oportunidades de redução de custos para empresas brasileiras.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                Com a Lei nº 15.269/2025, milhões de empresas passam a ter acesso ao mercado livre — mas acesso não significa transparência. Sem comparação e estrutura, muitas continuarão pagando mais do que deveriam.
+                Com a Lei nº 15.269/2025, milhões de empresas passam a ter acesso ao mercado livre, mas acesso não significa transparência. Sem comparação e estrutura, muitas continuarão pagando mais do que deveriam.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
                 A Lei nº 15.269/2025 formaliza essa abertura ao longo dos próximos anos. A Ótima Energia existe para garantir que sua empresa aproveite essa oportunidade para economizar de forma correta, segura e sem riscos.
@@ -190,7 +190,7 @@ export default function LeiMercadoLivre() {
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
               <p>
-                A abertura do Mercado Livre cria oportunidade — mas também risco para quem chega despreparado.
+                A abertura do Mercado Livre cria oportunidade, mas também risco para quem chega despreparado.
               </p>
               <p>
                 O <span className="font-medium text-[#9e3ffd]">ECOS™</span> permite que empresas se preparem com antecedência, entendendo seu perfil, riscos e posicionamento antes mesmo da migração ser possível.

@@ -651,7 +651,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
                       Equivalente a ~{formatCurrency(bestOption.savingsMonthlyAvg)} por mês (média no período)
                     </p>
                     <p className="text-sm text-emerald-600 italic">
-                      Baseado no seu histórico de consumo — sem compromisso.
+                      Baseado no seu histórico de consumo, sem compromisso.
                     </p>
                   </>
                 ) : (
@@ -667,7 +667,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
                 {baseline.costIsProxy && (
                   <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded mb-3 text-sm flex items-center gap-2">
                     <span className="font-medium">{baseline.proxyLabel || 'Estimativa conservadora'}</span>
-                    <span className="text-amber-600">— Custo base estimado manualmente</span>
+                    <span className="text-amber-600">, Custo base estimado manualmente</span>
                   </div>
                 )}
                 <div className="bg-gray-50 p-4 rounded grid grid-cols-3 gap-4 text-center">

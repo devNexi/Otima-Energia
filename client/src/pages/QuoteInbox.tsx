@@ -275,7 +275,7 @@ export default function QuoteInbox() {
               Quote Inbox
             </h1>
             <p className="text-gray-500 mt-1">
-              Inbound quotes from rfq@otimaenergia.com — parse, review, and confirm into deals
+              Inbound quotes from rfq@otimaenergia.com, parse, review, and confirm into deals
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -615,7 +615,7 @@ export default function QuoteInbox() {
                   <SelectContent>
                     {(Array.isArray(deals) ? deals : []).map((deal: any) => (
                       <SelectItem key={deal.id} value={deal.id}>
-                        {deal.clientName || deal.client_name || deal.id} — {deal.currentState || deal.current_state}
+                        {deal.clientName || deal.client_name || deal.id}, {deal.currentState || deal.current_state}
                       </SelectItem>
                     ))}
                   </SelectContent>

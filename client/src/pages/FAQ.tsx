@@ -90,7 +90,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "O desconto do GDL é garantido? E se a usina gerar menos?",
-        answer: "O desconto é aplicado sobre a tarifa da concessionária — se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
+        answer: "O desconto é aplicado sobre a tarifa da concessionária, se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
       },
     ]
   },
@@ -99,7 +99,7 @@ const faqSections: FAQSection[] = [
     items: [
       {
         question: "O que é o ECOS™?",
-        answer: "O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro — com total transparência."
+        answer: "O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro, com total transparência."
       },
       {
         question: "Vocês garantem economia?",
@@ -127,7 +127,7 @@ export default function FAQ() {
             Perguntas Frequentes
           </h1>
           <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed max-w-2xl">
-            Tire suas dúvidas sobre Mercado Livre (ACL), Energia por Assinatura (GDL) e como sua empresa pode começar a economizar — em qualquer mercado.
+            Tire suas dúvidas sobre Mercado Livre (ACL), Energia por Assinatura (GDL) e como sua empresa pode começar a economizar, em qualquer mercado.
           </p>
         </div>
       </section>

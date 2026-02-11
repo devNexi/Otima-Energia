@@ -72,7 +72,7 @@ export default function About() {
                 Não somos apenas uma corretora.
               </p>
               <p>
-                A Ótima Energia opera como uma parceira de migração, conformidade e otimização, apoiada pelo <span className="font-medium text-[#9e3ffd]">ECOS™</span> — um sistema proprietário desenvolvido para lidar com a complexidade real do mercado livre brasileiro.
+                A Ótima Energia opera como uma parceira de migração, conformidade e otimização, apoiada pelo <span className="font-medium text-[#9e3ffd]">ECOS™</span>, um sistema proprietário desenvolvido para lidar com a complexidade real do mercado livre brasileiro.
               </p>
               <p>
                 Enquanto o mercado permanece opaco e manual, usamos inteligência, dados e automação para proteger empresas e garantir decisões melhores ao longo do tempo.

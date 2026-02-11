@@ -17,7 +17,7 @@ function EcosSection() {
             </h2>
             <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
               <p>
-                A verdadeira economia não está só na escolha do mercado certo — está na revisão contínua, na hora certa.
+                A verdadeira economia não está só na escolha do mercado certo, está na revisão contínua, na hora certa.
               </p>
               <p>
                 É aí que entra o <strong className="text-[#9e3ffd]">ECOS™</strong>, nosso sistema interno de inteligência de mercado.

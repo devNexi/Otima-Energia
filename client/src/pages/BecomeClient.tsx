@@ -103,7 +103,7 @@ export default function BecomeClient() {
                 Simule sua economia com um diagnóstico técnico gratuito
               </h1>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-                Uma análise clara, sem compromisso, para entender se — e quando — faz sentido migrar.
+                Uma análise clara, sem compromisso, para entender se, e quando, faz sentido migrar.
               </p>
               <p className="text-base text-[#736d77] mt-4">
                 Economia potencial de até 40%. Sem obrigação de contratar.
@@ -177,7 +177,7 @@ export default function BecomeClient() {
                   </div>
                   <div>
                     <h3 className="font-medium text-[#16163f] mb-2">Recomendação formal</h3>
-                    <p className="text-[#736d77]">Você decide com clareza — sem pressão.</p>
+                    <p className="text-[#736d77]">Você decide com clareza, sem pressão.</p>
                   </div>
                 </div>
               </div>

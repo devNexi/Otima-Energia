@@ -20,7 +20,7 @@ export default function Solutions() {
                 Não existe uma única resposta para todos. Cada empresa tem um perfil de consumo, uma tarifa de distribuidora e objetivos diferentes.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico — seja no mercado cativo (ACR), no mercado livre (ACL) ou via geração compartilhada (GDL).
+                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico, seja no mercado cativo (ACR), no mercado livre (ACL) ou via geração compartilhada (GDL).
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 Atuamos como seu consultor independente: analisamos os três cenários com dados reais, recomendamos o melhor caminho e executamos toda a implementação. Sem viés. Sem conflito.
@@ -97,7 +97,7 @@ export default function Solutions() {
                   Gestão de contas e acesso à Geração Compartilhada (GDL)
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Sua empresa ainda não migrou para o livre? Ou não é elegível? Você ainda pode economizar — hoje — sem trocar de fornecedor.
+                  Sua empresa ainda não migrou para o livre? Ou não é elegível? Você ainda pode economizar, hoje, sem trocar de fornecedor.
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-4 font-medium text-[#16163f]">
                   Atuamos em duas frentes no mercado cativo:
@@ -233,7 +233,7 @@ export default function Solutions() {
                 Todos os caminhos passam pelo mesmo sistema.
               </p>
               <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
-                ECOS™ — Inteligência que orienta cada decisão.
+                ECOS™, Inteligência que orienta cada decisão.
               </h2>
               <p className="text-lg text-gray-300 leading-relaxed mb-6">
                 Seja no ACR, no ACL ou no GDL, todas as nossas recomendações são geradas e validadas pelo ECOS™, nosso sistema proprietário de IA e automação.

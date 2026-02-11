@@ -18,7 +18,7 @@ export default function RenovacaoContrato() {
             </h1>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
-                O momento certo depende do seu contrato — e de um bom planejamento.
+                O momento certo depende do seu contrato, e de um bom planejamento.
               </p>
               <Link 
                 href="/seja-cliente"
@@ -171,7 +171,7 @@ export default function RenovacaoContrato() {
             Quer entender o melhor caminho para sua empresa?
           </h2>
           <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-            Solicite um diagnóstico gratuito. Analisamos sua conta, avaliamos sua elegibilidade e indicamos o melhor momento para migrar — agora ou quando sua empresa estiver apta.
+            Solicite um diagnóstico gratuito. Analisamos sua conta, avaliamos sua elegibilidade e indicamos o melhor momento para migrar, agora ou quando sua empresa estiver apta.
           </p>
           <Link 
             href="/seja-cliente"

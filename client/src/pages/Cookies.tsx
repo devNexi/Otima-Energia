@@ -25,7 +25,7 @@ export default function Cookies() {
               A Ótima Energia Ltda. ("Ótima Energia", "nós" ou "nosso") utiliza cookies e tecnologias semelhantes para melhorar a experiência do usuário, garantir o correto funcionamento do site e compreender como nossos visitantes interagem com nossos conteúdos.
             </p>
             <p className="mb-12">
-              Esta Política de Cookies explica o que são cookies, como os utilizamos, quais tipos de cookies empregamos e como você pode gerenciá-los, em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).
+              Esta Política de Cookies explica o que são cookies, como os utilizamos, quais tipos de cookies empregamos e como você pode gerenciá-los, em conformidade com a Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).
             </p>
 
             <h2 className="text-2xl font-medium text-[#16163f] mb-4">1. O que são cookies?</h2>

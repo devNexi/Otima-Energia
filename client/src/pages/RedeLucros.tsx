@@ -108,13 +108,13 @@ export default function RedeLucros() {
               Transforme suas conexões em renda passiva vitalícia.
             </h1>
             <p className="text-xl lg:text-2xl text-[#736d77] leading-relaxed mb-6">
-              Indique clientes para a Ótima e ganhe comissões mensais — enquanto os contratos estiverem ativos.
+              Indique clientes para a Ótima e ganhe comissões mensais, enquanto os contratos estiverem ativos.
             </p>
             <p className="text-lg text-[#16163f] font-medium mb-2">
               Programa de Parcerias Ótima: simples, transparente e escalável.
             </p>
             <p className="text-[#736d77]">
-              Sem custo. Sem vender. Apenas indique — sempre com consentimento do cliente.
+              Sem custo. Sem vender. Apenas indique, sempre com consentimento do cliente.
             </p>
           </div>
         </div>

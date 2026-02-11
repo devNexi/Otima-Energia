@@ -25,10 +25,10 @@ export default function EnergiaAssinatura() {
                 Sua empresa ainda está no mercado cativo (concessionária) e sente o peso da conta de luz todo mês?
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                Migrar para o Mercado Livre não é viável agora? Você ainda pode economizar — e muito.
+                Migrar para o Mercado Livre não é viável agora? Você ainda pode economizar, e muito.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Geração Distribuída Compartilhada (GDL) — mais conhecida como <strong className="text-[#16163f]">energia por assinatura</strong> — permite que sua empresa receba descontos diretos na fatura da concessionária participando de uma usina solar, eólica ou de biogás da sua região.
+                A Geração Distribuída Compartilhada (GDL), mais conhecida como <strong className="text-[#16163f]">energia por assinatura</strong>, permite que sua empresa receba descontos diretos na fatura da concessionária participando de uma usina solar, eólica ou de biogás da sua região.
               </p>
               <p className="text-lg lg:text-xl text-[#16163f] font-medium mb-8">
                 Sem obras. Sem placas no telhado. Sem burocracia.
@@ -94,7 +94,7 @@ export default function EnergiaAssinatura() {
             </li>
           </ul>
           <p className="text-lg text-[#736d77] leading-relaxed mb-4">
-            A energia por assinatura já está disponível em diversas distribuidoras pelo país. Atuamos com os principais geradores e comercializadores do mercado — e nossa análise considera todos os players qualificados, não apenas um.
+            A energia por assinatura já está disponível em diversas distribuidoras pelo país. Atuamos com os principais geradores e comercializadores do mercado, e nossa análise considera todos os players qualificados, não apenas um.
           </p>
           <p className="text-lg text-[#736d77] leading-relaxed mb-8">
             Atendemos empresas em todas as regiões onde o modelo já está regulamentado. Se sua distribuidora ainda não opera com GDL, podemos avisar quando houver novidades.
@@ -125,7 +125,7 @@ export default function EnergiaAssinatura() {
             <div className="p-6 rounded-xl border border-gray-200 hover:border-[#9e3ffd] hover:shadow-lg transition-all">
               <h3 className="text-lg font-semibold text-[#16163f] mb-3">Analisamos o melhor gerador para o seu caso</h3>
               <p className="text-[#736d77] leading-relaxed">
-                Nem toda usina entrega o mesmo desconto, contrato ou segurança. Comparamos as condições reais dos principais players do mercado — e só recomendamos os mais sólidos e confiáveis.
+                Nem toda usina entrega o mesmo desconto, contrato ou segurança. Comparamos as condições reais dos principais players do mercado, e só recomendamos os mais sólidos e confiáveis.
               </p>
             </div>
             <div className="p-6 rounded-xl border border-gray-200 hover:border-[#9e3ffd] hover:shadow-lg transition-all">
@@ -238,13 +238,13 @@ export default function EnergiaAssinatura() {
               <p className="text-lg text-[#16163f] italic leading-relaxed mb-4">
                 "Reduzimos nossa conta de luz em 18% com energia por assinatura. Processo simples, rápido e sem instalar nada no nosso telhado."
               </p>
-              <p className="text-[#736d77] font-medium">— Rede de supermercados, Interior de SP</p>
+              <p className="text-[#736d77] font-medium">, Rede de supermercados, Interior de SP</p>
             </div>
             <div className="bg-[#eee7f1] p-8 rounded-xl">
               <p className="text-lg text-[#16163f] italic leading-relaxed mb-4">
                 "A Ótima nos apresentou o GDL como alternativa enquanto não migramos para o Mercado Livre. Já estamos economizando há 8 meses."
               </p>
-              <p className="text-[#736d77] font-medium">— Indústria alimentícia, Contagem/MG</p>
+              <p className="text-[#736d77] font-medium">, Indústria alimentícia, Contagem/MG</p>
             </div>
           </div>
         </div>

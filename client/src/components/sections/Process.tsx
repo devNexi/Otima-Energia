@@ -20,7 +20,7 @@ export function Process() {
             O mercado de energia é cheio de oportunidades, mas também de ruído: ofertas confusas, contratos ambíguos e vendedores que empurram uma única solução.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            A Ótima existe para tirar o peso das suas costas: analisamos os três mercados (ACR, ACL e GDL), explicamos tudo com transparência e te entregamos só o que importa — a decisão certa para o seu negócio.
+            A Ótima existe para tirar o peso das suas costas: analisamos os três mercados (ACR, ACL e GDL), explicamos tudo com transparência e te entregamos só o que importa, a decisão certa para o seu negócio.
           </p>
           <div className="flex flex-wrap gap-8 lg:gap-16 max-w-4xl">
             <div>
