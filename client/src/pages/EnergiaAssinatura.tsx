@@ -4,19 +4,6 @@ import { ArrowRight, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 
 export default function EnergiaAssinatura() {
-  const distribuidoras = [
-    { nome: "Equatorial Piauí", regiao: "PI" },
-    { nome: "Coelba", regiao: "BA" },
-    { nome: "Energisa", regiao: "MT, MS" },
-    { nome: "Equatorial Goiás", regiao: "GO" },
-    { nome: "Elektro", regiao: "SP" },
-    { nome: "CPFL Paulista", regiao: "SP" },
-    { nome: "CPFL Santa Cruz", regiao: "SP" },
-    { nome: "Cemig", regiao: "MG" },
-    { nome: "Copel", regiao: "PR" },
-    { nome: "RGE", regiao: "RS" },
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -93,33 +80,24 @@ export default function EnergiaAssinatura() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4">
             Quem pode aderir?
           </h2>
-          <p className="text-lg text-[#736d77] leading-relaxed mb-8">
-            Qualquer empresa atendida em <strong className="text-[#16163f]">baixa tensão</strong> (comércios, lojas, pequenas indústrias) ou <strong className="text-[#16163f]">média tensão</strong> (indústrias, grandes comércios, hospitais, shoppings).
+          <p className="text-lg text-[#736d77] leading-relaxed mb-4">
+            Qualquer empresa atendida em:
           </p>
-
-          <h3 className="text-xl font-medium text-[#16163f] mb-6">
-            Distribuidoras com operação ativa hoje:
-          </h3>
-          <div className="bg-white rounded-lg overflow-hidden mb-8">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#16163f] text-white">
-                  <th className="text-left px-6 py-3 font-medium">Distribuidora</th>
-                  <th className="text-left px-6 py-3 font-medium">Região</th>
-                </tr>
-              </thead>
-              <tbody>
-                {distribuidoras.map((d, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-6 py-3 text-[#16163f]">{d.nome}</td>
-                    <td className="px-6 py-3 text-[#736d77]">{d.regiao}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-sm text-[#736d77] mb-8">
-            Novas distribuidoras são adicionadas regularmente. Consulte-nos sobre a sua região.
+          <ul className="space-y-3 mb-8">
+            <li className="flex items-start gap-3">
+              <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
+              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Baixa tensão</strong> (comércios, lojas, pequenas indústrias)</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
+              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Média tensão</strong> (indústrias, grandes comércios, hospitais, shoppings)</span>
+            </li>
+          </ul>
+          <p className="text-lg text-[#736d77] leading-relaxed mb-4">
+            A energia por assinatura já está disponível em diversas distribuidoras pelo país. Atuamos com os principais geradores e comercializadores do mercado — e nossa análise considera todos os players qualificados, não apenas um.
+          </p>
+          <p className="text-lg text-[#736d77] leading-relaxed mb-8">
+            Atendemos empresas em todas as regiões onde o modelo já está regulamentado. Se sua distribuidora ainda não opera com GDL, podemos avisar quando houver novidades.
           </p>
           <Link 
             href="/seja-cliente"
