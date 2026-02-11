@@ -1,0 +1,87 @@
+UPDATED SOLUTIONS PAGE COPY
+Here is the complete rewrite. Replace your current Solutions page content with this:
+
+Soluções completas para sua empresa pagar menos energia.
+Não existe uma única resposta para todos. Cada empresa tem um perfil de consumo, uma tarifa de distribuidora e objetivos diferentes.
+
+A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico — seja no mercado cativo (ACR), no mercado livre (ACL) ou via geração compartilhada (GDL).
+
+Atuamos como seu consultor independente: analisamos os três cenários com dados reais, recomendamos o melhor caminho e executamos toda a implementação. Sem viés. Sem conflito.
+
+Todas as nossas frentes de atuação são operadas sobre o ECOS™, nosso sistema proprietário de inteligência de mercado que combina IA, automação e dados em tempo real para proteger sua empresa de decisões sem visibilidade.
+
+Escolha o caminho certo para sua empresa
+01 | Diagnóstico dos 3 Mercados
+Grátis | Sem compromisso | Para qualquer empresa
+
+Antes de qualquer recomendação, fazemos uma análise completa e neutra.
+
+Nossa IA cruza seu perfil de consumo, tarifa da concessionária, localização e elegibilidade para calcular a economia potencial em cada um dos três mercados: ACR (otimização na conta atual), ACL (migração para o livre) e GDL (energia por assinatura).
+
+Você recebe um diagnóstico claro com cenários, prazos e riscos. E decide, com total transparência, qual caminho faz sentido para o seu negócio.
+
+➝ Quero meu diagnóstico gratuito
+
+02 | Otimização no Mercado Cativo (ACR)
+Gestão de contas e acesso à Geração Compartilhada (GDL)
+
+Sua empresa ainda não migrou para o livre? Ou não é elegível? Você ainda pode economizar — hoje — sem trocar de fornecedor.
+
+Atuamos em duas frentes no mercado cativo:
+
+Análise e revisão de contas: Identificamos cobranças indevidas, erros de enquadramento tarifário e oportunidades imediatas de redução na sua fatura da concessionária.
+
+Energia por Assinatura (GDL): Conectamos sua empresa a usinas solares, eólicas ou biogás da sua região. Você recebe descontos de 15% a 25% na sua conta de luz, sem investir em equipamentos, sem obras, sem dor de cabeça. Nós gerenciamos toda a relação com o gerador e a compensação dos créditos.
+
+➝ Economizar no meu contrato atual
+
+03 | Migração e Gestão no Mercado Livre (ACL)
+Estratégia, contratação e renovação inteligente
+
+Para empresas elegíveis ou já atuantes no ambiente livre, entregamos economia consistente através de:
+
+Migração simplificada: Cuidamos de todo o processo regulatório, documental e contratual para entrada no ACL. Zero burocracia para você.
+
+Seleção de comercializadoras: Usamos o ECOS™ para comparar ofertas reais de múltiplas fornecedoras e negociar as melhores condições para seu perfil.
+
+Gestão de contratos e renovação: Acompanhamos seu contrato ao longo do tempo. Na janela de renovação, reavaliamos o mercado e decidimos com dados se vale a pena renovar, renegociar ou trocar de fornecedor. Sem pressa, sem ruído.
+
+➝ Quero migrar ou otimizar meu ACL
+
+04 | Sustentabilidade e Estratégia Energética
+Energia renovável certificada e neutralização de carbono
+
+Para empresas com compromissos ESG ou metas de descarbonização, estruturamos soluções sob medida:
+
+Contratação de energia renovável certificada (I-REC, selo de origem)
+
+Estratégias de neutralização de carbono
+
+Apoio na comunicação de resultados socioambientais
+
+Tudo com total rastreabilidade e transparência.
+
+➝ Soluções ESG para minha empresa
+
+Todos os caminhos passam pelo mesmo sistema.
+ECOS™ — Inteligência que orienta cada decisão.
+
+Seja no ACR, no ACL ou no GDL, todas as nossas recomendações são geradas e validadas pelo ECOS™, nosso sistema proprietário de IA e automação.
+
+Ele não vende produto. Ele analisa dados: ofertas reais de comercializadoras, desempenho de usinas GDL, bandas de preço histórico, perfis de risco e janelas contratuais.
+
+O ECOS™ só recomenda uma mudança quando há ganho real projetado. Sem conflito. Sem viés. Sem promessas vazias.
+
+Pronto para descobrir o melhor caminho para sua empresa?
+Faça um diagnóstico gratuito dos 3 mercados.
+Em até 5 dias úteis, você recebe uma análise completa com cenários comparáveis e recomendações claras.
+
+Solicitar Diagnóstico Gratuito
+
+SUMMARY OF CHANGES
+Before	After
+100% ACL-focused	Three-market overview with clear service pillars
+Buried GDL mention (nonexistent)	Dedicated section "Otimização no Mercado Cativo (ACR)" featuring GDL as hero offering
+"Mercado Livre" as default	"Diagnóstico dos 3 Mercados" as gateway to all
+Solutions as product features	Solutions as choices based on client profile
+No clear link to dedicated pages	Clear CTAs that lead to /mercadolivre-acl and /energia-por-assinatura-gdl
