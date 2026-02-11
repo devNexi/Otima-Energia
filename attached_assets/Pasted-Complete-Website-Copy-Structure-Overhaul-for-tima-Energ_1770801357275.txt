@@ -1,0 +1,108 @@
+Complete Website Copy & Structure Overhaul for Ótima Energia.
+Objective: Reframe the website from an ACL-only focus to a neutral, expert consultancy that guides clients to the most profitable choice among Brazil's three energy markets: ACR (Regulated), ACL (Free), and GDL (Shared Generation). The tone must remain professional, trustworthy, and benefit-driven. The tagline "Sua energia. Sua escolha. Sua economia." must stay exactly the same.
+
+Current Page to Edit: https://otimaenergia.com
+Deliverable: Provide updated HTML/CSS/JS code with the new copy and structure.
+
+Section-by-Section Instructions & Copy
+1. HERO SECTION (Top of Page)
+Keep: The main tagline: Sua energia. Sua escolha. Sua economia.
+
+Replace the current headline and sub-headline with this new block:
+
+html
+<h1>Conta menor. Controle total. Sem complexidade.</h1>
+<p>O mercado de energia brasileiro oferece mais opções do que nunca: <strong>ACR (concessionária), ACL (Livre) e GDL (geração compartilhada)</strong>. Qual é a certa para o seu negócio?<br><br>Nós analisamos seu perfil, comparamos os três mercados com dados reais e te guiamos para a decisão que maximiza sua economia, sem viés e sem conflito de interesse.</p>
+<a href="#diagnostico" class="cta-button">Diagnóstico Gratuito dos 3 Mercados</a>
+2. "COMO FUNCIONA" SECTION (The Process)
+Replace the entire 4-step process with this new structure. This is the core change.
+
+New Section Title: Como encontramos o mercado ideal para você
+Intro Paragraph: Nosso método substitui a venda de uma única solução por uma análise neutra. Trabalhamos como seu consultor estratégico para identificar a rota de maior economia.
+
+Step 1: Diagnóstico Completo
+
+html
+<h3>01. Diagnóstico Completo dos 3 Mercados</h3>
+<p>Você compartilha suas faturas. Nossa IA (ECOS™) cruza seu consumo, tarifa local e perfil com modelos dos mercados <strong>ACR, ACL e GDL</strong> para calcular a economia real possível em cada um.</p>
+Step 2: Análise de Eligibilidade e Cenários
+
+html
+<h3>02. Análise de Eligibilidade e Cenários</h3>
+<p>Identificamos em qual(is) mercado(s) sua empresa se qualifica e simulamos projeções financeiras detalhadas. Entregamos um quadro claro de prazos, riscos e oportunidades de cada caminho.</p>
+Step 3: Recomendação Clara e Comparável
+
+html
+<h3>03. Recomendação Clara e Comparável</h3>
+<p>Apresentamos uma proposta única com a <strong>recomendação do mercado mais vantajoso</strong> e, se aplicável, as melhores ofertas de fornecedores ou contratos daquele ambiente. A decisão final, sempre transparente, é sua.</p>
+Step 4: Implementação e Gestão Contínua
+
+html
+<h3>04. Implementação e Gestão</h3>
+<p>Acompanhamos toda a migração para o ACL, a otimização do contrato na concessionária (ACR) ou a adesão a uma usina GDL. E na renovação, reavaliamos o cenário para garantir que você permaneça no melhor lugar.</p>
+3. "SOLUÇÕES" SECTION
+Replace the four solution tiles with these new ones. Update icons if necessary.
+
+New Section Title: Nossas Frentes de Atuação
+
+Tile 1: Escolha do Mercado Ideal
+
+html
+<h4>Escolha do Mercado Ideal</h4>
+<p>Diagnóstico neutro entre ACR, ACL e GDL. Análise de viabilidade econômica e elegibilidade para direcionar sua empresa para o ambiente mais competitivo.</p>
+Tile 2: Otimização no Mercado Livre (ACL)
+
+html
+<h4>Otimização no Mercado Livre (ACL)</h4>
+<p>Para empresas no ou migrando para o ACL: estratégia de contratação, seleção de comercializadora, negociação de condições e gestão de renovação para máxima economia.</p>
+Tile 3: Gestão no Mercado Cativo (ACR)
+
+html
+<h4>Gestão no Mercado Cativo (ACR)</h4>
+<p>Para empresas no ACR: análise profunda da fatura da concessionária, revisão da tarifa, gestão de créditos de GDL e monitoramento para garantir que você explore todos os descontos possíveis.</p>
+Tile 4: Transparência Garantida
+
+html
+<h4>Transparência & Independência</h4>
+<p>Nosso diagnóstico é gratuito. Não somos vinculados a nenhuma comercializadora ou usina. Nossa receita vem de você, apenas se nossa recomendação fizer sentido econômico.</p>
+4. "POR QUE CONFIAR" SECTION
+Update the title and the "Metodologia Estruturada" bullet to reinforce the new positioning.
+
+New Section Title: Por que somos consultores, não vendedores
+
+First Bullet Point - Update Text:
+
+html
+<strong>Metodologia Baseada em Escolha:</strong> Análise estruturada que compara os três mercados (ACR, ACL, GDL) com critérios claros, priorizando seu resultado financeiro.
+5. ADD A NEW FAQ/GLOSSARY MODULE
+Insert this new section before the footer to educate visitors.
+
+Section Title: Entenda os Mercados
+
+html
+<div class="faq-item">
+    <h4>O que é ACR (Mercado Cativo)?</h4>
+    <p>O mercado tradicional, com concessionária regional fixa. Atuamos na <strong>otimização da conta</strong>, revisão de tarifas e gestão de créditos de GDL.</p>
+</div>
+<div class="faq-item">
+    <h4>O que é ACL (Mercado Livre de Energia)?</h4>
+    <p>Ambiente onde você pode <strong>escolher seu fornecedor</strong> e negociar contratos personalizados. Guiamos sua migração e estratégia de compra.</p>
+</div>
+<div class="faq-item">
+    <h4>O que é GDL (Geração Distribuída Compartilhada)?</h4>
+    <p>Modelo de "energia por assinatura" de usinas renováveis. Analisamos a viabilidade e gerenciamos sua participação para gerar <strong>descontos na conta de luz</strong>.</p>
+</div>
+Technical & SEO Instructions for the AI
+Global Find & Replace: Ensure all instances of "Mercado Livre" as the solution are replaced with context about it being one of three options.
+
+CTA Updates: Change all primary call-to-action buttons (like "Simular economia") to use the new language: "Diagnóstico Gratuito dos 3 Mercados".
+
+Meta Data: Update the page <title> and <meta description> to reflect the new focus. Suggestion:
+
+Title: Ótima Energia | Consultoria em ACR, ACL e GDL para Empresas
+
+Description: Diagnóstico gratuito que compara ACR, Mercado Livre (ACL) e GDL. Descubra o mercado de energia mais econômico para sua empresa com análise neutra e sem conflito.
+
+Image/Icon Suggestions: If generating or suggesting visuals, recommend icons that represent choice (e.g., a crossroads, a balance scale, three distinct paths) and analysis (a dashboard, graphs).
+
+Maintain Consistency: Apply the terminology (ACR, ACL, GDL) and the consultant-neutral tone across the entire site copy.
