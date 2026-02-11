@@ -1,0 +1,91 @@
+AQ PAGE REVIEW
+Problem: Your FAQ page is 100% ACL-focused. It completely ignores:
+
+GDL/Energia por Assinatura
+
+ACR optimization services
+
+Your "three markets" positioning
+
+The Prime partnership you're building
+
+Risk: A visitor reads your new homepage about three markets, clicks "FAQ", and finds zero answers about GDL. They will assume you don't actually do it.
+
+REQUIRED UPDATES
+1. NEW SECTION: GDL/ENERGIA POR ASSINATURA
+Add these 6 new FAQ items:
+
+O que é Energia por Assinatura (GDL)?
+
+É um modelo onde sua empresa assina uma cota de energia gerada por uma usina solar, eólica ou de biogás. Você não instala equipamento nenhum. Os créditos de energia são abatidos diretamente na sua conta da concessionária, gerando descontos de 15% a 25% todo mês. Funciona como um "clube de descontos" na sua conta de luz.
+
+Qual a diferença entre GDL e Mercado Livre (ACL)?
+
+No GDL (Energia por Assinatura) , você continua cliente da sua concessionária e recebe descontos direto na fatura via créditos de usinas compartilhadas. É simples, rápido e exige consumo mínimo baixo.
+
+No Mercado Livre (ACL) , você troca de fornecedor e passa a contratar energia diretamente de uma comercializadora. Exige maior consumo (a partir de ~500 kW), mas pode gerar economias de 20% a 40%.
+
+Ambos são válidos. Nossa consultoria analisa qual faz mais sentido para o seu perfil.
+
+Minha empresa pode fazer GDL mesmo sem ser elegível para o Mercado Livre?
+
+Sim. Essa é a maior vantagem do modelo. Qualquer empresa, de qualquer porte, atendida em baixa ou média tensão, pode aderir à energia por assinatura, desde que sua distribuidora possua usinas compartilhadas operando na região.
+
+Quais distribuidoras têm GDL disponível hoje?
+
+Atualmente atendemos empresas nas seguintes distribuidoras:
+
+Equatorial Piauí (PI)
+
+Coelba (BA)
+
+Energisa (MT, MS)
+
+Equatorial Goiás (GO)
+
+Elektro (SP)
+
+CPFL Paulista (SP)
+
+CPFL Santa Cruz (SP)
+
+Cemig (MG)
+
+Copel (PR)
+
+RGE (RS)
+
+Novas regiões são abertas mensalmente. Consulte-nos sobre sua distribuidora.
+
+Eu ainda posso migrar para o Mercado Livre depois de assinar GDL?
+
+Sim. São caminhos complementares, não excludentes. Muitas empresas começam economizando via GDL enquanto se preparam estrategicamente para migrar ao ACL no futuro. Nós podemos planejar essa transição com você.
+
+O desconto do GDL é garantido? E se a usina gerar menos?
+
+O desconto é aplicado sobre a tarifa da concessionária — se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador.
+
+2. MODIFY EXISTING ACL-FAQ INTRO
+Current: "Tire suas dúvidas sobre o mercado livre de energia..."
+
+Change to:
+
+Tire suas dúvidas sobre Mercado Livre (ACL), Energia por Assinatura (GDL) e como sua empresa pode começar a economizar — em qualquer mercado.
+
+3. MODIFY FINAL CTA
+Current: "...descubra se sua empresa pode migrar para o mercado livre."
+
+Change to:
+
+"...descubra qual caminho (GDL, ACL ou otimização no ACR) faz mais sentido para sua empresa."
+
+SUMMARY: WHAT TO ADD
+Topic	New Items
+GDL definition	✅ 1 new FAQ
+GDL vs ACL comparison	✅ 1 new FAQ
+Eligibility for GDL	✅ 1 new FAQ
+Distributor list	✅ 1 new FAQ
+GDL + ACL coexistence	✅ 1 new FAQ
+Guarantees & underperformance	✅ 1 new FAQ
+Updated intro + CTA	✅ 2 edits
+Your FAQ page must reflect the same three-market reality as your homepage and solutions page. Without this, your positioning collapses at the last meter.
