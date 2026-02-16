@@ -37,11 +37,11 @@ export default function EnergiaAssinatura() {
                 Nós analisamos se você é elegível, conectamos sua empresa ao gerador certo e gerenciamos toda a compensação de créditos. Você só vê o desconto na conta.
               </p>
               <Link 
-                href="/seja-cliente"
+                href="/diagnostico"
                 className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
                 data-testid="gdl-hero-cta"
               >
-                Simular economia com GDL
+                Solicitar Diagnóstico Gratuito
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
@@ -100,7 +100,7 @@ export default function EnergiaAssinatura() {
             Atendemos empresas em todas as regiões onde o modelo já está regulamentado. Se sua distribuidora ainda não opera com GDL, podemos avisar quando houver novidades.
           </p>
           <Link 
-            href="/seja-cliente"
+            href="/diagnostico"
             className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
             data-testid="gdl-check-availability"
           >
@@ -217,7 +217,7 @@ export default function EnergiaAssinatura() {
 
           <div className="mt-8 text-center">
             <Link 
-              href="/seja-cliente"
+              href="/diagnostico"
               className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
               data-testid="gdl-help-decide"
             >
@@ -284,11 +284,11 @@ export default function EnergiaAssinatura() {
             Em até 3 dias úteis, você recebe uma análise completa com: potencial de desconto para sua empresa, geradores disponíveis na sua região, comparação com o Mercado Livre (se aplicável) e minuta contratual para avaliação.
           </p>
           <Link 
-            href="/seja-cliente"
+            href="/diagnostico"
             className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
             data-testid="gdl-bottom-cta"
           >
-            Solicitar Simulação de GDL
+            Solicitar Diagnóstico Gratuito
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>

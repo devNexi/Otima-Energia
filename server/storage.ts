@@ -123,6 +123,7 @@ export interface IStorage {
   updateLead(id: number, data: Partial<InsertLead>): Promise<Lead | undefined>;
   generatePortalToken(leadId: number): Promise<string>;
   getLeadByPortalToken(token: string): Promise<Lead | undefined>;
+  getLeadByEmail(email: string): Promise<Lead | undefined>;
   
   // Clients
   createClient(client: InsertClient): Promise<Client>;
@@ -859,6 +860,11 @@ export class Storage implements IStorage {
 
   async getLeadByPortalToken(token: string): Promise<Lead | undefined> {
     const result = await db.select().from(leads).where(eq(leads.portalToken, token));
+    return result[0];
+  }
+
+  async getLeadByEmail(email: string): Promise<Lead | undefined> {
+    const result = await db.select().from(leads).where(eq(leads.email, email));
     return result[0];
   }
 

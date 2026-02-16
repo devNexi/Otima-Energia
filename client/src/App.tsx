@@ -42,6 +42,7 @@ import PublicProposal from "@/pages/PublicProposal";
 import ProposalPreview from "@/pages/ProposalPreview";
 import QuoteInbox from "@/pages/QuoteInbox";
 import EnergiaAssinatura from "@/pages/EnergiaAssinatura";
+import DiagnosticoForm from "@/pages/DiagnosticoForm";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/lei-mercado-livre" component={LeiMercadoLivre} />
       <Route path="/renovacao-contrato" component={RenovacaoContrato} />
       <Route path="/energia-por-assinatura-gdl" component={EnergiaAssinatura} />
+      <Route path="/diagnostico" component={DiagnosticoForm} />
       <Route path="/insights" component={Insights} />
       <Route path="/rede-de-lucros-otima" component={RedeLucros} />
       <Route path="/termos-parcerias" component={TermosParcerias} />

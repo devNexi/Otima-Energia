@@ -1,0 +1,598 @@
+import { useState, useCallback, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { ArrowRight, ArrowLeft, Upload, X, FileText, CheckCircle, Shield, Loader2, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const BRAZILIAN_STATES = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+];
+
+const BUSINESS_TYPES = [
+  "Escola / Colégio",
+  "Hotel / Pousada",
+  "Supermercado / Mercado",
+  "Shopping Center",
+  "Restaurante",
+  "Indústria",
+  "Outro (especificar em mensagem)",
+];
+
+const DISTRIBUTORS: { region: string; options: string[] }[] = [
+  { region: "São Paulo", options: ["CPFL Paulista", "CPFL Santa Cruz", "Elektro", "EDP SP", "Enel SP"] },
+  { region: "Minas Gerais", options: ["Cemig", "Energisa MG"] },
+  { region: "Paraná", options: ["Copel"] },
+  { region: "Rio Grande do Sul", options: ["RGE", "CEEE Equatorial"] },
+  { region: "Bahia", options: ["Coelba"] },
+  { region: "Piauí", options: ["Equatorial Piauí"] },
+  { region: "Mato Grosso", options: ["Energisa MT"] },
+  { region: "Mato Grosso do Sul", options: ["Energisa MS"] },
+  { region: "Goiás", options: ["Equatorial Goiás"] },
+  { region: "Outros", options: ["Não sei / Outra"] },
+];
+
+const STORAGE_KEY = "otima_diagnostico_draft";
+
+const step1Schema = z.object({
+  name: z.string().min(2, "Nome é obrigatório"),
+  company: z.string().min(2, "Nome da empresa é obrigatório"),
+  businessType: z.string().min(1, "Selecione o tipo de negócio"),
+  city: z.string().min(2, "Cidade é obrigatória"),
+  state: z.string().min(1, "Selecione o estado"),
+  distributor: z.string().min(1, "Selecione a distribuidora"),
+});
+
+const step2Schema = z.object({
+  email: z.string().email("E-mail inválido"),
+  phone: z.string().optional(),
+});
+
+const fullSchema = step1Schema.merge(step2Schema).extend({
+  lgpdConsent: z.literal(true, { errorMap: () => ({ message: "Consentimento LGPD é obrigatório" }) }),
+});
+
+type FormValues = z.infer<typeof fullSchema>;
+
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits.length ? `(${digits}` : "";
+  if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+}
+
+function FieldTooltip({ text }: { text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Info className="w-3.5 h-3.5 text-[#736d77] inline ml-1 cursor-help" />
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs">{text}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export default function DiagnosticoForm() {
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(step === 1 ? step1Schema : step === 2 ? step2Schema : fullSchema),
+    defaultValues: {
+      name: "", company: "", businessType: "", city: "", state: "", distributor: "",
+      email: "", phone: "", lgpdConsent: undefined as any,
+    },
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.entries(parsed).forEach(([key, val]) => {
+          if (val && key !== "lgpdConsent") form.setValue(key as any, val as string);
+        });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      try {
+        const { lgpdConsent, ...rest } = values;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+      } catch {}
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
+
+  const filledFields = (() => {
+    const vals = form.watch();
+    const fields = ["name","company","businessType","city","state","distributor","email"];
+    const filled = fields.filter(f => !!(vals as any)[f]).length;
+    const fileBonus = files.length > 0 ? 1 : 0;
+    return Math.round(((filled + fileBonus) / (fields.length + 1)) * 100);
+  })();
+
+  const submitDiagnostico = useMutation({
+    mutationFn: async (data: FormValues) => {
+      const formData = new FormData();
+      formData.append("name", data.name);
+      formData.append("company", data.company);
+      formData.append("businessType", data.businessType);
+      formData.append("city", data.city);
+      formData.append("state", data.state);
+      formData.append("distributor", data.distributor);
+      formData.append("email", data.email);
+      if (data.phone) formData.append("phone", data.phone);
+      formData.append("lgpdConsent", "true");
+      files.forEach(f => formData.append("bills", f));
+
+      const response = await fetch("/api/diagnostico", { method: "POST", body: formData });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Falha ao enviar");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setSubmitted(true);
+      localStorage.removeItem(STORAGE_KEY);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleFiles = useCallback((newFiles: FileList | File[]) => {
+    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    const maxSize = 10 * 1024 * 1024;
+    const valid: File[] = [];
+
+    Array.from(newFiles).forEach(f => {
+      if (!allowed.includes(f.type)) {
+        toast({ title: "Formato inválido", description: `${f.name}: Apenas PDF, JPG e PNG.`, variant: "destructive" });
+        return;
+      }
+      if (f.size > maxSize) {
+        toast({ title: "Arquivo grande demais", description: `${f.name}: Máximo 10MB.`, variant: "destructive" });
+        return;
+      }
+      valid.push(f);
+    });
+
+    setFiles(prev => {
+      const combined = [...prev, ...valid];
+      if (combined.length > 3) {
+        toast({ title: "Máximo 3 arquivos", description: "Selecione até 3 contas de luz.", variant: "destructive" });
+        return combined.slice(0, 3);
+      }
+      return combined;
+    });
+  }, [toast]);
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const goNext = async () => {
+    let fieldsToValidate: (keyof FormValues)[];
+    if (step === 1) fieldsToValidate = ["name","company","businessType","city","state","distributor"];
+    else fieldsToValidate = ["email"];
+
+    const valid = await form.trigger(fieldsToValidate);
+    if (valid) setStep(s => s + 1);
+  };
+
+  const handleSubmit = (values: FormValues) => {
+    if (files.length === 0) {
+      toast({ title: "Contas obrigatórias", description: "Envie pelo menos 1 conta de luz.", variant: "destructive" });
+      return;
+    }
+    submitDiagnostico.mutate(values);
+  };
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <section className="bg-[#eee7f1] pt-32 pb-24 lg:pt-40 lg:pb-32">
+          <div className="max-w-2xl mx-auto px-6 text-center">
+            <div className="w-20 h-20 bg-[#9e3ffd] rounded-full flex items-center justify-center mx-auto mb-8">
+              <CheckCircle className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6" data-testid="text-success-title">
+              Recebemos suas contas!
+            </h1>
+            <p className="text-lg text-[#736d77] leading-relaxed mb-8">
+              Em até 48h úteis você recebe um diagnóstico completo no seu e-mail com a economia projetada para sua empresa.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
+              data-testid="link-back-home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao site
+            </Link>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      <section className="bg-[#eee7f1] pt-32 pb-12 lg:pt-40 lg:pb-16">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium text-[#9e3ffd] uppercase tracking-wider mb-4">
+              Diagnóstico Gratuito
+            </p>
+            <h1 className="text-[2rem] lg:text-[2.75rem] leading-[1.15] font-normal tracking-tight text-[#16163f] mb-4" data-testid="text-form-title">
+              Diagnóstico Gratuito de Economia de Energia
+            </h1>
+            <p className="text-lg text-[#736d77] leading-relaxed">
+              Descubra quanto seu negócio pode economizar na conta de luz. Pré-requisito: envio das últimas 3 contas em PDF.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-12 lg:py-16">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-8">
+                {[1,2,3].map(s => (
+                  <div key={s} className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      step > s ? "bg-[#9e3ffd] text-white" :
+                      step === s ? "bg-[#9e3ffd] text-white" :
+                      "bg-gray-200 text-gray-500"
+                    }`} data-testid={`step-indicator-${s}`}>
+                      {step > s ? <CheckCircle className="w-4 h-4" /> : s}
+                    </div>
+                    <span className={`text-sm hidden sm:inline ${step >= s ? "text-[#16163f] font-medium" : "text-gray-400"}`}>
+                      {s === 1 ? "Dados" : s === 2 ? "Contato" : "Contas"}
+                    </span>
+                    {s < 3 && <div className={`w-8 h-px ${step > s ? "bg-[#9e3ffd]" : "bg-gray-200"}`} />}
+                  </div>
+                ))}
+                <span className="ml-auto text-xs text-[#736d77]">{filledFields}% preenchido</span>
+              </div>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)}>
+                  {step === 1 && (
+                    <div className="space-y-5" data-testid="step-1-fields">
+                      <div className="grid md:grid-cols-2 gap-5">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#16163f]">
+                              Nome Completo *
+                              <FieldTooltip text="Nome do responsável pelo diagnóstico." />
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="Seu nome completo" className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="input-name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="company" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#16163f]">
+                              Empresa *
+                              <FieldTooltip text="Nome da empresa, escola, hotel, etc." />
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="Nome da empresa / escola / hotel" className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="input-company" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+
+                      <FormField control={form.control} name="businessType" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-[#16163f]">
+                            Tipo de Negócio *
+                            <FieldTooltip text="Nos ajuda a comparar seu consumo com empresas similares." />
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="select-business-type">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {BUSINESS_TYPES.map(t => (
+                                <SelectItem key={t} value={t}>{t}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <div className="grid md:grid-cols-2 gap-5">
+                        <FormField control={form.control} name="city" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#16163f]">Cidade *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Sua cidade" className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="input-city" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="state" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#16163f]">Estado *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="select-state">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {BRAZILIAN_STATES.map(s => (
+                                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+
+                      <FormField control={form.control} name="distributor" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-[#16163f]">
+                            Distribuidora de Energia *
+                            <FieldTooltip text="A empresa que aparece na sua conta de luz." />
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="select-distributor">
+                                <SelectValue placeholder="Selecione sua distribuidora" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DISTRIBUTORS.map(group => (
+                                <SelectGroup key={group.region}>
+                                  <SelectLabel className="text-xs text-[#9e3ffd] font-semibold uppercase tracking-wide">{group.region}</SelectLabel>
+                                  {group.options.map(opt => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <div className="flex justify-end pt-4">
+                        <button type="button" onClick={goNext} className="flex items-center gap-2 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-3 font-medium transition-colors" data-testid="button-next-step1">
+                          Próximo
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 2 && (
+                    <div className="space-y-5" data-testid="step-2-fields">
+                      <FormField control={form.control} name="email" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-[#16163f]">
+                            E-mail *
+                            <FieldTooltip text="Enviaremos o diagnóstico para este e-mail." />
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="voce@empresa.com.br" type="email" className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="input-email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <FormField control={form.control} name="phone" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-[#16163f]">
+                            Telefone (opcional)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="(XX) XXXXX-XXXX"
+                              className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white"
+                              data-testid="input-phone"
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <div className="flex justify-between pt-4">
+                        <button type="button" onClick={() => setStep(1)} className="flex items-center gap-2 border border-gray-300 text-[#16163f] hover:bg-gray-50 px-6 py-3 font-medium transition-colors" data-testid="button-back-step2">
+                          <ArrowLeft className="w-4 h-4" />
+                          Voltar
+                        </button>
+                        <button type="button" onClick={goNext} className="flex items-center gap-2 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-3 font-medium transition-colors" data-testid="button-next-step2">
+                          Próximo
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 3 && (
+                    <div className="space-y-6" data-testid="step-3-fields">
+                      <div>
+                        <label className="text-sm font-medium text-[#16163f] mb-2 block">
+                          Upload das 3 Últimas Contas de Luz *
+                          <FieldTooltip text="Precisamos das contas para calcular seu perfil de consumo real." />
+                        </label>
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                            isDragging ? "border-[#9e3ffd] bg-[#eee7f1]" : "border-gray-300 hover:border-[#9e3ffd]"
+                          }`}
+                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={handleDrop}
+                          onClick={() => document.getElementById("file-input")?.click()}
+                          data-testid="dropzone-bills"
+                        >
+                          <Upload className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
+                          <p className="text-[#16163f] font-medium mb-1">Arraste os arquivos ou clique para selecionar</p>
+                          <p className="text-sm text-[#736d77]">PDF, JPG ou PNG. Máximo 10MB cada. Até 3 arquivos.</p>
+                          <input
+                            id="file-input"
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                            data-testid="input-file-upload"
+                          />
+                        </div>
+
+                        {files.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {files.map((f, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-[#eee7f1] rounded-lg px-4 py-3" data-testid={`file-item-${i}`}>
+                                <FileText className="w-5 h-5 text-[#9e3ffd] flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-[#16163f] truncate">{f.name}</p>
+                                  <p className="text-xs text-[#736d77]">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                                <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-red-500 transition-colors" data-testid={`button-remove-file-${i}`}>
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <FormField control={form.control} name="lgpdConsent" render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value === true}
+                              onCheckedChange={field.onChange}
+                              className="mt-0.5"
+                              data-testid="checkbox-lgpd"
+                            />
+                          </FormControl>
+                          <div className="space-y-1">
+                            <FormLabel className="text-sm text-[#736d77] font-normal leading-relaxed cursor-pointer">
+                              Concordo em compartilhar meus dados para receber o diagnóstico gratuito. <Link href="/privacidade" className="text-[#9e3ffd] hover:underline">Política de Privacidade</Link>
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )} />
+
+                      <div className="flex justify-between pt-4">
+                        <button type="button" onClick={() => setStep(2)} className="flex items-center gap-2 border border-gray-300 text-[#16163f] hover:bg-gray-50 px-6 py-3 font-medium transition-colors" data-testid="button-back-step3">
+                          <ArrowLeft className="w-4 h-4" />
+                          Voltar
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex items-center gap-2 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-3 font-medium transition-colors disabled:opacity-60"
+                          disabled={submitDiagnostico.isPending}
+                          data-testid="button-submit-diagnostico"
+                        >
+                          {submitDiagnostico.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              Enviar Diagnóstico
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </Form>
+            </div>
+
+            <div className="space-y-8">
+              <div className="bg-[#eee7f1] rounded-lg p-6">
+                <h3 className="text-lg font-medium text-[#16163f] mb-4">Como funciona</h3>
+                <div className="space-y-4">
+                  {[
+                    { n: "1", title: "Envie seus dados e contas", desc: "Preenchemos seu perfil de consumo." },
+                    { n: "2", title: "Análise nos 3 mercados", desc: "ACR, ACL e GDL comparados." },
+                    { n: "3", title: "Diagnóstico no e-mail", desc: "Em até 48h úteis, com economia projetada." },
+                  ].map(item => (
+                    <div key={item.n} className="flex gap-3">
+                      <div className="w-7 h-7 bg-[#9e3ffd] text-white rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium">
+                        {item.n}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#16163f]">{item.title}</p>
+                        <p className="text-xs text-[#736d77]">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 text-xs text-[#736d77]">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#9e3ffd]" />
+                  100% gratuito
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#9e3ffd]" />
+                  Sem compromisso
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-[#9e3ffd]" />
+                  Dados protegidos (LGPD)
+                </span>
+              </div>
+
+              <div className="bg-[#16163f] rounded-lg p-6 text-white">
+                <p className="text-2xl font-light text-[#9e3ffd] mb-1">48h</p>
+                <p className="text-sm text-gray-300">Prazo médio para receber seu diagnóstico completo</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+}

@@ -38,6 +38,7 @@ import {
   insertDealProposalSnapshotSchema,
   insertDealProposalViewSchema,
   insertBrandKitSchema,
+  diagnosticSubmissions,
   zohoIntakeEvents,
   zohoIntakeErrors,
   clients,
@@ -11425,6 +11426,157 @@ export async function registerRoutes(
   });
 
   // ============== END QA TEST ENDPOINTS ==============
+
+  // ============== DIAGNOSTIC FORM ==============
+
+  const diagnosticoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = ["application/pdf", "image/jpeg", "image/png"];
+      cb(null, allowed.includes(file.mimetype));
+    },
+  });
+
+  app.post("/api/diagnostico", diagnosticoUpload.array("bills", 3), async (req: Request, res: Response) => {
+    try {
+      const { name, company, businessType, city, state, distributor, email, phone, lgpdConsent } = req.body;
+
+      if (!name || !company || !businessType || !city || !state || !distributor || !email) {
+        return res.status(400).json({ error: "Campos obrigatórios não preenchidos." });
+      }
+      if (lgpdConsent !== "true") {
+        return res.status(400).json({ error: "Consentimento LGPD é obrigatório." });
+      }
+
+      const uploadedFiles = (req.files as Express.Multer.File[]) || [];
+      if (uploadedFiles.length === 0) {
+        return res.status(400).json({ error: "Envie pelo menos uma conta de luz." });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      const fileKeys: string[] = [];
+
+      for (const file of uploadedFiles) {
+        const timestamp = Date.now();
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const key = `diagnostico/${timestamp}_${safeName}`;
+        await objectStorageService.upload(key, file.buffer, file.mimetype);
+        fileKeys.push(key);
+      }
+
+      let lead = await storage.getLeadByEmail(email);
+      if (!lead) {
+        lead = await storage.createLead({
+          name,
+          email,
+          phone: phone || null,
+          companyName: company,
+          message: `[Diagnóstico] ${businessType} - ${city}/${state} - ${distributor}`,
+          source: "diagnostico",
+        });
+      }
+
+      const [submission] = await db.insert(diagnosticSubmissions).values({
+        name,
+        company,
+        businessType,
+        city,
+        state,
+        distributor,
+        email,
+        phone: phone || null,
+        fileKeys,
+        lgpdConsent: true,
+        leadId: lead.id,
+        status: "pending",
+      }).returning();
+
+      try {
+        const nodemailer = await import("nodemailer");
+        const smtpHost = process.env.SMTP_HOST;
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+
+        if (smtpHost && smtpUser && smtpPass) {
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: parseInt(process.env.SMTP_PORT || "587"),
+            secure: process.env.SMTP_SECURE === "true",
+            auth: { user: smtpUser, pass: smtpPass },
+          });
+
+          const fromAddress = `"${process.env.SMTP_FROM_NAME || "Ótima Energia"}" <${process.env.SMTP_FROM_EMAIL || "ops@otimaenergia.com"}>`;
+
+          await transporter.sendMail({
+            from: fromAddress,
+            to: email,
+            subject: "Recebemos seu diagnóstico — Ótima Energia",
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="background: #9e3ffd; padding: 24px 32px; border-radius: 8px 8px 0 0;">
+                  <h1 style="color: white; font-size: 20px; margin: 0;">Ótima Energia</h1>
+                </div>
+                <div style="padding: 32px; background: #f9f7fb; border-radius: 0 0 8px 8px;">
+                  <p>Olá <strong>${name}</strong>,</p>
+                  <p>Recebemos suas contas com sucesso! Nossa equipe vai analisar seu consumo e em até <strong>48h úteis</strong> você receberá um diagnóstico completo com a economia projetada para <strong>${company}</strong>.</p>
+                  <p>Fique de olho no seu e-mail. Qualquer dúvida, responda esta mensagem.</p>
+                  <p style="margin-top: 24px;">Abraço,<br/><strong>Time Ótima Energia</strong></p>
+                </div>
+              </div>
+            `,
+          });
+
+          const fileLinksItems = await Promise.all(fileKeys.map(async (key, i) => {
+            try {
+              const url = await objectStorageService.getSignedReadUrl(key, 7 * 24 * 3600);
+              return `<li><a href="${url}" target="_blank">Arquivo ${i + 1}: ${key.split("/").pop()}</a></li>`;
+            } catch {
+              return `<li>Arquivo ${i + 1}: ${key}</li>`;
+            }
+          }));
+          const fileLinksHtml = fileLinksItems.join("");
+
+          await transporter.sendMail({
+            from: fromAddress,
+            to: "callum@otimaenergia.com, renan@otimaenergia.com",
+            subject: `NOVO DIAGNÓSTICO: ${company} - ${city}/${state}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="background: #16163f; padding: 24px 32px; border-radius: 8px 8px 0 0;">
+                  <h1 style="color: white; font-size: 20px; margin: 0;">Novo Diagnóstico Recebido</h1>
+                </div>
+                <div style="padding: 32px; background: #f9f7fb; border-radius: 0 0 8px 8px;">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr><td style="padding: 8px 0; font-weight: bold; width: 140px;">Nome:</td><td>${name}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">Empresa:</td><td>${company}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">Tipo:</td><td>${businessType}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">Cidade/Estado:</td><td>${city} / ${state}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">Distribuidora:</td><td>${distributor}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">E-mail:</td><td>${email}</td></tr>
+                    <tr><td style="padding: 8px 0; font-weight: bold;">Telefone:</td><td>${phone || "Não informado"}</td></tr>
+                  </table>
+                  <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;" />
+                  <p style="font-weight: bold;">Arquivos enviados:</p>
+                  <ul>${fileLinksHtml}</ul>
+                  <p style="font-size: 12px; color: #999; margin-top: 16px;">Enviado em: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
+                </div>
+              </div>
+            `,
+          });
+        }
+      } catch (emailError) {
+        console.error("Diagnostic email error (non-blocking):", emailError);
+      }
+
+      res.json({ success: true, submissionId: submission.id });
+    } catch (error: any) {
+      console.error("Diagnostic submission error:", error);
+      res.status(500).json({ error: "Falha ao processar o diagnóstico. Tente novamente." });
+    }
+  });
+
+  // ============== END DIAGNOSTIC FORM ==============
 
   return httpServer;
 }
