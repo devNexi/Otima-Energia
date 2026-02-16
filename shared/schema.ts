@@ -4534,3 +4534,34 @@ export type InsertInboundEmail = z.infer<typeof insertInboundEmailSchema>;
 export type InboundEmail = typeof inboundEmails.$inferSelect;
 
 // ============== END INBOUND EMAIL LOG ==============
+
+// ============== DIAGNOSTIC SUBMISSIONS ==============
+
+export const diagnosticSubmissions = pgTable("diagnostic_submissions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  company: text("company").notNull(),
+  businessType: text("business_type").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  distributor: text("distributor").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  fileKeys: text("file_keys").array(),
+  lgpdConsent: boolean("lgpd_consent").default(false).notNull(),
+  leadId: integer("lead_id").references(() => leads.id),
+  status: text("status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDiagnosticSubmissionSchema = createInsertSchema(diagnosticSubmissions).omit({
+  id: true,
+  createdAt: true,
+  leadId: true,
+  status: true,
+});
+
+export type InsertDiagnosticSubmission = z.infer<typeof insertDiagnosticSubmissionSchema>;
+export type DiagnosticSubmission = typeof diagnosticSubmissions.$inferSelect;
+
+// ============== END DIAGNOSTIC SUBMISSIONS ==============

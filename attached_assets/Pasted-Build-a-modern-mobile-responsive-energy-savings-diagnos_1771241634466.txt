@@ -1,0 +1,88 @@
+Build a modern, mobile-responsive energy savings diagnostic form for Ötima Energia (https://otimaenergia.com). The form should match the website's existing design system (clean, professional, blue/green energy branding).
+
+## FORM REQUIREMENTS
+
+Create a single-page form with the following structure:
+
+### HEADER SECTION
+- Title: "Diagnóstico Gratuito de Economia de Energia"
+- Subtitle: "Descubra quanto seu negócio pode economizar na conta de luz. Pré-requisito: envio das últimas 3 contas em PDF."
+
+### FORM FIELDS (all required except phone)
+
+1. **Nome Completo** — Text input, required
+2. **Empresa** — Text input, required (label: "Nome da empresa / escola / hotel")
+3. **Tipo de Negócio** — Dropdown, required with options:
+   - Escola / Colégio
+   - Hotel / Pousada
+   - Supermercado / Mercado
+   - Shopping Center
+   - Restaurante
+   - Indústria
+   - Outro (especificar em mensagem)
+4. **Cidade** — Text input, required
+5. **Estado** — Dropdown, required with all 27 Brazilian states (AC to TO)
+6. **Distribuidora de Energia** — Dropdown, required with these options (grouped by region):
+   - [Select one]
+   - **São Paulo:** CPFL Paulista, CPFL Santa Cruz, Elektro, EDP SP, Enel SP
+   - **Minas Gerais:** Cemig, Energisa MG
+   - **Paraná:** Copel
+   - **Rio Grande do Sul:** RGE, CEEE Equatorial
+   - **Bahia:** Coelba
+   - **Piauí:** Equatorial Piauí
+   - **Mato Grosso:** Energisa MT
+   - **Mato Grosso do Sul:** Energisa MS
+   - **Goiás:** Equatorial Goiás
+   - **Outros:** Não sei / Outra
+7. **E-mail** — Email input, required
+8. **Telefone** — Text input with mask (XX) XXXXX-XXXX, optional
+9. **Upload das 3 Últimas Contas de Luz** — File upload, required, with these specifications:
+   - Accepts: PDF, JPG, PNG
+   - Multiple files allowed (up to 3)
+   - Max file size: 10MB each
+   - Drag-and-drop area with clear instructions: "Arraste os arquivos ou clique para selecionar"
+   - Visual confirmation when files are uploaded
+
+### SUBMIT BUTTON
+- Text: "Enviar Diagnóstico"
+- Loading state: "Enviando..." with spinner
+- Success message: "Recebemos suas contas! Em até 48h úteis você recebe um diagnóstico completo no seu e-mail."
+- Error handling: Clear validation messages in Portuguese
+
+### AFTER SUBMIT (AUTOMATION)
+1. Send auto-response email to prospect:
+   - Subject: "Recebemos seu diagnóstico — Ötima Energia"
+   - Body: "Olá [Nome], recebemos suas contas com sucesso! Nossa equipe vai analisar seu consumo e em até 48h úteis você receberá um diagnóstico completo com a economia projetada para sua [empresa]. Fique de olho no seu e-mail. Qualquer dúvida, responda esta mensagem. Abraço, Time Ötima Energia"
+2. Send notification email to Renan/team:
+   - Subject: "NOVO DIAGNÓSTICO: [Empresa] - [Cidade]/[Estado]"
+   - Body with all form data + links to uploaded PDFs
+3. Store submissions in Google Sheets (via API or Zapier integration)
+4. Uploaded files should be stored securely (AWS S3, Google Drive, or similar)
+
+### DESIGN REQUIREMENTS
+- Mobile-first responsive design
+- Clean progress indicator (steps 1-2-3 style)
+- Trust badges: "100% gratuito • Sem compromisso • Dados protegidos (LGPD)"
+- Link to privacy policy
+- Chat/support widget discreetly placed
+
+### TECH STACK PREFERENCES
+- React/Next.js (if using Replit's Next.js template)
+- Tailwind CSS for styling
+- File upload to AWS S3 or Firebase Storage
+- Email via Resend or Nodemailer
+- Form data to Google Sheets via API
+
+### ADDITIONAL FEATURES
+- Save partial submissions (localStorage) in case user refreshes
+- Progress percentage as they fill fields
+- Tooltips explaining why each field is needed
+- LGPD consent checkbox: "Concordo em compartilhar meus dados para receber o diagnóstico gratuito" (required)
+
+### BRANDING
+- Use Ötima Energia logo
+- Colors: #00A86B (green), #1E3A8A (blue), white, light gray
+- Font: Inter or similar sans-serif
+- Subtle energy-themed illustrations or icons
+
+The goal: Make this so easy and trustworthy that prospects complete it in <2 minutes. The mandatory bill upload is intentional — it filters for serious leads only.
