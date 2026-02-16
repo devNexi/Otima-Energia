@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ArrowRight, ArrowLeft, Upload, X, FileText, CheckCircle, Shield, Loader2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
@@ -54,52 +54,6 @@ const BUSINESS_TYPES = [
   "Outro (especificar em mensagem)",
 ];
 
-const DISTRIBUTORS: { group: string; options: { value: string; label: string }[] }[] = [
-  {
-    group: "Parceria Atual (Prime Energy)",
-    options: [
-      { value: "CPFL Paulista", label: "CPFL Paulista (SP)" },
-      { value: "CPFL Santa Cruz", label: "CPFL Santa Cruz (SP)" },
-      { value: "Elektro", label: "Elektro (SP)" },
-      { value: "Cemig", label: "Cemig (MG)" },
-      { value: "Copel", label: "Copel (PR)" },
-      { value: "RGE", label: "RGE (RS)" },
-      { value: "Coelba", label: "Coelba (BA)" },
-      { value: "Equatorial PI", label: "Equatorial Piauí (PI)" },
-      { value: "Energisa MT", label: "Energisa Mato Grosso (MT)" },
-      { value: "Energisa MS", label: "Energisa Mato Grosso do Sul (MS)" },
-      { value: "Equatorial GO", label: "Equatorial Goiás (GO)" },
-    ],
-  },
-  {
-    group: "Análise com Outros Parceiros",
-    options: [
-      { value: "Enel RJ", label: "Enel Rio de Janeiro (RJ)" },
-      { value: "Light", label: "Light (RJ)" },
-      { value: "Enel CE", label: "Enel Ceará (CE)" },
-      { value: "Neoenergia PE", label: "Neoenergia Pernambuco (PE)" },
-      { value: "Celesc", label: "Celesc (SC)" },
-      { value: "Equatorial PA", label: "Equatorial Pará (PA)" },
-      { value: "Amazonas Energia", label: "Amazonas Energia (AM)" },
-      { value: "Enel SP", label: "Enel São Paulo (SP)" },
-      { value: "EDP SP", label: "EDP São Paulo (SP)" },
-      { value: "CEEE Equatorial", label: "CEEE Equatorial (RS)" },
-      { value: "Energisa MG", label: "Energisa Minas Gerais (MG)" },
-      { value: "Energisa TO", label: "Energisa Tocantins (TO)" },
-      { value: "Energisa PB", label: "Energisa Paraíba (PB)" },
-      { value: "Energisa SE", label: "Energisa Sergipe (SE)" },
-      { value: "Energisa RO", label: "Energisa Rondônia (RO)" },
-      { value: "Energisa AC", label: "Energisa Acre (AC)" },
-    ],
-  },
-  {
-    group: "Outras",
-    options: [
-      { value: "Outra", label: "Outra (não listada)" },
-      { value: "Nao sei", label: "Não sei minha distribuidora" },
-    ],
-  },
-];
 
 const STORAGE_KEY = "otima_diagnostico_draft";
 
@@ -443,25 +397,10 @@ export default function DiagnosticoForm() {
                             Distribuidora de Energia *
                             <FieldTooltip text="A empresa que aparece na sua conta de luz." />
                           </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="select-distributor">
-                                <SelectValue placeholder="Selecione sua distribuidora" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {DISTRIBUTORS.map(group => (
-                                <SelectGroup key={group.group}>
-                                  <SelectLabel className="text-xs text-[#9e3ffd] font-semibold uppercase tracking-wide">{group.group}</SelectLabel>
-                                  {group.options.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input placeholder="Ex: CPFL Paulista, Cemig, Copel..." className="h-12 border-gray-300 focus:border-[#9e3ffd] focus:ring-0 bg-white" data-testid="input-distributor" {...field} />
+                          </FormControl>
                           <FormMessage />
-                          <p className="text-xs text-[#736d77] mt-1.5">Temos parceria ativa com a Prime Energy nas distribuidoras da primeira lista. Para as demais, analisamos com outros fornecedores parceiros. Se não houver oferta disponível hoje, avisamos e mantemos seu contato para futuras oportunidades.</p>
                         </FormItem>
                       )} />
 
