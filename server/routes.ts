@@ -11519,7 +11519,14 @@ export async function registerRoutes(
                 </div>
                 <div style="padding: 32px; background: #f9f7fb; border-radius: 0 0 8px 8px;">
                   <p>Olá <strong>${name}</strong>,</p>
-                  <p>Recebemos suas contas com sucesso! Nossa equipe vai analisar seu consumo e em até <strong>48h úteis</strong> você receberá um diagnóstico completo com a economia projetada para <strong>${company}</strong>.</p>
+                  <p>Recebemos suas contas com sucesso!</p>
+                  <p>Nossa equipe já está analisando seu perfil junto às nossas comercializadoras parceiras. <strong>O prazo médio para retorno é de 5 dias úteis</strong>, mas pode ser mais rápido dependendo da sua distribuidora e região.</p>
+                  <p>Assim que tivermos os números, você receberá um e-mail com:</p>
+                  <ul>
+                    <li>Se você é elegível para GDL</li>
+                    <li>Economia estimada em R$ por mês</li>
+                    <li>Próximos passos (se aplicável)</li>
+                  </ul>
                   <p>Fique de olho no seu e-mail. Qualquer dúvida, responda esta mensagem.</p>
                   <p style="margin-top: 24px;">Abraço,<br/><strong>Time Ótima Energia</strong></p>
                 </div>

@@ -15,7 +15,33 @@ import { Link } from "wouter";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const BRAZILIAN_STATES = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+  { value: "AC", label: "Acre (AC)" },
+  { value: "AL", label: "Alagoas (AL)" },
+  { value: "AP", label: "Amapá (AP)" },
+  { value: "AM", label: "Amazonas (AM)" },
+  { value: "BA", label: "Bahia (BA)" },
+  { value: "CE", label: "Ceará (CE)" },
+  { value: "DF", label: "Distrito Federal (DF)" },
+  { value: "ES", label: "Espírito Santo (ES)" },
+  { value: "GO", label: "Goiás (GO)" },
+  { value: "MA", label: "Maranhão (MA)" },
+  { value: "MT", label: "Mato Grosso (MT)" },
+  { value: "MS", label: "Mato Grosso do Sul (MS)" },
+  { value: "MG", label: "Minas Gerais (MG)" },
+  { value: "PA", label: "Pará (PA)" },
+  { value: "PB", label: "Paraíba (PB)" },
+  { value: "PR", label: "Paraná (PR)" },
+  { value: "PE", label: "Pernambuco (PE)" },
+  { value: "PI", label: "Piauí (PI)" },
+  { value: "RJ", label: "Rio de Janeiro (RJ)" },
+  { value: "RN", label: "Rio Grande do Norte (RN)" },
+  { value: "RS", label: "Rio Grande do Sul (RS)" },
+  { value: "RO", label: "Rondônia (RO)" },
+  { value: "RR", label: "Roraima (RR)" },
+  { value: "SC", label: "Santa Catarina (SC)" },
+  { value: "SP", label: "São Paulo (SP)" },
+  { value: "SE", label: "Sergipe (SE)" },
+  { value: "TO", label: "Tocantins (TO)" },
 ];
 
 const BUSINESS_TYPES = [
@@ -28,17 +54,51 @@ const BUSINESS_TYPES = [
   "Outro (especificar em mensagem)",
 ];
 
-const DISTRIBUTORS: { region: string; options: string[] }[] = [
-  { region: "São Paulo", options: ["CPFL Paulista", "CPFL Santa Cruz", "Elektro", "EDP SP", "Enel SP"] },
-  { region: "Minas Gerais", options: ["Cemig", "Energisa MG"] },
-  { region: "Paraná", options: ["Copel"] },
-  { region: "Rio Grande do Sul", options: ["RGE", "CEEE Equatorial"] },
-  { region: "Bahia", options: ["Coelba"] },
-  { region: "Piauí", options: ["Equatorial Piauí"] },
-  { region: "Mato Grosso", options: ["Energisa MT"] },
-  { region: "Mato Grosso do Sul", options: ["Energisa MS"] },
-  { region: "Goiás", options: ["Equatorial Goiás"] },
-  { region: "Outros", options: ["Não sei / Outra"] },
+const DISTRIBUTORS: { group: string; options: { value: string; label: string }[] }[] = [
+  {
+    group: "Parceria Atual (Prime Energy)",
+    options: [
+      { value: "CPFL Paulista", label: "CPFL Paulista (SP)" },
+      { value: "CPFL Santa Cruz", label: "CPFL Santa Cruz (SP)" },
+      { value: "Elektro", label: "Elektro (SP)" },
+      { value: "Cemig", label: "Cemig (MG)" },
+      { value: "Copel", label: "Copel (PR)" },
+      { value: "RGE", label: "RGE (RS)" },
+      { value: "Coelba", label: "Coelba (BA)" },
+      { value: "Equatorial PI", label: "Equatorial Piauí (PI)" },
+      { value: "Energisa MT", label: "Energisa Mato Grosso (MT)" },
+      { value: "Energisa MS", label: "Energisa Mato Grosso do Sul (MS)" },
+      { value: "Equatorial GO", label: "Equatorial Goiás (GO)" },
+    ],
+  },
+  {
+    group: "Análise com Outros Parceiros",
+    options: [
+      { value: "Enel RJ", label: "Enel Rio de Janeiro (RJ)" },
+      { value: "Light", label: "Light (RJ)" },
+      { value: "Enel CE", label: "Enel Ceará (CE)" },
+      { value: "Neoenergia PE", label: "Neoenergia Pernambuco (PE)" },
+      { value: "Celesc", label: "Celesc (SC)" },
+      { value: "Equatorial PA", label: "Equatorial Pará (PA)" },
+      { value: "Amazonas Energia", label: "Amazonas Energia (AM)" },
+      { value: "Enel SP", label: "Enel São Paulo (SP)" },
+      { value: "EDP SP", label: "EDP São Paulo (SP)" },
+      { value: "CEEE Equatorial", label: "CEEE Equatorial (RS)" },
+      { value: "Energisa MG", label: "Energisa Minas Gerais (MG)" },
+      { value: "Energisa TO", label: "Energisa Tocantins (TO)" },
+      { value: "Energisa PB", label: "Energisa Paraíba (PB)" },
+      { value: "Energisa SE", label: "Energisa Sergipe (SE)" },
+      { value: "Energisa RO", label: "Energisa Rondônia (RO)" },
+      { value: "Energisa AC", label: "Energisa Acre (AC)" },
+    ],
+  },
+  {
+    group: "Outras",
+    options: [
+      { value: "Outra", label: "Outra (não listada)" },
+      { value: "Nao sei", label: "Não sei minha distribuidora" },
+    ],
+  },
 ];
 
 const STORAGE_KEY = "otima_diagnostico_draft";
@@ -223,7 +283,7 @@ export default function DiagnosticoForm() {
               Recebemos suas contas!
             </h1>
             <p className="text-lg text-[#736d77] leading-relaxed mb-8">
-              Em até 48h úteis você recebe um diagnóstico completo no seu e-mail com a economia projetada para sua empresa.
+              Em até 5 dias úteis você recebe um diagnóstico completo no seu e-mail com a economia projetada para sua empresa.
             </p>
             <Link
               href="/"
@@ -262,6 +322,17 @@ export default function DiagnosticoForm() {
 
       <section className="bg-white py-12 lg:py-16">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+          <div className="bg-[#f8f9fa] border-l-4 border-[#00A86B] p-6 rounded-r-lg mb-10" data-testid="eligibility-notice">
+            <p className="font-bold text-[#16163f] mb-2">Antes de enviar:</p>
+            <p className="text-sm text-[#736d77] mb-3">A economia via GDL depende da sua distribuidora, região e perfil de consumo. Este é um <strong className="text-[#16163f]">diagnóstico gratuito</strong> — vamos analisar seus dados e verificar:</p>
+            <ul className="text-sm text-[#736d77] space-y-1.5 mb-3 ml-1">
+              <li>Se sua região possui usinas disponíveis (hoje ou no futuro)</li>
+              <li>Se seu perfil de consumo é compatível</li>
+              <li>Qual a economia estimada (se elegível)</li>
+            </ul>
+            <p className="text-sm text-[#16163f] font-medium">Se você for elegível, apresentamos propostas reais das nossas comercializadoras parceiras. Se não for hoje, avisamos e mantemos contato para quando houver oferta na sua região.</p>
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
             <div className="lg:col-span-2">
               <div className="flex items-center gap-2 mb-8">
@@ -357,7 +428,7 @@ export default function DiagnosticoForm() {
                               </FormControl>
                               <SelectContent>
                                 {BRAZILIAN_STATES.map(s => (
-                                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -380,16 +451,17 @@ export default function DiagnosticoForm() {
                             </FormControl>
                             <SelectContent>
                               {DISTRIBUTORS.map(group => (
-                                <SelectGroup key={group.region}>
-                                  <SelectLabel className="text-xs text-[#9e3ffd] font-semibold uppercase tracking-wide">{group.region}</SelectLabel>
+                                <SelectGroup key={group.group}>
+                                  <SelectLabel className="text-xs text-[#9e3ffd] font-semibold uppercase tracking-wide">{group.group}</SelectLabel>
                                   {group.options.map(opt => (
-                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                                   ))}
                                 </SelectGroup>
                               ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
+                          <p className="text-xs text-[#736d77] mt-1.5">Temos parceria ativa com a Prime Energy nas distribuidoras da primeira lista. Para as demais, analisamos com outros fornecedores parceiros. Se não houver oferta disponível hoje, avisamos e mantemos seu contato para futuras oportunidades.</p>
                         </FormItem>
                       )} />
 
@@ -553,7 +625,7 @@ export default function DiagnosticoForm() {
                   {[
                     { n: "1", title: "Envie seus dados e contas", desc: "Preenchemos seu perfil de consumo." },
                     { n: "2", title: "Análise nos 3 mercados", desc: "ACR, ACL e GDL comparados." },
-                    { n: "3", title: "Diagnóstico no e-mail", desc: "Em até 48h úteis, com economia projetada." },
+                    { n: "3", title: "Diagnóstico no e-mail", desc: "Em até 5 dias úteis, com economia projetada e próximos passos." },
                   ].map(item => (
                     <div key={item.n} className="flex gap-3">
                       <div className="w-7 h-7 bg-[#9e3ffd] text-white rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium">
@@ -584,10 +656,16 @@ export default function DiagnosticoForm() {
               </div>
 
               <div className="bg-[#16163f] rounded-lg p-6 text-white">
-                <p className="text-2xl font-light text-[#9e3ffd] mb-1">48h</p>
+                <p className="text-2xl font-light text-[#9e3ffd] mb-1">5 dias úteis</p>
                 <p className="text-sm text-gray-300">Prazo médio para receber seu diagnóstico completo</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-[#f0f7ff] rounded-lg p-5 mt-10" data-testid="future-expansion-notice">
+            <p className="text-sm text-[#736d77]">
+              <strong className="text-[#16163f]">Expandindo parcerias:</strong> Atualmente temos parceria prioritária com a Prime Energy (Grupo Shell) nas distribuidoras destacadas. Estamos constantemente adicionando novas comercializadoras parceiras em todas as regiões do Brasil. Mesmo que sua distribuidora não esteja na lista hoje, envie seus dados — analisamos com outros fornecedores e, se não houver oferta agora, avisamos quando surgir oportunidade.
+            </p>
           </div>
         </div>
       </section>

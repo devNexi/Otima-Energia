@@ -1,0 +1,168 @@
+Update the energy diagnostic form on the Ötima Energia website with the following improvements. The form is currently live at `/diagnostico-gratuito` and needs these modifications to handle all Brazilian states, set proper expectations, and prepare for future partner expansion.
+
+## 1. STATE DROPDOWN - ADD ALL 27 BRAZILIAN STATES
+
+Replace the current limited state list with this complete dropdown:
+
+```html
+<select name="estado" id="estado" required>
+  <option value="">Selecione seu estado</option>
+  <option value="AC">Acre (AC)</option>
+  <option value="AL">Alagoas (AL)</option>
+  <option value="AP">Amapá (AP)</option>
+  <option value="AM">Amazonas (AM)</option>
+  <option value="BA">Bahia (BA)</option>
+  <option value="CE">Ceará (CE)</option>
+  <option value="DF">Distrito Federal (DF)</option>
+  <option value="ES">Espírito Santo (ES)</option>
+  <option value="GO">Goiás (GO)</option>
+  <option value="MA">Maranhão (MA)</option>
+  <option value="MT">Mato Grosso (MT)</option>
+  <option value="MS">Mato Grosso do Sul (MS)</option>
+  <option value="MG">Minas Gerais (MG)</option>
+  <option value="PA">Pará (PA)</option>
+  <option value="PB">Paraíba (PB)</option>
+  <option value="PR">Paraná (PR)</option>
+  <option value="PE">Pernambuco (PE)</option>
+  <option value="PI">Piauí (PI)</option>
+  <option value="RJ">Rio de Janeiro (RJ)</option>
+  <option value="RN">Rio Grande do Norte (RN)</option>
+  <option value="RS">Rio Grande do Sul (RS)</option>
+  <option value="RO">Rondônia (RO)</option>
+  <option value="RR">Roraima (RR)</option>
+  <option value="SC">Santa Catarina (SC)</option>
+  <option value="SP">São Paulo (SP)</option>
+  <option value="SE">Sergipe (SE)</option>
+  <option value="TO">Tocantins (TO)</option>
+</select>
+2. DISTRIBUIDORA DROPDOWN - GROUPED BY PARTNERSHIP STATUS
+Replace the current distributor list with this optgroup structure showing current partners vs. future regions:
+
+html
+<select name="distribuidora" id="distribuidora" required>
+  <option value="">Selecione sua distribuidora</option>
+  
+  <optgroup label="✅ Parceria Atual (Prime Energy)">
+    <option value="CPFL Paulista">CPFL Paulista (SP)</option>
+    <option value="CPFL Santa Cruz">CPFL Santa Cruz (SP)</option>
+    <option value="Elektro">Elektro (SP)</option>
+    <option value="Cemig">Cemig (MG)</option>
+    <option value="Copel">Copel (PR)</option>
+    <option value="RGE">RGE (RS)</option>
+    <option value="Coelba">Coelba (BA)</option>
+    <option value="Equatorial PI">Equatorial Piauí (PI)</option>
+    <option value="Energisa MT">Energisa Mato Grosso (MT)</option>
+    <option value="Energisa MS">Energisa Mato Grosso do Sul (MS)</option>
+    <option value="Equatorial GO">Equatorial Goiás (GO)</option>
+  </optgroup>
+  
+  <optgroup label="🔄 Análise com Outros Parceiros">
+    <option value="Enel RJ">Enel Rio de Janeiro (RJ)</option>
+    <option value="Light">Light (RJ)</option>
+    <option value="Enel CE">Enel Ceará (CE)</option>
+    <option value="Neoenergia PE">Neoenergia Pernambuco (PE)</option>
+    <option value="Celesc">Celesc (SC)</option>
+    <option value="Equatorial PA">Equatorial Pará (PA)</option>
+    <option value="Amazonas Energia">Amazonas Energia (AM)</option>
+    <option value="Enel SP">Enel São Paulo (SP)</option>
+    <option value="EDP SP">EDP São Paulo (SP)</option>
+    <option value="CEEE Equatorial">CEEE Equatorial (RS)</option>
+    <option value="Energisa MG">Energisa Minas Gerais (MG)</option>
+    <option value="Energisa TO">Energisa Tocantins (TO)</option>
+    <option value="Energisa PB">Energisa Paraíba (PB)</option>
+    <option value="Energisa SE">Energisa Sergipe (SE)</option>
+    <option value="Energisa RO">Energisa Rondônia (RO)</option>
+    <option value="Energisa AC">Energisa Acre (AC)</option>
+  </optgroup>
+  
+  <optgroup label="📍 Outras">
+    <option value="Outra">Outra (não listada)</option>
+    <option value="Nao sei">Não sei minha distribuidora</option>
+  </optgroup>
+</select>
+
+<p class="helper-text">📍 Temos parceria ativa com a Prime Energy nas distribuidoras da primeira lista. Para as demais, analisamos com outros fornecedores parceiros. Se não houver oferta disponível hoje, avisamos e mantemos seu contato para futuras oportunidades.</p>
+3. ELIGIBILITY DISCLAIMER - ADD BEFORE FORM
+Add this prominent notice near the top of the form page:
+
+html
+<div class="eligibility-notice" style="background: #f8f9fa; border-left: 4px solid #00A86B; padding: 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+  <p style="font-weight: bold; margin-top: 0;">⚠️ Antes de enviar:</p>
+  <p>A economia via GDL depende da sua distribuidora, região e perfil de consumo. Este é um <strong>diagnóstico gratuito</strong> — vamos analisar seus dados e verificar:</p>
+  <ul style="margin-bottom: 0.5rem;">
+    <li>✅ Se sua região possui usinas disponíveis (hoje ou no futuro)</li>
+    <li>✅ Se seu perfil de consumo é compatível</li>
+    <li>✅ Qual a economia estimada (se elegível)</li>
+  </ul>
+  <p style="margin-bottom: 0;"><strong>Se você for elegível, apresentamos propostas reais das nossas comercializadoras parceiras. Se não for hoje, avisamos e mantemos contato para quando houver oferta na sua região.</strong></p>
+</div>
+4. TURNAROUND TIME - UPDATE FROM 48H TO 5 DAYS
+Change all instances of "48h úteis" to "5 dias úteis":
+
+On the form page:
+html
+<p class="turnaround">⏱️ <strong>Prazo de análise:</strong> Em até <strong>5 dias úteis</strong> você recebe um diagnóstico completo no seu e-mail.</p>
+In the "Como funciona" section:
+Update step 3 text to:
+
+html
+<h3>3. Diagnóstico no e-mail</h3>
+<p>Em até 5 dias úteis, com economia projetada e próximos passos.</p>
+In the auto-response email (server-side):
+Update the email template in server/routes.ts:
+
+javascript
+// Auto-response email to prospect
+const autoResponseHtml = `
+  <p>Olá ${nome},</p>
+  <p>Recebemos suas contas com sucesso! ✅</p>
+  <p>Nossa equipe já está analisando seu perfil junto às nossas comercializadoras parceiras. <strong>O prazo médio para retorno é de 5 dias úteis</strong>, mas pode ser mais rápido dependendo da sua distribuidora e região.</p>
+  <p>Assim que tivermos os números, você receberá um e-mail com:</p>
+  <ul>
+    <li>✅ Se você é elegível para GDL</li>
+    <li>✅ Economia estimada em R$ por mês</li>
+    <li>✅ Próximos passos (se aplicável)</li>
+  </ul>
+  <p>Fique de olho no seu e-mail. Qualquer dúvida, responda esta mensagem.</p>
+  <p>Abraço,<br>Time Ötima Energia</p>
+`;
+5. ADD FUTURE-PROOFING TEXT (Optional)
+Near the bottom of the form, add:
+
+html
+<div class="future-expansion" style="margin-top: 2rem; padding: 1rem; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem;">
+  <p>🔜 <strong>Expandindo parcerias:</strong> Atualmente temos parceria prioritária com a Prime Energy (Grupo Shell) nas distribuidoras destacadas em verde. Estamos constantemente adicionando novas comercializadoras parceiras em todas as regiões do Brasil. Mesmo que sua distribuidora não esteja na lista hoje, envie seus dados — analisamos com outros fornecedores e, se não houver oferta agora, avisamos quando surgir oportunidade.</p>
+</div>
+6. STYLING NOTES
+Match the existing Ötima Energia branding
+
+Use the website's current font (Inter or similar sans-serif)
+
+Ensure responsive design works on mobile
+
+Keep the form clean and uncluttered
+
+Maintain accessibility standards
+
+7. TESTING CHECKLIST
+After implementing:
+
+All 27 states appear in dropdown
+
+Distribuidora dropdown shows grouped options with correct labels
+
+Eligibility notice displays properly
+
+All "48h" text changed to "5 dias úteis"
+
+Auto-response email reflects 5-day timeline
+
+Form submits successfully with all fields
+
+File upload works (PDF, JPG, PNG, up to 3 files)
+
+Mobile responsive
+
+Notifications sent to callum@otimaenergia.com and renan@otimaenergia.com
+
+The goal: A form that handles all of Brazil today, sets proper expectations, and scales with future partner expansion.
