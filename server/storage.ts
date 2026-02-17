@@ -112,7 +112,8 @@ import {
   inboundEmails,
   consentRecords,
   dealTracks, dealTrackEvents, dealTrackDocuments,
-  dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs
+  dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs,
+  trackChaseState, type TrackChaseState, type InsertTrackChaseState
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -820,6 +821,11 @@ export interface IStorage {
   getDealTrackEvents(trackId: number): Promise<DealTrackEvent[]>;
   createDealTrackDocument(data: InsertDealTrackDocument): Promise<DealTrackDocument>;
   getDealTrackDocuments(trackId: number): Promise<DealTrackDocument[]>;
+
+  getChaseState(trackId: number): Promise<TrackChaseState | undefined>;
+  upsertChaseState(data: InsertTrackChaseState): Promise<TrackChaseState>;
+  updateChaseState(trackId: number, data: Partial<InsertTrackChaseState>): Promise<TrackChaseState | undefined>;
+  stopChase(trackId: number, reason: string, userId?: string): Promise<TrackChaseState | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -4802,6 +4808,60 @@ export class Storage implements IStorage {
   async deleteDealInternalNote(id: number): Promise<boolean> {
     const result = await db.delete(dealInternalNotes).where(eq(dealInternalNotes.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getChaseState(trackId: number): Promise<TrackChaseState | undefined> {
+    const result = await db.select().from(trackChaseState).where(eq(trackChaseState.trackId, trackId));
+    return result[0];
+  }
+
+  async upsertChaseState(data: InsertTrackChaseState): Promise<TrackChaseState> {
+    const result = await db.insert(trackChaseState).values(data)
+      .onConflictDoUpdate({
+        target: trackChaseState.trackId,
+        set: {
+          active: data.active,
+          level: data.level,
+          lastSentAt: data.lastSentAt,
+          nextSendAt: data.nextSendAt,
+          stoppedReason: data.stoppedReason,
+          stoppedAt: data.stoppedAt,
+          optOut: data.optOut,
+          optOutAt: data.optOutAt,
+          contactName: data.contactName,
+          contactEmail: data.contactEmail,
+          contactWhatsapp: data.contactWhatsapp,
+          whatsappOptIn: data.whatsappOptIn,
+          sentEventId: data.sentEventId,
+          sentByUserId: data.sentByUserId,
+          webhookStartFired: data.webhookStartFired,
+          webhookStopFired: data.webhookStopFired,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
+  async updateChaseState(trackId: number, data: Partial<InsertTrackChaseState>): Promise<TrackChaseState | undefined> {
+    const result = await db.update(trackChaseState)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(trackChaseState.trackId, trackId))
+      .returning();
+    return result[0];
+  }
+
+  async stopChase(trackId: number, reason: string, userId?: string): Promise<TrackChaseState | undefined> {
+    const result = await db.update(trackChaseState)
+      .set({
+        active: false,
+        stoppedReason: reason,
+        stoppedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trackChaseState.trackId, trackId))
+      .returning();
+    return result[0];
   }
 }
 
