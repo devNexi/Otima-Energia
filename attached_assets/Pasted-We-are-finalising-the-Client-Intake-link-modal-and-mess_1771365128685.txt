@@ -1,0 +1,125 @@
+We are finalising the Client Intake link modal and messaging experience.
+
+Before we move forward, implement the refinements below AND answer the WhatsApp automation question at the end.
+
+---
+
+# PART 1 — Update WhatsApp Message Template (Final Version)
+
+Replace the current template with the following base version:
+
+Olá {Nome}, tudo bem?
+
+Para avançarmos com a análise e proposta de energia, preciso que envie as suas faturas.
+
+✅ Acesse pelo telemóvel:
+{LINK}
+
+🔐 Código de acesso: {CÓDIGO}
+
+Assim que tiver as últimas faturas à mão, o envio leva apenas alguns minutos.
+Depois disso, avançamos com a análise técnica.
+
+---
+
+# Track-Specific Dynamic Wording
+
+Adjust line 2 dynamically based on Track type:
+
+GDL:
+"Para avançarmos com a proposta de energia por assinatura, preciso que envie as suas faturas."
+
+ACL:
+"Para avançarmos com a migração para o Mercado Livre, preciso que envie as suas faturas."
+
+ACR:
+"Para avançarmos com a otimização do seu contrato atual de energia, preciso que envie as suas faturas."
+
+OTHER:
+Use generic default wording.
+
+This must auto-adjust when generating the WhatsApp template in the modal.
+
+---
+
+# PART 2 — Modal UX Refinements
+
+Inside the "Generate Intake Link" modal, add:
+
+1. Expiry visibility:
+   - Show: "Link expira em: {date}"
+   - If expiry < 3 days:
+       - Show subtle amber warning badge
+       - Display button: "Estender +7 dias"
+       - Clicking it updates expiresAt server-side
+
+2. “Mark as Sent” Button:
+   - Logs action to portal_access_logs
+   - Enqueues Zoho task:
+       Subject: "Follow up on intake link – {Company}"
+       Due: next business day (America/Sao_Paulo)
+   - Must be idempotent (avoid duplicates)
+
+3. “Preview Link” Button:
+   - Opens intake link in new tab using current token
+   - For internal testing
+
+4. “Copy WhatsApp Message” button:
+   - Copies full formatted message with dynamic wording
+   - Proper line breaks preserved
+
+5. Improve modal layout for clarity:
+   - Separate sections:
+       - Link
+       - Access Code
+       - Expiry
+       - WhatsApp Message Preview
+       - Actions
+
+---
+
+# PART 3 — Microcopy Inside Client Intake App
+
+Add trust reinforcement below upload section:
+
+🔒 Seus dados são protegidos e utilizados apenas para análise e elaboração de proposta, conforme LGPD.
+
+Keep tone professional and clean.
+
+---
+
+# PART 4 — WhatsApp Automation Question
+
+Clarify the following before implementing any automation:
+
+1. Do we currently have any WhatsApp API integration (Twilio, Meta Business API, Z-API, 360Dialog, etc.) in this codebase?
+
+2. If not, confirm that:
+   - The current “Copy WhatsApp Message” is manual only.
+   - There is no backend WhatsApp sending capability.
+
+3. If we want to automate WhatsApp sending directly from the modal:
+   - What third-party service would you recommend?
+   - What would be required (Meta Business verification, webhook setup, API tokens)?
+   - Is it realistic to implement inside this architecture?
+
+Do NOT implement WhatsApp automation yet.
+Just provide a clear architectural answer on whether:
+- We already have it
+- We need a third-party provider
+- What the simplest path would be
+
+---
+
+# Deliverables
+
+Reply confirming:
+
+1. WhatsApp template updated with dynamic track wording
+2. Expiry warning + extend logic implemented
+3. Mark-as-sent task automation working
+4. Preview link button working
+5. Trust microcopy added
+6. Clear answer on WhatsApp automation architecture
+
+Do not move on to new features until confirmed.

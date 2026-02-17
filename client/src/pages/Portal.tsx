@@ -633,6 +633,11 @@ export default function Portal() {
                       </div>
                     )}
 
+                    <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 pt-1" data-testid="trust-microcopy">
+                      <ShieldCheck className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                      <span>Seus dados são protegidos e utilizados apenas para análise e elaboração de proposta, conforme LGPD.</span>
+                    </p>
+
                     <Button
                       onClick={goToNextStep}
                       className="w-full"

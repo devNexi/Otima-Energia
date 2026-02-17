@@ -320,7 +320,7 @@ export interface IStorage {
   getConsentRecordsByTrack(trackId: number): Promise<ConsentRecord[]>;
   
   // Upload Sessions (extended)
-  updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date }>): Promise<UploadSession | undefined>;
+  updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date; expiresAt: Date }>): Promise<UploadSession | undefined>;
   getUploadSessionsByTrack(trackId: number): Promise<UploadSession[]>;
   getConsumptionProfilesBySession(sessionId: number): Promise<ConsumptionProfile[]>;
   
@@ -1764,7 +1764,7 @@ export class Storage implements IStorage {
       .orderBy(desc(consentRecords.createdAt));
   }
 
-  async updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date }>): Promise<UploadSession | undefined> {
+  async updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date; expiresAt: Date }>): Promise<UploadSession | undefined> {
     const result = await db.update(uploadSessions).set(data).where(eq(uploadSessions.id, id)).returning();
     return result[0];
   }
@@ -3926,7 +3926,7 @@ export class Storage implements IStorage {
     const deal = await this.getDeal(dealId);
     if (!deal) return [];
     
-    const stage = targetStage || deal.stage;
+    const stage = targetStage || deal.status;
     const checklists = await this.getChecklists(stage);
     
     if (checklists.length === 0) return [];

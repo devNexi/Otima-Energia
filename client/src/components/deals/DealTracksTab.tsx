@@ -42,6 +42,9 @@ import {
   RefreshCw,
   Shield,
   KeyRound,
+  Eye,
+  Send,
+  TimerReset,
 } from "lucide-react";
 
 interface DealTracksTabProps {
@@ -722,7 +725,7 @@ function TrackDetailView({
         </div>
       </div>
 
-      <IntakeReadinessSection trackId={trackId} dealId={dealId} isPt={isPt} />
+      <IntakeReadinessSection trackId={trackId} dealId={dealId} trackType={trackType} isPt={isPt} />
 
       <div>
         <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
@@ -857,13 +860,27 @@ function GDLEligibilityChecklist({
   );
 }
 
-function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; dealId: string; isPt: boolean }) {
+function getTrackWhatsAppLine2(trackType: string): string {
+  switch (trackType) {
+    case 'GDL':
+      return 'Para avançarmos com a proposta de energia por assinatura, preciso que envie as suas faturas.';
+    case 'ACL':
+      return 'Para avançarmos com a migração para o Mercado Livre, preciso que envie as suas faturas.';
+    case 'ACR':
+      return 'Para avançarmos com a otimização do seu contrato atual de energia, preciso que envie as suas faturas.';
+    default:
+      return 'Para avançarmos com a análise e proposta de energia, preciso que envie as suas faturas.';
+  }
+}
+
+function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId: number; dealId: string; trackType: string; isPt: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [linkData, setLinkData] = useState<{ token: string; accessCode: string | null; expiresAt: string; companyName: string | null } | null>(null);
   const [emailTo, setEmailTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [markedSent, setMarkedSent] = useState(false);
   const [linkConfig, setLinkConfig] = useState({
     requireLGPD: true,
     requireLOA: true,
@@ -889,6 +906,7 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
     onSuccess: (data) => {
       setLinkData({ token: data.token, accessCode: data.accessCode, expiresAt: data.expiresAt, companyName: data.companyName });
       setShowModal(true);
+      setMarkedSent(false);
       toast({ title: isPt ? "Link gerado!" : "Link generated!" });
       queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
     },
@@ -904,8 +922,38 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
     },
     onSuccess: (data) => {
       setLinkData({ token: data.token, accessCode: data.accessCode, expiresAt: data.expiresAt, companyName: data.companyName });
+      setMarkedSent(false);
       toast({ title: isPt ? "Link regenerado!" : "Link regenerated!" });
       queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const extendExpiryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/extend-intake-expiry`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (linkData) setLinkData({ ...linkData, expiresAt: data.expiresAt });
+      toast({ title: isPt ? "Prazo estendido!" : "Expiry extended!" });
+      queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markSentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/mark-intake-sent`, { channel: 'whatsapp' });
+      return res.json();
+    },
+    onSuccess: () => {
+      setMarkedSent(true);
+      toast({ title: isPt ? "Marcado como enviado!" : "Marked as sent!" });
     },
     onError: (error: Error) => {
       toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
@@ -920,8 +968,11 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
     toast({ title: `${label} ${isPt ? 'copiado!' : 'copied!'}` });
   };
 
+  const line2 = getTrackWhatsAppLine2(trackType);
+  const clientName = linkData?.companyName || '{Nome}';
+
   const whatsAppMessage = linkData
-    ? `Olá${linkData.companyName ? ` ${linkData.companyName}` : ''}! 👋\n\nPara dar continuidade ao processo de análise energética, precisamos que você envie seus documentos pelo nosso portal seguro.\n\n🔗 Link: ${portalUrl}${linkData.accessCode ? `\n🔑 Código: ${linkData.accessCode}` : ''}\n\n📋 Você precisará:\n• Faturas de energia (últimos ${linkConfig.expectedBillsCount} meses)\n• Dados do representante legal\n\nO processo leva cerca de 5-10 minutos.\n\nQualquer dúvida, estamos à disposição!\n\n— Equipe Ótima Energia`
+    ? `Olá ${clientName}, tudo bem?\n\n${line2}\n\n✅ Acesse pelo telemóvel:\n${portalUrl}${linkData.accessCode ? `\n\n🔐 Código de acesso: ${linkData.accessCode}` : ''}\n\nAssim que tiver as últimas faturas à mão, o envio leva apenas alguns minutos.\nDepois disso, avançamos com a análise técnica.`
     : '';
 
   const sendEmail = async () => {
@@ -950,6 +1001,10 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
   const lgpd = intakeStatus?.lgpd;
   const loa = intakeStatus?.loa;
   const isComplete = hasActiveIntake && intakeStatus.session?.usedAt;
+
+  const expiresAt = linkData?.expiresAt ? new Date(linkData.expiresAt) : null;
+  const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry < 3;
 
   return (
     <div className="space-y-3">
@@ -1001,7 +1056,7 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
                 <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { copyToClipboard(activeSessionUrl, 'Link'); }} data-testid={`button-copy-intake-link-${trackId}`}>
                   <Copy className="w-3 h-3 mr-1" /> {isPt ? "Copiar Link" : "Copy Link"}
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setLinkData({ token: intakeStatus.session.token, accessCode: null, expiresAt: intakeStatus.session.expiresAt || '', companyName: null }); setShowModal(true); }} data-testid={`button-share-intake-${trackId}`}>
+                <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setLinkData({ token: intakeStatus.session.token, accessCode: intakeStatus.session.accessCode || null, expiresAt: intakeStatus.session.expiresAt || '', companyName: null }); setShowModal(true); setMarkedSent(false); }} data-testid={`button-share-intake-${trackId}`}>
                   <MessageCircle className="w-3 h-3 mr-1" /> {isPt ? "Compartilhar" : "Share"}
                 </Button>
                 <Button size="sm" variant="ghost" className="text-xs h-7 text-orange-600" onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending} data-testid={`button-regenerate-intake-${trackId}`}>
@@ -1046,16 +1101,17 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
 
       {showModal && linkData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowModal(false)}>
-          <Card className="w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()} data-testid={`modal-intake-link-${trackId}`}>
-            <CardHeader className="pb-3">
+          <Card className="w-full max-w-lg mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} data-testid={`modal-intake-link-${trackId}`}>
+            <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Shield className="w-4 h-4 text-green-600" />
-                {isPt ? "Link de Intake Gerado" : "Intake Link Generated"}
+                {isPt ? "Link de Intake" : "Intake Link"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+
               <div className="space-y-1">
-                <Label className="text-xs font-medium text-muted-foreground">{isPt ? "Link do Portal" : "Portal Link"}</Label>
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Link</Label>
                 <div className="flex gap-2">
                   <Input value={portalUrl} readOnly className="text-xs h-8 font-mono" data-testid="input-modal-portal-url" />
                   <Button size="sm" variant="outline" className="h-8 px-2 shrink-0" onClick={() => copyToClipboard(portalUrl, 'Link')} data-testid="button-modal-copy-link">
@@ -1066,7 +1122,7 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
 
               {linkData.accessCode && (
                 <div className="space-y-1">
-                  <Label className="text-xs font-medium text-muted-foreground">{isPt ? "Código de Acesso" : "Access Code"}</Label>
+                  <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{isPt ? "Código de Acesso" : "Access Code"}</Label>
                   <div className="flex gap-2 items-center">
                     <div className="bg-gray-100 rounded px-4 py-2 text-lg font-bold tracking-[6px] font-mono" data-testid="text-access-code">
                       {linkData.accessCode}
@@ -1078,25 +1134,41 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
                 </div>
               )}
 
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {isPt ? "Expira" : "Expires"}: {new Date(linkData.expiresAt).toLocaleDateString(isPt ? 'pt-BR' : 'en-US')}
-                </span>
-                {linkData.accessCode && (
-                  <span className="flex items-center gap-1">
-                    <KeyRound className="w-3 h-3" />
-                    {isPt ? "Código ativo" : "Code enabled"}
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{isPt ? "Validade" : "Expiry"}</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    Link expira em: {expiresAt?.toLocaleDateString('pt-BR')}
                   </span>
-                )}
+                  {isExpiringSoon && (
+                    <>
+                      <Badge className="bg-amber-100 text-amber-800 border-amber-300 border text-[10px]" data-testid="badge-expiry-warning">
+                        <AlertTriangle className="w-3 h-3 mr-0.5" />
+                        {daysUntilExpiry! <= 0 ? 'Expirado' : `${daysUntilExpiry}d restantes`}
+                      </Badge>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => extendExpiryMutation.mutate()} disabled={extendExpiryMutation.isPending} data-testid="button-extend-expiry">
+                        {extendExpiryMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <TimerReset className="w-3 h-3 mr-0.5" />}
+                        Estender +7 dias
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="border-t pt-3 space-y-2">
-                <Button size="sm" variant="outline" className="w-full justify-start text-xs h-8" onClick={() => { copyToClipboard(whatsAppMessage, 'WhatsApp'); }} data-testid="button-modal-whatsapp">
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{isPt ? "Mensagem WhatsApp" : "WhatsApp Message"}</Label>
+                <div className="bg-green-50 border border-green-200 rounded-md p-3 text-xs whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto" data-testid="whatsapp-preview">
+                  {whatsAppMessage}
+                </div>
+                <Button size="sm" variant="outline" className="w-full justify-center text-xs h-8" onClick={() => { copyToClipboard(whatsAppMessage, 'WhatsApp'); }} data-testid="button-modal-whatsapp">
                   <MessageCircle className="w-3.5 h-3.5 mr-2 text-green-600" />
                   {isPt ? "Copiar Mensagem WhatsApp" : "Copy WhatsApp Message"}
                 </Button>
+              </div>
 
+              <div className="border-t pt-3 space-y-2">
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{isPt ? "Enviar por E-mail" : "Send by Email"}</Label>
                 <div className="flex gap-2">
                   <Input type="email" placeholder={isPt ? "email@cliente.com" : "email@client.com"} value={emailTo} onChange={(e) => setEmailTo(e.target.value)} className="text-xs h-8 flex-1" data-testid="input-modal-email" />
                   <Button size="sm" className="h-8 text-xs" onClick={sendEmail} disabled={sendingEmail || !emailTo} data-testid="button-modal-send-email">
@@ -1106,10 +1178,25 @@ function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; de
                 </div>
               </div>
 
-              <div className="border-t pt-3 flex justify-between items-center">
-                <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => window.open(portalUrl, '_blank')} data-testid="button-modal-open-link">
-                  <ExternalLink className="w-3 h-3 mr-1" /> {isPt ? "Abrir" : "Open"}
-                </Button>
+              <div className="border-t pt-3">
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 block">{isPt ? "Ações" : "Actions"}</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant={markedSent ? "secondary" : "default"} className="text-xs h-8" onClick={() => markSentMutation.mutate()} disabled={markSentMutation.isPending || markedSent} data-testid="button-mark-sent">
+                    {markSentMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : markedSent ? <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
+                    {markedSent ? (isPt ? 'Enviado' : 'Sent') : (isPt ? 'Marcar como Enviado' : 'Mark as Sent')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => window.open(portalUrl, '_blank')} data-testid="button-modal-preview">
+                    <Eye className="w-3.5 h-3.5 mr-1" />
+                    {isPt ? "Preview Link" : "Preview Link"}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-xs h-8 text-orange-600" onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending} data-testid="button-modal-regenerate">
+                    {regenerateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+                    {isPt ? "Regenerar Link" : "Regenerate Link"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t pt-2 flex justify-end">
                 <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setShowModal(false)} data-testid="button-modal-close">
                   {isPt ? "Fechar" : "Close"}
                 </Button>

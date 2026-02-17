@@ -53,7 +53,8 @@ import {
   consentRecords,
   dealTrackDocuments,
   uploadSessions,
-  consumptionProfiles
+  consumptionProfiles,
+  adminSessions
 } from "@shared/schema";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -3719,7 +3720,6 @@ export async function registerRoutes(
             clientDossierId: dossier.id,
             snapshotData: { reason: 'RFQ', rfoRequestId: packet.rfoRequestId },
             createdBy: userId,
-            snapshotReason: 'RFQ_SENT'
           });
         }
       }
@@ -3827,7 +3827,6 @@ export async function registerRoutes(
         clientDossierId: dossier.id,
         snapshotData: { reason: 'RFQ', rfoRequestId: rfoId },
         createdBy: userId,
-        snapshotReason: 'RFQ_SENT'
       });
       
       // Update RFO supplier tracking status
@@ -4783,8 +4782,7 @@ export async function registerRoutes(
             dealId: req.params.id,
             eventType: 'MILESTONE_1',
             status: 'PENDING',
-            amountBrl: null,
-            amountRmwh: m1Amount,
+            amountRmwh: String(m1Amount),
             expectedDate: new Date().toISOString().split('T')[0],
             paymentTrigger: playbook?.milestone1Name || 'Contract Signed',
             notes: `Milestone 1 (${m1Percent}%): ${playbook?.milestone1Name || 'Contract Signed'}`,
@@ -4831,8 +4829,7 @@ export async function registerRoutes(
             dealId: req.params.id,
             eventType: 'MILESTONE_2',
             status: 'PENDING',
-            amountBrl: null,
-            amountRmwh: m2Amount,
+            amountRmwh: String(m2Amount),
             expectedDate: new Date().toISOString().split('T')[0],
             paymentTrigger: playbook?.milestone2Name || 'CCEE Activation / Supply Live',
             notes: `Milestone 2 (${m2Percent}%): ${playbook?.milestone2Name || 'CCEE Activation / Supply Live'}`,
@@ -7360,11 +7357,10 @@ export async function registerRoutes(
           clientDossierId: dossier.id,
           snapshotData: {
             dossier,
-            snapshotReason: 'RFQ_SENT',
+            reason: 'RFQ_SENT',
             dealId: req.params.dealId
           },
           createdBy: user?.id || null,
-          snapshotReason: 'RFQ_SENT'
         });
         snapshotId = snapshot.id;
       } else if (dossier && dossier.status === 'LOCKED') {
@@ -10036,12 +10032,11 @@ export async function registerRoutes(
         })),
         deal: {
           id: deal?.id,
-          stage: deal?.stage,
-          title: deal?.title
+          status: deal?.status,
         },
         client: {
           id: client?.id,
-          name: client?.contactName,
+          name: client?.contactPerson,
           company: client?.companyName
         },
         brandKit,
@@ -10071,12 +10066,11 @@ export async function registerRoutes(
       });
       
       await logAuditEvent({
+        actor: userId || 'system',
         action: 'generate',
         entityType: 'deal_proposal',
-        entityId: proposal.id,
-        userId,
-        changes: { status: 'GENERATED', sha256Hash: hash },
-        source: 'portal'
+        entityId: null,
+        detailsJson: { status: 'GENERATED', sha256Hash: hash, proposalId: proposal.id },
       });
       
       res.json({ success: true, proposal: updatedProposal });
@@ -10090,7 +10084,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
     try {
-      const userId = req.session?.userId;
+      const userId = (req as any).session?.userId;
       const proposal = await storage.getDealProposal(req.params.proposalId);
       
       if (!proposal) {
@@ -10167,12 +10161,11 @@ export async function registerRoutes(
       }
       
       await logAuditEvent({
+        actor: userId || 'system',
         action: 'send',
         entityType: 'deal_proposal',
-        entityId: proposal.id,
-        userId,
-        changes: { status: 'SENT', recipientEmail, emailSent },
-        source: 'portal'
+        entityId: null,
+        detailsJson: { status: 'SENT', recipientEmail, emailSent, proposalId: proposal.id },
       });
       
       res.json({ success: true, proposal: updated, emailSent });
@@ -10212,7 +10205,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
     try {
-      const userId = req.session?.userId;
+      const userId = (req as any).session?.userId;
       const { status } = req.body;
       
       if (!['ACCEPTED', 'REJECTED', 'EXPIRED'].includes(status)) {
@@ -10222,12 +10215,11 @@ export async function registerRoutes(
       const updated = await storage.updateDealProposal(req.params.proposalId, { status });
       
       await logAuditEvent({
+        actor: userId || 'system',
         action: 'update_status',
         entityType: 'deal_proposal',
-        entityId: req.params.proposalId,
-        userId,
-        changes: { status },
-        source: 'portal'
+        entityId: null,
+        detailsJson: { status, proposalId: req.params.proposalId },
       });
       
       res.json({ success: true, proposal: updated });
@@ -10275,10 +10267,10 @@ export async function registerRoutes(
       
       // SECURITY: Sanitize snapshot to ensure no supplier base prices leak
       let sanitizedSnapshot = snapshot?.snapshotJson;
-      if (sanitizedSnapshot && sanitizedSnapshot.items) {
+      if (sanitizedSnapshot && (sanitizedSnapshot as any).items) {
         sanitizedSnapshot = {
           ...sanitizedSnapshot,
-          items: sanitizedSnapshot.items.map((item: any) => ({
+          items: (sanitizedSnapshot as any).items.map((item: any) => ({
             id: item.id,
             supplierName: item.supplierName,
             productType: item.productType,
@@ -10504,12 +10496,11 @@ export async function registerRoutes(
       } as any);
       
       await logAuditEvent({
+        actor: userId || 'system',
         action: 'inbound_email_confirmed',
         entityType: 'deal_quote',
-        entityId: dealQuote.id,
-        userId,
-        changes: { inboundEmailId: emailId, dealId, supplierId },
-        source: 'portal'
+        entityId: null,
+        detailsJson: { inboundEmailId: emailId, dealId, supplierId, dealQuoteId: dealQuote.id },
       });
       
       res.json({ success: true, dealQuote });
@@ -10562,7 +10553,7 @@ export async function registerRoutes(
         partnerId: partnerId || null,
         partnerName: partnerName || null,
         status: INITIAL_TRACK_STATUS[type as keyof typeof INITIAL_TRACK_STATUS],
-        createdByUserId: (req.user as any)?.id || null,
+        createdByUserId: await getSessionUserId(req) || null,
         metadata: metadata || null,
       });
       await storage.createDealTrackEvent({
@@ -10571,7 +10562,7 @@ export async function registerRoutes(
         fromStatus: null,
         toStatus: track.status,
         payload: { type, partnerId, partnerName },
-        createdByUserId: (req.user as any)?.id || null,
+        createdByUserId: await getSessionUserId(req) || null,
       });
       res.json(track);
     } catch (error: any) {
@@ -10628,7 +10619,7 @@ export async function registerRoutes(
         fromStatus: track.status,
         toStatus: newStatus,
         payload: { notes: notes || null },
-        createdByUserId: (req.user as any)?.id || null,
+        createdByUserId: await getSessionUserId(req) || null,
       });
 
       let closureEvaluation = null;
@@ -10674,7 +10665,7 @@ export async function registerRoutes(
         dealId: dealTracks.dealId,
       }).from(dealTracks).orderBy(desc(dealTracks.updatedAt));
       
-      const dealIds = [...new Set(allTracks.map(t => t.track.dealId))];
+      const dealIds = Array.from(new Set(allTracks.map(t => t.track.dealId)));
       const dealMap: Record<string, any> = {};
       for (const did of dealIds) {
         const d = await storage.getDeal(did);
@@ -10706,7 +10697,7 @@ export async function registerRoutes(
         fromStatus: track.status,
         toStatus: track.status,
         payload: { metadata: req.body.metadata },
-        createdByUserId: (req.user as any)?.id || null,
+        createdByUserId: await getSessionUserId(req) || null,
       });
       res.json(updated);
     } catch (error: any) {
@@ -10723,7 +10714,7 @@ export async function registerRoutes(
         documentType: documentType || null,
         fileName: fileName || null,
         fileKey: fileKey || null,
-        uploadedByUserId: (req.user as any)?.id || null,
+        uploadedByUserId: await getSessionUserId(req) || null,
       });
       res.json(doc);
     } catch (error: any) {
@@ -10758,6 +10749,7 @@ export async function registerRoutes(
         session: {
           id: activeSession.id,
           token: activeSession.token,
+          accessCode: activeSession.accessCode,
           requireLGPD: activeSession.requireLGPD,
           requireLOA: activeSession.requireLOA,
           expectedBillsCount: activeSession.expectedBillsCount,
@@ -10815,7 +10807,7 @@ export async function registerRoutes(
       });
 
       await storage.logAdminAction({
-        actor: (req.user as any)?.username || "system",
+        actor: (await getSessionUserId(req)) || "system",
         actorIp: req.ip || null,
         action: "generate_intake_link",
         entityType: "track",
@@ -10951,7 +10943,7 @@ export async function registerRoutes(
       });
 
       await storage.logAdminAction({
-        actor: (req.user as any)?.username || "system",
+        actor: (await getSessionUserId(req)) || "system",
         actorIp: req.ip || null,
         action: "regenerate_intake_link",
         entityType: "track",
@@ -10969,6 +10961,119 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error regenerating intake link:", error);
       res.status(500).json({ success: false, error: "Failed to regenerate intake link" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/extend-intake-expiry", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+      if (!activeSession) {
+        return res.status(404).json({ success: false, error: "No active intake session found" });
+      }
+
+      const currentExpiry = activeSession.expiresAt ? new Date(activeSession.expiresAt) : null;
+      const baseDate = currentExpiry && currentExpiry > new Date() ? currentExpiry : new Date();
+      const newExpiry = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      await storage.updateUploadSession(activeSession.id, { expiresAt: newExpiry });
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const session = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = session ? await storage.getUser(session.userId) : null;
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "extend_intake_expiry",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { sessionId: activeSession.id, newExpiresAt: newExpiry.toISOString() }
+      });
+
+      res.json({ success: true, expiresAt: newExpiry.toISOString() });
+    } catch (error: any) {
+      console.error("Error extending intake expiry:", error);
+      res.status(500).json({ success: false, error: "Failed to extend intake expiry" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/mark-intake-sent", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+      if (!activeSession) {
+        return res.status(404).json({ success: false, error: "No active intake session found" });
+      }
+
+      const { channel = 'whatsapp' } = req.body;
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      await storage.logPortalAccess({
+        clientId: deal.clientId || null,
+        sessionToken: activeSession.token,
+        action: `intake_link_sent_${channel}`,
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      });
+
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const companyName = client?.companyName || 'Cliente';
+
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const day = tomorrow.getDay();
+      if (day === 0) tomorrow.setDate(tomorrow.getDate() + 1);
+      if (day === 6) tomorrow.setDate(tomorrow.getDate() + 2);
+
+      await enqueueJobIfNotExists(
+        'ZOHO_CREATE_TASK',
+        `intake_sent_${trackId}_${deal.id}`,
+        {
+          dealId: deal.id,
+          subject: `Follow up on intake link – ${companyName}`,
+          dueDate: tomorrow.toISOString().split('T')[0],
+          description: `Intake link was sent via ${channel}. Follow up to ensure client completes the intake process.`,
+          purpose: 'intake_followup',
+        }
+      );
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "mark_intake_sent",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal.id, channel, sessionId: activeSession.id }
+      });
+
+      res.json({ success: true, message: 'Marked as sent' });
+    } catch (error: any) {
+      console.error("Error marking intake as sent:", error);
+      res.status(500).json({ success: false, error: "Failed to mark intake as sent" });
     }
   });
 
@@ -11409,7 +11514,7 @@ export async function registerRoutes(
       
       // Get accepted quote for supplier info
       const quotes = await storage.getDealQuotes(commissionEvent.dealId);
-      const acceptedQuote = quotes.find(q => q.status === 'ACCEPTED');
+      const acceptedQuote = quotes.find(q => (q as any).status === 'ACCEPTED');
       
       // Determine invoice type from event type
       let invoiceType: 'MILESTONE_1' | 'MILESTONE_2' | 'ADJUSTMENT' = 'MILESTONE_1';
@@ -11437,9 +11542,9 @@ export async function registerRoutes(
         invoiceType,
         status: 'DRAFT',
         dueDate,
-        amountBrl: commissionEvent.amountBrl || null,
+        grossAmountBrl: commissionEvent.amountBrl || '0',
         // Calculate MWh amount from R$/MWh and deal volume
-        description: `${commissionEvent.paymentTrigger || invoiceType} - ${deal.id}`,
+        serviceDescription: `${commissionEvent.paymentTrigger || invoiceType} - ${deal.id}`,
         notes: commissionEvent.notes || null,
         createdBy: userId,
       });
@@ -11871,7 +11976,7 @@ export async function registerRoutes(
   // Get QA test run history
   app.get("/api/qa/history", async (req, res) => {
     try {
-      const userId = await getUserId(req);
+      const userId = await getSessionUserId(req);
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       
       const user = await storage.getUser(userId);
@@ -11894,7 +11999,7 @@ export async function registerRoutes(
   // Run a specific QA validation test and record result
   app.post("/api/qa/run/:testKey", async (req, res) => {
     try {
-      const userId = await getUserId(req);
+      const userId = await getSessionUserId(req);
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       
       const user = await storage.getUser(userId);
@@ -12007,7 +12112,7 @@ export async function registerRoutes(
           }
           
           case "proposals.pdf_security": {
-            const proposals = await storage.getDealProposals();
+            const proposals = await storage.getAllDealProposals();
             const generated = proposals.filter((p: any) => ["GENERATED", "SENT", "VIEWED"].includes(p.status));
             
             if (generated.length === 0) {
@@ -12044,7 +12149,7 @@ export async function registerRoutes(
               if (proposal.publicId) {
                 const dbSnapshot = await storage.getDealProposalSnapshot(proposal.id);
                 if (dbSnapshot) {
-                  const publicData = dbSnapshot.snapshotData as any;
+                  const publicData = dbSnapshot.snapshotJson as any;
                   const publicStr = JSON.stringify(publicData || {}).toLowerCase();
                   
                   for (const field of dangerousFields) {
@@ -12252,7 +12357,7 @@ export async function registerRoutes(
   // Run all QA tests
   app.post("/api/qa/run-all", async (req, res) => {
     try {
-      const userId = await getUserId(req);
+      const userId = await getSessionUserId(req);
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
       
       const user = await storage.getUser(userId);
@@ -12577,7 +12682,7 @@ export async function registerRoutes(
       const sessionId = req.headers["x-session-id"] as string;
       let authorUserId = "admin";
       if (sessionId) {
-        const session = await db.select().from(adminSessions).where(eq(adminSessions.sessionId, sessionId)).limit(1);
+        const session = await db.select().from(adminSessions).where(eq(adminSessions.id, sessionId)).limit(1);
         if (session[0]) authorUserId = session[0].userId;
       }
       
