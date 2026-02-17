@@ -19,6 +19,7 @@ import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
 import { DealTracksTab } from "@/components/deals/DealTracksTab";
+import { SalesMirrorPanel } from "@/components/deals/SalesMirrorPanel";
 import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
@@ -46,7 +47,8 @@ import {
   ShieldCheck,
   Send,
   BarChart3,
-  GitBranch
+  GitBranch,
+  Phone
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -635,6 +637,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <TabsTrigger value="tracks" className="flex items-center gap-2" data-testid="tab-tracks">
             <GitBranch className="w-4 h-4" />
             {language === "pt" ? "Trilhas" : "Tracks"}
+          </TabsTrigger>
+          <TabsTrigger value="sales" className="flex items-center gap-2" data-testid="tab-sales">
+            <Phone className="w-4 h-4" />
+            {language === "pt" ? "Vendas" : "Sales"}
           </TabsTrigger>
           <ContextualTooltip
             tooltipKey="tab_compliance_overview"
@@ -1312,6 +1318,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
 
         <TabsContent value="tracks">
           <DealTracksTab dealId={dealId} />
+        </TabsContent>
+
+        <TabsContent value="sales">
+          <SalesMirrorPanel dealId={dealId} zohoLeadId={deal.zohoLeadId} />
         </TabsContent>
 
         <TabsContent value="compliance">

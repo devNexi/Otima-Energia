@@ -4755,3 +4755,139 @@ export type InsertDealTrackDocument = z.infer<typeof insertDealTrackDocumentSche
 export type DealTrackDocument = typeof dealTrackDocuments.$inferSelect;
 
 // ============== END DEAL TRACKS ==============
+
+// ============== SALES ACTIVITY MIRROR (ZOHO CRM SYNC) ==============
+
+export const CRM_PROVIDERS = ['ZOHO'] as const;
+export type CrmProvider = typeof CRM_PROVIDERS[number];
+
+export const SYNC_STATUSES = ['NEVER', 'SYNCING', 'SYNCED', 'ERROR'] as const;
+export type SyncStatus = typeof SYNC_STATUSES[number];
+
+export const TASK_STATUSES = ['OVERDUE', 'UPCOMING', 'NONE'] as const;
+export type TaskStatus = typeof TASK_STATUSES[number];
+
+export const ACTIVITY_TYPES = ['CALL', 'TASK', 'NOTE', 'MEETING', 'EMAIL'] as const;
+export type ActivityType = typeof ACTIVITY_TYPES[number];
+
+export const JOB_STATUSES = ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED'] as const;
+export type JobStatus = typeof JOB_STATUSES[number];
+
+export const JOB_TYPES = ['ZOHO_SYNC_SNAPSHOT', 'ZOHO_CREATE_CALLBACK_TASK'] as const;
+export type JobType = typeof JOB_TYPES[number];
+
+export const dealCrmLinks = pgTable("deal_crm_links", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull().unique(),
+  provider: text("provider").notNull().default('ZOHO'),
+  zohoDealId: text("zoho_deal_id"),
+  zohoAccountId: text("zoho_account_id"),
+  zohoContactId: text("zoho_contact_id"),
+  zohoOwnerId: text("zoho_owner_id"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  syncStatus: text("sync_status").default('NEVER'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealCrmLinkSchema = createInsertSchema(dealCrmLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealCrmLink = z.infer<typeof insertDealCrmLinkSchema>;
+export type DealCrmLink = typeof dealCrmLinks.$inferSelect;
+
+export const dealSalesSnapshots = pgTable("deal_sales_snapshots", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull().unique(),
+  provider: text("provider").notNull().default('ZOHO'),
+  lastContactAt: timestamp("last_contact_at"),
+  nextTaskAt: timestamp("next_task_at"),
+  nextTaskStatus: text("next_task_status").default('NONE'),
+  totalCalls: integer("total_calls").default(0),
+  totalTasks: integer("total_tasks").default(0),
+  totalNotes: integer("total_notes").default(0),
+  lastSyncAt: timestamp("last_sync_at"),
+  snapshot: jsonb("snapshot"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealSalesSnapshotSchema = createInsertSchema(dealSalesSnapshots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealSalesSnapshot = z.infer<typeof insertDealSalesSnapshotSchema>;
+export type DealSalesSnapshot = typeof dealSalesSnapshots.$inferSelect;
+
+export const dealSalesActivityItems = pgTable("deal_sales_activity_items", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  provider: text("provider").notNull().default('ZOHO'),
+  activityType: text("activity_type").notNull(),
+  externalId: text("external_id"),
+  occurredAt: timestamp("occurred_at"),
+  title: text("title"),
+  summary: text("summary"),
+  url: text("url"),
+  raw: jsonb("raw"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique().on(table.provider, table.externalId),
+]);
+
+export const insertDealSalesActivityItemSchema = createInsertSchema(dealSalesActivityItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealSalesActivityItem = z.infer<typeof insertDealSalesActivityItemSchema>;
+export type DealSalesActivityItem = typeof dealSalesActivityItems.$inferSelect;
+
+export const dealInternalNotes = pgTable("deal_internal_notes", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  authorUserId: text("author_user_id"),
+  note: text("note").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealInternalNoteSchema = createInsertSchema(dealInternalNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealInternalNote = z.infer<typeof insertDealInternalNoteSchema>;
+export type DealInternalNote = typeof dealInternalNotes.$inferSelect;
+
+export const jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: text("status").notNull().default('PENDING'),
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(5),
+  nextRunAt: timestamp("next_run_at").defaultNow(),
+  lastError: text("last_error"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertJobSchema = createInsertSchema(jobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export type InsertJob = z.infer<typeof insertJobSchema>;
+export type Job = typeof jobs.$inferSelect;
+
+// ============== END SALES ACTIVITY MIRROR ==============

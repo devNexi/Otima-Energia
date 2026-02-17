@@ -63,6 +63,8 @@ import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProp
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
+import { enqueueJobIfNotExists } from "./jobs";
+import { getZohoLeadDeepLink } from "./zohoClient";
 
 // Helper to extract supplier name from PRC filename
 function extractSupplierNameFromFilename(filename: string): string | null {
@@ -7705,10 +7707,43 @@ export async function registerRoutes(
           ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
           : "https://otimaenergia.replit.app";
       
+      const portalDealUrl = `${baseUrl}/admin?tab=deals&deal=${newDeal.id}`;
+      
+      try {
+        await storage.upsertDealCrmLink({
+          dealId: newDeal.id,
+          provider: 'ZOHO',
+          zohoOwnerId: payload.zohoOwnerId || null,
+          zohoDealId: payload.zohoDealId || null,
+          zohoContactId: payload.zohoContactId || null,
+          zohoAccountId: null,
+        });
+
+        await enqueueJobIfNotExists(
+          'ZOHO_SYNC_SNAPSHOT',
+          `snapshot_${newDeal.id}`,
+          { dealId: newDeal.id, zohoLeadId: payload.zohoLeadId }
+        );
+
+        await enqueueJobIfNotExists(
+          'ZOHO_CREATE_CALLBACK_TASK',
+          `callback_${newDeal.id}`,
+          {
+            dealId: newDeal.id,
+            zohoLeadId: payload.zohoLeadId,
+            companyName: payload.companyName || client.companyName,
+            portalDealUrl,
+            zohoOwnerId: payload.zohoOwnerId || null,
+          }
+        );
+      } catch (jobError: any) {
+        console.error("Non-blocking: Failed to enqueue sales mirror jobs:", jobError.message);
+      }
+      
       return res.json({
         success: true,
         portalDealId: newDeal.id,
-        portalDealUrl: `${baseUrl}/admin?tab=deals&deal=${newDeal.id}`,
+        portalDealUrl,
         created: true,
         ownerAssigned: dealOwner,
         stageAssigned: "DRAFT"
@@ -11782,6 +11817,133 @@ export async function registerRoutes(
   });
 
   // ============== END DIAGNOSTIC FORM ==============
+
+  // ============== SALES ACTIVITY MIRROR ==============
+
+  app.get("/api/deals/:dealId/sales-snapshot", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const snapshot = await storage.getDealSalesSnapshot(dealId);
+      const crmLink = await storage.getDealCrmLink(dealId);
+      
+      const noActivityWarningDays = parseInt(process.env.NO_ACTIVITY_WARNING_DAYS || '10', 10);
+      let noActivityWarning = false;
+      if (snapshot?.lastContactAt) {
+        const daysSinceContact = (Date.now() - new Date(snapshot.lastContactAt).getTime()) / (1000 * 60 * 60 * 24);
+        noActivityWarning = daysSinceContact > noActivityWarningDays;
+      }
+      
+      res.json({
+        snapshot: snapshot || null,
+        crmLink: crmLink || null,
+        noActivityWarning,
+        zohoDeepLink: crmLink?.zohoDealId ? getZohoLeadDeepLink(crmLink.zohoDealId) : null,
+      });
+    } catch (error: any) {
+      console.error("Sales snapshot error:", error);
+      res.status(500).json({ error: "Failed to fetch sales snapshot" });
+    }
+  });
+
+  app.post("/api/deals/:dealId/sales-snapshot/refresh", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const crmLink = await storage.getDealCrmLink(dealId);
+      
+      if (!crmLink) {
+        return res.json({ success: false, error: "No CRM link found for this deal" });
+      }
+      
+      const deal = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal[0]?.zohoLeadId) {
+        return res.json({ success: false, error: "No Zoho Lead ID for this deal" });
+      }
+      
+      await enqueueJobIfNotExists(
+        'ZOHO_SYNC_SNAPSHOT',
+        `refresh_${dealId}_${Date.now()}`,
+        { dealId, zohoLeadId: deal[0].zohoLeadId }
+      );
+      
+      res.json({ success: true, message: "Refresh job enqueued" });
+    } catch (error: any) {
+      console.error("Sales snapshot refresh error:", error);
+      res.status(500).json({ error: "Failed to enqueue refresh" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/sales-activity", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const limit = parseInt(req.query.limit as string || '10', 10);
+      const items = await storage.getDealSalesActivityItems(dealId, limit);
+      res.json({ items });
+    } catch (error: any) {
+      console.error("Sales activity error:", error);
+      res.status(500).json({ error: "Failed to fetch sales activity" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/internal-notes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const notes = await storage.getDealInternalNotes(dealId);
+      res.json({ notes });
+    } catch (error: any) {
+      console.error("Internal notes fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch internal notes" });
+    }
+  });
+
+  app.post("/api/deals/:dealId/internal-notes", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { note } = req.body;
+      
+      if (!note || typeof note !== 'string' || note.trim().length === 0) {
+        return res.status(400).json({ error: "Note text is required" });
+      }
+      
+      const sessionId = req.headers["x-session-id"] as string;
+      let authorUserId = "admin";
+      if (sessionId) {
+        const session = await db.select().from(adminSessions).where(eq(adminSessions.sessionId, sessionId)).limit(1);
+        if (session[0]) authorUserId = session[0].userId;
+      }
+      
+      const created = await storage.createDealInternalNote({
+        dealId,
+        authorUserId,
+        note: note.trim(),
+      });
+      
+      res.json(created);
+    } catch (error: any) {
+      console.error("Internal note create error:", error);
+      res.status(500).json({ error: "Failed to create internal note" });
+    }
+  });
+
+  app.delete("/api/deals/:dealId/internal-notes/:noteId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const noteId = parseInt(req.params.noteId, 10);
+      if (isNaN(noteId)) return res.status(400).json({ error: "Invalid note ID" });
+      
+      const deleted = await storage.deleteDealInternalNote(noteId);
+      res.json({ success: deleted });
+    } catch (error: any) {
+      console.error("Internal note delete error:", error);
+      res.status(500).json({ error: "Failed to delete internal note" });
+    }
+  });
+
+  // ============== END SALES ACTIVITY MIRROR ==============
 
   return httpServer;
 }

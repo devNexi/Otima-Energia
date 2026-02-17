@@ -64,6 +64,30 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - Zoho must NOT update deal stage after creation or overwrite dossier/RFQ/quote/compliance data
 - Authentication via `x-zoho-intake-key` header
 - Idempotency: Duplicate `zohoLeadId` returns existing deal (HTTP 200, status: EXISTING)
+- On new deal creation, non-blocking jobs are enqueued: `ZOHO_SYNC_SNAPSHOT` and `ZOHO_CREATE_CALLBACK_TASK`
+
+**Sales Activity Mirror:**
+- Read-only mirror of Zoho CRM activity (calls, tasks, notes) displayed in Deal detail "Sales" tab
+- Cached snapshot stored in `deal_sales_snapshots` for fast rendering and resilience
+- Activity items stored in `deal_sales_activity_items` with unique constraint on (provider, externalId)
+- CRM link mapping in `deal_crm_links` (dealId → zohoDealId, zohoContactId, zohoOwnerId)
+- Refresh button triggers server-side Zoho sync via job queue
+- No-activity warning shown when lastContactAt > 10 days
+- Zoho deep links for "Open in Zoho" button
+- Internal notes (portal-only, no Zoho sync) via `deal_internal_notes` table
+
+**Auto-Callback Task Creation:**
+- On new Zoho intake deal, automatically creates a Zoho Task via job queue
+- Business hours scheduling: Mon-Fri 09:00-18:00 America/Sao_Paulo
+- 30-minute delay during business hours; rolls to next business day outside hours/weekends
+- Idempotent: uses `idempotencyKey` in job payload to prevent duplicate tasks
+- Zoho API client stubbed (`server/zohoClient.ts`) - awaiting ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN
+
+**Job Runner:**
+- Lightweight polling job runner (`server/jobs.ts`) with exponential backoff
+- Jobs table: type, payload, status (PENDING/RUNNING/SUCCESS/FAILED), attempts, maxAttempts
+- Polls every 30s, processes up to 3 concurrent jobs
+- Fail-open: if Zoho unavailable, deal creation still succeeds
 
 **Portal → Zoho (Future - Not Implemented):**
 - Light sync only: Deal Created timestamp + Portal Deal ID, Final Outcome (Closed Won/Lost)
@@ -79,6 +103,21 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - Default: Callum
 - Group B: Always Callum
 - Hotkey outcome (non-Group B): Renan
+
+**Zoho Config Environment Variables:**
+- `ENABLE_ZOHO_SNAPSHOT_SYNC` (true/false)
+- `ENABLE_ZOHO_AUTO_CALLBACK_TASK` (true/false)
+- `DEFAULT_CALLBACK_DELAY_MINUTES` (default 30)
+- `BUSINESS_HOURS_START` / `BUSINESS_HOURS_END` (09:00 / 18:00)
+- `NO_ACTIVITY_WARNING_DAYS` (default 10)
+- `TIMEZONE` (America/Sao_Paulo)
+- `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, `ZOHO_REFRESH_TOKEN` (not yet configured)
+- `ZOHO_REGION` (default: com)
+
+**Google Calendar:**
+- NOT directly integrated by portal
+- Achieved via Zoho's native Google Calendar sync
+- Portal ensures Zoho Task exists with correct schedule
 
 ## External Dependencies
 

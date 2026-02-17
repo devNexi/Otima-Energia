@@ -82,6 +82,11 @@ import {
   type DealTrack, type InsertDealTrack,
   type DealTrackEvent, type InsertDealTrackEvent,
   type DealTrackDocument, type InsertDealTrackDocument,
+  type DealCrmLink, type InsertDealCrmLink,
+  type DealSalesSnapshot, type InsertDealSalesSnapshot,
+  type DealSalesActivityItem, type InsertDealSalesActivityItem,
+  type DealInternalNote, type InsertDealInternalNote,
+  type Job, type InsertJob,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -104,7 +109,8 @@ import {
   invoices, invoiceEvents, invoicePermissions,
   qaTestRuns,
   inboundEmails,
-  dealTracks, dealTrackEvents, dealTrackDocuments
+  dealTracks, dealTrackEvents, dealTrackDocuments,
+  dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -4682,6 +4688,75 @@ export class Storage implements IStorage {
 
   async getDealTrackDocuments(trackId: number): Promise<DealTrackDocument[]> {
     return db.select().from(dealTrackDocuments).where(eq(dealTrackDocuments.trackId, trackId)).orderBy(desc(dealTrackDocuments.createdAt));
+  }
+
+  async getDealCrmLink(dealId: string): Promise<DealCrmLink | undefined> {
+    const result = await db.select().from(dealCrmLinks).where(eq(dealCrmLinks.dealId, dealId));
+    return result[0];
+  }
+
+  async upsertDealCrmLink(data: InsertDealCrmLink): Promise<DealCrmLink> {
+    const result = await db.insert(dealCrmLinks).values(data)
+      .onConflictDoUpdate({
+        target: dealCrmLinks.dealId,
+        set: {
+          zohoDealId: data.zohoDealId,
+          zohoAccountId: data.zohoAccountId,
+          zohoContactId: data.zohoContactId,
+          zohoOwnerId: data.zohoOwnerId,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
+  async getDealSalesSnapshot(dealId: string): Promise<DealSalesSnapshot | undefined> {
+    const result = await db.select().from(dealSalesSnapshots).where(eq(dealSalesSnapshots.dealId, dealId));
+    return result[0];
+  }
+
+  async upsertDealSalesSnapshot(data: InsertDealSalesSnapshot): Promise<DealSalesSnapshot> {
+    const result = await db.insert(dealSalesSnapshots).values(data)
+      .onConflictDoUpdate({
+        target: dealSalesSnapshots.dealId,
+        set: {
+          lastContactAt: data.lastContactAt,
+          nextTaskAt: data.nextTaskAt,
+          nextTaskStatus: data.nextTaskStatus,
+          totalCalls: data.totalCalls,
+          totalTasks: data.totalTasks,
+          totalNotes: data.totalNotes,
+          lastSyncAt: data.lastSyncAt,
+          snapshot: data.snapshot,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
+  async getDealSalesActivityItems(dealId: string, limit = 10): Promise<DealSalesActivityItem[]> {
+    return db.select().from(dealSalesActivityItems)
+      .where(eq(dealSalesActivityItems.dealId, dealId))
+      .orderBy(desc(dealSalesActivityItems.occurredAt))
+      .limit(limit);
+  }
+
+  async getDealInternalNotes(dealId: string): Promise<DealInternalNote[]> {
+    return db.select().from(dealInternalNotes)
+      .where(eq(dealInternalNotes.dealId, dealId))
+      .orderBy(desc(dealInternalNotes.createdAt));
+  }
+
+  async createDealInternalNote(data: InsertDealInternalNote): Promise<DealInternalNote> {
+    const result = await db.insert(dealInternalNotes).values(data).returning();
+    return result[0];
+  }
+
+  async deleteDealInternalNote(id: number): Promise<boolean> {
+    const result = await db.delete(dealInternalNotes).where(eq(dealInternalNotes.id, id)).returning();
+    return result.length > 0;
   }
 }
 
