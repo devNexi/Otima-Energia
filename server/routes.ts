@@ -1174,6 +1174,40 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null
       }).catch(err => console.error("Error logging portal access:", err));
 
+      if (session.trackId) {
+        const chaseState = await storage.getChaseState(session.trackId);
+        if (chaseState && chaseState.active) {
+          await storage.stopChase(session.trackId, 'intake_complete');
+
+          const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+          if (webhookUrl) {
+            try {
+              const crmLink = session.dealId ? await storage.getDealCrmLink(session.dealId) : null;
+              const resp = await fetch(`${webhookUrl}/webhook/chase/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  event: 'chase.stop',
+                  dealId: session.dealId,
+                  trackId: session.trackId,
+                  zohoDealId: crmLink?.zohoDealId || null,
+                  reason: 'intake_complete',
+                  stoppedAt: new Date().toISOString(),
+                }),
+                signal: AbortSignal.timeout(10000),
+              });
+              if (resp.ok) {
+                await storage.updateChaseState(session.trackId, { webhookStopFired: true });
+              }
+            } catch (err) {
+              console.error("[chase] Stop webhook on intake complete failed:", err);
+            }
+          } else {
+            await storage.updateChaseState(session.trackId, { webhookStopFired: true });
+          }
+        }
+      }
+
       res.json({ success: true, message: "Intake completed successfully" });
     } catch (error: any) {
       console.error("Error completing intake:", error);
@@ -11076,6 +11110,321 @@ export async function registerRoutes(
       res.status(500).json({ success: false, error: "Failed to mark intake as sent" });
     }
   });
+
+  // ============== CHASE STATE ENGINE ==============
+
+  app.get("/api/tracks/:trackId/chase-state", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const chaseState = await storage.getChaseState(trackId);
+      res.json({ success: true, chaseState: chaseState || null });
+    } catch (error: any) {
+      console.error("Error getting chase state:", error);
+      res.status(500).json({ success: false, error: "Failed to get chase state" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/send-intake-link-action", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const {
+        contactName,
+        contactEmail,
+        contactWhatsapp,
+        whatsappOptIn = false,
+      } = req.body;
+
+      if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+        return res.status(400).json({ success: false, error: "Valid email is required" });
+      }
+
+      if (whatsappOptIn && contactWhatsapp) {
+        if (!/^\+55\d{10,11}$/.test(contactWhatsapp)) {
+          return res.status(400).json({ success: false, error: "WhatsApp number must be E.164 format starting with +55" });
+        }
+      }
+
+      const existingChase = await storage.getChaseState(trackId);
+      if (existingChase && existingChase.active && existingChase.webhookStartFired) {
+        return res.status(409).json({
+          success: false,
+          error: "Intake link already sent for this track",
+          sentAt: existingChase.lastSentAt,
+          sentEventId: existingChase.sentEventId,
+        });
+      }
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+      if (!activeSession) {
+        return res.status(400).json({ success: false, error: "No active intake session. Generate a link first." });
+      }
+
+      const portalUrl = `${req.protocol}://${req.get('host')}/client/intake/${activeSession.token}`;
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const companyName = client?.companyName || contactName || 'Cliente';
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+      const userId = user?.id || 'system';
+
+      const sentEventId = `intake_send_${trackId}_${Date.now()}`;
+
+      const smtpPass = process.env.SMTP_PASS;
+      if (!smtpPass) {
+        return res.status(500).json({ success: false, error: "SMTP not configured" });
+      }
+
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: "smtp.zoho.com",
+        port: 465,
+        secure: true,
+        auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+      });
+
+      const codeBlock = activeSession.accessCode
+        ? `\n\nCódigo de acesso: ${activeSession.accessCode}\n(Você precisará deste código para acessar o portal)`
+        : '';
+
+      await transporter.sendMail({
+        from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
+        to: contactEmail,
+        subject: `Ótima Energia – Portal de Documentos`,
+        text: `Olá ${companyName},\n\nVocê recebeu um convite para enviar seus documentos de energia através do nosso portal seguro.\n\nAcesse o link abaixo para começar:\n${portalUrl}${codeBlock}\n\nO que você precisará:\n• Suas faturas de energia elétrica (últimos ${activeSession.expectedBillsCount || 6} meses)\n• Dados do representante legal da empresa\n\nO processo leva aproximadamente 5-10 minutos.\n\nSe tiver dúvidas, responda este e-mail ou entre em contato conosco.\n\nAtenciosamente,\nEquipe Ótima Energia`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #16803C; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Ótima Energia</h1>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Olá <strong>${companyName}</strong>,</p>
+            <p>Você recebeu um convite para enviar seus documentos de energia através do nosso portal seguro.</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${portalUrl}" style="background: #16803C; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Acessar Portal</a>
+            </div>
+            ${activeSession.accessCode ? `<div style="background: #f3f4f6; padding: 16px; border-radius: 6px; text-align: center; margin: 16px 0;">
+              <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;">Código de acesso:</p>
+              <p style="margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #111827;">${activeSession.accessCode}</p>
+            </div>` : ''}
+            <p style="font-size: 14px; color: #6b7280;"><strong>O que você precisará:</strong></p>
+            <ul style="font-size: 14px; color: #6b7280;">
+              <li>Suas faturas de energia elétrica (últimos ${activeSession.expectedBillsCount || 6} meses)</li>
+              <li>Dados do representante legal da empresa</li>
+            </ul>
+            <p style="font-size: 14px; color: #6b7280;">O processo leva aproximadamente 5-10 minutos.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 12px; color: #9ca3af;">Este e-mail foi enviado pela Ótima Energia. Se tiver dúvidas, responda este e-mail.</p>
+          </div>
+        </div>`,
+      });
+
+      await storage.logPortalAccess({
+        clientId: deal.clientId || null,
+        sessionToken: activeSession.token,
+        action: "INTAKE_SENT",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      });
+
+      const now = new Date();
+      const nextBizDay = new Date(now);
+      nextBizDay.setDate(nextBizDay.getDate() + 1);
+      const dow = nextBizDay.getDay();
+      if (dow === 0) nextBizDay.setDate(nextBizDay.getDate() + 1);
+      if (dow === 6) nextBizDay.setDate(nextBizDay.getDate() + 2);
+
+      await enqueueJobIfNotExists(
+        'ZOHO_CREATE_TASK',
+        `chase_followup_${trackId}_${deal.id}`,
+        {
+          dealId: deal.id,
+          subject: `Follow up intake link – ${companyName}`,
+          dueDate: nextBizDay.toISOString().split('T')[0],
+          description: `Intake link was sent to ${contactEmail}. Follow up to ensure client completes the intake process.`,
+          purpose: 'intake_chase_followup',
+        }
+      );
+
+      await storage.upsertChaseState({
+        trackId,
+        active: true,
+        level: 0,
+        lastSentAt: now,
+        contactName: contactName || null,
+        contactEmail,
+        contactWhatsapp: contactWhatsapp || null,
+        whatsappOptIn: whatsappOptIn || false,
+        sentEventId,
+        sentByUserId: userId,
+        webhookStartFired: false,
+      });
+
+      let webhookStartOk = false;
+      const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+      if (webhookUrl) {
+        try {
+          const webhookPayload = {
+            event: 'chase.start',
+            dealId: deal.id,
+            trackId,
+            trackType: track.type,
+            companyName,
+            contact: {
+              name: contactName || null,
+              email: contactEmail,
+              whatsapp: contactWhatsapp || null,
+              whatsappOptIn: whatsappOptIn || false,
+            },
+            intakeLink: portalUrl,
+            accessCode: activeSession.accessCode || null,
+            expiresAt: activeSession.expiresAt?.toISOString() || null,
+            requiredBills: activeSession.expectedBillsCount || 6,
+            sentAt: now.toISOString(),
+            sentEventId,
+            sentByUserId: userId,
+          };
+
+          const resp = await fetch(`${webhookUrl}/webhook/chase/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+            signal: AbortSignal.timeout(10000),
+          });
+          webhookStartOk = resp.ok;
+        } catch (err) {
+          console.error("[chase] Start webhook failed:", err);
+        }
+      }
+
+      await storage.updateChaseState(trackId, { webhookStartFired: webhookStartOk || !webhookUrl });
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "INTAKE_SENT",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: {
+          dealId: deal.id,
+          contactEmail,
+          contactWhatsapp: contactWhatsapp || null,
+          whatsappOptIn,
+          sentEventId,
+          linkExpiry: activeSession.expiresAt?.toISOString(),
+          requiredBills: activeSession.expectedBillsCount,
+          webhookStartFired: webhookStartOk,
+        }
+      });
+
+      res.json({
+        success: true,
+        sentEventId,
+        sentAt: now.toISOString(),
+        webhookStartFired: webhookStartOk || !webhookUrl,
+      });
+    } catch (error: any) {
+      console.error("Error sending intake link:", error);
+      res.status(500).json({ success: false, error: "Failed to send intake link" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/chase-stop", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { reason = 'manual_override' } = req.body;
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const existingChase = await storage.getChaseState(trackId);
+      if (!existingChase || !existingChase.active) {
+        return res.json({ success: true, message: "Chase already stopped or never started" });
+      }
+
+      await storage.stopChase(trackId, reason);
+
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const companyName = client?.companyName || 'Cliente';
+
+      let webhookStopOk = false;
+      const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+      if (webhookUrl) {
+        try {
+          const crmLink = await storage.getDealCrmLink(deal.id);
+          const webhookPayload = {
+            event: 'chase.stop',
+            dealId: deal.id,
+            trackId,
+            trackType: track.type,
+            zohoDealId: crmLink?.zohoDealId || null,
+            reason,
+            stoppedAt: new Date().toISOString(),
+          };
+
+          const resp = await fetch(`${webhookUrl}/webhook/chase/stop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+            signal: AbortSignal.timeout(10000),
+          });
+          webhookStopOk = resp.ok;
+        } catch (err) {
+          console.error("[chase] Stop webhook failed:", err);
+        }
+      }
+
+      await storage.updateChaseState(trackId, { webhookStopFired: webhookStopOk || !webhookUrl });
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "CHASE_STOPPED",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal.id, reason, webhookStopFired: webhookStopOk }
+      });
+
+      if (reason === 'manual_override') {
+        await storage.createDealTrackEvent({
+          trackId,
+          eventType: 'DOCS_RECEIVED_MANUAL',
+          payload: { stoppedBy: user?.username || 'system', reason },
+          createdByUserId: user?.id || null,
+        });
+      }
+
+      res.json({ success: true, reason, webhookStopFired: webhookStopOk || !webhookUrl });
+    } catch (error: any) {
+      console.error("Error stopping chase:", error);
+      res.status(500).json({ success: false, error: "Failed to stop chase" });
+    }
+  });
+
+  // ============== END CHASE STATE ENGINE ==============
 
   // ============== END DEAL TRACKS ==============
 
