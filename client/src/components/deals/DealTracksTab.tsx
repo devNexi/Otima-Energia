@@ -937,7 +937,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
       return res.json();
     },
     onSuccess: (data) => {
-      if (linkData) setLinkData({ ...linkData, expiresAt: data.expiresAt });
+      if (linkData) setLinkData({ ...linkData, expiresAt: data.expiresAt, token: data.token || linkData.token });
       toast({ title: isPt ? "Prazo estendido!" : "Expiry extended!" });
       queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
     },
@@ -1002,8 +1002,8 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
   const loa = intakeStatus?.loa;
   const isComplete = hasActiveIntake && intakeStatus.session?.usedAt;
 
-  const expiresAt = linkData?.expiresAt ? new Date(linkData.expiresAt) : null;
-  const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const expiresAt = linkData?.expiresAt && linkData.expiresAt !== '' ? new Date(linkData.expiresAt) : null;
+  const daysUntilExpiry = expiresAt && !isNaN(expiresAt.getTime()) ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
   const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry < 3;
 
   return (
@@ -1139,7 +1139,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                 <div className="flex items-center gap-2">
                   <span className="text-xs flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    Link expira em: {expiresAt?.toLocaleDateString('pt-BR')}
+                    {expiresAt ? `Link expira em: ${expiresAt.toLocaleDateString('pt-BR')}` : (isPt ? 'Sem expiração definida' : 'No expiry set')}
                   </span>
                   {isExpiringSoon && (
                     <>
