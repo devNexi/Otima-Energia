@@ -1,0 +1,84 @@
+Replit, before you build anything new, I want you to AUDIT and EXPLAIN the current “Client Portal” implementation in our codebase. This is a discovery task only — do NOT refactor or change behaviour yet.
+
+# Goal
+Produce a clear, developer-friendly report of what currently exists for the client-facing portal (if anything), how it works, and what’s missing to support our upcoming “Client Intake Workspace” (uploads + LGPD + LOA).
+
+# What to inspect (be thorough)
+## 1) Routes & Entry Points
+- List all client-portal-related frontend routes (React Router / Next-style routing) including any `/client`, `/portal`, `/intake`, `/share`, `/public`, `/external`, `/u/:token` patterns.
+- For each route:
+  - Which component renders?
+  - Is it protected (auth required) or public (token link)?
+  - What query params / path params are used?
+
+## 2) Backend Endpoints
+- List all Express routes that appear related to client portal / external intake / uploads:
+  - Anything like `/api/client/*`, `/api/public/*`, `/api/intake/*`, `/api/upload/*`, `/api/share/*`.
+- For each endpoint:
+  - Method, path, purpose
+  - Auth mechanism (JWT session? token link? none?)
+  - Request/response shapes (types/interfaces if defined)
+
+## 3) Authentication & Access Control
+- Is there a “client user” role or concept?
+- Is there any token-based access (signed links, magic links, one-time tokens)?
+- If yes:
+  - Where are tokens generated?
+  - Where are tokens stored/validated?
+  - Do they expire? How?
+
+## 4) Upload System (Critical)
+We currently use `upload_sessions` and `diagnostic_submissions`. Explain exactly how uploads work today:
+- How an upload session is created
+- Where files are stored (S3? local disk? Replit storage? other)
+- How a submission is finalised
+- How submissions are linked to internal entities (leadId / dealId)
+- Any file type/size limits
+- Any existing UI components we can reuse for a client portal upload experience
+
+## 5) Current Client Portal Features (If Any)
+- Does any client portal UI exist?
+- If yes, what can a client currently do?
+  - upload bills?
+  - view status?
+  - sign consent?
+  - view documents?
+  - fill forms?
+- Provide screenshots/description of pages and component structure.
+
+## 6) Database Tables & Existing Models
+- Identify any tables that look client-portal-related:
+  - client_users, external_users, portal_users, invitations, share_links, access_tokens, etc.
+- For each:
+  - schema fields
+  - relationships
+  - where it’s used in code
+
+## 7) Email / Notifications
+- Is there any email sending in the system for portal links or uploads?
+- If yes, list:
+  - provider used
+  - templates
+  - where triggered
+  - what data is included
+
+## 8) Gaps vs. What We Need Next
+After auditing, compare current reality to our target “Client Intake Workspace” requirements:
+- Upload 6–12 energy bills easily on mobile
+- Mandatory LGPD consent capture (with timestamp, IP, version)
+- LOA capture (for ACR/ACL as well) with e-sign or checkbox + generated PDF
+- Track-level intake (ties uploads/consents to a specific Deal Track)
+- Secure token links with expiry
+- Progress status back to Renan inside the Deal Track (docs complete, consent complete, LOA complete)
+- Automated reminders (likely via Zoho tasks; not portal push notifications initially)
+
+List what already exists that we can reuse and what must be built from scratch.
+
+# Output Format (Required)
+Return a structured report with:
+1) “What exists today” (routes, endpoints, DB, auth, uploads)
+2) “How it works” (flow diagrams in text are fine)
+3) “What is missing”
+4) “Recommended next steps” (minimal-risk approach that won’t break existing portal)
+
+Again: this is READ-ONLY analysis. No code changes yet.
