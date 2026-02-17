@@ -1,0 +1,158 @@
+We are now implementing the Human-Controlled Document Chasing System.
+
+This must integrate cleanly with our existing Portal, Deal Tracks, Intake system, and Zoho integration.
+
+CRITICAL RULE:
+Automation must NEVER start automatically on qualification.
+Automation starts ONLY when Renan manually presses "SEND INTAKE LINK" inside the Portal.
+
+Do not build any automatic start logic tied to deal stages.
+
+-----------------------------------
+PART 1 — SEND INTAKE LINK WORKFLOW
+-----------------------------------
+
+Inside the Track Intake modal:
+
+1. Add contact verification block:
+   - Editable contact name
+   - Editable email (required, validated)
+   - Editable WhatsApp number (E.164 format, +55…)
+   - WhatsApp opt-in checkbox (required for WhatsApp sending)
+
+2. Ensure Generate Link exists (already built).
+
+3. Add a primary button:
+   "SEND INTAKE LINK"
+
+When clicked:
+
+A. Validate:
+   - Email format valid
+   - If WhatsApp sending enabled: WhatsApp number valid + opt-in true
+
+B. Execute:
+   - Send email using existing SMTP
+   - Log portal_access_logs entry: INTAKE_SENT
+   - Store sentAt timestamp
+   - Create Zoho task:
+       Subject: "Follow up intake link – <Company>"
+       Due: next business hour (America/Sao_Paulo)
+   - Trigger webhook:
+       POST /webhook/chase/start
+       Include full payload (dealId, trackId, contact, link, expiry, requiredBills)
+
+C. Ensure idempotency:
+   - Multiple clicks must not send duplicates
+   - Use unique eventId per track
+
+-----------------------------------
+PART 2 — PORTAL CHASE STATE ENGINE
+-----------------------------------
+
+Create new table: track_chase_state
+
+Fields:
+- trackId (FK)
+- active (boolean)
+- level (int 0–7)
+- lastSentAt (timestamp)
+- nextSendAt (timestamp)
+- stoppedReason (nullable string)
+- optOut (boolean)
+- optOutAt (timestamp)
+- createdAt
+- updatedAt
+
+Portal responsibilities:
+- Start state when SEND pressed
+- Stop state when:
+    intakeCompleted
+    manualOverride
+    optOut
+- Expose GET /api/tracks/:id/chase-state
+
+Do NOT implement scheduling logic here.
+Scheduling lives in n8n.
+Portal only stores state.
+
+-----------------------------------
+PART 3 — STOP CONDITIONS
+-----------------------------------
+
+When intake completes (already implemented in portal):
+
+Trigger:
+POST /webhook/chase/stop
+{
+  dealId,
+  trackId,
+  zohoDealId,
+  reason: "intake_complete"
+}
+
+Also:
+- Set chase_state.active = false
+- Add "Intake Complete" badge (already built)
+
+Manual override button:
+"Mark Docs Received (Manual)"
+Must:
+- Stop chase
+- Trigger stop webhook
+- Update Zoho
+
+-----------------------------------
+PART 4 — WEBHOOK CONTRACTS
+-----------------------------------
+
+Implement two outbound webhooks only:
+
+1) /webhook/chase/start
+2) /webhook/chase/stop
+3) /webhook/intake/status (already exists or confirm)
+
+No WhatsApp logic inside Portal.
+No voice logic inside Portal.
+Portal must be channel-agnostic.
+
+-----------------------------------
+PART 5 — AUDIT & LOGGING
+-----------------------------------
+
+Log:
+- Who clicked SEND
+- Timestamp
+- Email used
+- WhatsApp number used
+- Link expiry
+- Regeneration events
+
+-----------------------------------
+PART 6 — WHATSAPP INTEGRATION PREP (NO SENDING YET)
+-----------------------------------
+
+Add feature flag:
+WHATSAPP_AUTOMATION_ENABLED
+
+If false:
+- Show "Copy WhatsApp Message"
+- Require Renan to confirm "Sent manually"
+
+If true:
+- System will later call WhatsApp provider (handled externally)
+
+-----------------------------------
+
+Deliverables:
+- Clean UI
+- Idempotent send
+- Webhooks firing correctly
+- Chase state stored in DB
+- Stop conditions wired
+
+Do not implement n8n logic.
+Do not implement WhatsApp sending.
+Do not implement voice.
+
+Portal is only the trigger + state authority.

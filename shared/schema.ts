@@ -4799,6 +4799,50 @@ export const insertDealTrackDocumentSchema = createInsertSchema(dealTrackDocumen
 export type InsertDealTrackDocument = z.infer<typeof insertDealTrackDocumentSchema>;
 export type DealTrackDocument = typeof dealTrackDocuments.$inferSelect;
 
+// ============== CHASE STATE ENGINE ==============
+
+export const CHASE_STOP_REASONS = [
+  'intake_complete',
+  'manual_override',
+  'opt_out',
+  'expired',
+] as const;
+export type ChaseStopReason = typeof CHASE_STOP_REASONS[number];
+
+export const trackChaseState = pgTable("track_chase_state", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => dealTracks.id).notNull().unique(),
+  active: boolean("active").default(true).notNull(),
+  level: integer("level").default(0).notNull(),
+  lastSentAt: timestamp("last_sent_at"),
+  nextSendAt: timestamp("next_send_at"),
+  stoppedReason: text("stopped_reason"),
+  stoppedAt: timestamp("stopped_at"),
+  optOut: boolean("opt_out").default(false).notNull(),
+  optOutAt: timestamp("opt_out_at"),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactWhatsapp: text("contact_whatsapp"),
+  whatsappOptIn: boolean("whatsapp_opt_in").default(false),
+  sentEventId: text("sent_event_id"),
+  sentByUserId: text("sent_by_user_id"),
+  webhookStartFired: boolean("webhook_start_fired").default(false),
+  webhookStopFired: boolean("webhook_stop_fired").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertTrackChaseStateSchema = createInsertSchema(trackChaseState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrackChaseState = z.infer<typeof insertTrackChaseStateSchema>;
+export type TrackChaseState = typeof trackChaseState.$inferSelect;
+
+// ============== END CHASE STATE ENGINE ==============
+
 // ============== END DEAL TRACKS ==============
 
 // ============== SALES ACTIVITY MIRROR (ZOHO CRM SYNC) ==============
