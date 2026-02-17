@@ -1,0 +1,22 @@
+{
+  "name": "Ótima Energia - Portal do Cliente",
+  "short_name": "Ótima Portal",
+  "description": "Portal de intake para clientes da Ótima Energia",
+  "start_url": "/portal/upload/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16803C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -33,6 +33,10 @@ import {
   AlertTriangle,
   Calendar,
   Upload,
+  Link2,
+  Copy,
+  ExternalLink,
+  Smartphone,
 } from "lucide-react";
 
 interface DealTracksTabProps {
@@ -707,6 +711,8 @@ function TrackDetailView({
         </div>
       </div>
 
+      <IntakeReadinessSection trackId={trackId} dealId={dealId} isPt={isPt} />
+
       <div>
         <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
           <Calendar className="w-4 h-4" />
@@ -837,5 +843,189 @@ function GDLEligibilityChecklist({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function IntakeReadinessSection({ trackId, dealId, isPt }: { trackId: number; dealId: string; isPt: boolean }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [linkConfig, setLinkConfig] = useState({
+    requireLGPD: true,
+    requireLOA: true,
+    expectedBillsCount: 6,
+  });
+
+  const { data: intakeStatus, isLoading: loadingStatus } = useQuery({
+    queryKey: [`/api/tracks/${trackId}/intake-status`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tracks/${trackId}/intake-status`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const generateLinkMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/generate-intake-link`, linkConfig);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedLink(data.portalUrl);
+      toast({ title: isPt ? "Link gerado" : "Link generated" });
+      queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const copyLink = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink);
+      toast({ title: isPt ? "Link copiado!" : "Link copied!" });
+    }
+  };
+
+  const hasActiveIntake = intakeStatus && intakeStatus.session;
+  const bills = intakeStatus?.bills;
+  const lgpd = intakeStatus?.lgpd;
+  const loa = intakeStatus?.loa;
+  const isComplete = hasActiveIntake && intakeStatus.session?.usedAt;
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <Smartphone className="w-4 h-4" />
+        {isPt ? "Intake do Cliente" : "Client Intake"}
+      </h4>
+
+      {hasActiveIntake ? (
+        <Card className={`${isComplete ? 'border-green-300 bg-green-50/50' : 'border-blue-300 bg-blue-50/50'}`} data-testid={`card-intake-status-${trackId}`}>
+          <CardContent className="py-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                {isPt ? "Status do Intake" : "Intake Status"}
+              </span>
+              <Badge className={isComplete ? "bg-green-100 text-green-800 border-green-300 border" : "bg-blue-100 text-blue-800 border-blue-300 border"} data-testid={`badge-intake-status-${trackId}`}>
+                {isComplete ? (isPt ? "Completo" : "Complete") : (isPt ? "Em andamento" : "In progress")}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="flex items-center gap-1" data-testid={`intake-bills-${trackId}`}>
+                {bills?.uploaded >= (bills?.required || 1) ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                )}
+                <span>{isPt ? "Faturas" : "Bills"}: {bills?.uploaded || 0}/{bills?.required || '?'}</span>
+              </div>
+              {intakeStatus.session?.requireLGPD && (
+                <div className="flex items-center gap-1" data-testid={`intake-lgpd-${trackId}`}>
+                  {lgpd?.captured ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  )}
+                  LGPD
+                </div>
+              )}
+              {intakeStatus.session?.requireLOA && (
+                <div className="flex items-center gap-1" data-testid={`intake-loa-${trackId}`}>
+                  {loa?.captured ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  )}
+                  LOA
+                </div>
+              )}
+            </div>
+            {intakeStatus.session?.token && !isComplete && (
+              <div className="pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7"
+                  onClick={() => {
+                    const url = `${window.location.origin}/client/intake/${intakeStatus.session.token}`;
+                    navigator.clipboard.writeText(url);
+                    toast({ title: isPt ? "Link copiado!" : "Link copied!" });
+                  }}
+                  data-testid={`button-copy-intake-link-${trackId}`}
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  {isPt ? "Copiar Link" : "Copy Link"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-dashed" data-testid={`card-generate-intake-${trackId}`}>
+          <CardContent className="py-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              {isPt
+                ? "Gere um link para o cliente enviar faturas, assinar LGPD e LOA."
+                : "Generate a link for the client to upload bills, sign LGPD and LOA."}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px]">{isPt ? "Faturas esperadas" : "Expected bills"}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={linkConfig.expectedBillsCount}
+                  onChange={(e) => setLinkConfig(prev => ({ ...prev, expectedBillsCount: parseInt(e.target.value) || 6 }))}
+                  className="h-7 text-xs"
+                  data-testid={`input-expected-bills-${trackId}`}
+                />
+              </div>
+              <div className="flex items-center gap-1.5 pt-4">
+                <Checkbox
+                  id={`lgpd-${trackId}`}
+                  checked={linkConfig.requireLGPD}
+                  onCheckedChange={(v) => setLinkConfig(prev => ({ ...prev, requireLGPD: !!v }))}
+                  data-testid={`checkbox-require-lgpd-${trackId}`}
+                />
+                <Label htmlFor={`lgpd-${trackId}`} className="text-xs cursor-pointer">LGPD</Label>
+              </div>
+              <div className="flex items-center gap-1.5 pt-4">
+                <Checkbox
+                  id={`loa-${trackId}`}
+                  checked={linkConfig.requireLOA}
+                  onCheckedChange={(v) => setLinkConfig(prev => ({ ...prev, requireLOA: !!v }))}
+                  data-testid={`checkbox-require-loa-${trackId}`}
+                />
+                <Label htmlFor={`loa-${trackId}`} className="text-xs cursor-pointer">LOA</Label>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => generateLinkMutation.mutate()}
+              disabled={generateLinkMutation.isPending}
+              className="w-full"
+              data-testid={`button-generate-intake-link-${trackId}`}
+            >
+              {generateLinkMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Link2 className="w-3 h-3 mr-1" />}
+              {isPt ? "Gerar Link de Intake" : "Generate Intake Link"}
+            </Button>
+            {generatedLink && (
+              <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs">
+                <Input value={generatedLink} readOnly className="h-7 text-xs flex-1" data-testid={`input-generated-link-${trackId}`} />
+                <Button size="sm" variant="outline" className="h-7 px-2" onClick={copyLink} data-testid={`button-copy-link-${trackId}`}>
+                  <Copy className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => window.open(generatedLink, '_blank')} data-testid={`button-open-link-${trackId}`}>
+                  <ExternalLink className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

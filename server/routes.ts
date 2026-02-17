@@ -48,7 +48,12 @@ import {
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
   type DealState,
-  dealTracks
+  dealTracks,
+  insertConsentRecordSchema,
+  consentRecords,
+  dealTrackDocuments,
+  uploadSessions,
+  consumptionProfiles
 } from "@shared/schema";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -65,6 +70,12 @@ import { seedDictionaryTerms } from "./dictionarySeeder";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
 import { getZohoLeadDeepLink, getZohoStatus } from "./zohoClient";
+
+declare module 'express' {
+  interface Request {
+    portalSession?: any;
+  }
+}
 
 // Helper to extract supplier name from PRC filename
 function extractSupplierNameFromFilename(filename: string): string | null {
@@ -167,6 +178,64 @@ setInterval(() => {
     }
   });
 }, 60000);
+
+async function validatePortalToken(req: Request, res: Response, next: NextFunction) {
+  const token = (req.headers['x-portal-token'] as string) || req.body?.portalToken || (req.query?.token as string);
+  
+  if (!token) {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (sessionId) {
+      const adminSession = await storage.getAdminSession(sessionId);
+      if (adminSession && new Date(adminSession.expiresAt) >= new Date()) {
+        return next();
+      }
+    }
+    return res.status(401).json({ success: false, error: "Portal token required" });
+  }
+
+  try {
+    const session = await storage.getUploadSessionByToken(token);
+    
+    if (!session) {
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: token,
+        action: "token_validation_invalid",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+      return res.status(401).json({ success: false, error: "Invalid portal token" });
+    }
+
+    if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: token,
+        action: "token_validation_expired",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+      return res.status(401).json({ success: false, error: "Portal token has expired" });
+    }
+
+    if (session.accessCode && !session.verifiedAt) {
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: token,
+        action: "token_validation_unverified",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+      return res.status(401).json({ success: false, error: "Access code verification required" });
+    }
+
+    req.portalSession = session;
+    next();
+  } catch (error: any) {
+    console.error("Error validating portal token:", error);
+    res.status(500).json({ success: false, error: "Token validation failed" });
+  }
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -965,6 +1034,8 @@ export async function registerRoutes(
         return res.status(401).json({ success: false, error: "Invalid access code" });
       }
       
+      await storage.updateUploadSession(session.id, { verifiedAt: new Date() });
+      
       // Log successful verification (fire-and-forget, before response)
       if (session.clientId) {
         storage.logPortalAccess({
@@ -991,13 +1062,300 @@ export async function registerRoutes(
     }
   });
 
+  // ============== PORTAL INTAKE ENDPOINTS ==============
+
+  // Submit consent record (LGPD or LOA)
+  app.post("/api/portal/intake/:token/consent", checkPortalRateLimit, validatePortalToken, async (req, res) => {
+    try {
+      const session = req.portalSession;
+      const { consentType, consentVersion, consentText, signatureMethod, signerName, signerRole, signerEmail, signerDocument, signatureData } = req.body;
+      
+      if (!consentType || !['LGPD', 'LOA'].includes(consentType)) {
+        return res.status(400).json({ success: false, error: "consentType must be 'LGPD' or 'LOA'" });
+      }
+      if (!consentVersion || !consentText || !signatureMethod) {
+        return res.status(400).json({ success: false, error: "consentVersion, consentText, and signatureMethod are required" });
+      }
+
+      const record = await storage.createConsentRecord({
+        clientId: session.clientId || null,
+        dealId: session.dealId || null,
+        trackId: session.trackId || null,
+        uploadSessionId: session.id,
+        consentType,
+        consentVersion,
+        consentText,
+        signatureMethod,
+        signerName: signerName || null,
+        signerRole: signerRole || null,
+        signerEmail: signerEmail || null,
+        signerDocument: signerDocument || null,
+        signatureData: signatureData || null,
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+      });
+
+      if (session.trackId) {
+        const track = await storage.getDealTrack(session.trackId);
+        if (track) {
+          const metaKey = consentType === 'LGPD' ? 'lgpdCapturedAt' : 'loaCapturedAt';
+          const merged = { ...(track.metadata as any || {}), [metaKey]: new Date().toISOString() };
+          await storage.updateDealTrack(track.id, { metadata: merged });
+        }
+      }
+
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: session.token,
+        action: `consent_${consentType.toLowerCase()}_captured`,
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+
+      res.json({ success: true, consentRecord: record });
+    } catch (error: any) {
+      console.error("Error creating consent record:", error);
+      res.status(500).json({ success: false, error: "Failed to create consent record" });
+    }
+  });
+
+  // Complete intake process
+  app.post("/api/portal/intake/:token/complete", checkPortalRateLimit, validatePortalToken, async (req, res) => {
+    try {
+      const session = req.portalSession;
+      
+      await storage.updateUploadSession(session.id, { isUsed: true, usedAt: new Date() });
+
+      if (session.trackId) {
+        const track = await storage.getDealTrack(session.trackId);
+        if (track) {
+          const merged = { ...(track.metadata as any || {}), intakeCompletedAt: new Date().toISOString() };
+          await storage.updateDealTrack(track.id, { metadata: merged });
+        }
+      }
+
+      if (session.dealId && session.trackId) {
+        const client = session.clientId ? await storage.getClient(session.clientId) : null;
+        const profiles = await storage.getConsumptionProfilesBySession(session.id);
+        const consents = await storage.getConsentRecordsBySession(session.id);
+        enqueueJob('INTAKE_COMPLETED_NOTIFICATION', {
+          dealId: session.dealId,
+          trackId: session.trackId,
+          clientName: client?.companyName || '',
+          billsUploaded: profiles.length,
+          lgpdCaptured: consents.some((c: any) => c.consentType === 'LGPD'),
+          loaCaptured: consents.some((c: any) => c.consentType === 'LOA'),
+        }).catch(err => console.error("Error enqueuing intake notification:", err));
+      }
+
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: session.token,
+        action: "intake_completed",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+
+      res.json({ success: true, message: "Intake completed successfully" });
+    } catch (error: any) {
+      console.error("Error completing intake:", error);
+      res.status(500).json({ success: false, error: "Failed to complete intake" });
+    }
+  });
+
+  // Get intake progress/status
+  app.get("/api/portal/intake/:token/status", checkPortalRateLimit, validatePortalToken, async (req, res) => {
+    try {
+      const session = req.portalSession;
+
+      const [profiles, consents] = await Promise.all([
+        db.select().from(consumptionProfiles).where(eq(consumptionProfiles.uploadSessionId, session.id)),
+        storage.getConsentRecordsBySession(session.id),
+      ]);
+
+      const lgpdRecords = consents.filter((c: any) => c.consentType === 'LGPD');
+      const loaRecords = consents.filter((c: any) => c.consentType === 'LOA');
+
+      res.json({
+        success: true,
+        progress: {
+          billsUploaded: profiles.length,
+          lgpdCaptured: lgpdRecords.length > 0,
+          loaCaptured: loaRecords.length > 0,
+        },
+        config: {
+          expectedBillsCount: session.expectedBillsCount || 6,
+          requireLOA: session.requireLOA ?? true,
+          requireLGPD: session.requireLGPD ?? true,
+        },
+        session: {
+          isUsed: session.isUsed,
+          usedAt: session.usedAt,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error getting intake status:", error);
+      res.status(500).json({ success: false, error: "Failed to get intake status" });
+    }
+  });
+
+  app.post("/api/portal/intake/:token/generate-loa-pdf", checkPortalRateLimit, validatePortalToken, async (req, res) => {
+    try {
+      const session = req.portalSession;
+      const consents = await storage.getConsentRecordsBySession(session.id);
+      const loaRecord = consents.find((c: any) => c.consentType === 'LOA');
+
+      if (!loaRecord) {
+        return res.status(404).json({ success: false, error: "No LOA consent record found for this session" });
+      }
+
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const pageWidth = 595;
+      const pageHeight = 842;
+      const margin = 50;
+      const maxWidth = pageWidth - margin * 2;
+      const lineHeight = 14;
+
+      function wrapText(text: string, fontSize: number, usedFont: any): string[] {
+        const lines: string[] = [];
+        const paragraphs = text.split('\n');
+        for (const para of paragraphs) {
+          if (para.trim() === '') { lines.push(''); continue; }
+          const words = para.split(' ');
+          let currentLine = '';
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const width = usedFont.widthOfTextAtSize(testLine, fontSize);
+            if (width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) lines.push(currentLine);
+        }
+        return lines;
+      }
+
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let y = pageHeight - margin;
+
+      function drawText(text: string, fontSize: number, usedFont: any, color = rgb(0.1, 0.1, 0.1)) {
+        const lines = wrapText(text, fontSize, usedFont);
+        for (const line of lines) {
+          if (y < margin + 20) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+          }
+          page.drawText(line, { x: margin, y, size: fontSize, font: usedFont, color });
+          y -= lineHeight + 2;
+        }
+      }
+
+      page.drawText('CARTA DE AUTORIZAÇÃO (LOA)', { x: margin, y, size: 16, font: boldFont, color: rgb(0.09, 0.09, 0.25) });
+      y -= 30;
+
+      page.drawText(`Data: ${new Date(loaRecord.capturedAt).toLocaleDateString('pt-BR')}`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
+      y -= 25;
+
+      drawText(loaRecord.consentText, 10, font);
+      y -= 15;
+
+      page.drawLine({ start: { x: margin, y: y + 5 }, end: { x: pageWidth - margin, y: y + 5 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
+      y -= 20;
+
+      drawText('DADOS DO SIGNATÁRIO', 11, boldFont);
+      y -= 5;
+      drawText(`Nome: ${loaRecord.signerName || 'N/A'}`, 10, font);
+      drawText(`Cargo: ${loaRecord.signerRole || 'N/A'}`, 10, font);
+      drawText(`E-mail: ${loaRecord.signerEmail || 'N/A'}`, 10, font);
+      if (loaRecord.signerDocument) drawText(`CPF: ${loaRecord.signerDocument}`, 10, font);
+      y -= 10;
+      drawText(`Método de assinatura: ${loaRecord.signatureMethod === 'checkbox' ? 'Confirmação digital (checkbox)' : loaRecord.signatureMethod}`, 9, font, rgb(0.5, 0.5, 0.5));
+      drawText(`IP: ${loaRecord.ipAddress || 'N/A'}`, 9, font, rgb(0.5, 0.5, 0.5));
+      drawText(`Capturado em: ${new Date(loaRecord.capturedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`, 9, font, rgb(0.5, 0.5, 0.5));
+      drawText(`Versão: ${loaRecord.consentVersion}`, 9, font, rgb(0.5, 0.5, 0.5));
+
+      const pdfBytes = await pdfDoc.save();
+
+      let fileKey: string | null = null;
+      let documentId = null;
+
+      try {
+        const objectStorageService = new ObjectStorageService();
+        const uploadResult = await objectStorageService.getObjectEntityUploadURL();
+
+        const uploadResponse = await fetch(uploadResult, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: Buffer.from(pdfBytes),
+        });
+
+        if (uploadResponse.ok) {
+          const url = new URL(uploadResult);
+          fileKey = url.pathname.split('/').pop() || null;
+        }
+      } catch (err) {
+        console.error("Error uploading LOA PDF to object storage:", err);
+      }
+
+      if (session.trackId) {
+        const doc = await storage.createDealTrackDocument({
+          trackId: session.trackId,
+          documentType: 'LOA',
+          fileName: `loa_${session.token.substring(0, 8)}.pdf`,
+          fileKey,
+          uploadedByUserId: null,
+          uploadedByClient: true,
+          uploadSessionId: session.id,
+          source: 'portal_intake',
+        });
+        documentId = doc.id;
+      }
+
+      storage.logPortalAccess({
+        clientId: session.clientId || null,
+        sessionToken: session.token,
+        action: "loa_pdf_generated",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+
+      res.json({
+        success: true,
+        consentRecordId: loaRecord.id,
+        documentId,
+        message: "LOA PDF generated successfully"
+      });
+    } catch (error: any) {
+      console.error("Error generating LOA PDF:", error);
+      res.status(500).json({ success: false, error: "Failed to generate LOA PDF" });
+    }
+  });
+
   // ============== FILE UPLOAD ENDPOINTS ==============
 
   // Get presigned upload URL
-  app.post("/api/objects/upload", async (req, res) => {
+  app.post("/api/objects/upload", validatePortalToken, async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      if (req.portalSession) {
+        storage.logPortalAccess({
+          clientId: req.portalSession.clientId || null,
+          sessionToken: req.portalSession.token,
+          action: "object_upload_url_requested",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
+      }
+      
       res.json({ uploadURL });
     } catch (error: any) {
       console.error("Error getting upload URL:", error);
@@ -1006,10 +1364,21 @@ export async function registerRoutes(
   });
 
   // Register uploaded file as consumption profile
-  app.post("/api/consumption-profiles", async (req, res) => {
+  app.post("/api/consumption-profiles", validatePortalToken, async (req, res) => {
     try {
       const validatedData = insertConsumptionProfileSchema.parse(req.body);
       const profile = await storage.createConsumptionProfile(validatedData);
+      
+      if (req.portalSession) {
+        storage.logPortalAccess({
+          clientId: req.portalSession.clientId || null,
+          sessionToken: req.portalSession.token,
+          action: "consumption_profile_created",
+          ipAddress: req.ip || null,
+          userAgent: req.get("User-Agent") || null
+        }).catch(err => console.error("Error logging portal access:", err));
+      }
+      
       res.json({ success: true, profile });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -10328,6 +10697,110 @@ export async function registerRoutes(
       res.json(doc);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/:trackId/intake-status", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find((s: any) => s.intakeType === 'full_intake') || sessions[0];
+
+      if (!activeSession) {
+        return res.json({ success: true, session: null, bills: null, lgpd: null, loa: null });
+      }
+
+      const profiles = await storage.getConsumptionProfilesBySession(activeSession.id);
+      const consents = await storage.getConsentRecordsBySession(activeSession.id);
+
+      const lgpdConsent = consents.find((c: any) => c.consentType === 'LGPD');
+      const loaConsent = consents.find((c: any) => c.consentType === 'LOA');
+
+      res.json({
+        success: true,
+        session: {
+          id: activeSession.id,
+          token: activeSession.token,
+          requireLGPD: activeSession.requireLGPD,
+          requireLOA: activeSession.requireLOA,
+          expectedBillsCount: activeSession.expectedBillsCount,
+          usedAt: activeSession.usedAt,
+          createdAt: activeSession.createdAt,
+        },
+        bills: {
+          uploaded: profiles.length,
+          required: activeSession.expectedBillsCount || 6,
+        },
+        lgpd: { captured: !!lgpdConsent, capturedAt: lgpdConsent?.capturedAt },
+        loa: { captured: !!loaConsent, capturedAt: loaConsent?.capturedAt },
+      });
+    } catch (error: any) {
+      console.error("Error getting intake status:", error);
+      res.status(500).json({ success: false, error: "Failed to get intake status" });
+    }
+  });
+
+  // Generate intake link for a track (admin only)
+  app.post("/api/tracks/:trackId/generate-intake-link", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const { expectedBillsCount, requireLOA, requireCode } = req.body;
+      
+      const token = randomBytes(32).toString("hex");
+      const accessCode = requireCode ? Math.random().toString(36).substring(2, 8).toUpperCase() : null;
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      const session = await storage.createUploadSession({
+        clientId: deal.clientId || null,
+        dealId: deal.id,
+        trackId: track.id,
+        token,
+        accessCode,
+        expiresAt,
+        intakeType: track.type || 'intake',
+        expectedBillsCount: expectedBillsCount || 6,
+        requireLOA: requireLOA ?? true,
+        requireLGPD: true,
+      });
+
+      const url = `/portal/upload/${token}`;
+
+      await storage.logAdminAction({
+        actor: (req.user as any)?.username || "system",
+        actorIp: req.ip || null,
+        action: "generate_intake_link",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal.id, trackId, token: token.substring(0, 8) + '...' }
+      });
+
+      res.json({
+        success: true,
+        url,
+        accessCode,
+        expiresAt: expiresAt.toISOString(),
+        sessionId: session.id,
+      });
+    } catch (error: any) {
+      console.error("Error generating intake link:", error);
+      res.status(500).json({ success: false, error: "Failed to generate intake link" });
     }
   });
 

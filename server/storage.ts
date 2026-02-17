@@ -79,6 +79,7 @@ import {
   type InvoicePermission, type InsertInvoicePermission,
   type QaTestRun, type InsertQaTestRun,
   type InboundEmail, type InsertInboundEmail,
+  type ConsentRecord, type InsertConsentRecord,
   type DealTrack, type InsertDealTrack,
   type DealTrackEvent, type InsertDealTrackEvent,
   type DealTrackDocument, type InsertDealTrackDocument,
@@ -109,6 +110,7 @@ import {
   invoices, invoiceEvents, invoicePermissions,
   qaTestRuns,
   inboundEmails,
+  consentRecords,
   dealTracks, dealTrackEvents, dealTrackDocuments,
   dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs
 } from "@shared/schema";
@@ -311,6 +313,16 @@ export interface IStorage {
   // ECOS - Portal Access Logs
   logPortalAccess(log: InsertPortalAccessLog): Promise<PortalAccessLog>;
   getPortalAccessLogs(clientId: number): Promise<PortalAccessLog[]>;
+  
+  // Consent Records
+  createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
+  getConsentRecordsBySession(uploadSessionId: number): Promise<ConsentRecord[]>;
+  getConsentRecordsByTrack(trackId: number): Promise<ConsentRecord[]>;
+  
+  // Upload Sessions (extended)
+  updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date }>): Promise<UploadSession | undefined>;
+  getUploadSessionsByTrack(trackId: number): Promise<UploadSession[]>;
+  getConsumptionProfilesBySession(sessionId: number): Promise<ConsumptionProfile[]>;
   
   // ECOS - Lead Snapshots
   createLeadEcosSnapshot(snapshot: InsertLeadEcosSnapshot): Promise<LeadEcosSnapshot>;
@@ -1733,6 +1745,39 @@ export class Storage implements IStorage {
     return await db.select().from(portalAccessLogs)
       .where(eq(portalAccessLogs.clientId, clientId))
       .orderBy(desc(portalAccessLogs.timestamp));
+  }
+
+  async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
+    const result = await db.insert(consentRecords).values(record).returning();
+    return result[0];
+  }
+
+  async getConsentRecordsBySession(uploadSessionId: number): Promise<ConsentRecord[]> {
+    return await db.select().from(consentRecords)
+      .where(eq(consentRecords.uploadSessionId, uploadSessionId))
+      .orderBy(desc(consentRecords.createdAt));
+  }
+
+  async getConsentRecordsByTrack(trackId: number): Promise<ConsentRecord[]> {
+    return await db.select().from(consentRecords)
+      .where(eq(consentRecords.trackId, trackId))
+      .orderBy(desc(consentRecords.createdAt));
+  }
+
+  async updateUploadSession(id: number, data: Partial<{ isUsed: boolean; usedAt: Date; verifiedAt: Date }>): Promise<UploadSession | undefined> {
+    const result = await db.update(uploadSessions).set(data).where(eq(uploadSessions.id, id)).returning();
+    return result[0];
+  }
+
+  async getUploadSessionsByTrack(trackId: number): Promise<UploadSession[]> {
+    return await db.select().from(uploadSessions)
+      .where(eq(uploadSessions.trackId, trackId))
+      .orderBy(desc(uploadSessions.createdAt));
+  }
+
+  async getConsumptionProfilesBySession(sessionId: number): Promise<ConsumptionProfile[]> {
+    return await db.select().from(consumptionProfiles)
+      .where(eq(consumptionProfiles.uploadSessionId, sessionId));
   }
 
   // Lead ECOS Snapshots

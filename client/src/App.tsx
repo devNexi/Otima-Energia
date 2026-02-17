@@ -67,6 +67,7 @@ function Router() {
       <Route path="/rede-de-lucros-otima" component={RedeLucros} />
       <Route path="/termos-parcerias" component={TermosParcerias} />
       <Route path="/portal/upload/:token" component={Portal} />
+      <Route path="/client/intake/:token" component={Portal} />
       <Route path="/proposta/:publicId" component={PublicProposal} />
       <Route path="/proposta-preview" component={ProposalPreview} />
       <Route path="/proposal/view/:token" component={ProposalView} />

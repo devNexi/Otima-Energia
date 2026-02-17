@@ -116,16 +116,26 @@ export const uploadSessions = pgTable("upload_sessions", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id),
   token: text("token").unique().notNull(),
-  accessCode: text("access_code"), // Optional 6-digit PIN
+  accessCode: text("access_code"),
   isUsed: boolean("is_used").default(false),
   expiresAt: timestamp("expires_at").default(sql`NOW() + INTERVAL '7 days'`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id),
+  trackId: integer("track_id").references(() => dealTracks.id),
+  intakeType: text("intake_type"),
+  expectedBillsCount: integer("expected_bills_count").default(6),
+  requireLOA: boolean("require_loa").default(true),
+  requireLGPD: boolean("require_lgpd").default(true),
+  usedAt: timestamp("used_at"),
+  verifiedAt: timestamp("verified_at"),
 });
 
 export const insertUploadSessionSchema = createInsertSchema(uploadSessions).omit({
   id: true,
   createdAt: true,
   isUsed: true,
+  usedAt: true,
+  verifiedAt: true,
 });
 
 export type InsertUploadSession = z.infer<typeof insertUploadSessionSchema>;
@@ -1362,6 +1372,38 @@ export const insertPortalAccessLogSchema = createInsertSchema(portalAccessLogs).
 
 export type InsertPortalAccessLog = z.infer<typeof insertPortalAccessLogSchema>;
 export type PortalAccessLog = typeof portalAccessLogs.$inferSelect;
+
+// ============== CONSENT RECORDS ==============
+export const consentRecords = pgTable("consent_records", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id),
+  trackId: integer("track_id").references(() => dealTracks.id),
+  uploadSessionId: integer("upload_session_id").references(() => uploadSessions.id),
+  consentType: text("consent_type").notNull(),
+  consentVersion: text("consent_version").notNull(),
+  consentText: text("consent_text").notNull(),
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  signerName: text("signer_name"),
+  signerRole: text("signer_role"),
+  signerEmail: text("signer_email"),
+  signerDocument: text("signer_document"),
+  signatureMethod: text("signature_method").notNull(),
+  signatureData: jsonb("signature_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit({
+  id: true,
+  createdAt: true,
+  capturedAt: true,
+});
+
+export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
+export type ConsentRecord = typeof consentRecords.$inferSelect;
+// ============== END CONSENT RECORDS ==============
 
 // ============== DEAL OS SCHEMA ==============
 // Revenue-control and deal-execution system
@@ -4663,7 +4705,7 @@ export const INITIAL_TRACK_STATUS: Record<TrackType, string> = {
 };
 
 export const GDL_REQUIRED_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT'] as const;
-export const TRACK_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT', 'OTHER'] as const;
+export const TRACK_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT', 'LOA', 'OTHER'] as const;
 export type TrackDocType = typeof TRACK_DOC_TYPES[number];
 
 export const GDL_TRANSITION_GATES: Record<string, (track: any, documents: any[]) => { allowed: boolean; reason?: string }> = {
@@ -4744,6 +4786,9 @@ export const dealTrackDocuments = pgTable("deal_track_documents", {
   fileKey: text("file_key"),
   uploadedByUserId: text("uploaded_by_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  uploadedByClient: boolean("uploaded_by_client").default(false),
+  uploadSessionId: integer("upload_session_id").references(() => uploadSessions.id),
+  source: text("source").default("admin"),
 });
 
 export const insertDealTrackDocumentSchema = createInsertSchema(dealTrackDocuments).omit({

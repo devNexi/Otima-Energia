@@ -30,7 +30,8 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Migrations**: Drizzle Kit
 
 ### Key Features
-- **Portal System**: Token-based access for client document uploads.
+- **Portal System**: Token-based access for client document uploads. Enhanced with Client Intake App.
+- **Client Intake App**: Mobile-first PWA stepper at `/portal/upload/:token` and `/client/intake/:token`. Steps: Upload Bills → LGPD Consent → LOA Signing → Review & Submit. Track-aware with dealId/trackId linking. LOA PDF generation with pdf-lib. Consent records with full audit trail (IP, user agent, signer details). Backwards compatible with legacy upload sessions. Admin "Generate Intake Link" in Deal Tracks UI with configurable expectedBillsCount/requireLGPD/requireLOA. Intake readiness indicators (bills X/Y, LGPD ✓, LOA ✓) in track detail. Tables: `consent_records`. Extended: `upload_sessions` (dealId, trackId, intakeType, expectedBillsCount, requireLOA, requireLGPD, usedAt, verifiedAt), `deal_track_documents` (uploadedByClient, uploadSessionId, source). Job types: `INTAKE_COMPLETED_NOTIFICATION`, `INTAKE_REMINDER`.
 - **Data Models**: Comprehensive models for leads, clients, upload sessions, consumption profiles, and various quote/RFO processes.
 - **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.
 - **Deal OS**: Revenue-control and deal-execution system with an explicit state machine, auditability, commission tracking, and immutable records.

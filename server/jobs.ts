@@ -213,6 +213,81 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
       break;
     }
 
+    case 'INTAKE_COMPLETED_NOTIFICATION': {
+      const dealId = payload.dealId as string;
+      const trackId = payload.trackId as number;
+      const clientName = payload.clientName as string;
+      const billsUploaded = payload.billsUploaded as number;
+      const lgpdCaptured = payload.lgpdCaptured as boolean;
+      const loaCaptured = payload.loaCaptured as boolean;
+
+      try {
+        const nodemailer = await import('nodemailer');
+        const smtpPass = process.env.SMTP_PASS;
+        if (smtpPass) {
+          const transporter = nodemailer.createTransport({
+            host: "smtp.zoho.com",
+            port: 465,
+            secure: true,
+            auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+          });
+
+          const checklist = [
+            `Faturas enviadas: ${billsUploaded}`,
+            lgpdCaptured ? 'LGPD: Aceito' : 'LGPD: Pendente',
+            loaCaptured ? 'LOA: Assinado' : 'LOA: Pendente',
+          ].join('\n  ');
+
+          await transporter.sendMail({
+            from: '"Ótima Portal" <notificacoes@otimaenergia.com>',
+            to: "ops@otimaenergia.com",
+            subject: `[Intake Completo] ${clientName || `Deal ${dealId}`} - Track #${trackId}`,
+            text: `O cliente ${clientName || dealId} completou o intake no portal.\n\nResumo:\n  ${checklist}\n\nAcesse o portal para revisar os documentos.`,
+          });
+          console.log(`[JobRunner] Intake completion email sent for deal ${dealId}`);
+        }
+      } catch (emailErr) {
+        console.error(`[JobRunner] Failed to send intake completion email:`, emailErr);
+      }
+      break;
+    }
+
+    case 'INTAKE_REMINDER': {
+      const sessionToken = payload.sessionToken as string;
+      const clientEmail = payload.clientEmail as string;
+      const clientName = payload.clientName as string;
+      const portalUrl = payload.portalUrl as string;
+
+      if (!clientEmail) {
+        console.log(`[JobRunner] No client email for intake reminder, skipping`);
+        return;
+      }
+
+      try {
+        const nodemailer = await import('nodemailer');
+        const smtpPass = process.env.SMTP_PASS;
+        if (smtpPass) {
+          const transporter = nodemailer.createTransport({
+            host: "smtp.zoho.com",
+            port: 465,
+            secure: true,
+            auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+          });
+
+          await transporter.sendMail({
+            from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
+            to: clientEmail,
+            subject: `Lembrete: Complete seu cadastro - Ótima Energia`,
+            text: `Olá ${clientName || ''},\n\nNotamos que seu cadastro no portal da Ótima Energia ainda não foi finalizado.\n\nPara continuar, acesse: ${portalUrl}\n\nSe precisar de ajuda, entre em contato conosco.\n\nAtenciosamente,\nEquipe Ótima Energia`,
+          });
+          console.log(`[JobRunner] Intake reminder email sent to ${clientEmail}`);
+        }
+      } catch (emailErr) {
+        console.error(`[JobRunner] Failed to send intake reminder email:`, emailErr);
+      }
+      break;
+    }
+
     default:
       console.warn(`[JobRunner] Unknown job type: ${job.type}`);
   }

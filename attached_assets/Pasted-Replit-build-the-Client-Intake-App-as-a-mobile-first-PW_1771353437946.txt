@@ -1,0 +1,253 @@
+Replit, build the “Client Intake App” as a mobile-first PWA experience by EXTENDING our existing client portal (/portal/upload/:token) and upload_sessions system. This must be safe, backwards compatible, and track-aware (deal tracks: GDL/ACL/ACR/OTHER). DO NOT refactor core portal or deal workflows. Add new routes/modules where appropriate, reuse existing components (ObjectUploader/Uppy) and job runner.
+
+# Core Outcomes
+We need a client-facing intake flow that can be used for ANY solution (GDL/ACL/ACR) with ONE streamlined experience:
+1) Upload 6–12 energy bills easily on mobile
+2) Mandatory LGPD consent capture with audit trail (timestamp, IP, user agent, version, consent text)
+3) Mandatory LOA capture (Letter of Authority) to allow Otima to negotiate/process on their behalf for ACR/ACL (and optionally for GDL if we choose)
+4) Link all uploaded documents + consent/LOA artifacts to the correct Deal Track (deal_tracks + deal_track_documents)
+5) Update Track readiness automatically (docs complete, consent complete, LOA complete) and show it internally to Renan
+6) Notify Renan automatically when intake is completed and/or create a Zoho Task reminder if incomplete after X days
+7) Close security gaps: protect /api/objects/upload and /api/consumption-profiles so they REQUIRE a valid upload session token
+
+# Important Constraints (DO NOT BREAK)
+- Keep existing /portal/upload/:token behaviour working for any links already sent out.
+- Keep existing upload_sessions tokens (14-day expiry) and access-code gating.
+- Do NOT break internal admin portal and deal state machine.
+- Reuse existing job runner for reminders/notifications.
+- Store timestamps in UTC; compute business-time in America/Sao_Paulo (Rio de Janeiro).
+
+# Timezone / Locale
+- TIMEZONE = America/Sao_Paulo must be used for any “reminder date” or “due date” computations.
+- Store in UTC; display local for UI.
+
+# Current State Summary (for you to rely on)
+Existing:
+- Public portal route: /portal/upload/:token (Portal.tsx)
+- Token validation: GET /api/portal/upload/validate/:token
+- Optional access code: POST /api/portal/upload/verify/:token
+- Upload to object storage via presigned URL: POST /api/objects/upload (currently NO AUTH — must fix)
+- Register upload: POST /api/consumption-profiles (currently NO AUTH — must fix)
+- Upload sessions expire in 14 days; isUsed exists but not enforced.
+- portal_access_logs exists and should continue to log actions.
+- deal_tracks + deal_track_documents exists internally.
+- job runner exists.
+- nodemailer exists.
+
+# Phase 1 — Data Model Changes (Drizzle + migrations)
+## 1) Link upload sessions to deals/tracks (minimal risk)
+Add nullable columns to upload_sessions:
+- dealId (FK -> deals.id, nullable, indexed)
+- trackId (FK -> deal_tracks.id, nullable, indexed)
+- intakeType (text nullable) // 'GDL'|'ACL'|'ACR'|'OTHER' for convenience
+- expectedBillsCount (int nullable, default 6) // config per link
+- requireLOA (boolean default true) // LOA required for ACL/ACR by default
+- requireLGPD (boolean default true) // always true
+- usedAt (timestamp nullable)
+Enforce: existing sessions without these fields remain valid.
+
+## 2) Consent records (proper audit trail)
+Create new table consent_records:
+- id
+- clientId (FK nullable)
+- dealId (FK nullable)
+- trackId (FK nullable)
+- uploadSessionId (FK -> upload_sessions.id)
+- consentType (enum/text): 'LGPD' | 'LOA'
+- consentVersion (text) // e.g. 'v1'
+- consentText (text) // store exact text presented
+- capturedAt (timestamp UTC)
+- ipAddress (text)
+- userAgent (text)
+- signerName (text nullable)
+- signerRole (text nullable)
+- signerEmail (text nullable)
+- signerDocument (text nullable) // CPF optional
+- signatureMethod (text) // 'checkbox'|'typed'|'drawn'
+- signatureData (jsonb nullable) // e.g. drawn signature vector or typed name metadata
+- createdAt
+
+## 3) Deal track document linkage for client uploads
+We already have deal_track_documents(trackId, documentType, fileName, fileKey, uploadedByUserId, createdAt).
+Extend deal_track_documents safely:
+- uploadedByClient (boolean default false)
+- uploadSessionId (FK nullable) // to trace back
+- source (text default 'client_portal') // helpful for audit
+
+We also need to store uploaded bills as deal_track_documents with documentType='ENERGY_BILL' instead of only consumption_profiles (which is legacy).
+Do NOT remove consumption_profiles usage; but for track-based flow, also create deal_track_documents rows so track readiness can be computed reliably.
+
+## 4) Optional: Portal intake progress snapshot (internal)
+Option A (lightweight): Store progress in deal_tracks.metadata as booleans:
+- billsUploadedCount
+- billsRequiredCount
+- lgpdCaptured
+- loaCaptured
+- intakeCompletedAt
+Option B: Create portal_intake_status table.
+Choose Option A unless there’s a strong reason otherwise (minimise complexity).
+
+# Phase 2 — Security Fix (CRITICAL)
+Protect these endpoints so they require a valid upload session token:
+- POST /api/objects/upload
+- POST /api/consumption-profiles
+
+Implement middleware:
+- Extract token from header "X-Portal-Token" OR body.token OR query token
+- Validate against upload_sessions:
+  - token exists
+  - not expired
+  - if requiresCode true: must have verified session (store verification in server-side session OR add upload_sessions.verifiedAt)
+  - optionally enforce isUsed if we enable single-use mode (see below)
+- If invalid: 401
+- Log failures to portal_access_logs
+
+Important: The portal UI must pass the token when requesting presigned URLs and registering uploads.
+
+# Phase 3 — New Client Intake UX (Mobile-first PWA)
+We will keep /portal/upload/:token but turn it into a guided stepper.
+
+## Route(s)
+- Keep: /portal/upload/:token
+- Optional new alias: /client/intake/:token (same component, better naming). Must remain backwards compatible with old links.
+
+## Stepper Flow (Client)
+Step 0: Token validate (existing)
+- Show company/client name and friendly intro.
+- If access code required, collect 6-digit code (existing).
+
+Step 1: Upload Bills (required)
+- Use ObjectUploader.tsx with:
+  - maxNumberOfFiles = expectedBillsCount (default 6, allow up to 12)
+  - allow multiple selection
+  - mobile-friendly UI + progress
+  - accept pdf/jpg/png
+  - keep 10MB per file (or increase if safe, but keep conservative)
+- After each file upload, create:
+  a) consumption_profiles record (legacy) — keep behaviour
+  b) deal_track_documents record if trackId exists (documentType='ENERGY_BILL', uploadedByClient=true)
+- Show counter: “Uploaded X / required Y”
+
+Step 2: LGPD Consent (mandatory, BEFORE final submit)
+- Present LGPD consent text (configured constant), require checkbox.
+- On submit:
+  - Create consent_records row with full audit: text, version, ip, userAgent, capturedAt, uploadSessionId, dealId, trackId, clientId.
+- Store also in track metadata: lgpdCaptured=true
+
+Step 3: LOA (mandatory if requireLOA=true)
+- Show LOA text + form fields:
+  - signerName (required)
+  - signerRole (required)
+  - signerEmail (required)
+  - signerDocument CPF optional
+- Signature method:
+  - MVP: typed name confirmation + checkbox “I agree” (fast + mobile friendly)
+  - Nice: signature pad (drawn) if easy; store signatureData
+- Create consent_records row with consentType='LOA' including signer fields.
+- Generate a PDF receipt of LOA (recommended) and store it as deal_track_documents (documentType='OTHER' or new 'LOA' if you add it).
+  - If you add new documentType 'LOA', update enums/logic accordingly.
+  - PDF generation approach: use pdf-lib (preferred, simpler than puppeteer on Replit).
+  - Store the PDF in object storage and link via deal_track_documents.fileKey.
+- Update track metadata: loaCaptured=true
+
+Step 4: Review & Submit
+- Show checklist:
+  - Bills uploaded ✅
+  - LGPD consent ✅
+  - LOA ✅ (if required)
+- “Submit” button finalises intake:
+  - Mark upload_sessions.isUsed=true and usedAt=now (optional but recommended once complete)
+  - Update track metadata: intakeCompletedAt
+  - Log portal_access_logs action "intake_completed"
+  - Trigger notifications (below)
+
+# Phase 4 — Track Readiness + Internal UI
+In the internal Deal Tracks UI:
+- For each track, show Intake Progress:
+  - Bills: X/Y
+  - LGPD: yes/no
+  - LOA: yes/no
+  - CompletedAt
+- Add gating:
+  - If intake incomplete, show primary CTA “Send client intake link”
+  - If complete, allow “Submit to partner” stage (for GDL gating logic)
+
+# Phase 5 — Link Generation + Notifications
+## Link generation
+Add endpoint for admins:
+- POST /api/tracks/:trackId/generate-intake-link
+  body:
+    - expectedBillsCount (default 6; allow 12)
+    - requireLOA (default true for ACL/ACR; optional false for GDL if chosen)
+    - requireCode (boolean; default true)
+  behaviour:
+    - create upload_sessions row linked to clientId + dealId + trackId
+    - token, accessCode, expiresAt=14 days
+    - return:
+      - url (e.g. /portal/upload/:token)
+      - accessCode
+      - expiresAt
+    - log portal_access_logs
+Integrate this button into Track detail UI: “Generate client intake link”
+
+## Notifications
+When intake is completed:
+- Send email to internal recipients (e.g. renan@otimaenergia.com, callum@otimaenergia.com) with:
+  - deal link
+  - track type
+  - uploaded docs summary
+  - timestamp
+- Enqueue a Zoho task creation job (optional) to remind Renan to review intake:
+  - Subject: “Review client intake complete: <Company>”
+  - Due: now + 30 minutes in America/Sao_Paulo business hours
+
+## Reminders for incomplete intake
+Add scheduled job:
+- daily check for upload_sessions nearing expiry or incomplete after X days (config, e.g. 2 days):
+  - If bills < required OR missing LGPD OR missing LOA:
+    - create Zoho task for Renan: “Chase missing docs: <Company>”
+    - optionally send client reminder email (phase 2)
+Use existing job runner and Zoho task system (already built).
+
+# Phase 6 — PWA Requirements
+Make the client intake route mobile-first and PWA-ready:
+- Responsive layout (single column, big buttons)
+- Add-to-home-screen friendly manifest + icons
+- Full-screen theme colour
+- Offline not required, but graceful error messaging
+- Ensure upload UI works well on iOS and Android
+- Do not require app store distribution at this stage.
+
+# Backwards Compatibility Requirements
+- Existing links to /portal/upload/:token must still validate and allow uploads even if no dealId/trackId set.
+- For sessions without trackId:
+  - continue creating consumption_profiles only
+  - still allow LGPD/LOA steps if configured, but do not require them for legacy flow unless session flags say so
+- Do not remove or change the existing /api/leads/:id/portal-link without ensuring it still works.
+  - Ideally: update it to optionally accept trackId and use new track-aware flow.
+
+# Security & Logging
+- Every validate/verify/upload/register/consent action must be logged to portal_access_logs.
+- Rate limit stays in place.
+- Ensure /api/objects/upload and /api/consumption-profiles require valid token and (if enabled) verified code.
+- Consider enabling single-use once intake completed: mark session isUsed=true and enforce it for subsequent submits (but allow viewing already uploaded list).
+
+# Deliverables
+1) DB migrations + Drizzle schema updates
+2) Token auth middleware for portal uploads
+3) Track-aware intake link generator
+4) Client intake stepper UI (Bills → LGPD → LOA → Review/Submit)
+5) Consent capture + LOA PDF receipt stored in deal_track_documents
+6) Track readiness indicators in internal UI
+7) Notification jobs + reminder jobs (Zoho tasks + email)
+8) Mobile-first PWA polish (manifest, icons, install prompt optional)
+
+# Acceptance Criteria (Must Pass)
+- Old portal upload links still work.
+- New track-linked intake link works end-to-end on mobile.
+- Client can upload 6–12 bills in one session.
+- LGPD consent is mandatory and stored with full audit.
+- LOA captured and stored (and PDF receipt stored as document).
+- Upload endpoints are protected; unauthorised calls fail.
+- Track shows accurate progress and becomes “ready”.
+- Renan is notified when intake completes; reminders fire when intake incomplete.
