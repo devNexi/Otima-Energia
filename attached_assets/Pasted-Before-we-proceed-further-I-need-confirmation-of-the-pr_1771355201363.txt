@@ -1,0 +1,144 @@
+Before we proceed further, I need confirmation of the production URL structure and a few final improvements.
+
+This is critical to avoid broken client links.
+
+# PART 1 — Confirm Production Base URL
+
+We need to confirm where the portal app is actually served.
+
+Please answer clearly:
+
+1) What is the exact base URL where the internal Portal is currently running?
+   - Is it https://otimaenergia.com ?
+   - Or https://portal.otimaenergia.com ?
+   - Or https://app.otimaenergia.com ?
+   - Or a Replit subdomain?
+
+2) Is the marketing site and the Portal served from the same Next/React build,
+   or are they separate apps?
+
+3) Confirm that the following routes are live and accessible in production:
+   - /client/intake/:token
+   - /portal/upload/:token
+
+I want a clear answer like:
+
+"Portal is served from https://portal.otimaenergia.com and both intake routes are working."
+
+Do NOT assume. Verify.
+
+---
+
+# PART 2 — Improve Client Link Generation UX
+
+We need to make Renan’s workflow ultra simple.
+
+When he clicks “Generate Intake Link” inside a Track:
+
+It must:
+
+1) Display a modal with:
+   - Full clickable URL
+   - Access code (if enabled)
+   - Expiry date
+   - Copy Link button
+   - Copy Code button
+   - “Copy WhatsApp Message” button (preformatted)
+
+2) Add a “Send by Email” button:
+   - Uses existing Nodemailer
+   - Sends branded email with:
+     - Company name
+     - Secure intake link
+     - Access code
+     - Short instructions
+   - Logs the action in portal_access_logs
+
+3) Add “Regenerate Link” functionality:
+   - Invalidates previous session (mark expired)
+   - Creates new upload_session
+   - Logs regeneration
+
+---
+
+# PART 3 — Intake Completion Automation (Tighten It)
+
+When intake is completed:
+
+1) Ensure:
+   - upload_sessions.isUsed = true
+   - usedAt is set
+   - Session cannot be reused for new uploads
+   - Existing uploaded files remain viewable
+
+2) Enqueue:
+   - INTAKE_COMPLETED_NOTIFICATION job
+   - Zoho task:
+     Subject: "Review intake complete – <Company>"
+     Due: next business hour (America/Sao_Paulo)
+
+3) Add a visual badge on the Track:
+   - "Intake Complete"
+   - With completed timestamp
+
+---
+
+# PART 4 — Reminder System (Make It Smart)
+
+Add daily background job:
+
+If:
+- intake session exists
+- NOT completed
+- createdAt > 48 hours ago
+
+Then:
+- Create Zoho task:
+  "Chase intake documents – <Company>"
+- Only if no existing open chase task (prevent duplicates)
+
+Make this idempotent using dealId + purpose key.
+
+---
+
+# PART 5 — Security Final Check
+
+Confirm:
+
+1) /api/objects/upload requires valid portal token
+2) /api/consumption-profiles requires valid portal token
+3) Expired tokens return 401
+4) Access code must be verified before upload endpoints work
+5) Legacy sessions (without trackId) still function
+
+Provide confirmation after testing these cases.
+
+---
+
+# PART 6 — PWA Verification
+
+Confirm:
+
+1) manifest.json is correctly linked
+2) Icons load
+3) Mobile install prompt works
+4) Layout tested on:
+   - iPhone Safari
+   - Android Chrome
+
+No assumptions. Confirm tested.
+
+---
+
+# Deliverable Format
+
+Reply with:
+
+1) Confirmed production base URL
+2) Screenshot or confirmation that intake link works
+3) Confirmation that upload security is enforced
+4) Confirmation that new UX modal + email sender works
+5) Confirmation reminder job is running
+6) Any blockers
+
+Do not continue building new features until the above is confirmed.

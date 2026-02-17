@@ -1,9 +1,9 @@
 import { db } from "./db";
-import { jobs, dealZohoTaskLinks } from "@shared/schema";
-import { eq, and, lte, sql, or } from "drizzle-orm";
+import { jobs, dealZohoTaskLinks, uploadSessions } from "@shared/schema";
+import { eq, and, lte, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { computeNextCallbackDateTime } from "./scheduler";
 import { fetchZohoSnapshot, createZohoCallbackTask, createZohoTask, isZohoEnabled, isZohoCallbackTaskEnabled } from "./zohoClient";
-import { dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, deals } from "@shared/schema";
+import { dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, deals, clients } from "@shared/schema";
 
 const POLL_INTERVAL_MS = parseInt(process.env.JOB_POLL_INTERVAL_MS || '30000', 10);
 const MAX_CONCURRENT_JOBS = 3;
@@ -317,6 +317,7 @@ async function pollJobs(): Promise<void> {
 
   try {
     await recoverStuckJobs();
+    await checkIncompleteIntakes();
 
     const claimedJobs = await db.execute(sql`
       UPDATE jobs
@@ -379,6 +380,72 @@ async function pollJobs(): Promise<void> {
     }
   } catch (error: any) {
     console.error('[JobRunner] Poll error:', error.message);
+  }
+}
+
+let lastChaseCheckAt = 0;
+const CHASE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+async function checkIncompleteIntakes(): Promise<void> {
+  const now = Date.now();
+  if (now - lastChaseCheckAt < CHASE_CHECK_INTERVAL_MS) return;
+  lastChaseCheckAt = now;
+
+  try {
+    const cutoff = new Date(now - 48 * 60 * 60 * 1000);
+    const staleIntakes = await db.select({
+      sessionId: uploadSessions.id,
+      dealId: uploadSessions.dealId,
+      trackId: uploadSessions.trackId,
+      clientId: uploadSessions.clientId,
+      token: uploadSessions.token,
+      createdAt: uploadSessions.createdAt,
+    })
+      .from(uploadSessions)
+      .where(and(
+        isNull(uploadSessions.usedAt),
+        isNotNull(uploadSessions.dealId),
+        isNotNull(uploadSessions.trackId),
+        eq(uploadSessions.intakeType, 'full_intake'),
+        lte(uploadSessions.createdAt, cutoff),
+      ))
+      .limit(20);
+
+    for (const intake of staleIntakes) {
+      if (!intake.dealId || !intake.trackId) continue;
+
+      const idempotencyKey = `chase_intake_${intake.dealId}_${intake.trackId}`;
+      const existing = await db.select().from(jobs)
+        .where(and(
+          eq(jobs.type, 'ZOHO_CREATE_TASK'),
+          sql`${jobs.payload}->>'idempotencyKey' = ${idempotencyKey}`,
+        ))
+        .limit(1);
+
+      if (existing.length > 0) continue;
+
+      let companyName = '';
+      if (intake.clientId) {
+        const clientRows = await db.select({ companyName: clients.companyName })
+          .from(clients)
+          .where(eq(clients.id, intake.clientId))
+          .limit(1);
+        companyName = clientRows[0]?.companyName || '';
+      }
+
+      const dueDate = computeNextCallbackDateTime(new Date());
+      await enqueueJob('ZOHO_CREATE_TASK', {
+        dealId: intake.dealId,
+        subject: `Chase intake documents – ${companyName || `Deal ${intake.dealId}`}`,
+        dueDate: dueDate.toISOString(),
+        description: `Intake session created ${new Date(intake.createdAt).toLocaleDateString('pt-BR')} is still incomplete after 48+ hours. Track #${intake.trackId}. Follow up with client.`,
+        idempotencyKey,
+      });
+
+      console.log(`[JobRunner] Enqueued chase task for deal ${intake.dealId} track ${intake.trackId}`);
+    }
+  } catch (error: any) {
+    console.error('[JobRunner] Chase check error:', error.message);
   }
 }
 

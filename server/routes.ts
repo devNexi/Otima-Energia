@@ -1123,9 +1123,14 @@ export async function registerRoutes(
   app.post("/api/portal/intake/:token/complete", checkPortalRateLimit, validatePortalToken, async (req, res) => {
     try {
       const session = req.portalSession;
+
+      if (session.usedAt) {
+        return res.status(400).json({ success: false, error: "This intake session has already been completed" });
+      }
       
       await storage.updateUploadSession(session.id, { isUsed: true, usedAt: new Date() });
 
+      let clientName = '';
       if (session.trackId) {
         const track = await storage.getDealTrack(session.trackId);
         if (track) {
@@ -1136,16 +1141,28 @@ export async function registerRoutes(
 
       if (session.dealId && session.trackId) {
         const client = session.clientId ? await storage.getClient(session.clientId) : null;
+        clientName = client?.companyName || '';
         const profiles = await storage.getConsumptionProfilesBySession(session.id);
         const consents = await storage.getConsentRecordsBySession(session.id);
+
         enqueueJob('INTAKE_COMPLETED_NOTIFICATION', {
           dealId: session.dealId,
           trackId: session.trackId,
-          clientName: client?.companyName || '',
+          clientName,
           billsUploaded: profiles.length,
           lgpdCaptured: consents.some((c: any) => c.consentType === 'LGPD'),
           loaCaptured: consents.some((c: any) => c.consentType === 'LOA'),
         }).catch(err => console.error("Error enqueuing intake notification:", err));
+
+        const { computeNextCallbackDateTime } = await import('./scheduler');
+        const dueDate = computeNextCallbackDateTime(new Date());
+        enqueueJob('ZOHO_CREATE_TASK', {
+          dealId: session.dealId,
+          subject: `Review intake complete – ${clientName || `Deal ${session.dealId}`}`,
+          dueDate: dueDate.toISOString(),
+          description: `Client intake completed for Track #${session.trackId}. Bills uploaded: ${profiles.length}. Review documents in the portal.`,
+          idempotencyKey: `intake_review_${session.dealId}_${session.trackId}`,
+        }).catch(err => console.error("Error enqueuing Zoho review task:", err));
       }
 
       storage.logPortalAccess({
@@ -10732,6 +10749,7 @@ export async function registerRoutes(
           expectedBillsCount: activeSession.expectedBillsCount,
           usedAt: activeSession.usedAt,
           createdAt: activeSession.createdAt,
+          expiresAt: activeSession.expiresAt,
         },
         bills: {
           uploaded: profiles.length,
@@ -10761,11 +10779,13 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
 
-      const { expectedBillsCount, requireLOA, requireCode } = req.body;
+      const { expectedBillsCount, requireLOA, requireLGPD, requireCode } = req.body;
       
       const token = randomBytes(32).toString("hex");
       const accessCode = requireCode ? Math.random().toString(36).substring(2, 8).toUpperCase() : null;
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
 
       const session = await storage.createUploadSession({
         clientId: deal.clientId || null,
@@ -10774,13 +10794,11 @@ export async function registerRoutes(
         token,
         accessCode,
         expiresAt,
-        intakeType: track.type || 'intake',
+        intakeType: 'full_intake',
         expectedBillsCount: expectedBillsCount || 6,
         requireLOA: requireLOA ?? true,
-        requireLGPD: true,
+        requireLGPD: requireLGPD ?? true,
       });
-
-      const url = `/portal/upload/${token}`;
 
       await storage.logAdminAction({
         actor: (req.user as any)?.username || "system",
@@ -10793,14 +10811,150 @@ export async function registerRoutes(
 
       res.json({
         success: true,
-        url,
+        token,
         accessCode,
         expiresAt: expiresAt.toISOString(),
         sessionId: session.id,
+        companyName: client?.companyName || null,
       });
     } catch (error: any) {
       console.error("Error generating intake link:", error);
       res.status(500).json({ success: false, error: "Failed to generate intake link" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/send-intake-email", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { email, companyName, portalUrl, accessCode } = req.body;
+
+      if (!email || !portalUrl) {
+        return res.status(400).json({ success: false, error: "Email and portalUrl required" });
+      }
+
+      const smtpPass = process.env.SMTP_PASS;
+      if (!smtpPass) {
+        return res.status(500).json({ success: false, error: "SMTP not configured" });
+      }
+
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: "smtp.zoho.com",
+        port: 465,
+        secure: true,
+        auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+      });
+
+      const codeBlock = accessCode
+        ? `\n\nCódigo de acesso: ${accessCode}\n(Você precisará deste código para acessar o portal)`
+        : '';
+
+      await transporter.sendMail({
+        from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
+        to: email,
+        subject: `Ótima Energia – Portal de Documentos`,
+        text: `Olá${companyName ? ` ${companyName}` : ''},\n\nVocê recebeu um convite para enviar seus documentos de energia através do nosso portal seguro.\n\nAcesse o link abaixo para começar:\n${portalUrl}${codeBlock}\n\nO que você precisará:\n• Suas faturas de energia elétrica (últimos 6-12 meses)\n• Dados do representante legal da empresa\n\nO processo leva aproximadamente 5-10 minutos.\n\nSe tiver dúvidas, responda este e-mail ou entre em contato conosco.\n\nAtenciosamente,\nEquipe Ótima Energia`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #16803C; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Ótima Energia</h1>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Olá${companyName ? ` <strong>${companyName}</strong>` : ''},</p>
+            <p>Você recebeu um convite para enviar seus documentos de energia através do nosso portal seguro.</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${portalUrl}" style="background: #16803C; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Acessar Portal</a>
+            </div>
+            ${accessCode ? `<div style="background: #f3f4f6; padding: 16px; border-radius: 6px; text-align: center; margin: 16px 0;">
+              <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;">Código de acesso:</p>
+              <p style="margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #111827;">${accessCode}</p>
+            </div>` : ''}
+            <p style="font-size: 14px; color: #6b7280;"><strong>O que você precisará:</strong></p>
+            <ul style="font-size: 14px; color: #6b7280;">
+              <li>Suas faturas de energia elétrica (últimos 6-12 meses)</li>
+              <li>Dados do representante legal da empresa</li>
+            </ul>
+            <p style="font-size: 14px; color: #6b7280;">O processo leva aproximadamente 5-10 minutos.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 12px; color: #9ca3af;">Este e-mail foi enviado pela Ótima Energia. Se tiver dúvidas, responda este e-mail.</p>
+          </div>
+        </div>`,
+      });
+
+      storage.logPortalAccess({
+        clientId: null,
+        sessionToken: req.body.token || 'email_sent',
+        action: "intake_email_sent",
+        ipAddress: req.ip || null,
+        userAgent: req.get("User-Agent") || null
+      }).catch(err => console.error("Error logging portal access:", err));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error sending intake email:", error);
+      res.status(500).json({ success: false, error: "Failed to send email" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/regenerate-intake-link", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ success: false, error: "Track not found" });
+      }
+
+      const existingSessions = await storage.getUploadSessionsByTrack(trackId);
+      for (const sess of existingSessions) {
+        if (!sess.usedAt) {
+          await storage.updateUploadSession(sess.id, { isUsed: true, usedAt: new Date() });
+        }
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) {
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
+
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const { expectedBillsCount, requireLOA, requireLGPD, requireCode } = req.body;
+      const token = randomBytes(32).toString("hex");
+      const accessCode = requireCode ? Math.random().toString(36).substring(2, 8).toUpperCase() : null;
+      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+      await storage.createUploadSession({
+        clientId: deal.clientId || null,
+        dealId: deal.id,
+        trackId: track.id,
+        token,
+        accessCode,
+        expiresAt,
+        intakeType: 'full_intake',
+        expectedBillsCount: expectedBillsCount || 6,
+        requireLOA: requireLOA ?? true,
+        requireLGPD: requireLGPD ?? true,
+      });
+
+      await storage.logAdminAction({
+        actor: (req.user as any)?.username || "system",
+        actorIp: req.ip || null,
+        action: "regenerate_intake_link",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal.id, trackId, previousSessions: existingSessions.length }
+      });
+
+      res.json({
+        success: true,
+        token,
+        accessCode,
+        expiresAt: expiresAt.toISOString(),
+        companyName: client?.companyName || null,
+      });
+    } catch (error: any) {
+      console.error("Error regenerating intake link:", error);
+      res.status(500).json({ success: false, error: "Failed to regenerate intake link" });
     }
   });
 
