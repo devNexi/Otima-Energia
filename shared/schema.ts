@@ -4662,6 +4662,36 @@ export const INITIAL_TRACK_STATUS: Record<TrackType, string> = {
   OTHER: 'OTHER_NEW',
 };
 
+export const GDL_REQUIRED_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT'] as const;
+export const TRACK_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT', 'OTHER'] as const;
+export type TrackDocType = typeof TRACK_DOC_TYPES[number];
+
+export const GDL_TRANSITION_GATES: Record<string, (track: any, documents: any[]) => { allowed: boolean; reason?: string }> = {
+  GDL_SUBMITTED_TO_PRIME: (track, documents) => {
+    const meta = (track.metadata as any) || {};
+    const elig = meta.eligibility || {};
+    const allElig = elig.hasDistributor && elig.hasCCEEProfile && elig.monthlyDemandKw && elig.voltageLevel;
+    if (!allElig) return { allowed: false, reason: 'Eligibility checklist incomplete' };
+    const hasBill = documents.some((d: any) => d.documentType === 'ENERGY_BILL');
+    const hasConsent = documents.some((d: any) => d.documentType === 'LGPD_CONSENT') || elig.lgpdConsentDigital;
+    if (!hasBill) return { allowed: false, reason: 'Energy bill required' };
+    if (!hasConsent) return { allowed: false, reason: 'LGPD consent required' };
+    return { allowed: true };
+  },
+  GDL_PRIME_APPROVED: (track) => {
+    if (track.status !== 'GDL_SUBMITTED_TO_PRIME') return { allowed: false, reason: 'Must submit to Prime first' };
+    return { allowed: true };
+  },
+  GDL_CLIENT_ACCEPTED: (track) => {
+    if (track.status !== 'GDL_PROPOSAL_SENT') return { allowed: false, reason: 'Proposal must be sent first' };
+    return { allowed: true };
+  },
+  GDL_CLOSED_WON: (track) => {
+    if (track.status !== 'GDL_CONTRACT_SIGNED') return { allowed: false, reason: 'Contract must be signed first' };
+    return { allowed: true };
+  },
+};
+
 export const dealTracks = pgTable("deal_tracks", {
   id: serial("id").primaryKey(),
   dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
@@ -4671,6 +4701,9 @@ export const dealTracks = pgTable("deal_tracks", {
   status: text("status").notNull(),
   createdByUserId: text("created_by_user_id"),
   metadata: jsonb("metadata"),
+  nextActionAt: timestamp("next_action_at"),
+  nextActionText: text("next_action_text"),
+  staleAfterDays: integer("stale_after_days").default(7),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

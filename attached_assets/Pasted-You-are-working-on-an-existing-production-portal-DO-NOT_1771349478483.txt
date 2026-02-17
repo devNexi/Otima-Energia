@@ -1,0 +1,267 @@
+You are working on an existing production portal. DO NOT refactor, rename, or break any existing flows. Your job is to ADD a “Sales Activity Mirror” and “Auto-Callback Task Creation” in Zoho, so Renan can process deals operationally in the portal while continuing to call + schedule callbacks in Zoho (Zoho Voice). Google Calendar is NOT created directly by the portal; it is a bolt-on handled by Zoho’s native Google sync.
+
+# Context / Current System (DO NOT BREAK)
+- Frontend: React + TypeScript
+- Backend: Node.js + Express
+- DB: PostgreSQL + Drizzle ORM
+- Hosting: Replit
+- Zoho is the system of record for leads/deals and Zoho Voice is used for dialling.
+- Qualified deals are pushed into this portal via: POST /api/intake/zoho/deal which creates a Deal in portal.
+- After Deal creation, all operational work happens in portal (dossiers, RFQs, quotes, compliance, tracks, contracts, commissions).
+- Deals have an explicit state machine (DO NOT CHANGE): NOVO, DOSSIER_BUILDING, RFQ_READY, RFQ_SENT, QUOTES_IN, NEGOTIATION, CONTRACT_SENT, CONTRACT_SIGNED, SUPPLY_LIVE, CLOSED_WON, CLOSED_LOST.
+- Leads are qualified in Zoho, pushed to portal; portal is operational system for the Deal.
+- Uploads are handled separately (upload_sessions + diagnostic_submissions). Do not alter upload architecture.
+
+# Timezone / Locale (CRITICAL)
+All scheduling logic must use:
+- Timezone: America/Sao_Paulo (Rio de Janeiro)
+- Business hours rules must be evaluated in this timezone.
+- Store timestamps in DB in UTC; convert for display and scheduling calculations using America/Sao_Paulo.
+
+# High-Level Goal
+1) Inside each Deal page, show a “Sales Snapshot Panel” and “Sales Activity” feed that mirror Zoho activity for that Zoho deal (read-only).
+2) When a new Deal is created from Zoho intake, automatically create a Zoho Task (callback) assigned to Renan (Zoho owner) with a smart “next business hour” schedule.
+3) Renan continues to CALL and SCHEDULE inside Zoho. Portal mirrors context; portal does NOT replace Zoho CRM.
+4) Google Calendar reminders are achieved via Zoho’s own Google Calendar sync (portal does not create Google events).
+
+# Non-Destructive Rules (Critical)
+1) Do NOT change existing deal state machine logic or deal stages.
+2) Do NOT change existing RFQ workflow.
+3) Do NOT break the Zoho intake endpoint. Any new logic must be additive and non-blocking.
+4) Integrations must FAIL OPEN: if Zoho API fails, deal creation must still succeed. Log and continue.
+5) All new UI must degrade gracefully if Zoho IDs are missing.
+
+# Data Model Additions (Postgres + Drizzle)
+## A) Persist Zoho identifiers and owner mapping (needed for deep link + tasks)
+If deals table already contains Zoho IDs, reuse. If not, add ONE of these approaches:
+
+Preferred: create a mapping table (least risky)
+Table: deal_crm_links
+- id
+- dealId (FK -> deals.id, unique)
+- provider (enum: 'ZOHO')
+- zohoDealId (string, indexed, nullable)
+- zohoAccountId (string, nullable)
+- zohoContactId (string, nullable)
+- zohoOwnerId (string, nullable) // user in Zoho who owns the deal
+- createdAt, updatedAt
+
+Alternatively (only if safe): add these nullable columns to deals directly.
+
+## B) Cached snapshot for fast rendering + resilience
+Table: deal_sales_snapshot
+- id
+- dealId (FK, unique)
+- provider ('ZOHO')
+- lastContactAt (timestamp nullable)
+- nextTaskAt (timestamp nullable)
+- nextTaskStatus ('OVERDUE'|'UPCOMING'|'NONE')
+- totalCalls (int default 0)
+- totalTasks (int default 0)
+- totalNotes (int default 0)
+- lastSyncAt (timestamp)
+- snapshot (jsonb) // semi-normalised summary and top items, safe for UI
+- createdAt, updatedAt
+
+## C) Optional detailed activity items (recommended for better UI)
+Table: deal_sales_activity_items
+- id
+- dealId
+- provider ('ZOHO')
+- activityType ('CALL'|'TASK'|'NOTE'|'MEETING'|'EMAIL' etc.)
+- externalId (string)
+- occurredAt (timestamp)
+- title (string)
+- summary (text nullable)
+- url (text nullable) // deep link to Zoho record or call recording
+- raw (jsonb)
+- createdAt, updatedAt
+Unique constraint: (provider, externalId)
+
+## D) Internal notes in portal (fallback only)
+Table: deal_internal_notes
+- id
+- dealId
+- authorUserId
+- note (text)
+- createdAt
+
+## E) Job runner for non-blocking sync + task creation
+Because deal intake must remain fast and reliable, implement a lightweight jobs table:
+Table: jobs
+- id
+- type (string) e.g. 'ZOHO_SYNC_SNAPSHOT', 'ZOHO_CREATE_CALLBACK_TASK'
+- payload (jsonb)
+- status ('PENDING'|'RUNNING'|'SUCCESS'|'FAILED')
+- attempts (int default 0)
+- nextRunAt (timestamp)
+- lastError (text nullable)
+- createdAt, updatedAt
+
+Idempotency keys (important): add payload fields like dealId + 'purpose' so duplicates can be prevented.
+
+# Zoho Integration (Read-only mirror + task creation)
+## Requirements
+- Implement a Zoho API client wrapper with OAuth token handling (existing tokens/env secrets or stored tokens).
+- Must be server-to-server. Portal users should NOT need to login to Zoho.
+- Must support:
+  1) Fetching deal-related Tasks (next callback)
+  2) Fetching Calls (Zoho Voice logs) and recording links if available
+  3) Fetching Notes
+- Create Tasks in Zoho:
+  - Add a “CALL NEW LEAD: <CompanyName>” task on new intake
+  - Assigned to deal owner (zohoOwnerId) where possible.
+
+## Sync strategy
+- On demand: user clicks refresh in portal -> server refreshes snapshot now.
+- Background: scheduled job every N minutes refreshes snapshots for active deals (not closed).
+- “Active deals”: deals not in CLOSED_* or last updated within last 60 days (configurable).
+
+## Fail-open behaviour
+- If Zoho is down or rate-limited, show “Last synced <time>” and keep cached snapshot.
+- Do not block portal operations.
+
+# Auto-Callback Task Creation in Zoho (Core Feature)
+When POST /api/intake/zoho/deal is called and deal is created:
+1) Save Zoho IDs + zohoOwnerId mapping in deal_crm_links.
+2) Enqueue two jobs:
+   a) ZOHO_SYNC_SNAPSHOT (initial)
+   b) ZOHO_CREATE_CALLBACK_TASK (auto callback)
+
+IMPORTANT:
+- Do NOT create duplicate tasks if intake is retried.
+- Use idempotency: before creating callback task, query if a task with a specific marker exists for that zohoDealId.
+
+## Task creation spec
+Create a Zoho Task linked to the Zoho Deal (and/or Contact if required by Zoho API):
+- Subject: "CALL NEW LEAD: <CompanyName>"
+- Description: include:
+  - Portal deal URL (deep link)
+  - Zoho deal URL (deep link)
+  - Key contact details if present in intake payload
+- Status: "Not Started" (or equivalent)
+- Priority: "High" (optional)
+- Due Date/Time: computed using Business Hour Logic below
+- Owner: zohoOwnerId (preferred) else default configured Zoho user id
+- Reminder: if Zoho supports reminders on tasks, set it; otherwise rely on Zoho-to-Google Calendar sync or Zoho notifications.
+
+### Marker for idempotency (mandatory)
+Add a unique identifier in the task description or a custom field if available, e.g.:
+"[OTIMA_AUTO_CALLBACK_TASK v1] dealId=<portalDealId> zohoDealId=<zohoDealId>"
+Before creating, search tasks for that marker or for Subject+Deal match created within last X hours.
+
+# Business Hour Scheduling Logic (America/Sao_Paulo)
+Implement a helper: computeNextCallbackDateTime(intakeTime)
+Rules in America/Sao_Paulo:
+- Working days: Monday to Friday
+- Working hours: 09:00 to 18:00
+- Default callback delay: 30 minutes (config DEFAULT_CALLBACK_DELAY_MINUTES=30)
+- Duration not needed for Zoho task, but okay to include in description.
+
+Algorithm:
+1) Let now = intakeTime in America/Sao_Paulo
+2) If weekend (Sat/Sun): set callback to next Monday 09:00
+3) Else if time < 09:00: set callback to today 09:00
+4) Else if 09:00 <= time <= 17:30: set callback = now + 30 minutes
+5) Else (after 17:30): set callback to next business day 09:00
+6) If callback time falls outside business hours, roll to next business day 09:00
+
+Store resulting datetime as UTC in DB; send appropriate format to Zoho (respecting Zoho timezone expectations; if Zoho expects local date/time fields, convert accordingly).
+
+# UI/UX Requirements (Frontend)
+## Deal Detail Page: Sales Snapshot Panel (Top Right)
+Add a non-breaking component “Sales Snapshot” displaying:
+- Last contact: relative (“2 days ago”) + absolute tooltip
+- Next callback/task: date/time in America/Sao_Paulo
+- Task status badge: Overdue / Upcoming / None
+- Total calls (Zoho)
+- Total tasks (optional)
+- Total notes (optional)
+- Link button: “Open in Zoho” -> deep link using zohoDealId
+- Refresh button: triggers server refresh endpoint
+- “No activity warning”: If lastContactAt older than 10 days AND deal not closed, show orange warning:
+  "No sales activity logged in the last 10 days."
+
+## Sales Activity Section (Read-only)
+Show recent items (last 10):
+- Calls: date/time, outcome if available, link to recording if present
+- Tasks: due date, status, subject
+- Notes: snippet, author/date
+If detailed activity table is not implemented, render from snapshot JSON.
+
+## Manual Notes (Fallback)
+- Simple internal notes section:
+  - Add note
+  - List notes with timestamps
+- This does not sync to Zoho in MVP.
+
+## Graceful Degradation
+If no Zoho link exists for a deal:
+- Hide Sales Snapshot OR show “Zoho activity unavailable for this deal”.
+
+# Backend API (Express)
+Add endpoints:
+- GET /api/deals/:dealId/sales-snapshot
+  -> returns cached snapshot + lastSyncAt
+- POST /api/deals/:dealId/sales-snapshot/refresh
+  -> refreshes from Zoho now and returns updated snapshot
+- GET /api/deals/:dealId/sales-activity?limit=10 (optional)
+- POST /api/deals/:dealId/internal-notes
+- GET /api/deals/:dealId/internal-notes
+
+Security: protect endpoints with existing auth middleware; refresh endpoint should be rate-limited.
+
+# Zoho Deep Links
+Implement consistent deep links:
+- Zoho deal URL must be built from zohoDealId + region/domain config.
+- Provide “Open in Zoho” button in UI.
+- For activity items (calls/tasks/notes), include url when possible.
+
+# Job Runner
+Implement a safe job runner loop:
+- Poll jobs where status=PENDING and nextRunAt <= now
+- Mark RUNNING, attempt, update attempts, on success mark SUCCESS
+- On failure, mark FAILED and set nextRunAt with backoff (e.g. exponential) up to max attempts
+- Never crash the server loop; handle errors per job.
+- Ensure idempotency for callback task creation.
+
+# Configuration (ENV flags)
+Add config flags:
+- ENABLE_ZOHO_SNAPSHOT_SYNC=true/false
+- ENABLE_ZOHO_AUTO_CALLBACK_TASK=true/false
+- DEFAULT_CALLBACK_DELAY_MINUTES=30
+- BUSINESS_HOURS_START=09:00
+- BUSINESS_HOURS_END=18:00
+- NO_ACTIVITY_WARNING_DAYS=10
+- TIMEZONE=America/Sao_Paulo
+
+Default behaviour:
+- Snapshot sync enabled
+- Auto callback task enabled
+But if disabled, portal must still function normally.
+
+# Google Calendar (Explicit Scope)
+DO NOT implement direct Google Calendar integration in this task.
+Instead:
+- Document that Google Calendar reminders are achieved via Zoho’s native Google Calendar sync.
+- The portal’s job is to ensure the Zoho Task exists and is scheduled correctly (America/Sao_Paulo).
+If asked later, we can add direct Google integration, but not now.
+
+# Testing / Acceptance Criteria
+1) Existing intake and Deal workflows remain unchanged and work end-to-end.
+2) When a new deal is created via POST /api/intake/zoho/deal:
+   - deal is created successfully even if Zoho APIs fail
+   - a background job attempts to create a Zoho callback task
+3) The Deal detail page shows the Sales Snapshot panel when zohoDealId exists.
+4) Refresh button updates snapshot.
+5) No activity warning appears when lastContactAt > 10 days.
+6) Scheduling logic respects America/Sao_Paulo business hours and weekends.
+7) No duplicate Zoho callback tasks are created on intake retries (idempotent).
+8) Manual internal notes can be created/viewed and do not affect Zoho.
+
+# Deliverables
+- Drizzle migrations + schema updates
+- New backend routes + Zoho client wrapper + job runner
+- React components for Sales Snapshot + Sales Activity + Manual Notes
+- Non-breaking integration into Deal detail page
+- Clear comments on business-hour scheduling and idempotency

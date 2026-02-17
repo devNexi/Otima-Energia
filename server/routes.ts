@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql, eq, and, or, ilike } from "drizzle-orm";
+import { sql, eq, and, or, ilike, desc } from "drizzle-orm";
 import { 
   insertLeadSchema, 
   insertClientSchema, 
@@ -47,7 +47,8 @@ import {
   invoices,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
-  type DealState
+  type DealState,
+  dealTracks
 } from "@shared/schema";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
@@ -10168,13 +10169,21 @@ export async function registerRoutes(
       const track = await storage.getDealTrack(parseInt(req.params.trackId));
       if (!track) return res.status(404).json({ error: "Track not found" });
 
-      const { TRACK_STATUS_TRANSITIONS } = await import("@shared/schema");
+      const { TRACK_STATUS_TRANSITIONS, GDL_TRANSITION_GATES } = await import("@shared/schema");
       const allowed = TRACK_STATUS_TRANSITIONS[track.status] || [];
       if (!allowed.includes(newStatus)) {
         return res.status(400).json({ 
           error: `Cannot transition from ${track.status} to ${newStatus}`,
           allowedTransitions: allowed
         });
+      }
+
+      if (track.type === 'GDL' && GDL_TRANSITION_GATES[newStatus]) {
+        const documents = await storage.getDealTrackDocuments(track.id);
+        const gate = GDL_TRANSITION_GATES[newStatus](track, documents);
+        if (!gate.allowed) {
+          return res.status(400).json({ error: gate.reason, gateBlocked: true });
+        }
       }
 
       const updated = await storage.updateDealTrack(track.id, { status: newStatus });
@@ -10187,16 +10196,63 @@ export async function registerRoutes(
         createdByUserId: (req.user as any)?.id || null,
       });
 
+      let closureEvaluation = null;
       if (newStatus.endsWith('_CLOSED_WON') || newStatus.endsWith('_CLOSED_LOST')) {
         const allTracks = await storage.getDealTracks(track.dealId);
         const anyWon = allTracks.some(t => t.status.endsWith('_CLOSED_WON'));
-        const allClosed = allTracks.every(t => t.status.endsWith('_CLOSED_WON') || t.status.endsWith('_CLOSED_LOST'));
-        if (anyWon || allClosed) {
-          console.log(`[DealTracks] Deal ${track.dealId} closure evaluation: anyWon=${anyWon}, allClosed=${allClosed}`);
+        const allLost = allTracks.every(t => t.status.endsWith('_CLOSED_WON') || t.status.endsWith('_CLOSED_LOST'));
+        const allClosedLost = allTracks.every(t => t.status.endsWith('_CLOSED_LOST'));
+        if (anyWon) {
+          closureEvaluation = { suggestion: 'CLOSE_WON', message: 'A track was won. Close deal as Won?' };
+        } else if (allClosedLost) {
+          closureEvaluation = { suggestion: 'CLOSE_LOST', message: 'All tracks lost. Close deal as Lost?' };
         }
       }
 
+      res.json({ ...updated, closureEvaluation });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/tracks/:trackId/next-action", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const { nextActionAt, nextActionText } = req.body;
+      const track = await storage.getDealTrack(parseInt(req.params.trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+      const updated = await storage.updateDealTrack(track.id, {
+        nextActionAt: nextActionAt ? new Date(nextActionAt) : null,
+        nextActionText: nextActionText || null,
+      });
       res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const allTracks = await db.select({
+        track: dealTracks,
+        dealId: dealTracks.dealId,
+      }).from(dealTracks).orderBy(desc(dealTracks.updatedAt));
+      
+      const dealIds = [...new Set(allTracks.map(t => t.track.dealId))];
+      const dealMap: Record<string, any> = {};
+      for (const did of dealIds) {
+        const d = await storage.getDeal(did);
+        if (d) {
+          const client = d.clientId ? await storage.getClient(d.clientId) : null;
+          dealMap[did] = { id: d.id, status: d.status, companyName: client?.companyName || 'Unknown' };
+        }
+      }
+      
+      res.json(allTracks.map(t => ({
+        ...t.track,
+        deal: dealMap[t.track.dealId] || null,
+      })));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

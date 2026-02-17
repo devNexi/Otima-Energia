@@ -1,0 +1,191 @@
+Upgrade:
+
+At the top of the Tracks tab (and optionally on the Deal header), add 4 one-click buttons:
+
++ GDL Track
+
++ ACL Track
+
++ ACR Track
+
++ Other Track
+
+Each button creates the track instantly with default status and opens it expanded.
+
+Why it matters: Renan will use GDL constantly at the start. Make it one click.
+
+2) Make GDL a guided “checklist wizard” (not just metadata)
+
+You’ve stored eligibility in metadata (fine), but the real speed comes from gating + progress.
+
+Add a “GDL Readiness” progress bar on the Track Card:
+
+Example:
+
+Eligibility: ✅/❌
+
+Docs: 2/3
+
+Prime submission: Pending/Done
+
+Proposal: Pending/Done
+
+Accepted: Pending/Done
+
+Then the card’s primary CTA becomes context-aware:
+
+“Complete eligibility”
+
+“Upload missing docs”
+
+“Submit to Prime”
+
+“Mark Prime approved”
+
+“Record client acceptance”
+
+“Mark contract signed”
+
+This turns Tracks into a workflow tool, not a database viewer.
+
+3) Enforce document requirements at the Track level (GDL)
+
+Right now you have deal_track_documents linking, but you need required doc types for GDL.
+
+Add documentType on deal_track_documents:
+
+Enum:
+
+ENERGY_BILL
+
+CNPJ_CARD
+
+LGPD_CONSENT
+
+OTHER
+
+Then enforce rules:
+
+For GDL:
+
+ENERGY_BILL required (min 1, ideally 6 files)
+
+If Pessoa Jurídica: CNPJ_CARD required
+
+LGPD_CONSENT required (either uploaded or digital consent checkbox stored as event/metadata)
+
+Even if you don’t hard-block, show warnings and disable “Submit to Prime” until complete.
+
+4) Add the one thing Renan will live on: a “Next Action” field per Track
+
+This is the single biggest pipeline management win inside the portal (even if sales tasks live in Zoho).
+
+Add to deal_tracks:
+
+nextActionAt (timestamp, nullable)
+
+nextActionText (varchar/text, nullable)
+
+staleAfterDays (optional, default 7)
+
+Display:
+
+On Track card: “Next action: Tue 10:30 — Ask for 6 bills”
+
+If overdue: red badge
+
+If none: grey “No next action”
+
+This keeps the portal usable even when Zoho is open on the other screen.
+
+5) Track status transitions: ensure they’re right for GDL
+
+You said transitions are validated (great). But ensure the GDL statuses match the Prime flow and don’t force irrelevant states.
+
+Minimum recommended GDL states:
+
+GDL_NEW
+
+GDL_ELIGIBILITY_PASSED
+
+GDL_DOCS_COMPLETE
+
+GDL_SUBMITTED_TO_PRIME
+
+GDL_PRIME_APPROVED / GDL_PRIME_REJECTED
+
+GDL_PROPOSAL_SENT
+
+GDL_CLIENT_ACCEPTED
+
+GDL_CONTRACT_SIGNED
+
+GDL_CLOSED_WON / GDL_CLOSED_LOST
+
+Make sure:
+
+GDL_SUBMITTED_TO_PRIME is blocked unless docs complete + eligibility passed.
+
+GDL_PRIME_APPROVED can’t happen unless submitted.
+
+GDL_CLIENT_ACCEPTED can’t happen unless proposal sent.
+
+GDL_CLOSED_WON can’t happen unless contract signed (unless you explicitly allow manual override).
+
+6) Do NOT auto-move the Deal stage (but DO evaluate closure)
+
+Your earlier system had Deal stage machine. Tracks must not hijack it.
+
+Best practice:
+
+Tracks can close won/lost independently.
+
+Deal closes when:
+
+any Track = CLOSED_WON → prompt Renan: “Close deal as Won?” (one-click confirm)
+
+all Tracks = CLOSED_LOST → prompt Renan: “Close deal as Lost?”
+
+Otherwise leave Deal stage untouched.
+
+This keeps the Otima RFQ flow intact.
+
+7) Add “Partner” selection for ACL/ACR tracks (future-proofing)
+
+GDL is Prime today, but later you’ll want:
+
+GDL with other partners
+
+ACL with multiple partners
+
+ACR consultancies, etc.
+
+So on non-GDL tracks (and even on GDL optionally), add:
+
+partnerId select
+
+partner label displayed on card
+
+Even if not used yet, it’s the hook that keeps roads open.
+
+8) Add a global “Tracks Queue” page for Renan (optional but huge)
+
+Inside one Deal, Tracks are fine.
+But Renan will want to work a pipeline.
+
+Create a page:
+
+/tracks
+Filter + sort:
+
+By type (GDL/ACL/ACR)
+
+By status
+
+By “Next action overdue”
+
+By “Updated recently”
+
+By partner
+
+This becomes his “today view”.

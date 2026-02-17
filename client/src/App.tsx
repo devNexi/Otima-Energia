@@ -43,6 +43,7 @@ import ProposalPreview from "@/pages/ProposalPreview";
 import QuoteInbox from "@/pages/QuoteInbox";
 import EnergiaAssinatura from "@/pages/EnergiaAssinatura";
 import DiagnosticoForm from "@/pages/DiagnosticoForm";
+import TracksQueue from "@/pages/TracksQueue";
 
 function Router() {
   return (
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/admin/qa" component={QaConsole} />
       <Route path="/admin/qa/history" component={QaHistory} />
       <Route path="/admin/walkthrough" component={RenanWalkthrough} />
+      <Route path="/admin/tracks" component={TracksQueue} />
       <Route path="/admin/quote-inbox" component={QuoteInbox} />
       <Route component={NotFound} />
     </Switch>
