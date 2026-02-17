@@ -10100,6 +10100,148 @@ export async function registerRoutes(
 
   // ============== END INBOUND EMAIL PARSE ==============
 
+  // ============== DEAL TRACKS ==============
+
+  app.get("/api/deals/:dealId/tracks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const tracks = await storage.getDealTracks(req.params.dealId);
+      res.json(tracks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/deals/:dealId/tracks", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const { type, partnerId, partnerName, metadata } = req.body;
+      if (!type || !['GDL', 'ACL', 'ACR', 'OTHER'].includes(type)) {
+        return res.status(400).json({ error: "Invalid track type" });
+      }
+      const { INITIAL_TRACK_STATUS } = await import("@shared/schema");
+      const track = await storage.createDealTrack({
+        dealId: req.params.dealId,
+        type,
+        partnerId: partnerId || null,
+        partnerName: partnerName || null,
+        status: INITIAL_TRACK_STATUS[type as keyof typeof INITIAL_TRACK_STATUS],
+        createdByUserId: (req.user as any)?.id || null,
+        metadata: metadata || null,
+      });
+      await storage.createDealTrackEvent({
+        trackId: track.id,
+        eventType: 'TRACK_CREATED',
+        fromStatus: null,
+        toStatus: track.status,
+        payload: { type, partnerId, partnerName },
+        createdByUserId: (req.user as any)?.id || null,
+      });
+      res.json(track);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/:trackId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const track = await storage.getDealTrack(parseInt(req.params.trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+      const [events, documents] = await Promise.all([
+        storage.getDealTrackEvents(track.id),
+        storage.getDealTrackDocuments(track.id),
+      ]);
+      res.json({ ...track, events, documents });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/tracks/:trackId/status", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const { newStatus, notes } = req.body;
+      if (!newStatus || typeof newStatus !== 'string') {
+        return res.status(400).json({ error: "newStatus is required" });
+      }
+      const track = await storage.getDealTrack(parseInt(req.params.trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+
+      const { TRACK_STATUS_TRANSITIONS } = await import("@shared/schema");
+      const allowed = TRACK_STATUS_TRANSITIONS[track.status] || [];
+      if (!allowed.includes(newStatus)) {
+        return res.status(400).json({ 
+          error: `Cannot transition from ${track.status} to ${newStatus}`,
+          allowedTransitions: allowed
+        });
+      }
+
+      const updated = await storage.updateDealTrack(track.id, { status: newStatus });
+      await storage.createDealTrackEvent({
+        trackId: track.id,
+        eventType: 'STATUS_CHANGE',
+        fromStatus: track.status,
+        toStatus: newStatus,
+        payload: { notes: notes || null },
+        createdByUserId: (req.user as any)?.id || null,
+      });
+
+      if (newStatus.endsWith('_CLOSED_WON') || newStatus.endsWith('_CLOSED_LOST')) {
+        const allTracks = await storage.getDealTracks(track.dealId);
+        const anyWon = allTracks.some(t => t.status.endsWith('_CLOSED_WON'));
+        const allClosed = allTracks.every(t => t.status.endsWith('_CLOSED_WON') || t.status.endsWith('_CLOSED_LOST'));
+        if (anyWon || allClosed) {
+          console.log(`[DealTracks] Deal ${track.dealId} closure evaluation: anyWon=${anyWon}, allClosed=${allClosed}`);
+        }
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/tracks/:trackId/metadata", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const track = await storage.getDealTrack(parseInt(req.params.trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+      const merged = { ...(track.metadata as any || {}), ...req.body.metadata };
+      const updated = await storage.updateDealTrack(track.id, { metadata: merged });
+      await storage.createDealTrackEvent({
+        trackId: track.id,
+        eventType: 'METADATA_UPDATE',
+        fromStatus: track.status,
+        toStatus: track.status,
+        payload: { metadata: req.body.metadata },
+        createdByUserId: (req.user as any)?.id || null,
+      });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/documents", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const { documentType, fileName, fileKey } = req.body;
+      const doc = await storage.createDealTrackDocument({
+        trackId: parseInt(req.params.trackId),
+        documentType: documentType || null,
+        fileName: fileName || null,
+        fileKey: fileKey || null,
+        uploadedByUserId: (req.user as any)?.id || null,
+      });
+      res.json(doc);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============== END DEAL TRACKS ==============
+
   // Generate proposal PDF with brand kit styling
   app.get("/api/proposals/:proposalId/pdf", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;

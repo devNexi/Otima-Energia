@@ -18,6 +18,7 @@ import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
+import { DealTracksTab } from "@/components/deals/DealTracksTab";
 import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
@@ -44,7 +45,8 @@ import {
   Shield,
   ShieldCheck,
   Send,
-  BarChart3
+  BarChart3,
+  GitBranch
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -629,6 +631,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <TabsTrigger value="cases" className="flex items-center gap-2">
             <Briefcase className="w-4 h-4" />
             {language === "pt" ? "Casos" : "Cases"}
+          </TabsTrigger>
+          <TabsTrigger value="tracks" className="flex items-center gap-2" data-testid="tab-tracks">
+            <GitBranch className="w-4 h-4" />
+            {language === "pt" ? "Trilhas" : "Tracks"}
           </TabsTrigger>
           <ContextualTooltip
             tooltipKey="tab_compliance_overview"
@@ -1302,6 +1308,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
 
         <TabsContent value="cases">
           <DealCasesTab dealId={dealId} />
+        </TabsContent>
+
+        <TabsContent value="tracks">
+          <DealTracksTab dealId={dealId} />
         </TabsContent>
 
         <TabsContent value="compliance">
