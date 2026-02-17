@@ -1,0 +1,262 @@
+You are working on an existing production portal. DO NOT refactor or change existing flows unless explicitly instructed. Your job is to ADD a new capability: multi-track “sales motions” inside a Deal, starting with a GDL Track for Prime/Shell, while keeping the existing “standard Otima RFQ” workflow intact and operational.
+
+# Context / Current Architecture (DO NOT BREAK)
+- Frontend: React + TypeScript
+- Backend: Node.js + Express
+- DB: PostgreSQL + Drizzle ORM
+- Hosting: Replit
+- Zoho is system of record for leads/deals. Portal receives qualified deals from Zoho via: POST /api/intake/zoho/deal
+- This endpoint creates a Deal in the portal. After creation, the portal handles operations (dossiers, RFQs, quotes, compliance, commissions).
+- Deal has explicit state machine stages: NOVO, DOSSIER_BUILDING, RFQ_READY, RFQ_SENT, QUOTES_IN, NEGOTIATION, CONTRACT_SENT, CONTRACT_SIGNED, SUPPLY_LIVE, CLOSED_WON, CLOSED_LOST.
+- Leads have simpler status, but operational work is on Deal.
+- Uploads are not stored in leads table. Uploads are handled via upload_sessions + diagnostic_submissions that link back via leadId (or dealId).
+- Requirement: We must preserve current Otima marketplace process for future multi-partner scenarios. We must ADD tracks, not replace.
+
+# High-Level Goal
+Add “Deal Tracks” so a single Deal can pursue multiple commercial pathways in parallel or sequentially without duplicating the Deal, dossier, or restarting the process.
+
+We want explicit Track types:
+- GDL Track (Prime/Shell “Energia por Assinatura”)
+- ACL Track (Mercado Livre / Free-market energy partners)
+- ACR Track (regulated market / consultancies / other)
+- Other Track (future)
+
+UX requirement: No generic “Add Track” button. Instead show 4 explicit buttons:
+- “+ GDL Track”
+- “+ ACL Track”
+- “+ ACR Track”
+- “+ Other Track”
+
+# Non-Destructive Rules (Critical)
+1) Do NOT change the existing Deal state machine or how it works for existing marketplace RFQ process.
+2) Do NOT break or modify existing RFQ logic or stages.
+3) Do NOT break the existing dossier building process.
+4) Do NOT rename existing stages or states.
+5) ADD new tables, endpoints, and UI components in a way that is isolated and backwards compatible.
+6) Existing Deal detail pages must continue to work even if there are zero tracks.
+
+# Data Model: Add Deal Tracks (DB + Drizzle)
+Create a new table: deal_tracks
+
+Required columns:
+- id (uuid / serial, consistent with existing conventions)
+- dealId (FK to deals.id, indexed)
+- type (enum/string): 'GDL' | 'ACL' | 'ACR' | 'OTHER'
+- partnerId (nullable FK to partners.id if partners table exists; for GDL initial partner is Prime/Shell but keep nullable for flexibility)
+- status (string/enum per type - see below)
+- createdByUserId (nullable FK to users)
+- createdAt, updatedAt
+- metadata (jsonb nullable) for type-specific values (keep small; do not store large files here)
+
+Create a new table: deal_track_events (optional but recommended)
+- id
+- trackId (FK deal_tracks.id)
+- eventType (string)
+- payload (jsonb)
+- createdAt
+- createdByUserId
+
+Uploads/documents: DO NOT add file blobs to DB. Reuse existing upload_sessions / diagnostic_submissions patterns.
+Add an optional foreign key or reference to connect documents to tracks:
+- Either add `trackId` to diagnostic_submissions (nullable) OR
+- Create a join table `deal_track_documents(trackId, submissionId)` if you prefer not to alter existing table.
+Choose the safest approach with minimal risk: JOIN TABLE is preferred if diagnostic_submissions is already used widely.
+
+# Track Statuses (Separate from Deal State Machine)
+Each track has its own internal workflow; Deal state machine remains as-is.
+
+## GDL Track statuses (initial implementation)
+These statuses are based on Prime Energy programme structure:
+- GDL_NEW
+- GDL_ELIGIBILITY_PASSED
+- GDL_DOCS_COMPLETE
+- GDL_SUBMITTED_TO_PRIME
+- GDL_PRIME_APPROVED
+- GDL_PRIME_REJECTED
+- GDL_PROPOSAL_SENT
+- GDL_CLIENT_ACCEPTED
+- GDL_CONTRACT_SENT
+- GDL_CONTRACT_SIGNED
+- GDL_CLOSED_WON
+- GDL_CLOSED_LOST
+
+Note: Track can close won/lost independent of Deal. Deal closure rules are defined below.
+
+## ACL Track statuses (placeholder MVP)
+- ACL_NEW
+- ACL_DOSSIER_READY
+- ACL_RFQ_SENT
+- ACL_QUOTES_IN
+- ACL_NEGOTIATION
+- ACL_CONTRACT_SIGNED
+- ACL_CLOSED_WON
+- ACL_CLOSED_LOST
+
+## ACR Track statuses (placeholder MVP)
+- ACR_NEW
+- ACR_ASSESSMENT
+- ACR_PROPOSAL_SENT
+- ACR_ACCEPTED
+- ACR_CLOSED_WON
+- ACR_CLOSED_LOST
+
+## OTHER Track statuses
+- OTHER_NEW
+- OTHER_IN_PROGRESS
+- OTHER_CLOSED_WON
+- OTHER_CLOSED_LOST
+
+# Deal Closure Rules (Important)
+- A Deal can have multiple tracks.
+- A Deal should be set to CLOSED_WON if any track reaches *_CLOSED_WON (unless business logic says otherwise).
+- A Deal should be set to CLOSED_LOST only if ALL tracks are *_CLOSED_LOST (or manually closed).
+- Existing Deal stages should not be blocked by tracks; tracks should not force the deal into RFQ stages unless the user explicitly proceeds with RFQ flow.
+
+Implement this carefully:
+- Do not auto-mutate the Deal stage aggressively.
+- Provide a safe helper function: evaluateDealClosure(dealId) that checks track statuses and updates Deal only when closure conditions are met.
+
+# GDL Eligibility (Data Capture + UI Rules)
+For GDL, add an eligibility checklist on the track, based on Prime Energy “Energia por Assinatura” criteria:
+We MUST reflect this accurately:
+
+Eligibility required fields/questions:
+- averageMonthlyKwh (number; must be >= 500)
+- monthsOfHistoryProvided (>= 6) OR proof by uploads
+- hasOnsiteGenerationAtLoad (must be false)
+- receivesCreditsFromOtherUnits (must be false)
+- hasTariffOrTaxExemptions (must be false)
+- isAdimplenteWithDistributor (must be true)
+- distributorName (string)
+- customerType (PF/PJ)
+- upload requirements:
+  - last 6 energy bills OR one bill showing sufficient history
+  - if PJ: CNPJ card
+  - LGPD consent evidence or explicit portal consent checkbox (see below)
+
+These fields can be stored in deal_tracks.metadata JSONB for GDL only OR in a dedicated table deal_track_gdl (preferred if you want strong typing).
+Choose approach:
+- For fastest safe implementation: metadata jsonb + schema validation on backend.
+- For stronger long-term: create deal_track_gdl table. If you choose this, do not overcomplicate. Keep minimal.
+
+LGPD consent:
+- Add a checkbox “Client consent to share data with Prime Energy for evaluation” with timestamp + user.
+- Store consent text version and timestamp (in metadata or event).
+
+# UI/UX Requirements
+## Where to place track controls
+On Deal Detail page, add a “Tracks” panel/section.
+At top of this panel show four buttons:
+- + GDL Track
+- + ACL Track
+- + ACR Track
+- + Other Track
+
+When clicked:
+- Create a new track row in deal_tracks with type and initial status.
+- Navigate/expand to that track’s view immediately.
+
+## Track list display
+Show each track as a card or row with:
+- type badge (GDL/ACL/ACR/OTHER)
+- partner (if set)
+- current status
+- last updated
+- key next action button (“Complete eligibility”, “Upload docs”, “Submit to Prime”, etc.)
+- warning indicators (missing docs, eligibility failed, stalled)
+
+## GDL Track Detail UI
+Within the track, provide a guided step UI:
+1) Eligibility checklist (simple YES/NO + numeric)
+2) Documents upload area (reusing existing upload session components)
+3) “Submit to Prime” button (only enabled when eligibility passed + required docs present)
+4) Prime decision (approved/rejected + notes + timestamp)
+5) Proposal steps (record proposal sent date + upload proposal file if needed)
+6) Client acceptance (toggle + evidence upload)
+7) Contract signed (toggle + date + evidence upload)
+8) Close won/lost
+
+All actions should create events in deal_track_events for auditing.
+
+## Do not break existing pages
+- The Deal page must load even if there are 0 tracks.
+- No track-related code should interfere with RFQ logic.
+
+# Backend/API Requirements (Express)
+Add endpoints:
+- POST /api/deals/:dealId/tracks
+  body: { type: 'GDL'|'ACL'|'ACR'|'OTHER' }
+  returns created track
+
+- GET /api/deals/:dealId/tracks
+  returns tracks list
+
+- GET /api/tracks/:trackId
+  returns track + metadata + events + linked documents
+
+- PATCH /api/tracks/:trackId
+  used to update status, metadata fields, partnerId, notes
+  enforce status transitions with a simple per-type transition map (do not overengineer)
+
+- POST /api/tracks/:trackId/events
+  for logging events (if not auto-created by PATCH)
+
+- POST /api/tracks/:trackId/submit-to-prime (GDL only)
+  This does NOT actually email Prime unless system already does it.
+  For MVP: just sets status to GDL_SUBMITTED_TO_PRIME and logs event.
+  Gate it with validations:
+   - eligibility passed
+   - required docs present
+   - LGPD consent present
+
+Validation errors must be explicit and helpful.
+
+# Document Linking
+We must associate uploads/submissions to a track without changing existing upload architecture.
+
+Preferred approach:
+- Create join table `deal_track_submissions`:
+  - trackId
+  - submissionId (or upload_session id depending on existing architecture)
+  - createdAt
+Then in Track detail UI, show documents via this join.
+
+When a user uploads docs inside the GDL track view:
+- create the upload session as normal
+- create diagnostic_submissions as normal (if that is the existing pattern)
+- link resulting submissionId to the track via join table.
+
+DO NOT break existing dossier uploads or other upload flows.
+
+# Migration / Drizzle
+- Add migrations for new tables and indices.
+- Ensure foreign keys are correct.
+- Add seed or safe default for existing deals: no tracks created.
+- All new code paths must tolerate empty/missing.
+
+# Testing / Safety Checklist
+Implement and verify:
+1) Existing Deal + RFQ flows still work end-to-end with no tracks created.
+2) Creating a GDL track does not change Deal stage.
+3) Uploading docs in a track does not interfere with dossier upload sessions.
+4) Track status updates are persisted and visible on reload.
+5) Submitting to Prime is blocked until eligibility + docs + consent are present.
+6) Deal closure evaluation:
+   - If a track is closed won, Deal can be closed won (but do not force if business logic says manual confirmation; if uncertain, implement a confirmation modal in UI).
+   - If all tracks closed lost, allow closing the Deal lost.
+
+# Implementation Order (Do in this sequence)
+1) DB schema + migrations for deal_tracks + (optional) events + join table
+2) Backend endpoints for CRUD tracks + update status + fetch
+3) Frontend: add Tracks panel to Deal page with 4 explicit buttons
+4) Frontend: implement GDL track detail view with eligibility + docs + submit gating
+5) Add basic event logging (recommended)
+6) Add minimal closure evaluation helper, but do NOT break existing closure logic
+
+# Deliverables
+- PR-quality changes: migrations, Drizzle schema updates, new backend routes, new frontend components.
+- Minimal, clean UI consistent with existing portal styling.
+- No breaking changes to existing endpoints, existing DB tables, or Deal state machine.
+- Clear code comments where business rules matter (especially GDL eligibility gating).
+
+If any requirement conflicts with existing assumptions in code, do NOT guess. Implement the safest backwards-compatible path and leave TODO notes indicating what needs confirmation.

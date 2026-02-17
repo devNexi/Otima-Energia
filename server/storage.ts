@@ -79,6 +79,9 @@ import {
   type InvoicePermission, type InsertInvoicePermission,
   type QaTestRun, type InsertQaTestRun,
   type InboundEmail, type InsertInboundEmail,
+  type DealTrack, type InsertDealTrack,
+  type DealTrackEvent, type InsertDealTrackEvent,
+  type DealTrackDocument, type InsertDealTrackDocument,
   type DealState, DEAL_STATES, DEAL_STATE_TRANSITIONS,
   users, leads, clients, uploadSessions, consumptionProfiles, quoteRequests, supplierQuotes, billUploads, suppliers,
   rfoRequests, rfoSupplierTracking, supplierContacts, supplierPortals, rfoTemplates,
@@ -100,7 +103,8 @@ import {
   brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
   invoices, invoiceEvents, invoicePermissions,
   qaTestRuns,
-  inboundEmails
+  inboundEmails,
+  dealTracks, dealTrackEvents, dealTrackDocuments
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -788,6 +792,16 @@ export interface IStorage {
   createInboundEmail(data: InsertInboundEmail): Promise<InboundEmail>;
   getInboundEmails(): Promise<InboundEmail[]>;
   updateInboundEmail(id: number, data: Partial<InboundEmail>): Promise<InboundEmail | undefined>;
+
+  // ============== DEAL TRACKS ==============
+  createDealTrack(data: InsertDealTrack): Promise<DealTrack>;
+  getDealTracks(dealId: string): Promise<DealTrack[]>;
+  getDealTrack(id: number): Promise<DealTrack | undefined>;
+  updateDealTrack(id: number, data: Partial<InsertDealTrack>): Promise<DealTrack | undefined>;
+  createDealTrackEvent(data: InsertDealTrackEvent): Promise<DealTrackEvent>;
+  getDealTrackEvents(trackId: number): Promise<DealTrackEvent[]>;
+  createDealTrackDocument(data: InsertDealTrackDocument): Promise<DealTrackDocument>;
+  getDealTrackDocuments(trackId: number): Promise<DealTrackDocument[]>;
 }
 
 export class Storage implements IStorage {
@@ -4630,6 +4644,44 @@ export class Storage implements IStorage {
   async updateInboundEmail(id: number, data: Partial<InboundEmail>): Promise<InboundEmail | undefined> {
     const result = await db.update(inboundEmails).set(data).where(eq(inboundEmails.id, id)).returning();
     return result[0];
+  }
+
+  // ============== DEAL TRACKS ==============
+  async createDealTrack(data: InsertDealTrack): Promise<DealTrack> {
+    const result = await db.insert(dealTracks).values(data).returning();
+    return result[0];
+  }
+
+  async getDealTracks(dealId: string): Promise<DealTrack[]> {
+    return db.select().from(dealTracks).where(eq(dealTracks.dealId, dealId)).orderBy(desc(dealTracks.createdAt));
+  }
+
+  async getDealTrack(id: number): Promise<DealTrack | undefined> {
+    const result = await db.select().from(dealTracks).where(eq(dealTracks.id, id));
+    return result[0];
+  }
+
+  async updateDealTrack(id: number, data: Partial<InsertDealTrack>): Promise<DealTrack | undefined> {
+    const result = await db.update(dealTracks).set({ ...data, updatedAt: new Date() }).where(eq(dealTracks.id, id)).returning();
+    return result[0];
+  }
+
+  async createDealTrackEvent(data: InsertDealTrackEvent): Promise<DealTrackEvent> {
+    const result = await db.insert(dealTrackEvents).values(data).returning();
+    return result[0];
+  }
+
+  async getDealTrackEvents(trackId: number): Promise<DealTrackEvent[]> {
+    return db.select().from(dealTrackEvents).where(eq(dealTrackEvents.trackId, trackId)).orderBy(desc(dealTrackEvents.createdAt));
+  }
+
+  async createDealTrackDocument(data: InsertDealTrackDocument): Promise<DealTrackDocument> {
+    const result = await db.insert(dealTrackDocuments).values(data).returning();
+    return result[0];
+  }
+
+  async getDealTrackDocuments(trackId: number): Promise<DealTrackDocument[]> {
+    return db.select().from(dealTrackDocuments).where(eq(dealTrackDocuments.trackId, trackId)).orderBy(desc(dealTrackDocuments.createdAt));
   }
 }
 

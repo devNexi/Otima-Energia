@@ -4565,3 +4565,160 @@ export type InsertDiagnosticSubmission = z.infer<typeof insertDiagnosticSubmissi
 export type DiagnosticSubmission = typeof diagnosticSubmissions.$inferSelect;
 
 // ============== END DIAGNOSTIC SUBMISSIONS ==============
+
+// ============== DEAL TRACKS ==============
+
+export const TRACK_TYPES = ['GDL', 'ACL', 'ACR', 'OTHER'] as const;
+export type TrackType = typeof TRACK_TYPES[number];
+
+export const GDL_TRACK_STATUSES = [
+  'GDL_NEW',
+  'GDL_ELIGIBILITY_PASSED',
+  'GDL_DOCS_COMPLETE',
+  'GDL_SUBMITTED_TO_PRIME',
+  'GDL_PRIME_APPROVED',
+  'GDL_PRIME_REJECTED',
+  'GDL_PROPOSAL_SENT',
+  'GDL_CLIENT_ACCEPTED',
+  'GDL_CONTRACT_SENT',
+  'GDL_CONTRACT_SIGNED',
+  'GDL_CLOSED_WON',
+  'GDL_CLOSED_LOST',
+] as const;
+export type GdlTrackStatus = typeof GDL_TRACK_STATUSES[number];
+
+export const ACL_TRACK_STATUSES = [
+  'ACL_NEW',
+  'ACL_DOSSIER_READY',
+  'ACL_RFQ_SENT',
+  'ACL_QUOTES_IN',
+  'ACL_NEGOTIATION',
+  'ACL_CONTRACT_SIGNED',
+  'ACL_CLOSED_WON',
+  'ACL_CLOSED_LOST',
+] as const;
+export type AclTrackStatus = typeof ACL_TRACK_STATUSES[number];
+
+export const ACR_TRACK_STATUSES = [
+  'ACR_NEW',
+  'ACR_ASSESSMENT',
+  'ACR_PROPOSAL_SENT',
+  'ACR_ACCEPTED',
+  'ACR_CLOSED_WON',
+  'ACR_CLOSED_LOST',
+] as const;
+export type AcrTrackStatus = typeof ACR_TRACK_STATUSES[number];
+
+export const OTHER_TRACK_STATUSES = [
+  'OTHER_NEW',
+  'OTHER_IN_PROGRESS',
+  'OTHER_CLOSED_WON',
+  'OTHER_CLOSED_LOST',
+] as const;
+export type OtherTrackStatus = typeof OTHER_TRACK_STATUSES[number];
+
+export type TrackStatus = GdlTrackStatus | AclTrackStatus | AcrTrackStatus | OtherTrackStatus;
+
+export const TRACK_STATUS_TRANSITIONS: Record<string, string[]> = {
+  GDL_NEW: ['GDL_ELIGIBILITY_PASSED', 'GDL_CLOSED_LOST'],
+  GDL_ELIGIBILITY_PASSED: ['GDL_DOCS_COMPLETE', 'GDL_CLOSED_LOST'],
+  GDL_DOCS_COMPLETE: ['GDL_SUBMITTED_TO_PRIME', 'GDL_CLOSED_LOST'],
+  GDL_SUBMITTED_TO_PRIME: ['GDL_PRIME_APPROVED', 'GDL_PRIME_REJECTED'],
+  GDL_PRIME_APPROVED: ['GDL_PROPOSAL_SENT', 'GDL_CLOSED_LOST'],
+  GDL_PRIME_REJECTED: ['GDL_CLOSED_LOST'],
+  GDL_PROPOSAL_SENT: ['GDL_CLIENT_ACCEPTED', 'GDL_CLOSED_LOST'],
+  GDL_CLIENT_ACCEPTED: ['GDL_CONTRACT_SENT', 'GDL_CLOSED_LOST'],
+  GDL_CONTRACT_SENT: ['GDL_CONTRACT_SIGNED', 'GDL_CLOSED_LOST'],
+  GDL_CONTRACT_SIGNED: ['GDL_CLOSED_WON', 'GDL_CLOSED_LOST'],
+  GDL_CLOSED_WON: [],
+  GDL_CLOSED_LOST: [],
+
+  ACL_NEW: ['ACL_DOSSIER_READY', 'ACL_CLOSED_LOST'],
+  ACL_DOSSIER_READY: ['ACL_RFQ_SENT', 'ACL_CLOSED_LOST'],
+  ACL_RFQ_SENT: ['ACL_QUOTES_IN', 'ACL_CLOSED_LOST'],
+  ACL_QUOTES_IN: ['ACL_NEGOTIATION', 'ACL_CLOSED_LOST'],
+  ACL_NEGOTIATION: ['ACL_CONTRACT_SIGNED', 'ACL_CLOSED_LOST'],
+  ACL_CONTRACT_SIGNED: ['ACL_CLOSED_WON', 'ACL_CLOSED_LOST'],
+  ACL_CLOSED_WON: [],
+  ACL_CLOSED_LOST: [],
+
+  ACR_NEW: ['ACR_ASSESSMENT', 'ACR_CLOSED_LOST'],
+  ACR_ASSESSMENT: ['ACR_PROPOSAL_SENT', 'ACR_CLOSED_LOST'],
+  ACR_PROPOSAL_SENT: ['ACR_ACCEPTED', 'ACR_CLOSED_LOST'],
+  ACR_ACCEPTED: ['ACR_CLOSED_WON', 'ACR_CLOSED_LOST'],
+  ACR_CLOSED_WON: [],
+  ACR_CLOSED_LOST: [],
+
+  OTHER_NEW: ['OTHER_IN_PROGRESS', 'OTHER_CLOSED_LOST'],
+  OTHER_IN_PROGRESS: ['OTHER_CLOSED_WON', 'OTHER_CLOSED_LOST'],
+  OTHER_CLOSED_WON: [],
+  OTHER_CLOSED_LOST: [],
+};
+
+export const INITIAL_TRACK_STATUS: Record<TrackType, string> = {
+  GDL: 'GDL_NEW',
+  ACL: 'ACL_NEW',
+  ACR: 'ACR_NEW',
+  OTHER: 'OTHER_NEW',
+};
+
+export const dealTracks = pgTable("deal_tracks", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  type: text("type").notNull(),
+  partnerId: integer("partner_id"),
+  partnerName: text("partner_name"),
+  status: text("status").notNull(),
+  createdByUserId: text("created_by_user_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealTrackSchema = createInsertSchema(dealTracks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealTrack = z.infer<typeof insertDealTrackSchema>;
+export type DealTrack = typeof dealTracks.$inferSelect;
+
+export const dealTrackEvents = pgTable("deal_track_events", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => dealTracks.id).notNull(),
+  eventType: text("event_type").notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status"),
+  payload: jsonb("payload"),
+  createdByUserId: text("created_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealTrackEventSchema = createInsertSchema(dealTrackEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealTrackEvent = z.infer<typeof insertDealTrackEventSchema>;
+export type DealTrackEvent = typeof dealTrackEvents.$inferSelect;
+
+export const dealTrackDocuments = pgTable("deal_track_documents", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => dealTracks.id).notNull(),
+  documentType: text("document_type"),
+  fileName: text("file_name"),
+  fileKey: text("file_key"),
+  uploadedByUserId: text("uploaded_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDealTrackDocumentSchema = createInsertSchema(dealTrackDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDealTrackDocument = z.infer<typeof insertDealTrackDocumentSchema>;
+export type DealTrackDocument = typeof dealTrackDocuments.$inferSelect;
+
+// ============== END DEAL TRACKS ==============
