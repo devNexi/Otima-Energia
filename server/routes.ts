@@ -71,7 +71,7 @@ import { processPrcDocumentWithBuffer } from "./prc-parser";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
 import { getZohoLeadDeepLink, getZohoStatus } from "./zohoClient";
 
-declare module 'express' {
+declare module 'express-serve-static-core' {
   interface Request {
     portalSession?: any;
   }
@@ -551,7 +551,7 @@ export async function registerRoutes(
         actorIp: req.ip || null,
         action: "create_user",
         entityType: "user",
-        entityId: user.id,
+        entityId: null,
         detailsJson: { username, role: role || 'admin' }
       });
       
@@ -611,7 +611,7 @@ export async function registerRoutes(
         actorIp: req.ip || null,
         action: "update_user",
         entityType: "user",
-        entityId: id,
+        entityId: null,
         detailsJson: { username, role, passwordChanged: !!password }
       });
       
@@ -646,7 +646,7 @@ export async function registerRoutes(
         actorIp: req.ip || null,
         action: "delete_user",
         entityType: "user",
-        entityId: id,
+        entityId: null,
         detailsJson: { deletedUsername: existingUser.username }
       });
       
@@ -1237,7 +1237,7 @@ export async function registerRoutes(
       const maxWidth = pageWidth - margin * 2;
       const lineHeight = 14;
 
-      function wrapText(text: string, fontSize: number, usedFont: any): string[] {
+      const wrapText = (text: string, fontSize: number, usedFont: any): string[] => {
         const lines: string[] = [];
         const paragraphs = text.split('\n');
         for (const para of paragraphs) {
@@ -1262,7 +1262,7 @@ export async function registerRoutes(
       let page = pdfDoc.addPage([pageWidth, pageHeight]);
       let y = pageHeight - margin;
 
-      function drawText(text: string, fontSize: number, usedFont: any, color = rgb(0.1, 0.1, 0.1)) {
+      const drawText = (text: string, fontSize: number, usedFont: any, color = rgb(0.1, 0.1, 0.1)) => {
         const lines = wrapText(text, fontSize, usedFont);
         for (const line of lines) {
           if (y < margin + 20) {
@@ -3325,7 +3325,7 @@ export async function registerRoutes(
   // ============== DEAL OS ENDPOINTS ==============
 
   // Helper function to validate admin session for Deal OS
-  const validateDealOsSession = async (req: Request, res: Response): Promise<boolean> => {
+  const validateDealOsSession = async (req: Request, res: Response, _allowedRoles?: string[]): Promise<boolean> => {
     const sessionId = req.headers["x-session-id"] as string;
     if (!sessionId) {
       res.status(401).json({ success: false, error: "Authentication required" });
@@ -3698,7 +3698,7 @@ export async function registerRoutes(
         if (dossier) {
           // Lock the dossier if not already locked
           if (dossier.status !== 'LOCKED') {
-            await storage.lockClientDossier(dossier.id, userId);
+            await storage.lockDossier(dossier.id, userId);
             
             // Audit log for first lock
             await storage.logAdminAction({
@@ -3715,7 +3715,12 @@ export async function registerRoutes(
           }
           
           // Always create immutable snapshot for every RFQ send (audit trail)
-          await storage.createDossierSnapshot(dossier.id, 'RFQ', packet.rfoRequestId, userId);
+          await storage.createDossierSnapshot({
+            clientDossierId: dossier.id,
+            snapshotData: { reason: 'RFQ', rfoRequestId: packet.rfoRequestId },
+            createdBy: userId,
+            snapshotReason: 'RFQ_SENT'
+          });
         }
       }
       
@@ -3801,7 +3806,7 @@ export async function registerRoutes(
       // DOSSIER LOCK & SNAPSHOT: Lock dossier on first send, create snapshot for every RFQ send
       if (dossier.status !== 'LOCKED') {
         // Lock the dossier
-        await storage.lockClientDossier(dossier.id, userId);
+        await storage.lockDossier(dossier.id, userId);
         
         // Audit log for first lock
         await storage.logAdminAction({
@@ -3818,7 +3823,12 @@ export async function registerRoutes(
       }
       
       // Always create immutable snapshot for every RFQ send (audit trail)
-      await storage.createDossierSnapshot(dossier.id, 'RFQ', rfoId, userId);
+      await storage.createDossierSnapshot({
+        clientDossierId: dossier.id,
+        snapshotData: { reason: 'RFQ', rfoRequestId: rfoId },
+        createdBy: userId,
+        snapshotReason: 'RFQ_SENT'
+      });
       
       // Update RFO supplier tracking status
       const rfoTracking = await storage.getRfoSupplierTracking(rfoId);
@@ -4434,8 +4444,8 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res)) return;
     
     try {
-      const userId = req.session?.userId;
-      const userRole = req.session?.role;
+      const userId = (req as any).session?.userId;
+      const userRole = (req as any).session?.role;
       
       const filters: any = {};
       if (req.query.stage) filters.stage = req.query.stage as string;
@@ -4511,7 +4521,7 @@ export async function registerRoutes(
         entityId: null,
         dealId: deal.id,
         clientId: deal.clientId || null,
-        detailsJson: { clientId: deal.clientId, owner: deal.owner, status: deal.status }
+        detailsJson: { clientId: deal.clientId, owner: deal.internalOwner, status: deal.status }
       });
       
       res.json({ success: true, deal });
@@ -4707,7 +4717,7 @@ export async function registerRoutes(
               entityType: "deal",
               entityId: null,
               dealId: req.params.id,
-              details: { 
+              detailsJson: { 
                 fromState: deal.status, 
                 toState, 
                 overrideReason,
@@ -4760,13 +4770,13 @@ export async function registerRoutes(
       // On CONTRACT_SIGNED: Create Milestone 1 (50%) commission event
       if (toState === 'CONTRACT_SIGNED' && result.deal) {
         const selectedQuote = await storage.getDealQuotes(req.params.id)
-          .then(quotes => quotes.find(q => q.status === 'ACCEPTED'));
+          .then(quotes => quotes.find((q: any) => q.status === 'ACCEPTED'));
         
         if (selectedQuote && selectedQuote.supplierId) {
           // Get supplier playbook for milestone config
           const playbook = await storage.getSupplierPlaybook(selectedQuote.supplierId);
           const m1Percent = playbook?.milestone1Percent || 50;
-          const totalCommission = selectedQuote.brokerCommissionRmwh || 0;
+          const totalCommission = (selectedQuote as any).brokerCommissionRmwh || 0;
           const m1Amount = Number((totalCommission * m1Percent / 100).toFixed(4));
           
           await storage.createDealCommissionEvent({
@@ -4789,7 +4799,7 @@ export async function registerRoutes(
             entityType: "commission_event",
             entityId: null,
             dealId: req.params.id,
-            details: { milestone: 1, percent: m1Percent, amountRmwh: m1Amount }
+            detailsJson: { milestone: 1, percent: m1Percent, amountRmwh: m1Amount }
           });
         }
       }
@@ -4809,12 +4819,12 @@ export async function registerRoutes(
         }
         
         const selectedQuote = await storage.getDealQuotes(req.params.id)
-          .then(quotes => quotes.find(q => q.status === 'ACCEPTED'));
+          .then(quotes => quotes.find((q: any) => q.status === 'ACCEPTED'));
         
         if (selectedQuote && selectedQuote.supplierId) {
           const playbook = await storage.getSupplierPlaybook(selectedQuote.supplierId);
           const m2Percent = playbook?.milestone2Percent || 50;
-          const totalCommission = selectedQuote.brokerCommissionRmwh || 0;
+          const totalCommission = (selectedQuote as any).brokerCommissionRmwh || 0;
           const m2Amount = Number((totalCommission * m2Percent / 100).toFixed(4));
           
           await storage.createDealCommissionEvent({
@@ -4837,7 +4847,7 @@ export async function registerRoutes(
             entityType: "commission_event",
             entityId: null,
             dealId: req.params.id,
-            details: { milestone: 2, percent: m2Percent, amountRmwh: m2Amount }
+            detailsJson: { milestone: 2, percent: m2Percent, amountRmwh: m2Amount }
           });
         }
       }
@@ -4955,10 +4965,10 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "QUOTE_CREATED",
         entityType: "quote",
-        entityId: quote.id,
+        entityId: null,
         dealId: dealId,
         clientId: deal.clientId || null,
-        detailsJson: { supplierId: quote.supplierId, pricePerMwh: quote.pricePerMwh, termMonths: quote.termMonths }
+        detailsJson: { supplierId: quote.supplierId, pricePerMwh: (quote as any).pricePerMwh, termMonths: quote.termMonths }
       });
       
       res.json({ success: true, quote });
@@ -5000,7 +5010,7 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "QUOTE_SELECTED",
         entityType: "quote",
-        entityId: quote.id,
+        entityId: null,
         dealId: req.params.dealId,
         clientId: deal?.clientId || null,
         detailsJson: { reason, supplierId: quote.supplierId }
@@ -5040,7 +5050,7 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "QUOTE_REJECTED",
         entityType: "quote",
-        entityId: quote.id,
+        entityId: null,
         dealId: req.params.dealId,
         clientId: deal?.clientId || null,
         detailsJson: { reason, supplierId: quote.supplierId }
@@ -5116,7 +5126,7 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "CLIENT_PRICE_SET",
         entityType: "quote",
-        entityId: quote.id,
+        entityId: null,
         dealId: req.params.dealId,
         clientId: deal?.clientId || null,
         detailsJson: { 
@@ -5387,7 +5397,7 @@ export async function registerRoutes(
       
       // Get related data
       const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
-      const dossier = client ? await storage.getClientDossierByClientId(client.id) : null;
+      const dossier = client ? await storage.getClientDossier(client.id) : null;
       
       // Status labels in PT-BR
       const statusLabels: Record<string, { label: string; color: string; bgColor: string }> = {
@@ -5410,7 +5420,7 @@ export async function registerRoutes(
       };
       
       const statusInfo = statusLabels[snapshot.status] || statusLabels['NO_DATA'];
-      const frozenInputs = snapshot.frozenInputs as any || {};
+      const frozenInputs = (snapshot as any).frozenInputs as any || {};
       const benchmarkMatch = snapshot.benchmarkMatch as any || {};
       const results = snapshot.results as any || {};
       const confidenceReasons = (snapshot.confidenceReasons as any[]) || [];
@@ -6471,7 +6481,7 @@ export async function registerRoutes(
         entityId: dealCase.id,
         dealId: dealId,
         clientId: deal.clientId || null,
-        detailsJson: { caseType: dealCase.caseType, severity: dealCase.severity, title: dealCase.title }
+        detailsJson: { caseType: dealCase.caseType, severity: dealCase.severity }
       });
       
       res.json({ success: true, case: dealCase });
@@ -6806,7 +6816,7 @@ export async function registerRoutes(
   app.post("/api/notifications/check", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     
-    const session = await storage.getSession(req.headers["x-session-id"] as string);
+    const session = await storage.getAdminSession(req.headers["x-session-id"] as string);
     const user = session?.userId ? await storage.getUser(session.userId) : null;
     if (user?.role !== 'admin') {
       return res.status(403).json({ success: false, error: "Admin access required" });
@@ -6825,7 +6835,7 @@ export async function registerRoutes(
   app.get("/api/notifications/pending", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     
-    const session = await storage.getSession(req.headers["x-session-id"] as string);
+    const session = await storage.getAdminSession(req.headers["x-session-id"] as string);
     const user = session?.userId ? await storage.getUser(session.userId) : null;
     if (user?.role !== 'admin' && user?.role !== 'ops') {
       return res.status(403).json({ success: false, error: "Admin or Ops access required" });
@@ -7067,12 +7077,12 @@ export async function registerRoutes(
       for (const deal of allDeals.slice(0, 50)) {
         const events = await storage.getDealCommissionEvents(deal.id);
         for (const e of events) {
-          if (e.status === 'PENDING' && e.dueDate && new Date(e.dueDate) < new Date()) {
+          if (e.status === 'PENDING' && e.expectedDate && new Date(e.expectedDate) < new Date()) {
             overdueRevenue.push({
               id: e.id,
               dealId: deal.id,
-              amountR: e.amountR,
-              dueDate: e.dueDate,
+              amountR: e.amountBrl,
+              dueDate: e.expectedDate,
               deepLink: `/admin/ops/revenue?eventId=${e.id}`
             });
           }
@@ -7348,7 +7358,6 @@ export async function registerRoutes(
         await storage.lockDossier(dossier.id, user?.id || 'system');
         const snapshot = await storage.createDossierSnapshot({
           clientDossierId: dossier.id,
-          snapshotVersion: 1,
           snapshotData: {
             dossier,
             snapshotReason: 'RFQ_SENT',
@@ -7699,7 +7708,7 @@ export async function registerRoutes(
         entityId: null,
         detailsJson: result.summary
       });
-      res.json({ success: true, ...result });
+      res.json({ ...result, success: true });
     } catch (error: any) {
       console.error("Error seeding demo data:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to seed demo data" });
@@ -7732,7 +7741,7 @@ export async function registerRoutes(
         entityId: null,
         detailsJson: result.deleted
       });
-      res.json({ success: true, ...result });
+      res.json({ ...result, success: true });
     } catch (error: any) {
       console.error("Error nuking demo data:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to nuke demo data" });
@@ -7959,7 +7968,7 @@ export async function registerRoutes(
           userAgent,
           action: "ZOHO_INTAKE_IDEMPOTENT",
           entityType: "deal",
-          entityId: deal.id,
+          entityId: null,
           detailsJson: { zohoLeadId: payload.zohoLeadId, message: "Deal already exists" }
         });
         
@@ -8099,9 +8108,9 @@ export async function registerRoutes(
         await storage.upsertDealCrmLink({
           dealId: newDeal.id,
           provider: 'ZOHO',
-          zohoOwnerId: payload.zohoOwnerId || null,
-          zohoDealId: payload.zohoDealId || null,
-          zohoContactId: payload.zohoContactId || null,
+          zohoOwnerId: (payload as any).zohoOwnerId || null,
+          zohoDealId: (payload as any).zohoDealId || null,
+          zohoContactId: (payload as any).zohoContactId || null,
           zohoAccountId: null,
         });
 
@@ -8119,7 +8128,7 @@ export async function registerRoutes(
             zohoLeadId: payload.zohoLeadId,
             companyName: payload.companyName || client.companyName,
             portalDealUrl,
-            zohoOwnerId: payload.zohoOwnerId || null,
+            zohoOwnerId: (payload as any).zohoOwnerId || null,
           }
         );
       } catch (jobError: any) {
@@ -8230,7 +8239,7 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "ZOHO_INTAKE_ERROR_RESOLVED",
         entityType: "zoho_intake_error",
-        entityId: id,
+        entityId: parseInt(id),
         detailsJson: { notes }
       });
       
@@ -8392,12 +8401,12 @@ export async function registerRoutes(
     
     try {
       const { dealId } = req.params;
-      const deal = await storage.getDealById(dealId);
+      const deal = await storage.getDeal(dealId);
       if (!deal) {
         return res.status(404).json({ success: false, error: "Deal not found" });
       }
       
-      const checklists = await storage.getChecklists(deal.stage);
+      const checklists = await storage.getChecklists(deal.status);
       const completions = await storage.getDealChecklistCompletions(dealId);
       
       const items: Record<number, any[]> = {};
@@ -8440,7 +8449,7 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "CHECKLIST_ITEM_COMPLETED",
         entityType: "checklist_completion",
-        entityId: completion.id.toString(),
+        entityId: completion.id,
         detailsJson: { dealId, itemId, notes }
       });
       
@@ -9390,7 +9399,7 @@ export async function registerRoutes(
       const batchDocumentIds = batch.documentIds as number[];
       
       // Get rows ONLY from the documents in this batch
-      const allBatchRows: Awaited<ReturnType<typeof storage.getPrcRows>>[] = [];
+      const allBatchRows: any[] = [];
       for (const docId of batchDocumentIds) {
         const docRows = await storage.getPrcRows(docId);
         allBatchRows.push(...docRows);
@@ -9557,7 +9566,7 @@ export async function registerRoutes(
     
     try {
       const id = parseInt(req.params.id);
-      const userId = req.session?.userId;
+      const userId = (req as any).session?.userId;
       
       const kit = await storage.updateBrandKit(id, {
         ...req.body,
@@ -9569,12 +9578,14 @@ export async function registerRoutes(
       }
       
       await logAuditEvent({
-        action: 'update',
+        actor: userId || 'system',
+        actorRole: 'admin',
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: 'BRAND_KIT_UPDATED',
         entityType: 'brand_kit',
-        entityId: id.toString(),
-        userId,
-        changes: req.body,
-        source: 'admin'
+        entityId: id,
+        detailsJson: req.body
       });
       
       res.json({ success: true, brandKit: kit });
@@ -9730,7 +9741,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
     try {
-      const userId = req.session?.userId;
+      const userId = (req as any).session?.userId;
       const deal = await storage.getDeal(req.params.dealId);
       
       if (!deal) {
@@ -9775,12 +9786,15 @@ export async function registerRoutes(
       });
       
       await logAuditEvent({
-        action: 'create',
+        actor: userId || 'system',
+        actorRole: null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: 'PROPOSAL_CREATED',
         entityType: 'deal_proposal',
-        entityId: proposal.id,
-        userId,
-        changes: { dealId: deal.id, status: 'DRAFT', hasBaseline: !!baselineConsumptionMwh12m, isProxy: baselineCostIsProxy },
-        source: 'portal'
+        entityId: null,
+        dealId: deal.id,
+        detailsJson: { proposalId: proposal.id, status: 'DRAFT', hasBaseline: !!baselineConsumptionMwh12m, isProxy: baselineCostIsProxy }
       });
       
       res.json({ success: true, proposal });
@@ -9976,7 +9990,7 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res, ['admin', 'sales'])) return;
     
     try {
-      const userId = req.session?.userId;
+      const userId = (req as any).session?.userId;
       const proposal = await storage.getDealProposal(req.params.proposalId);
       
       if (!proposal) {
