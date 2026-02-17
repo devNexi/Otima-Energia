@@ -34,6 +34,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Data Models**: Comprehensive models for leads, clients, upload sessions, consumption profiles, and various quote/RFO processes.
 - **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.
 - **Deal OS**: Revenue-control and deal-execution system with an explicit state machine, auditability, commission tracking, and immutable records.
+- **Deal Tracks**: Multi-track deal management (GDL, ACL, ACR, OTHER) allowing parallel sales motions per deal with independent status workflows, event audit trail, document linking, and GDL eligibility checklist. Tables: `deal_tracks`, `deal_track_events`, `deal_track_documents`.
 - **Client Dossier**: Canonical energy profile for each client, serving as the foundational data for RFQ workflows, with status gates and immutability after RFQ.
 - **RFQ Adapter Layer**: Multi-channel RFQ automation with templated messages and token replacement for various communication channels.
 - **Commission OS**: Milestone-based commission tracking with 50/50 payment model:
