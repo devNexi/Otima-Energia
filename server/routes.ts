@@ -63,8 +63,8 @@ import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProp
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
-import { enqueueJobIfNotExists } from "./jobs";
-import { getZohoLeadDeepLink } from "./zohoClient";
+import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
+import { getZohoLeadDeepLink, getZohoStatus } from "./zohoClient";
 
 // Helper to extract supplier name from PRC filename
 function extractSupplierNameFromFilename(filename: string): string | null {
@@ -11826,18 +11826,42 @@ export async function registerRoutes(
       const { dealId } = req.params;
       const snapshot = await storage.getDealSalesSnapshot(dealId);
       const crmLink = await storage.getDealCrmLink(dealId);
-      
+
       const noActivityWarningDays = parseInt(process.env.NO_ACTIVITY_WARNING_DAYS || '10', 10);
       let noActivityWarning = false;
-      if (snapshot?.lastContactAt) {
-        const daysSinceContact = (Date.now() - new Date(snapshot.lastContactAt).getTime()) / (1000 * 60 * 60 * 24);
+
+      let effectiveLastContact: Date | null = snapshot?.lastContactAt ? new Date(snapshot.lastContactAt) : null;
+      const activityItems = await storage.getDealSalesActivityItems(dealId, 100);
+      for (const item of activityItems) {
+        if (item.occurredAt) {
+          const d = new Date(item.occurredAt);
+          if (!effectiveLastContact || d > effectiveLastContact) {
+            effectiveLastContact = d;
+          }
+        }
+      }
+      const internalNotes = await storage.getDealInternalNotes(dealId);
+      for (const note of internalNotes) {
+        if (note.createdAt) {
+          const d = new Date(note.createdAt);
+          if (!effectiveLastContact || d > effectiveLastContact) {
+            effectiveLastContact = d;
+          }
+        }
+      }
+
+      if (effectiveLastContact) {
+        const daysSinceContact = (Date.now() - effectiveLastContact.getTime()) / (1000 * 60 * 60 * 24);
         noActivityWarning = daysSinceContact > noActivityWarningDays;
+      } else if (crmLink) {
+        noActivityWarning = true;
       }
       
       res.json({
         snapshot: snapshot || null,
         crmLink: crmLink || null,
         noActivityWarning,
+        effectiveLastContactAt: effectiveLastContact?.toISOString() || null,
         zohoDeepLink: crmLink?.zohoDealId ? getZohoLeadDeepLink(crmLink.zohoDealId) : null,
       });
     } catch (error: any) {
@@ -11940,6 +11964,64 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Internal note delete error:", error);
       res.status(500).json({ error: "Failed to delete internal note" });
+    }
+  });
+
+  app.get("/api/integrations/zoho/status", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const status = getZohoStatus();
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to check Zoho status" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/sales-snapshot/sync-status", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const lastJob = await getLastJobForDeal(dealId, 'ZOHO_SYNC_SNAPSHOT');
+      if (!lastJob) {
+        return res.json({ status: 'NEVER', lastError: null, lastAttempt: null });
+      }
+      res.json({
+        status: lastJob.status,
+        lastError: lastJob.lastError,
+        lastAttempt: lastJob.updatedAt,
+        jobId: lastJob.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to check sync status" });
+    }
+  });
+
+  app.post("/api/deals/:dealId/zoho-tasks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { subject, dueDate, description } = req.body;
+
+      if (!subject || !dueDate) {
+        return res.status(400).json({ error: "Subject and due date are required" });
+      }
+
+      const deal = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+      if (!deal[0]) return res.status(404).json({ error: "Deal not found" });
+
+      const jobId = await enqueueJob('ZOHO_CREATE_TASK', {
+        dealId,
+        subject,
+        dueDate,
+        description: description || '',
+        zohoLeadId: deal[0].zohoLeadId || undefined,
+        idempotencyKey: `manual_task_${dealId}_${Date.now()}`,
+      });
+
+      res.json({ success: true, jobId, message: "Task creation job enqueued" });
+    } catch (error: any) {
+      console.error("Create Zoho task error:", error);
+      res.status(500).json({ error: "Failed to create Zoho task" });
     }
   });
 

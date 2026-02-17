@@ -84,9 +84,15 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - Zoho API client stubbed (`server/zohoClient.ts`) - awaiting ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN
 
 **Job Runner:**
-- Lightweight polling job runner (`server/jobs.ts`) with exponential backoff
+- Lightweight polling job runner (`server/jobs.ts`) with exponential backoff + jitter (±20%)
 - Jobs table: type, payload, status (PENDING/RUNNING/SUCCESS/FAILED), attempts, maxAttempts
 - Polls every 30s, processes up to 3 concurrent jobs
+- Concurrency lock: `SELECT FOR UPDATE SKIP LOCKED` prevents duplicate processing across server instances
+- Stuck job recovery: jobs RUNNING > 10 minutes auto-reset to PENDING each poll cycle
+- Task-level idempotency: `deal_zoho_task_links` table (dealId + purpose unique) prevents duplicate Zoho tasks even on job retry after network timeout
+- Health endpoint: `GET /api/integrations/zoho/status` → `{connected, missing[], region}`
+- Sync status endpoint: `GET /api/deals/:dealId/sales-snapshot/sync-status` → last job status
+- Manual Zoho task creation: `POST /api/deals/:dealId/zoho-tasks` (subject, dueDate, description)
 - Fail-open: if Zoho unavailable, deal creation still succeeds
 
 **Portal → Zoho (Future - Not Implemented):**

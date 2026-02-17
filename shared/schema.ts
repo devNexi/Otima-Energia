@@ -4890,4 +4890,25 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 
+export const dealZohoTaskLinks = pgTable("deal_zoho_task_links", {
+  id: serial("id").primaryKey(),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
+  zohoTaskId: text("zoho_task_id"),
+  purpose: text("purpose").notNull().default('AUTO_CALLBACK'),
+  status: text("status").notNull().default('CREATED'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique().on(table.dealId, table.purpose),
+]);
+
+export const insertDealZohoTaskLinkSchema = createInsertSchema(dealZohoTaskLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealZohoTaskLink = z.infer<typeof insertDealZohoTaskLinkSchema>;
+export type DealZohoTaskLink = typeof dealZohoTaskLinks.$inferSelect;
+
 // ============== END SALES ACTIVITY MIRROR ==============

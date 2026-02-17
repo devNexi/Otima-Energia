@@ -59,6 +59,36 @@ export function isZohoEnabled(): boolean {
   return getZohoConfig().enabled && process.env.ENABLE_ZOHO_SNAPSHOT_SYNC !== 'false';
 }
 
+export function getZohoStatus(): { connected: boolean; missing: string[]; region: string } {
+  const missing: string[] = [];
+  if (!process.env.ZOHO_CLIENT_ID) missing.push('ZOHO_CLIENT_ID');
+  if (!process.env.ZOHO_CLIENT_SECRET) missing.push('ZOHO_CLIENT_SECRET');
+  if (!process.env.ZOHO_REFRESH_TOKEN) missing.push('ZOHO_REFRESH_TOKEN');
+  return {
+    connected: missing.length === 0,
+    missing,
+    region: process.env.ZOHO_REGION || 'com',
+  };
+}
+
+export async function createZohoTask(params: {
+  subject: string;
+  dueDate: Date;
+  description?: string;
+  zohoLeadId?: string;
+  zohoDealId?: string;
+  zohoOwnerId?: string;
+  priority?: string;
+}): Promise<{ success: boolean; taskId?: string; error?: string }> {
+  const config = getZohoConfig();
+  if (!config.enabled) {
+    return { success: false, error: 'Zoho API not configured' };
+  }
+
+  console.log(`[ZohoClient] Would create task: "${params.subject}" due ${params.dueDate.toISOString()} - API not yet configured`);
+  return { success: false, error: 'Zoho API not configured' };
+}
+
 export function isZohoCallbackTaskEnabled(): boolean {
   return getZohoConfig().enabled && process.env.ENABLE_ZOHO_AUTO_CALLBACK_TASK !== 'false';
 }

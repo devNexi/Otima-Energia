@@ -19,7 +19,7 @@ import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
 import { DealTracksTab } from "@/components/deals/DealTracksTab";
-import { SalesMirrorPanel } from "@/components/deals/SalesMirrorPanel";
+import { SalesMirrorPanel, SalesSnapshotCompactCard } from "@/components/deals/SalesMirrorPanel";
 import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
 import { ChecklistDrawer } from "@/components/ops/ChecklistDrawer";
@@ -966,6 +966,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                 </div>
               </CardContent>
             </Card>
+
+            {deal.zohoLeadId && (
+              <SalesSnapshotCompactCard dealId={dealId} zohoLeadId={deal.zohoLeadId} />
+            )}
           </div>
         </TabsContent>
 

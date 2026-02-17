@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -23,6 +25,10 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  WifiOff,
+  CheckCircle2,
+  XCircle,
+  Plus,
 } from "lucide-react";
 
 interface SalesMirrorPanelProps {
@@ -72,6 +78,249 @@ const activityTypeBadgeColors: Record<string, string> = {
   EMAIL: "bg-pink-100 text-pink-800",
 };
 
+function SyncStatusBadge({ dealId }: { dealId: string }) {
+  const { data } = useQuery({
+    queryKey: [`/api/deals/${dealId}/sales-snapshot/sync-status`],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}/sales-snapshot/sync-status`);
+      return res.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  if (!data || data.status === 'NEVER') return null;
+
+  const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
+    PENDING: { icon: Clock, color: "text-yellow-600", label: "Queued" },
+    RUNNING: { icon: Loader2, color: "text-blue-600", label: "Syncing..." },
+    SUCCESS: { icon: CheckCircle2, color: "text-green-600", label: "Synced" },
+    FAILED: { icon: XCircle, color: "text-red-600", label: "Failed" },
+  };
+
+  const config = statusConfig[data.status] || statusConfig.PENDING;
+  const Icon = config.icon;
+
+  return (
+    <div className="flex items-center gap-1" data-testid="sync-status-badge">
+      <Icon className={`w-3 h-3 ${config.color} ${data.status === 'RUNNING' ? 'animate-spin' : ''}`} />
+      <span className={`text-[10px] ${config.color}`}>{config.label}</span>
+      {data.status === 'FAILED' && data.lastError && (
+        <span className="text-[10px] text-red-500 truncate max-w-[120px]" title={data.lastError}>
+          ({data.lastError})
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ZohoNotConnectedBanner({ language }: { language: string }) {
+  const { data } = useQuery({
+    queryKey: ['/api/integrations/zoho/status'],
+    queryFn: async () => {
+      const res = await fetch('/api/integrations/zoho/status');
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
+  if (!data || data.connected) return null;
+
+  return (
+    <div className="flex items-center gap-2 p-2.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-xs mb-3" data-testid="banner-zoho-not-connected">
+      <WifiOff className="w-4 h-4 flex-shrink-0" />
+      <div>
+        <span className="font-medium">
+          {language === "pt" ? "Zoho CRM não conectado" : "Zoho CRM not connected"}
+        </span>
+        {data.missing?.length > 0 && (
+          <span className="ml-1 text-amber-600">
+            ({language === "pt" ? "Faltando" : "Missing"}: {data.missing.join(', ')})
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreateZohoTaskDialog({ dealId, language }: { dealId: string; language: string }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [description, setDescription] = useState("");
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}/zoho-tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, dueDate, description }),
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: language === "pt" ? "Tarefa criada" : "Task created",
+          description: language === "pt" ? "A tarefa será criada no Zoho." : "Task will be created in Zoho.",
+        });
+        setOpen(false);
+        setSubject("");
+        setDueDate("");
+        setDescription("");
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 text-xs" data-testid="button-create-zoho-task">
+          <Plus className="w-3 h-3 mr-1" />
+          {language === "pt" ? "Criar Tarefa" : "Create Task"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-sm">
+            {language === "pt" ? "Criar Tarefa no Zoho" : "Create Zoho Task"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div>
+            <Label className="text-xs">{language === "pt" ? "Assunto" : "Subject"}</Label>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={language === "pt" ? "Ligar para cliente..." : "Call client..."}
+              className="text-sm"
+              data-testid="input-task-subject"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{language === "pt" ? "Data de Vencimento" : "Due Date"}</Label>
+            <Input
+              type="datetime-local"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="text-sm"
+              data-testid="input-task-due-date"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{language === "pt" ? "Descrição (opcional)" : "Description (optional)"}</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="text-sm min-h-[50px] resize-none"
+              data-testid="input-task-description"
+            />
+          </div>
+          <Button
+            className="w-full"
+            size="sm"
+            disabled={!subject.trim() || !dueDate || createMutation.isPending}
+            onClick={() => createMutation.mutate()}
+            data-testid="button-submit-zoho-task"
+          >
+            {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+              language === "pt" ? "Criar Tarefa" : "Create Task"
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function SalesSnapshotCompactCard({ dealId, zohoLeadId }: SalesMirrorPanelProps) {
+  const { language } = useI18n();
+
+  const { data: snapshotData, isLoading } = useQuery({
+    queryKey: [`/api/deals/${dealId}/sales-snapshot`],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}/sales-snapshot`);
+      return res.json();
+    },
+    enabled: !!zohoLeadId,
+  });
+
+  if (!zohoLeadId) return null;
+
+  const snapshot = snapshotData?.snapshot;
+  const noActivityWarning = snapshotData?.noActivityWarning;
+  const zohoDeepLink = snapshotData?.zohoDeepLink;
+  const effectiveLastContact = snapshotData?.effectiveLastContactAt;
+
+  return (
+    <Card data-testid="card-sales-compact">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Phone className="w-5 h-5" />
+            {language === "pt" ? "Vendas" : "Sales"}
+          </CardTitle>
+          {zohoDeepLink && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => window.open(zohoDeepLink, "_blank")}
+              data-testid="button-open-zoho-overview"
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Zoho
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        ) : (
+          <div className="space-y-2">
+            {noActivityWarning && (
+              <div className="flex items-center gap-1.5 text-orange-700 text-xs" data-testid="warning-no-activity-overview">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {language === "pt" ? "Sem atividade recente" : "No recent activity"}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-xs text-muted-foreground block">
+                  {language === "pt" ? "Último contato" : "Last contact"}
+                </span>
+                <RelativeTime date={effectiveLastContact || snapshot?.lastContactAt} language={language} />
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">
+                  {language === "pt" ? "Próxima tarefa" : "Next task"}
+                </span>
+                {snapshot?.nextTaskAt ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">
+                      {new Date(snapshot.nextTaskAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                    </span>
+                    {snapshot.nextTaskStatus === "OVERDUE" && (
+                      <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 text-[10px]" data-testid="badge-overdue-overview">
+                        OVERDUE
+                      </Badge>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-xs">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) {
   const { language } = useI18n();
   const { toast } = useToast();
@@ -112,11 +361,13 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
     },
     onSuccess: () => {
       toast({
-        title: language === "pt" ? "Atualização solicitada" : "Refresh requested",
+        title: language === "pt" ? "Sincronização solicitada" : "Sync requested",
         description: language === "pt" ? "O snapshot será atualizado em breve." : "Snapshot will be updated shortly.",
       });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/sales-snapshot/sync-status`] });
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/sales-snapshot`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/sales-snapshot/sync-status`] });
       }, 5000);
     },
   });
@@ -155,6 +406,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
   const crmLink = snapshotData?.crmLink;
   const noActivityWarning = snapshotData?.noActivityWarning;
   const zohoDeepLink = snapshotData?.zohoDeepLink;
+  const effectiveLastContact = snapshotData?.effectiveLastContactAt;
   const activityItems = activityData?.items || [];
   const notes = notesData?.notes || [];
 
@@ -176,6 +428,8 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
 
   return (
     <div className="space-y-4">
+      <ZohoNotConnectedBanner language={language} />
+
       <Card data-testid="panel-sales-snapshot">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -184,6 +438,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
               {language === "pt" ? "Painel de Vendas" : "Sales Snapshot"}
             </CardTitle>
             <div className="flex items-center gap-2">
+              <CreateZohoTaskDialog dealId={dealId} language={language} />
               {zohoDeepLink && (
                 <Button
                   variant="outline"
@@ -208,6 +463,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
               </Button>
             </div>
           </div>
+          <SyncStatusBadge dealId={dealId} />
         </CardHeader>
         <CardContent className="pt-0">
           {snapshotLoading ? (
@@ -233,7 +489,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
                   <span className="text-xs text-muted-foreground block">
                     {language === "pt" ? "Último contato" : "Last contact"}
                   </span>
-                  <RelativeTime date={snapshot?.lastContactAt} language={language} />
+                  <RelativeTime date={effectiveLastContact || snapshot?.lastContactAt} language={language} />
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">

@@ -1,0 +1,75 @@
+Must-add before Client App
+1) Zoho client “stub” → make activation foolproof
+
+Right now, if creds aren’t set it returns empty arrays (good), but you’ll want:
+
+A visible “Zoho not connected” banner in the Sales tab (only for admins), showing which env vars are missing.
+
+A health endpoint: GET /api/integrations/zoho/status returning {connected: boolean, missing: []} so you can sanity-check quickly.
+
+Why: avoids silent failure + confusion during rollout.
+
+2) Job runner reliability tweaks
+
+Polling every 30s and 3 jobs at a time is fine for now, but add:
+
+Job “stuck” recovery: if a job is RUNNING for > X minutes, mark it back to PENDING (or FAILED) and retry.
+
+Jitter on backoff (small randomness) to avoid thundering herd if Zoho returns.
+
+Concurrency lock so two server instances don’t process the same job (Replit can restart/scale). A DB-level “select for update skip locked” pattern is ideal if you can.
+
+Why: prevents zombie jobs and duplication headaches.
+
+3) Idempotency for the Zoho Task itself (not just the job)
+
+You’ve got idempotency keys for jobs, great. Add idempotency for the created Zoho task:
+
+Store a mapping table: deal_zoho_task_links (dealId, zohoTaskId, purpose='AUTO_CALLBACK')
+
+Before creating, check that table. If it exists, skip.
+
+If it doesn’t exist, create task and persist zohoTaskId.
+
+Why: job idempotency isn’t enough if the job runs twice after a network timeout.
+
+4) Snapshot refresh UX: “queued vs refreshed”
+
+Right now Refresh enqueues a job and user “checks back”. Improve UX:
+
+Show “Sync queued…” state + last job status.
+
+Add a tiny endpoint GET /api/deals/:dealId/sales-snapshot/sync-status that reports last job status for that deal (SUCCESS/FAILED/RUNNING, lastError).
+
+Why: makes it feel responsive and reduces “is it working?” questions.
+
+5) “No activity” logic: use last of (call OR note OR email OR meeting) not just last contact
+
+Make sure lastContactAt reflects the latest meaningful activity across types, not only calls. Otherwise you’ll get false warnings.
+
+Why: accuracy → trust.
+
+Nice-to-have before Client App (but worth it)
+6) Sales Snapshot on the Deal Overview (not only in Sales tab)
+
+Even a compact card:
+
+Last contact
+
+Next task
+
+Overdue badge
+
+Open in Zoho
+
+Why: Renan shouldn’t need to click into the Sales tab constantly.
+
+7) “Create Zoho Task” quick action from Portal (optional)
+
+Since Zoho is the task system, add a button in Portal:
+
+“Create Zoho Task” (title + due date/time)
+
+It writes to Zoho and then mirrors back on next sync.
+
+Why: sometimes he’s in Portal and wants to set a follow-up without switching screens. (This doesn’t turn Portal into a CRM; it’s just a convenience hook.)
