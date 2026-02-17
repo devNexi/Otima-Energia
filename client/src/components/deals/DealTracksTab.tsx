@@ -45,6 +45,9 @@ import {
   Eye,
   Send,
   TimerReset,
+  StopCircle,
+  User,
+  Phone,
 } from "lucide-react";
 
 interface DealTracksTabProps {
@@ -881,6 +884,10 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
   const [emailTo, setEmailTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [markedSent, setMarkedSent] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactWhatsapp, setContactWhatsapp] = useState('');
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [linkConfig, setLinkConfig] = useState({
     requireLGPD: true,
     requireLOA: true,
@@ -959,6 +966,57 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
       toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const { data: chaseData, refetch: refetchChase } = useQuery({
+    queryKey: [`/api/tracks/${trackId}/chase-state`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tracks/${trackId}/chase-state`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const sendIntakeLinkMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/send-intake-link-action`, {
+        contactName,
+        contactEmail,
+        contactWhatsapp: whatsappOptIn ? contactWhatsapp : null,
+        whatsappOptIn,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to send');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Link enviado por e-mail!" : "Intake link sent!" });
+      refetchChase();
+      queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/intake-status`] });
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro ao enviar" : "Send failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const stopChaseMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/chase-stop`, { reason: 'manual_override' });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Chase parado" : "Chase stopped" });
+      refetchChase();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const chaseState = chaseData?.chaseState;
+  const chaseActive = chaseState?.active === true;
 
   const portalUrl = linkData ? `${window.location.origin}/client/intake/${linkData.token}` : '';
   const activeSessionUrl = intakeStatus?.session?.token ? `${window.location.origin}/client/intake/${intakeStatus.session.token}` : '';
@@ -1167,23 +1225,77 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                 </Button>
               </div>
 
-              <div className="border-t pt-3 space-y-2">
-                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{isPt ? "Enviar por E-mail" : "Send by Email"}</Label>
-                <div className="flex gap-2">
-                  <Input type="email" placeholder={isPt ? "email@cliente.com" : "email@client.com"} value={emailTo} onChange={(e) => setEmailTo(e.target.value)} className="text-xs h-8 flex-1" data-testid="input-modal-email" />
-                  <Button size="sm" className="h-8 text-xs" onClick={sendEmail} disabled={sendingEmail || !emailTo} data-testid="button-modal-send-email">
-                    {sendingEmail ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
-                    {isPt ? "Enviar" : "Send"}
-                  </Button>
-                </div>
+              <div className="border-t pt-3 space-y-3">
+                <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1">
+                  <Send className="w-3 h-3" />
+                  {isPt ? "Enviar Link de Intake" : "Send Intake Link"}
+                </Label>
+
+                {chaseActive ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3 space-y-2" data-testid="chase-active-state">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-blue-800 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {isPt ? "Link enviado" : "Link sent"}
+                      </span>
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-300 border text-[10px]">
+                        {isPt ? "Chase ativo" : "Chase active"}
+                      </Badge>
+                    </div>
+                    <div className="text-[10px] text-blue-700 space-y-0.5">
+                      <p><strong>{isPt ? "Para" : "To"}:</strong> {chaseState.contactName || ''} ({chaseState.contactEmail})</p>
+                      {chaseState.contactWhatsapp && <p><strong>WhatsApp:</strong> {chaseState.contactWhatsapp}</p>}
+                      <p><strong>{isPt ? "Enviado em" : "Sent"}:</strong> {new Date(chaseState.lastSentAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="text-xs h-7 text-red-600 border-red-300 hover:bg-red-50 w-full" onClick={() => stopChaseMutation.mutate()} disabled={stopChaseMutation.isPending} data-testid="button-stop-chase">
+                      {stopChaseMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <StopCircle className="w-3 h-3 mr-1" />}
+                      {isPt ? "Parar Chase" : "Stop Chase"}
+                    </Button>
+                  </div>
+                ) : chaseState && !chaseState.active ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-1" data-testid="chase-stopped-state">
+                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                      <StopCircle className="w-3.5 h-3.5" />
+                      {isPt ? "Chase encerrado" : "Chase stopped"}: {chaseState.stoppedReason === 'intake_complete' ? (isPt ? 'Intake completo' : 'Intake complete') : (isPt ? 'Parado manualmente' : 'Manual override')}
+                    </div>
+                    {chaseState.contactEmail && <p className="text-[10px] text-gray-500">{isPt ? "Enviado para" : "Sent to"}: {chaseState.contactEmail}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" />{isPt ? "Nome do contato" : "Contact name"}</Label>
+                        <Input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="João Silva" className="text-xs h-7" data-testid="input-contact-name" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />E-mail *</Label>
+                        <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="email@empresa.com" className="text-xs h-7" data-testid="input-contact-email" />
+                      </div>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />WhatsApp</Label>
+                        <Input value={contactWhatsapp} onChange={(e) => setContactWhatsapp(e.target.value)} placeholder="+5511999999999" className="text-xs h-7" data-testid="input-contact-whatsapp" />
+                      </div>
+                      <div className="flex items-center gap-1.5 pb-0.5">
+                        <Checkbox id={`wa-optin-${trackId}`} checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} data-testid="checkbox-whatsapp-optin" />
+                        <Label htmlFor={`wa-optin-${trackId}`} className="text-[10px] cursor-pointer whitespace-nowrap">Opt-in WA</Label>
+                      </div>
+                    </div>
+                    <Button size="sm" className="w-full text-xs h-8 bg-green-600 hover:bg-green-700" onClick={() => sendIntakeLinkMutation.mutate()} disabled={sendIntakeLinkMutation.isPending || !contactEmail} data-testid="button-send-intake-link">
+                      {sendIntakeLinkMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Send className="w-3.5 h-3.5 mr-1" />}
+                      {isPt ? "ENVIAR LINK DE INTAKE" : "SEND INTAKE LINK"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-3">
                 <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 block">{isPt ? "Ações" : "Actions"}</Label>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant={markedSent ? "secondary" : "default"} className="text-xs h-8" onClick={() => markSentMutation.mutate()} disabled={markSentMutation.isPending || markedSent} data-testid="button-mark-sent">
+                  <Button size="sm" variant={markedSent ? "secondary" : "outline"} className="text-xs h-8" onClick={() => markSentMutation.mutate()} disabled={markSentMutation.isPending || markedSent} data-testid="button-mark-sent">
                     {markSentMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : markedSent ? <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
-                    {markedSent ? (isPt ? 'Enviado' : 'Sent') : (isPt ? 'Marcar como Enviado' : 'Mark as Sent')}
+                    {markedSent ? (isPt ? 'Enviado' : 'Sent') : (isPt ? 'Marcar como Enviado (manual)' : 'Mark as Sent (manual)')}
                   </Button>
                   <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => window.open(portalUrl, '_blank')} data-testid="button-modal-preview">
                     <Eye className="w-3.5 h-3.5 mr-1" />
