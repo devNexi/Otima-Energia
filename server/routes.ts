@@ -11809,10 +11809,14 @@ export async function registerRoutes(
       const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
       if (!activeSession) return res.status(400).json({ success: false, error: "No active intake session to chase" });
 
+      const freshSentEventId = `intake_restart_${trackId}_${Date.now()}`;
+
       await storage.updateChaseState(trackId, {
         active: true,
+        level: 0,
         stoppedReason: null,
         stoppedAt: null,
+        sentEventId: freshSentEventId,
         webhookStartFired: false,
         webhookStopFired: false,
         webhookLastError: null,
@@ -11840,6 +11844,7 @@ export async function registerRoutes(
               intakeLink: portalUrl,
               accessCode: activeSession.accessCode || null,
               expiresAt: activeSession.expiresAt?.toISOString() || null,
+              sentEventId: freshSentEventId,
               isRestart: true,
             }),
             signal: AbortSignal.timeout(10000),

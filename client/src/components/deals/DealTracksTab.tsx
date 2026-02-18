@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import {
   TRACK_STATUS_TRANSITIONS,
   GDL_TRACK_STATUSES,
@@ -879,6 +880,8 @@ function getTrackWhatsAppLine2(trackType: string): string {
 function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId: number; dealId: string; trackType: string; isPt: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
   const [showModal, setShowModal] = useState(false);
   const [linkData, setLinkData] = useState<{ token: string; accessCode: string | null; expiresAt: string; companyName: string | null } | null>(null);
   const [emailTo, setEmailTo] = useState('');
@@ -1167,7 +1170,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
             </div>
             {isComplete && intakeStatus.session?.usedAt && (
               <p className="text-[10px] text-green-700">
-                {isPt ? "Concluído em" : "Completed"}: {new Date(intakeStatus.session.usedAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}
+                {isPt ? "Concluído em" : "Completed"}: {new Date(intakeStatus.session.usedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
               </p>
             )}
             <div className="grid grid-cols-3 gap-2 text-xs">
@@ -1280,7 +1283,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                 <div className="flex items-center gap-2">
                   <span className="text-xs flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {expiresAt ? `Link expira em: ${expiresAt.toLocaleDateString('pt-BR')}` : (isPt ? 'Sem expiração definida' : 'No expiry set')}
+                    {expiresAt ? `Link expira em: ${expiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : (isPt ? 'Sem expiração definida' : 'No expiry set')}
                   </span>
                   {isExpiringSoon && (
                     <>
@@ -1330,7 +1333,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                       <div className="text-[10px] text-blue-700 space-y-0.5">
                         <p><strong>{isPt ? "Para" : "To"}:</strong> {chaseState.contactName || ''} ({chaseState.contactEmail})</p>
                         {chaseState.contactWhatsapp && <p><strong>WhatsApp:</strong> {chaseState.contactWhatsapp}</p>}
-                        <p><strong>{isPt ? "Enviado em" : "Sent"}:</strong> {new Date(chaseState.lastSentAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+                        <p><strong>{isPt ? "Enviado em" : "Sent"}:</strong> {new Date(chaseState.lastSentAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
                         <Button size="sm" variant="link" className="text-[10px] h-5 p-0 text-blue-600" onClick={() => { setEditContactName(chaseState.contactName || ''); setEditContactEmail(chaseState.contactEmail || ''); setEditContactWhatsapp(chaseState.contactWhatsapp || ''); setEditingContact(true); }} data-testid="button-edit-contact">
                           {isPt ? "Editar contato" : "Edit contact"}
                         </Button>
@@ -1363,7 +1366,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                       return (
                         <div className="text-[10px] text-blue-600 flex items-center gap-1.5">
                           <Calendar className="w-3 h-3" />
-                          <span>{isPt ? 'Expira' : 'Expires'}: {sessionExpiresAt.toLocaleDateString(isPt ? 'pt-BR' : 'en-US')}</span>
+                          <span>{isPt ? 'Expira' : 'Expires'}: {sessionExpiresAt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
                           {sessionDaysLeft !== null && sessionDaysLeft <= 3 && (
                             <>
                               <Badge className="bg-amber-100 text-amber-800 border-amber-300 border text-[10px] px-1 py-0">
@@ -1410,13 +1413,13 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                           )}
                         </div>
                         {chaseState.webhookLastAttemptAt && (
-                          <p className="text-[9px] text-blue-500">{isPt ? 'Última tentativa' : 'Last attempt'}: {new Date(chaseState.webhookLastAttemptAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+                          <p className="text-[9px] text-blue-500">{isPt ? 'Última tentativa' : 'Last attempt'}: {new Date(chaseState.webhookLastAttemptAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
                         )}
                         {chaseState.webhookLastError && (
                           <p className="text-[9px] text-red-500">{isPt ? 'Erro' : 'Error'}: {chaseState.webhookLastError}</p>
                         )}
                       </div>
-                      {chaseState.webhookStartFired === false && (
+                      {isAdmin && chaseState.webhookStartFired === false && (
                         <Button size="sm" variant="outline" className="text-[10px] h-6 w-full mt-1" onClick={() => retryWebhookMutation.mutate('start')} disabled={retryWebhookMutation.isPending} data-testid="button-retry-start-webhook">
                           {retryWebhookMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
                           {isPt ? "Reenviar webhook start" : "Retry start webhook"}
@@ -1444,7 +1447,7 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                       </Badge>
                     </div>
                     {chaseState.contactEmail && <p className="text-[10px] text-gray-500">{isPt ? "Enviado para" : "Sent to"}: {chaseState.contactEmail}</p>}
-                    {chaseState.stoppedAt && <p className="text-[10px] text-gray-400">{isPt ? "Parado em" : "Stopped at"}: {new Date(chaseState.stoppedAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>}
+                    {chaseState.stoppedAt && <p className="text-[10px] text-gray-400">{isPt ? "Parado em" : "Stopped at"}: {new Date(chaseState.stoppedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>}
 
                     <div className="text-[10px] space-y-0.5 border-t border-gray-200 pt-1.5">
                       <div className="flex items-center gap-1">
@@ -1459,18 +1462,18 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                         <p className="text-[9px] text-red-500">{isPt ? 'Erro' : 'Error'}: {chaseState.webhookLastError}</p>
                       )}
                       {chaseState.webhookLastAttemptAt && (
-                        <p className="text-[9px] text-gray-400">{isPt ? 'Última tentativa' : 'Last attempt'}: {new Date(chaseState.webhookLastAttemptAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+                        <p className="text-[9px] text-gray-400">{isPt ? 'Última tentativa' : 'Last attempt'}: {new Date(chaseState.webhookLastAttemptAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
                       )}
                     </div>
 
-                    {chaseState.webhookStopFired === false && (
+                    {isAdmin && chaseState.webhookStopFired === false && (
                       <Button size="sm" variant="outline" className="text-[10px] h-6 w-full" onClick={() => retryWebhookMutation.mutate('stop')} disabled={retryWebhookMutation.isPending} data-testid="button-retry-stop-webhook">
                         {retryWebhookMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
                         {isPt ? "Reenviar webhook stop" : "Retry stop webhook"}
                       </Button>
                     )}
 
-                    {chaseState.stoppedReason !== 'intake_complete' && (
+                    {isAdmin && chaseState.stoppedReason !== 'intake_complete' && (
                       <Button size="sm" variant="outline" className="text-[10px] h-6 w-full text-blue-600 border-blue-300" onClick={() => restartChaseMutation.mutate()} disabled={restartChaseMutation.isPending} data-testid="button-restart-chase">
                         {restartChaseMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
                         {isPt ? "Reiniciar Chase (Admin)" : "Restart Chase (Admin)"}
