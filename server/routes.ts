@@ -11889,7 +11889,7 @@ export async function registerRoutes(
         const clientId = 1;
         const now = new Date();
 
-        await db.execute(sql`INSERT INTO deals (id, client_id, status, is_demo) VALUES (${dealId}, ${clientId}, 'PROSPECT', true)`);
+        await db.execute(sql`INSERT INTO deals (id, client_id, status, is_demo) VALUES (${dealId}, ${clientId}, 'DRAFT', true)`);
 
         const trackTypes = ['GDL', 'ACL', 'ACR', 'GDL', 'GDL'];
         const trackLabels = ['pre_send', 'active', 'stopped_manual', 'intake_complete', 'webhook_failed'];
