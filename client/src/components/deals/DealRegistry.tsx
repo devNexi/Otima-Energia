@@ -103,10 +103,6 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
   const { data: awaitingData } = useQuery({
     queryKey: ["/api/contracts/awaiting-signature"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/contracts/awaiting-signature");
-      return res.json();
-    },
   });
 
   const createDealMutation = useMutation({
@@ -274,44 +270,50 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
         </div>
       )}
 
-      {(awaitingData?.count > 0 || (dashboard?.dealsByStatus?.CONTRACT_SENT > 0)) && (
-        <Card className="border-l-4 border-l-amber-500 bg-amber-50/30">
-          <CardContent className="py-3">
-            <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              {language === "pt" ? "Minhas Ações Hoje" : "My Actions Today"}
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {(awaitingData?.count > 0) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
-                  onClick={() => setStatusFilter("AWAITING_SIGNATURE")}
-                  data-testid="action-awaiting-signature"
-                >
-                  <FileText className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
-                  <span className="font-bold text-amber-700 mr-1">{awaitingData.count}</span>
-                  {language === "pt" ? "contratos aguardando assinatura" : "contracts awaiting signature"}
-                </Button>
-              )}
-              {dashboard?.dealsByStatus?.CONTRACT_SENT > 0 && !awaitingData?.count && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
-                  onClick={() => setStatusFilter("CONTRACT_SENT")}
-                  data-testid="action-contract-sent"
-                >
-                  <Send className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
-                  <span className="font-bold text-amber-700 mr-1">{dashboard.dealsByStatus.CONTRACT_SENT}</span>
-                  {language === "pt" ? "contratos enviados" : "contracts sent"}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {(() => {
+        const awaiting = awaitingData as any;
+        const awaitingCount = awaiting?.count || 0;
+        const contractSentCount = dashboard?.dealsByStatus?.CONTRACT_SENT || 0;
+        if (awaitingCount === 0 && contractSentCount === 0) return null;
+        return (
+          <Card className="border-l-4 border-l-amber-500 bg-amber-50/30">
+            <CardContent className="py-3">
+              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                {language === "pt" ? "Minhas Ações Hoje" : "My Actions Today"}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {awaitingCount > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
+                    onClick={() => setStatusFilter("AWAITING_SIGNATURE")}
+                    data-testid="action-awaiting-signature"
+                  >
+                    <FileText className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                    <span className="font-bold text-amber-700 mr-1">{awaitingCount}</span>
+                    {language === "pt" ? "contratos aguardando assinatura" : "contracts awaiting signature"}
+                  </Button>
+                )}
+                {contractSentCount > 0 && awaitingCount === 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
+                    onClick={() => setStatusFilter("CONTRACT_SENT")}
+                    data-testid="action-contract-sent"
+                  >
+                    <Send className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                    <span className="font-bold text-amber-700 mr-1">{contractSentCount}</span>
+                    {language === "pt" ? "contratos enviados" : "contracts sent"}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <Card>
         <CardHeader>
