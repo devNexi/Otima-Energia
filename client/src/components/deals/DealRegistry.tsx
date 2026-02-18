@@ -23,7 +23,8 @@ import {
   ArrowRight,
   FileText,
   Eye,
-  TrendingUp
+  TrendingUp,
+  Send
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -98,6 +99,14 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
   const { data: clientsData } = useQuery({
     queryKey: ["/api/clients"],
+  });
+
+  const { data: awaitingData } = useQuery({
+    queryKey: ["/api/contracts/awaiting-signature"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/contracts/awaiting-signature");
+      return res.json();
+    },
   });
 
   const createDealMutation = useMutation({
@@ -263,6 +272,45 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {(awaitingData?.count > 0 || (dashboard?.dealsByStatus?.CONTRACT_SENT > 0)) && (
+        <Card className="border-l-4 border-l-amber-500 bg-amber-50/30">
+          <CardContent className="py-3">
+            <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              {language === "pt" ? "Minhas Ações Hoje" : "My Actions Today"}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {(awaitingData?.count > 0) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
+                  onClick={() => setStatusFilter("AWAITING_SIGNATURE")}
+                  data-testid="action-awaiting-signature"
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                  <span className="font-bold text-amber-700 mr-1">{awaitingData.count}</span>
+                  {language === "pt" ? "contratos aguardando assinatura" : "contracts awaiting signature"}
+                </Button>
+              )}
+              {dashboard?.dealsByStatus?.CONTRACT_SENT > 0 && !awaitingData?.count && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs border-amber-300 bg-white hover:bg-amber-50"
+                  onClick={() => setStatusFilter("CONTRACT_SENT")}
+                  data-testid="action-contract-sent"
+                >
+                  <Send className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                  <span className="font-bold text-amber-700 mr-1">{dashboard.dealsByStatus.CONTRACT_SENT}</span>
+                  {language === "pt" ? "contratos enviados" : "contracts sent"}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -454,6 +502,12 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                         <Badge className={`${stateColors[deal.status as DealState] || "bg-gray-100 text-gray-800 border-gray-300"} border`}>
                           {stateLabels[deal.status as DealState]?.[language as "en" | "pt"] || deal.status}
                         </Badge>
+                        {deal.status === 'CONTRACT_SENT' && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 border text-[10px] animate-pulse">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {language === "pt" ? "Aguardando Assinatura" : "Awaiting Signature"}
+                          </Badge>
+                        )}
                         {deal.manualOverrideRequired && (
                           <Badge variant="destructive" className="text-xs">
                             <AlertTriangle className="w-3 h-3 mr-1" />
@@ -478,8 +532,8 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                         {deal.contractStartDate && (
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {new Date(deal.contractStartDate).toLocaleDateString("pt-BR")}
-                            {deal.contractEndDate && ` - ${new Date(deal.contractEndDate).toLocaleDateString("pt-BR")}`}
+                            {new Date(deal.contractStartDate).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                            {deal.contractEndDate && ` - ${new Date(deal.contractEndDate).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`}
                           </span>
                         )}
                         {deal.expectedCommissionMonthly && (

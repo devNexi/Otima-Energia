@@ -248,7 +248,7 @@ export async function registerRoutes(
   // ============== AUTHENTICATION ENDPOINTS ==============
   
   const SALT_ROUNDS = 12;
-  const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const SESSION_DURATION_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
   try {
     const existing = await storage.getUserByUsername("admin");
@@ -464,11 +464,16 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ success: false, error: "User not found" });
       }
+
+      const newExpiry = new Date(Date.now() + SESSION_DURATION_MS);
+      try {
+        await db.execute(sql`UPDATE admin_sessions SET expires_at = ${newExpiry} WHERE id = ${session.id}`);
+      } catch {}
       
       res.json({
         success: true,
         user: { id: user.id, username: user.username, role: user.role || 'admin' },
-        session: { id: session.id, expiresAt: session.expiresAt }
+        session: { id: session.id, expiresAt: newExpiry.toISOString() }
       });
     } catch (error: any) {
       console.error("Error getting session:", error);
