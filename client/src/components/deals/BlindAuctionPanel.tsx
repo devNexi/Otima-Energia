@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,21 +66,13 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
     notes: ""
   });
 
-  const { data: auctionData, isLoading, refetch } = useQuery({
+  const { data: auctionData, isLoading, refetch } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/blind-auction`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/blind-auction`);
-      return res.json();
-    }
   });
 
   const createDispatchMutation = useMutation({
     mutationFn: async (data: { supplierId: number; channelUsed: string; messageBody?: string }) => {
-      const res = await fetch(`/api/deals/${dealId}/rfq-dispatches`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/rfq-dispatches`, data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -96,11 +89,7 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
 
   const markSentMutation = useMutation({
     mutationFn: async (dispatchId: number) => {
-      const res = await fetch(`/api/rfq-dispatches/${dispatchId}/mark-sent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
-      });
+      const res = await apiRequest("POST", `/api/rfq-dispatches/${dispatchId}/mark-sent`, {});
       return res.json();
     },
     onSuccess: (data) => {
@@ -113,10 +102,7 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
 
   const markRespondedMutation = useMutation({
     mutationFn: async (dispatchId: number) => {
-      const res = await fetch(`/api/rfq-dispatches/${dispatchId}/mark-responded`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
+      const res = await apiRequest("POST", `/api/rfq-dispatches/${dispatchId}/mark-responded`);
       return res.json();
     },
     onSuccess: (data) => {
@@ -129,10 +115,7 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
 
   const followupMutation = useMutation({
     mutationFn: async (dispatchId: number) => {
-      const res = await fetch(`/api/rfq-dispatches/${dispatchId}/followup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
+      const res = await apiRequest("POST", `/api/rfq-dispatches/${dispatchId}/followup`);
       return res.json();
     },
     onSuccess: (data) => {
@@ -145,19 +128,15 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
 
   const recordQuoteMutation = useMutation({
     mutationFn: async (data: { supplierId: number; dispatchId: number }) => {
-      const res = await fetch(`/api/deals/${dealId}/quotes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          supplierId: data.supplierId,
-          rfqDispatchId: data.dispatchId,
-          pricePerMwh: parseFloat(quoteForm.pricePerMwh),
-          priceStructure: quoteForm.priceStructure,
-          termMonths: parseInt(quoteForm.termMonths),
-          validUntil: quoteForm.validUntil || null,
-          internalNotes: quoteForm.notes || null,
-          receivedVia: "RFQ_DISPATCH"
-        })
+      const res = await apiRequest("POST", `/api/deals/${dealId}/quotes`, {
+        supplierId: data.supplierId,
+        rfqDispatchId: data.dispatchId,
+        pricePerMwh: parseFloat(quoteForm.pricePerMwh),
+        priceStructure: quoteForm.priceStructure,
+        termMonths: parseInt(quoteForm.termMonths),
+        validUntil: quoteForm.validUntil || null,
+        internalNotes: quoteForm.notes || null,
+        receivedVia: "RFQ_DISPATCH"
       });
       return res.json();
     },

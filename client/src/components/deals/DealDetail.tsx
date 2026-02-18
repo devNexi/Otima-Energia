@@ -176,15 +176,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
       serviceDescription: string;
       notes: string;
     }) => {
-      const sessionId = localStorage.getItem("sessionId") || "";
-      const res = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-session-id": sessionId
-        },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("POST", "/api/invoices", data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -327,8 +319,8 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               {language === "pt" ? "Via Zoho" : "Via Zoho"}
             </Badge>
           )}
-          <Badge className={`${stateColors[deal.status as DealState]} border text-lg px-4 py-2`} data-testid="badge-deal-status">
-            {stateLabels[deal.status as DealState][language as "en" | "pt"]}
+          <Badge className={`${stateColors[deal.status as DealState] || "bg-gray-100 text-gray-800 border-gray-300"} border text-lg px-4 py-2`} data-testid="badge-deal-status">
+            {stateLabels[deal.status as DealState]?.[language as "en" | "pt"] || deal.status}
           </Badge>
         </div>
       </div>
@@ -458,7 +450,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                     {isPast ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
                   </div>
                   <span className={`ml-2 text-xs whitespace-nowrap ${isActive ? "font-bold" : ""} ${isFuture ? "text-gray-400" : ""}`}>
-                    {stateLabels[state][language as "en" | "pt"]}
+                    {stateLabels[state]?.[language as "en" | "pt"] || state}
                   </span>
                   {index < DEAL_STATES.length - 1 && (
                     <ArrowRight className={`w-4 h-4 mx-2 ${isPast ? "text-green-500" : "text-gray-300"}`} />
@@ -1280,12 +1272,12 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                       <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-violet-500 border-2 border-white" />
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge className={stateColors[transition.fromState as DealState]}>
-                            {stateLabels[transition.fromState as DealState]?.[language as "en" | "pt"]}
+                          <Badge className={stateColors[transition.fromState as DealState] || "bg-gray-100 text-gray-800 border-gray-300"}>
+                            {stateLabels[transition.fromState as DealState]?.[language as "en" | "pt"] || transition.fromState}
                           </Badge>
                           <ArrowRight className="w-4 h-4" />
-                          <Badge className={stateColors[transition.toState as DealState]}>
-                            {stateLabels[transition.toState as DealState]?.[language as "en" | "pt"]}
+                          <Badge className={stateColors[transition.toState as DealState] || "bg-gray-100 text-gray-800 border-gray-300"}>
+                            {stateLabels[transition.toState as DealState]?.[language as "en" | "pt"] || transition.toState}
                           </Badge>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">

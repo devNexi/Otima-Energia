@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,10 +111,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const { data: snapshots, isLoading: snapshotsLoading } = useQuery<EcosSnapshot[]>({
     queryKey: ["/api/deals", dealId, "ecos-snapshots"],
     queryFn: async () => {
-      const sessionId = localStorage.getItem("sessionId");
-      const res = await fetch(`/api/deals/${dealId}/ecos-snapshots`, {
-        headers: { "x-session-id": sessionId || "" }
-      });
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos-snapshots`);
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       return data.snapshots;
@@ -123,10 +121,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const { data: previewEval, isLoading: previewLoading, refetch: refetchPreview } = useQuery<EcosEvaluation>({
     queryKey: ["/api/deals", dealId, "ecos-evaluation"],
     queryFn: async () => {
-      const sessionId = localStorage.getItem("sessionId");
-      const res = await fetch(`/api/deals/${dealId}/ecos-evaluation`, {
-        headers: { "x-session-id": sessionId || "" }
-      });
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos-evaluation`);
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       return data.evaluation;
@@ -136,15 +131,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
 
   const createSnapshotMutation = useMutation({
     mutationFn: async () => {
-      const sessionId = localStorage.getItem("sessionId");
-      const res = await fetch(`/api/deals/${dealId}/ecos-snapshots`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-session-id": sessionId || "" 
-        },
-        body: JSON.stringify({ triggerType: "MANUAL" })
-      });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/ecos-snapshots`, { triggerType: "MANUAL" });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       return data;
@@ -173,16 +160,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const handleDownloadPdf = async (snapshotId: number) => {
     setDownloadingPdf(true);
     try {
-      const sessionId = localStorage.getItem("sessionId");
-      const res = await fetch(`/api/deals/${dealId}/ecos-snapshots/${snapshotId}/pdf`, {
-        method: "POST",
-        headers: { "x-session-id": sessionId || "" }
-      });
-      
-      if (!res.ok) {
-        throw new Error("Failed to generate PDF");
-      }
-      
+      const res = await apiRequest("POST", `/api/deals/${dealId}/ecos-snapshots/${snapshotId}/pdf`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

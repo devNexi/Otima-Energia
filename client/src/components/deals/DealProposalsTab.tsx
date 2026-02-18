@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,28 +102,16 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
     publicNotes: ""
   });
 
-  const { data: proposalsData, isLoading: loadingProposals } = useQuery({
+  const { data: proposalsData, isLoading: loadingProposals } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/proposals`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/proposals`);
-      return res.json();
-    }
   });
 
-  const { data: eligibleQuotesData } = useQuery({
+  const { data: eligibleQuotesData } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/eligible-quotes`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/eligible-quotes`);
-      return res.json();
-    }
   });
 
-  const { data: proposalDetails } = useQuery({
+  const { data: proposalDetails } = useQuery<any>({
     queryKey: [`/api/proposals/${selectedProposal?.id}`],
-    queryFn: async () => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}`);
-      return res.json();
-    },
     enabled: !!selectedProposal
   });
 
@@ -132,10 +121,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const createProposalMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/proposals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/proposals`);
       return res.json();
     },
     onSuccess: (data) => {
@@ -152,11 +138,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const addItemMutation = useMutation({
     mutationFn: async (data: typeof newItemForm) => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("POST", `/api/proposals/${selectedProposal!.id}/items`, data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -177,9 +159,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId: number) => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}/items/${itemId}`, {
-        method: "DELETE"
-      });
+      const res = await apiRequest("DELETE", `/api/proposals/${selectedProposal!.id}/items/${itemId}`);
       return res.json();
     },
     onSuccess: () => {
@@ -190,9 +170,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}/generate`, {
-        method: "POST"
-      });
+      const res = await apiRequest("POST", `/api/proposals/${selectedProposal!.id}/generate`);
       return res.json();
     },
     onSuccess: (data) => {
@@ -209,9 +187,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}/send`, {
-        method: "POST"
-      });
+      const res = await apiRequest("POST", `/api/proposals/${selectedProposal!.id}/send`);
       return res.json();
     },
     onSuccess: (data) => {
@@ -228,11 +204,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
 
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await fetch(`/api/proposals/${selectedProposal!.id}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
-      });
+      const res = await apiRequest("POST", `/api/proposals/${selectedProposal!.id}/status`, { status });
       return res.json();
     },
     onSuccess: (data) => {

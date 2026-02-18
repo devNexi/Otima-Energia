@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,12 +80,8 @@ const activityTypeBadgeColors: Record<string, string> = {
 };
 
 function SyncStatusBadge({ dealId }: { dealId: string }) {
-  const { data } = useQuery({
+  const { data } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/sales-snapshot/sync-status`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/sales-snapshot/sync-status`);
-      return res.json();
-    },
     refetchInterval: 10000,
   });
 
@@ -114,12 +111,8 @@ function SyncStatusBadge({ dealId }: { dealId: string }) {
 }
 
 function ZohoNotConnectedBanner({ language }: { language: string }) {
-  const { data } = useQuery({
+  const { data } = useQuery<any>({
     queryKey: ['/api/integrations/zoho/status'],
-    queryFn: async () => {
-      const res = await fetch('/api/integrations/zoho/status');
-      return res.json();
-    },
     staleTime: 60000,
   });
 
@@ -151,11 +144,7 @@ function CreateZohoTaskDialog({ dealId, language }: { dealId: string; language: 
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/zoho-tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, dueDate, description }),
-      });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/zoho-tasks`, { subject, dueDate, description });
       return res.json();
     },
     onSuccess: (data) => {
@@ -238,12 +227,8 @@ function CreateZohoTaskDialog({ dealId, language }: { dealId: string; language: 
 export function SalesSnapshotCompactCard({ dealId, zohoLeadId }: SalesMirrorPanelProps) {
   const { language } = useI18n();
 
-  const { data: snapshotData, isLoading } = useQuery({
+  const { data: snapshotData, isLoading } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/sales-snapshot`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/sales-snapshot`);
-      return res.json();
-    },
     enabled: !!zohoLeadId,
   });
 
@@ -328,35 +313,27 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
   const [noteText, setNoteText] = useState("");
   const [activityExpanded, setActivityExpanded] = useState(false);
 
-  const { data: snapshotData, isLoading: snapshotLoading } = useQuery({
+  const { data: snapshotData, isLoading: snapshotLoading } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/sales-snapshot`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/sales-snapshot`);
-      return res.json();
-    },
     enabled: !!zohoLeadId,
   });
 
-  const { data: activityData } = useQuery({
+  const { data: activityData } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/sales-activity`],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/sales-activity?limit=10`);
+      const res = await apiRequest("GET", `/api/deals/${dealId}/sales-activity?limit=10`);
       return res.json();
     },
     enabled: !!zohoLeadId,
   });
 
-  const { data: notesData, isLoading: notesLoading } = useQuery({
+  const { data: notesData, isLoading: notesLoading } = useQuery<any>({
     queryKey: [`/api/deals/${dealId}/internal-notes`],
-    queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/internal-notes`);
-      return res.json();
-    },
   });
 
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/sales-snapshot/refresh`, { method: "POST" });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/sales-snapshot/refresh`);
       return res.json();
     },
     onSuccess: () => {
@@ -374,12 +351,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
 
   const addNoteMutation = useMutation({
     mutationFn: async (note: string) => {
-      const sessionId = localStorage.getItem("sessionId") || "";
-      const res = await fetch(`/api/deals/${dealId}/internal-notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-id": sessionId },
-        body: JSON.stringify({ note }),
-      });
+      const res = await apiRequest("POST", `/api/deals/${dealId}/internal-notes`, { note });
       return res.json();
     },
     onSuccess: () => {
@@ -390,11 +362,7 @@ export function SalesMirrorPanel({ dealId, zohoLeadId }: SalesMirrorPanelProps) 
 
   const deleteNoteMutation = useMutation({
     mutationFn: async (noteId: number) => {
-      const sessionId = localStorage.getItem("sessionId") || "";
-      const res = await fetch(`/api/deals/${dealId}/internal-notes/${noteId}`, {
-        method: "DELETE",
-        headers: { "x-session-id": sessionId },
-      });
+      const res = await apiRequest("DELETE", `/api/deals/${dealId}/internal-notes/${noteId}`);
       return res.json();
     },
     onSuccess: () => {

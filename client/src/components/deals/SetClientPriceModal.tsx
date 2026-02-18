@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,13 +71,9 @@ export function SetClientPriceModal({ quote, open, onOpenChange }: SetClientPric
 
   const setClientPriceMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/deals/${quote!.dealId}/quotes/${quote!.id}/set-client-price`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          upliftType,
-          upliftValue
-        })
+      const res = await apiRequest("POST", `/api/deals/${quote!.dealId}/quotes/${quote!.id}/set-client-price`, {
+        upliftType,
+        upliftValue
       });
       return res.json();
     },
