@@ -108,7 +108,7 @@ export function ContextualTooltip({
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const queryClient = useQueryClient();
 
-  const config = typeConfig[type];
+  const config = typeConfig[type] || typeConfig["info"] || { icon: null, color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-200" };
   const Icon = config.icon;
 
   const { data: dismissedTooltips } = useQuery<string[]>({
