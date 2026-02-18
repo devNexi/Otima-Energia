@@ -1,0 +1,114 @@
+Yes — the updated intake modal direction is correct. Before we move on, I want you to confirm/adjust a few specifics to ensure it’s bulletproof and Renan-proof:
+
+1) Contact Editing (must be safe + auditable)
+
+Editing name/email/WhatsApp should be allowed even when chase is active.
+
+When saved, it must:
+
+update track_chase_state contact fields
+
+create an audit log entry (who changed what + timestamp)
+
+Validation:
+
+email must be valid format
+
+WhatsApp must be E.164 (+55…) and reject obviously invalid lengths
+
+2) Resend Email (must NOT restart chase)
+
+“Resend email” should:
+
+re-send the same intake link + access code
+
+NOT fire chase.start again
+
+NOT reset chase level
+
+log an EMAIL_RESENT audit event (user + timestamp)
+
+Add a soft cooldown (e.g. 60 seconds) to prevent accidental spam-clicking.
+
+3) Stop Reasons (taxonomy + behaviour)
+
+Confirm stop reasons include (at minimum):
+
+intake_complete
+
+manual_override
+
+client_opt_out
+
+invalid_contact
+
+lost_interest
+
+other
+
+When stopped:
+
+always fire chase.stop webhook with reason
+
+set chase state to inactive
+
+prevent further sends unless a deliberate “Restart Chase” action exists (admin-only)
+
+4) Webhook Status (visibility + retry)
+
+Modal must show:
+
+last event type (start/stop)
+
+delivery status (success/failed)
+
+timestamp
+
+last error message (if failed)
+
+“Retry webhook” button should:
+
+retry only the failed event payload
+
+preserve the original eventId (or include a retryAttempt counter)
+
+be idempotent (no duplicate downstream actions)
+
+5) Guided Sharing UX
+
+WhatsApp template copy should use this exact sentence:
+“Assim que tiver as últimas faturas à mão, o envio leva apenas alguns minutos. Depois disso, avançamos com a análise técnica.”
+
+Link expiry should be visible in the modal.
+
+If expiry < 3 days, show warning + “Extend 7 days” (if you built that).
+
+6) API / Data consistency checks
+
+Please confirm:
+
+chase.start payload now includes zohoDealId
+
+all chase.stop payloads include trackType + zohoDealId
+
+idempotency prevents double-send AND double-webhook
+
+7) Edge Cases
+
+If chase is active and intake completes, ensure UI flips to “Intake Complete” and chase stops automatically.
+
+If Zoho task creation fails, the send still succeeds (fail-open) but logs error and allows retry.
+
+If all above are done, reply with screenshots of the modal states:
+
+Pre-send state
+
+Active chase state
+
+Stopped state (manual)
+
+Intake complete state
+
+Webhook failed state (showing retry)
+
+Then we move on to the next build.

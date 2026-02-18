@@ -4828,6 +4828,8 @@ export const trackChaseState = pgTable("track_chase_state", {
   sentByUserId: text("sent_by_user_id"),
   webhookStartFired: boolean("webhook_start_fired").default(false),
   webhookStopFired: boolean("webhook_stop_fired").default(false),
+  webhookLastError: text("webhook_last_error"),
+  webhookLastAttemptAt: timestamp("webhook_last_attempt_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

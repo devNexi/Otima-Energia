@@ -11308,12 +11308,16 @@ export async function registerRoutes(
             signal: AbortSignal.timeout(10000),
           });
           webhookStartOk = resp.ok;
-        } catch (err) {
+          if (!resp.ok) {
+            await storage.updateChaseState(trackId, { webhookLastError: `HTTP ${resp.status}: ${resp.statusText}`, webhookLastAttemptAt: new Date() });
+          }
+        } catch (err: any) {
           console.error("[chase] Start webhook failed:", err);
+          await storage.updateChaseState(trackId, { webhookLastError: err.message || 'Network error', webhookLastAttemptAt: new Date() });
         }
       }
 
-      await storage.updateChaseState(trackId, { webhookStartFired: webhookStartOk || !webhookUrl });
+      await storage.updateChaseState(trackId, { webhookStartFired: webhookStartOk || !webhookUrl, ...(webhookStartOk ? { webhookLastError: null } : {}), webhookLastAttemptAt: new Date() });
 
       await storage.logAdminAction({
         actor: user?.username || "system",
@@ -11396,12 +11400,16 @@ export async function registerRoutes(
             signal: AbortSignal.timeout(10000),
           });
           webhookStopOk = resp.ok;
-        } catch (err) {
+          if (!resp.ok) {
+            await storage.updateChaseState(trackId, { webhookLastError: `HTTP ${resp.status}: ${resp.statusText}`, webhookLastAttemptAt: new Date() });
+          }
+        } catch (err: any) {
           console.error("[chase] Stop webhook failed:", err);
+          await storage.updateChaseState(trackId, { webhookLastError: err.message || 'Network error', webhookLastAttemptAt: new Date() });
         }
       }
 
-      await storage.updateChaseState(trackId, { webhookStopFired: webhookStopOk || !webhookUrl });
+      await storage.updateChaseState(trackId, { webhookStopFired: webhookStopOk || !webhookUrl, ...(webhookStopOk ? { webhookLastError: null } : {}), webhookLastAttemptAt: new Date() });
 
       const sessionId = req.headers["x-session-id"] as string;
       const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
@@ -11445,6 +11453,14 @@ export async function registerRoutes(
       const chaseState = await storage.getChaseState(trackId);
       if (!chaseState || !chaseState.active) {
         return res.status(400).json({ success: false, error: "No active chase to resend for" });
+      }
+
+      if (chaseState.lastSentAt) {
+        const secondsSinceLast = (Date.now() - new Date(chaseState.lastSentAt).getTime()) / 1000;
+        if (secondsSinceLast < 60) {
+          const waitSeconds = Math.ceil(60 - secondsSinceLast);
+          return res.status(429).json({ success: false, error: `Please wait ${waitSeconds} seconds before resending`, cooldownRemaining: waitSeconds });
+        }
       }
 
       const { contactEmail: newEmail } = req.body;
@@ -11563,13 +11579,23 @@ export async function registerRoutes(
       const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
       const user = adminSession ? await storage.getUser(adminSession.userId) : null;
 
+      const changedFields: Record<string, { from: any; to: any }> = {};
+      if (updates.contactName !== undefined && updates.contactName !== chaseState.contactName)
+        changedFields.contactName = { from: chaseState.contactName, to: updates.contactName };
+      if (updates.contactEmail !== undefined && updates.contactEmail !== chaseState.contactEmail)
+        changedFields.contactEmail = { from: chaseState.contactEmail, to: updates.contactEmail };
+      if (updates.contactWhatsapp !== undefined && updates.contactWhatsapp !== chaseState.contactWhatsapp)
+        changedFields.contactWhatsapp = { from: chaseState.contactWhatsapp, to: updates.contactWhatsapp };
+      if (updates.whatsappOptIn !== undefined && updates.whatsappOptIn !== chaseState.whatsappOptIn)
+        changedFields.whatsappOptIn = { from: chaseState.whatsappOptIn, to: updates.whatsappOptIn };
+
       await storage.logAdminAction({
         actor: user?.username || "system",
         actorIp: req.ip || null,
         action: "CHASE_CONTACT_UPDATED",
         entityType: "track",
         entityId: trackId,
-        detailsJson: { updates }
+        detailsJson: { changes: changedFields, updatedBy: user?.username || 'system' }
       });
 
       const webhookUrl = process.env.CHASE_WEBHOOK_URL;
@@ -11726,20 +11752,124 @@ export async function registerRoutes(
         };
       }
 
-      const resp = await fetch(`${webhookUrl}/webhook/chase/${webhookType}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10000),
-      });
+      let webhookOk = false;
+      let errorMsg: string | null = null;
+      try {
+        const resp = await fetch(`${webhookUrl}/webhook/chase/${webhookType}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(10000),
+        });
+        webhookOk = resp.ok;
+        if (!resp.ok) errorMsg = `HTTP ${resp.status}: ${resp.statusText}`;
+      } catch (fetchErr: any) {
+        errorMsg = fetchErr.message || 'Network error';
+      }
 
       const updateField = webhookType === 'start' ? 'webhookStartFired' : 'webhookStopFired';
-      await storage.updateChaseState(trackId, { [updateField]: resp.ok });
+      await storage.updateChaseState(trackId, {
+        [updateField]: webhookOk,
+        webhookLastError: webhookOk ? null : errorMsg,
+        webhookLastAttemptAt: new Date(),
+      });
 
-      res.json({ success: true, delivered: resp.ok, status: resp.status });
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "WEBHOOK_RETRY",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { webhookType, delivered: webhookOk, error: errorMsg }
+      });
+
+      res.json({ success: true, delivered: webhookOk, error: errorMsg });
     } catch (error: any) {
       console.error("Error retrying webhook:", error);
       res.status(500).json({ success: false, error: "Failed to retry webhook" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/chase-restart", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const chaseState = await storage.getChaseState(trackId);
+      if (!chaseState) return res.status(404).json({ success: false, error: "No chase state" });
+      if (chaseState.active) return res.status(400).json({ success: false, error: "Chase is already active" });
+      if (chaseState.stoppedReason === 'intake_complete') return res.status(400).json({ success: false, error: "Cannot restart: intake already completed" });
+
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+      if (!activeSession) return res.status(400).json({ success: false, error: "No active intake session to chase" });
+
+      await storage.updateChaseState(trackId, {
+        active: true,
+        stoppedReason: null,
+        stoppedAt: null,
+        webhookStartFired: false,
+        webhookStopFired: false,
+        webhookLastError: null,
+      });
+
+      const deal = await storage.getDeal(track.dealId);
+      const client = deal?.clientId ? await storage.getClient(deal.clientId) : null;
+      let webhookOk = false;
+      const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+      if (webhookUrl && deal) {
+        try {
+          const crmLink = await storage.getDealCrmLink(deal.id);
+          const portalUrl = `${req.protocol}://${req.get('host')}/client/intake/${activeSession.token}`;
+          const resp = await fetch(`${webhookUrl}/webhook/chase/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'chase.start',
+              dealId: deal.id,
+              trackId,
+              trackType: track.type,
+              zohoDealId: crmLink?.zohoDealId || null,
+              companyName: client?.companyName || chaseState.contactName || 'Cliente',
+              contact: { name: chaseState.contactName, email: chaseState.contactEmail, whatsapp: chaseState.contactWhatsapp, whatsappOptIn: chaseState.whatsappOptIn },
+              intakeLink: portalUrl,
+              accessCode: activeSession.accessCode || null,
+              expiresAt: activeSession.expiresAt?.toISOString() || null,
+              isRestart: true,
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          webhookOk = resp.ok;
+          if (!resp.ok) {
+            await storage.updateChaseState(trackId, { webhookLastError: `HTTP ${resp.status}: ${resp.statusText}`, webhookLastAttemptAt: new Date() });
+          }
+        } catch (err: any) {
+          await storage.updateChaseState(trackId, { webhookLastError: err.message || 'Network error', webhookLastAttemptAt: new Date() });
+        }
+      }
+      await storage.updateChaseState(trackId, { webhookStartFired: webhookOk || !webhookUrl, webhookLastAttemptAt: new Date() });
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "CHASE_RESTARTED",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal?.id, previousReason: chaseState.stoppedReason }
+      });
+
+      res.json({ success: true, webhookStartFired: webhookOk || !webhookUrl });
+    } catch (error: any) {
+      console.error("Error restarting chase:", error);
+      res.status(500).json({ success: false, error: "Failed to restart chase" });
     }
   });
 
