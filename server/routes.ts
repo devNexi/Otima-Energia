@@ -11501,9 +11501,11 @@ export async function registerRoutes(
         </div>`,
       });
 
+      const resendUpdates: Record<string, any> = { lastSentAt: new Date() };
       if (newEmail && newEmail !== chaseState.contactEmail) {
-        await storage.updateChaseState(trackId, { contactEmail: newEmail });
+        resendUpdates.contactEmail = newEmail;
       }
+      await storage.updateChaseState(trackId, resendUpdates);
 
       const sessionId = req.headers["x-session-id"] as string;
       const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
