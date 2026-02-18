@@ -11880,6 +11880,59 @@ export async function registerRoutes(
 
   // ============== END CHASE STATE ENGINE ==============
 
+  // ============== DEV SEED: Chase State QA (dev only) ==============
+  if (process.env.NODE_ENV !== 'production') {
+    app.post("/api/dev/seed-chase-states", async (req, res) => {
+      if (!await validateDealOsSession(req, res, ['admin'])) return;
+      try {
+        const dealId = `CHASE_QA_${Date.now()}`;
+        const clientId = 1;
+        const now = new Date();
+
+        await db.execute(sql`INSERT INTO deals (id, client_id, status, is_demo) VALUES (${dealId}, ${clientId}, 'PROSPECT', true)`);
+
+        const trackTypes = ['GDL', 'ACL', 'ACR', 'GDL', 'GDL'];
+        const trackLabels = ['pre_send', 'active', 'stopped_manual', 'intake_complete', 'webhook_failed'];
+        const createdTracks: { id: number; label: string; type: string }[] = [];
+
+        for (let i = 0; i < 5; i++) {
+          const trackResult = await db.execute(sql`INSERT INTO deal_tracks (deal_id, type, status) VALUES (${dealId}, ${trackTypes[i]}, 'INITIAL') RETURNING id`);
+          const trackId = (trackResult.rows[0] as any).id;
+          createdTracks.push({ id: trackId, label: trackLabels[i], type: trackTypes[i] });
+
+          const token = `chase_qa_${trackLabels[i]}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const expiresAt = new Date(Date.now() + (i === 4 ? 2 * 86400000 : 14 * 86400000));
+          const usedAt = i === 3 ? now : null;
+          await db.execute(sql`INSERT INTO upload_sessions (client_id, token, access_code, is_used, expires_at, deal_id, track_id, intake_type, expected_bills_count, require_loa, require_lgpd, used_at) VALUES (${clientId}, ${token}, '1234', ${i === 3}, ${expiresAt}, ${dealId}, ${trackId}, 'full_intake', 6, true, true, ${usedAt})`);
+        }
+
+        const t1 = createdTracks[1].id;
+        const t2 = createdTracks[2].id;
+        const t3 = createdTracks[3].id;
+        const t4 = createdTracks[4].id;
+
+        await db.execute(sql`INSERT INTO track_chase_state (track_id, active, level, last_sent_at, contact_name, contact_email, contact_whatsapp, whatsapp_opt_in, sent_event_id, sent_by_user_id, webhook_start_fired, webhook_stop_fired) VALUES (${t1}, true, 2, ${new Date(now.getTime() - 30000)}, 'Maria Silva', 'maria@empresa.com.br', '+5511987654321', true, ${'intake_send_' + t1 + '_' + Date.now()}, 'admin', true, false)`);
+
+        await db.execute(sql`INSERT INTO track_chase_state (track_id, active, level, last_sent_at, stopped_reason, stopped_at, contact_name, contact_email, contact_whatsapp, whatsapp_opt_in, sent_event_id, sent_by_user_id, webhook_start_fired, webhook_stop_fired) VALUES (${t2}, false, 3, ${new Date(now.getTime() - 3600000)}, 'manual_override', ${new Date(now.getTime() - 1800000)}, 'João Pereira', 'joao@empresa.com.br', '+5521999887766', true, ${'intake_send_' + t2 + '_' + Date.now()}, 'admin', true, true)`);
+
+        await db.execute(sql`INSERT INTO track_chase_state (track_id, active, level, last_sent_at, stopped_reason, stopped_at, contact_name, contact_email, contact_whatsapp, whatsapp_opt_in, sent_event_id, sent_by_user_id, webhook_start_fired, webhook_stop_fired) VALUES (${t3}, false, 1, ${new Date(now.getTime() - 7200000)}, 'intake_complete', ${new Date(now.getTime() - 3600000)}, 'Ana Costa', 'ana@empresa.com.br', '+5531988776655', false, ${'intake_send_' + t3 + '_' + Date.now()}, 'admin', true, true)`);
+
+        await db.execute(sql`INSERT INTO track_chase_state (track_id, active, level, last_sent_at, contact_name, contact_email, contact_whatsapp, whatsapp_opt_in, sent_event_id, sent_by_user_id, webhook_start_fired, webhook_stop_fired, webhook_last_error, webhook_last_attempt_at) VALUES (${t4}, true, 0, ${new Date(now.getTime() - 120000)}, 'Carlos Santos', 'carlos@empresa.com.br', '+5541977665544', true, ${'intake_send_' + t4 + '_' + Date.now()}, 'admin', false, false, 'HTTP 502: Bad Gateway', ${new Date(now.getTime() - 60000)})`);
+
+        res.json({
+          success: true,
+          dealId,
+          tracks: createdTracks.map(t => ({ id: t.id, label: t.label, type: t.type })),
+          message: `Navigate to /admin/deals/${dealId} to see all 5 chase states`,
+        });
+      } catch (error: any) {
+        console.error("Error seeding chase states:", error);
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+  }
+  // ============== END DEV SEED ==============
+
   // ============== END DEAL TRACKS ==============
 
   // Generate proposal PDF with brand kit styling
