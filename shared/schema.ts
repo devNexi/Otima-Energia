@@ -1415,28 +1415,42 @@ export const DEAL_STATES = [
   'RFQ_SENT',
   'QUOTES_RECEIVED',
   'OFFER_SELECTED',
-  'ONBOARDING_PENDING',  // NEW: Client delays docs/compliance/CCEE steps
+  'ONBOARDING_PENDING',
+  'CONTRACT_SENT',
   'CONTRACT_SIGNED',
   'SUPPLY_LIVE',
   'CONTRACT_ENDED',
   'CLOSED',
-  'LOST'  // NEW: Dead deals (can be reached from pre-signature states)
+  'LOST'
 ] as const;
 
 export type DealState = typeof DEAL_STATES[number];
 
-// Valid state transitions (cannot skip states)
+export const DEAL_STATE_PRECEDENCE: DealState[] = [
+  'DRAFT',
+  'RFQ_SENT',
+  'QUOTES_RECEIVED',
+  'OFFER_SELECTED',
+  'ONBOARDING_PENDING',
+  'CONTRACT_SENT',
+  'CONTRACT_SIGNED',
+  'SUPPLY_LIVE',
+  'CONTRACT_ENDED',
+  'CLOSED',
+];
+
 export const DEAL_STATE_TRANSITIONS: Record<DealState, DealState[]> = {
   'DRAFT': ['RFQ_SENT', 'LOST'],
   'RFQ_SENT': ['QUOTES_RECEIVED', 'LOST'],
   'QUOTES_RECEIVED': ['OFFER_SELECTED', 'LOST'],
-  'OFFER_SELECTED': ['ONBOARDING_PENDING', 'CONTRACT_SIGNED', 'LOST'],
-  'ONBOARDING_PENDING': ['CONTRACT_SIGNED', 'LOST'],
-  'CONTRACT_SIGNED': ['SUPPLY_LIVE', 'LOST'],  // LOST requires admin approval
+  'OFFER_SELECTED': ['ONBOARDING_PENDING', 'CONTRACT_SENT', 'CONTRACT_SIGNED', 'LOST'],
+  'ONBOARDING_PENDING': ['CONTRACT_SENT', 'CONTRACT_SIGNED', 'LOST'],
+  'CONTRACT_SENT': ['CONTRACT_SIGNED', 'LOST'],
+  'CONTRACT_SIGNED': ['SUPPLY_LIVE', 'LOST'],
   'SUPPLY_LIVE': ['CONTRACT_ENDED'],
   'CONTRACT_ENDED': ['CLOSED'],
   'CLOSED': [],
-  'LOST': []  // Terminal state
+  'LOST': []
 };
 
 // Commission event status transitions
@@ -4705,8 +4719,11 @@ export const INITIAL_TRACK_STATUS: Record<TrackType, string> = {
 };
 
 export const GDL_REQUIRED_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT'] as const;
-export const TRACK_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT', 'LOA', 'OTHER'] as const;
+export const TRACK_DOC_TYPES = ['ENERGY_BILL', 'CNPJ_CARD', 'LGPD_CONSENT', 'LOA', 'SUPPLIER_CONTRACT', 'SIGNED_CONTRACT', 'OTHER'] as const;
 export type TrackDocType = typeof TRACK_DOC_TYPES[number];
+
+export const CONTRACT_STATUSES = ['NOT_READY', 'READY', 'SENT', 'SIGNED', 'DECLINED', 'EXPIRED'] as const;
+export type ContractStatus = typeof CONTRACT_STATUSES[number];
 
 export const GDL_TRANSITION_GATES: Record<string, (track: any, documents: any[]) => { allowed: boolean; reason?: string }> = {
   GDL_SUBMITTED_TO_PRIME: (track, documents) => {
@@ -4789,6 +4806,15 @@ export const dealTrackDocuments = pgTable("deal_track_documents", {
   uploadedByClient: boolean("uploaded_by_client").default(false),
   uploadSessionId: integer("upload_session_id").references(() => uploadSessions.id),
   source: text("source").default("admin"),
+  category: text("category"),
+  versionLabel: text("version_label"),
+  isFinal: boolean("is_final").default(false),
+  signedByClient: boolean("signed_by_client").default(false),
+  provider: text("provider"),
+  providerEnvelopeId: text("provider_envelope_id"),
+  providerStatus: text("provider_status"),
+  sentAt: timestamp("sent_at"),
+  signedAt: timestamp("signed_at"),
 });
 
 export const insertDealTrackDocumentSchema = createInsertSchema(dealTrackDocuments).omit({
@@ -4798,6 +4824,37 @@ export const insertDealTrackDocumentSchema = createInsertSchema(dealTrackDocumen
 
 export type InsertDealTrackDocument = z.infer<typeof insertDealTrackDocumentSchema>;
 export type DealTrackDocument = typeof dealTrackDocuments.$inferSelect;
+
+// ============== DEAL TRACK CONTRACTS ==============
+
+export const dealTrackContracts = pgTable("deal_track_contracts", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => dealTracks.id).notNull().unique(),
+  status: text("status").notNull().default('NOT_READY'),
+  clientName: text("client_name"),
+  clientEmail: text("client_email"),
+  clientWhatsapp: text("client_whatsapp"),
+  sentByUserId: text("sent_by_user_id"),
+  sentAt: timestamp("sent_at"),
+  signedAt: timestamp("signed_at"),
+  provider: text("provider").default('manual'),
+  providerEnvelopeId: text("provider_envelope_id"),
+  providerStatus: text("provider_status"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDealTrackContractSchema = createInsertSchema(dealTrackContracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDealTrackContract = z.infer<typeof insertDealTrackContractSchema>;
+export type DealTrackContract = typeof dealTrackContracts.$inferSelect;
+
+// ============== END DEAL TRACK CONTRACTS ==============
 
 // ============== CHASE STATE ENGINE ==============
 

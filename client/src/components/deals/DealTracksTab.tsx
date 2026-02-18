@@ -731,6 +731,8 @@ function TrackDetailView({
 
       <IntakeReadinessSection trackId={trackId} dealId={dealId} trackType={trackType} isPt={isPt} />
 
+      <ContractSection trackId={trackId} dealId={dealId} isPt={isPt} />
+
       <div>
         <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
           <Calendar className="w-4 h-4" />
@@ -1538,5 +1540,302 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
         </div>
       )}
     </div>
+  );
+}
+
+const CONTRACT_STATUS_COLORS: Record<string, string> = {
+  NOT_READY: "bg-gray-100 text-gray-800 border-gray-300",
+  READY: "bg-blue-100 text-blue-800 border-blue-300",
+  SENT: "bg-amber-100 text-amber-800 border-amber-300",
+  SIGNED: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  DECLINED: "bg-red-100 text-red-800 border-red-300",
+  EXPIRED: "bg-orange-100 text-orange-800 border-orange-300",
+};
+
+const CONTRACT_STATUS_LABELS: Record<string, { en: string; pt: string }> = {
+  NOT_READY: { en: "Not Ready", pt: "Não Pronto" },
+  READY: { en: "Ready", pt: "Pronto" },
+  SENT: { en: "Sent", pt: "Enviado" },
+  SIGNED: { en: "Signed", pt: "Assinado" },
+  DECLINED: { en: "Declined", pt: "Recusado" },
+  EXPIRED: { en: "Expired", pt: "Expirado" },
+};
+
+function ContractSection({ trackId, dealId, isPt }: { trackId: number; dealId: string; isPt: boolean }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [uploadFileName, setUploadFileName] = useState("");
+  const [uploadVersionLabel, setUploadVersionLabel] = useState("");
+  const [uploadIsFinal, setUploadIsFinal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendName, setSendName] = useState("");
+  const [sendEmail, setSendEmail] = useState("");
+  const [sendWhatsapp, setSendWhatsapp] = useState("");
+  const [sendChannel, setSendChannel] = useState("email");
+  const [signedFileName, setSignedFileName] = useState("");
+  const [waLink, setWaLink] = useState<string | null>(null);
+  const [waMessage, setWaMessage] = useState<string | null>(null);
+
+  const { data: contractData, isLoading } = useQuery({
+    queryKey: [`/api/tracks/${trackId}/contract`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/tracks/${trackId}/contract`);
+      return res.json();
+    },
+  });
+
+  const contract = contractData?.contract;
+  const supplierContracts: any[] = contractData?.supplierContracts || [];
+  const signedContracts: any[] = contractData?.signedContracts || [];
+  const finalContract = contractData?.finalContract;
+  const status = contract?.status || "NOT_READY";
+
+  const invalidateContract = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}/contract`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/tracks/${trackId}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/tracks`] });
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/contracts/upload-supplier`, {
+        fileName: uploadFileName,
+        versionLabel: uploadVersionLabel || undefined,
+        isFinal: uploadIsFinal,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Contrato do fornecedor enviado" : "Supplier contract uploaded" });
+      setUploadFileName("");
+      setUploadVersionLabel("");
+      setUploadIsFinal(false);
+      invalidateContract();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/contracts/send`, {
+        clientName: sendName,
+        clientEmail: sendEmail,
+        clientWhatsapp: sendWhatsapp || undefined,
+        channel: sendChannel,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: isPt ? "Contrato enviado ao cliente" : "Contract sent to client" });
+      if (data.waLink) setWaLink(data.waLink);
+      if (data.whatsappMessage) setWaMessage(data.whatsappMessage);
+      invalidateContract();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const markSignedMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/contracts/mark-signed`, {
+        signedFileName,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Contrato assinado registrado!" : "Signed contract recorded!" });
+      setSignedFileName("");
+      invalidateContract();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-2">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const formatDate = (d: string) => {
+    return new Date(d).toLocaleString(isPt ? "pt-BR" : "en-US", { timeZone: "America/Sao_Paulo" });
+  };
+
+  return (
+    <Card className="border-purple-200 bg-purple-50/30" data-testid={`contract-section-${trackId}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-purple-600" />
+            {isPt ? "Contratos" : "Contracts"}
+          </span>
+          <Badge className={`${CONTRACT_STATUS_COLORS[status] || CONTRACT_STATUS_COLORS.NOT_READY} border text-xs`} data-testid={`badge-contract-status-${trackId}`}>
+            {CONTRACT_STATUS_LABELS[status]?.[isPt ? "pt" : "en"] || status}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {supplierContracts.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">{isPt ? "Contratos do Fornecedor" : "Supplier Contracts"}</p>
+            <div className="space-y-1">
+              {supplierContracts.map((doc: any) => (
+                <div key={doc.id} className="flex items-center gap-2 text-xs p-1.5 rounded border bg-white" data-testid={`doc-supplier-contract-${doc.id}`}>
+                  <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="truncate">{doc.fileName}</span>
+                  {doc.versionLabel && <Badge variant="outline" className="text-[10px] shrink-0">{doc.versionLabel}</Badge>}
+                  {doc.isFinal && <Badge className="bg-green-100 text-green-800 border-green-300 border text-[10px] shrink-0">{isPt ? "Final" : "Final"}</Badge>}
+                  <span className="text-muted-foreground ml-auto shrink-0">{new Date(doc.createdAt).toLocaleDateString(isPt ? "pt-BR" : "en-US")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {signedContracts.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">{isPt ? "Contratos Assinados" : "Signed Contracts"}</p>
+            <div className="space-y-1">
+              {signedContracts.map((doc: any) => (
+                <div key={doc.id} className="flex items-center gap-2 text-xs p-1.5 rounded border bg-white" data-testid={`doc-signed-contract-${doc.id}`}>
+                  <CheckCircle2 className="w-3 h-3 text-green-600 shrink-0" />
+                  <span className="truncate">{doc.fileName}</span>
+                  {doc.signedAt && <span className="text-muted-foreground ml-auto shrink-0">{formatDate(doc.signedAt)}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {contract?.sentAt && (
+          <div className="text-xs space-y-0.5 p-2 rounded bg-white border">
+            <p><span className="font-medium">{isPt ? "Enviado para:" : "Sent to:"}</span> {contract.clientName} ({contract.clientEmail})</p>
+            {contract.clientWhatsapp && <p><span className="font-medium">WhatsApp:</span> {contract.clientWhatsapp}</p>}
+            <p><span className="font-medium">{isPt ? "Enviado em:" : "Sent at:"}</span> {formatDate(contract.sentAt)}</p>
+            {contract.signedAt && <p><span className="font-medium">{isPt ? "Assinado em:" : "Signed at:"}</span> {formatDate(contract.signedAt)}</p>}
+          </div>
+        )}
+
+        <div className="space-y-3 border-t pt-3">
+          <div>
+            <p className="text-xs font-medium mb-1.5">{isPt ? "Enviar Contrato do Fornecedor" : "Upload Supplier Contract"}</p>
+            <div className="flex gap-2 items-end flex-wrap">
+              <div className="space-y-1 flex-1 min-w-[150px]">
+                <Label className="text-[10px]">{isPt ? "Nome do Arquivo" : "File Name"}</Label>
+                <Input value={uploadFileName} onChange={(e) => setUploadFileName(e.target.value)} placeholder="contrato_v1.pdf" className="h-7 text-xs" data-testid={`input-contract-filename-${trackId}`} />
+              </div>
+              <div className="space-y-1 min-w-[100px]">
+                <Label className="text-[10px]">{isPt ? "Versão" : "Version"}</Label>
+                <Input value={uploadVersionLabel} onChange={(e) => setUploadVersionLabel(e.target.value)} placeholder="v1" className="h-7 text-xs" data-testid={`input-contract-version-${trackId}`} />
+              </div>
+              <div className="flex items-center gap-1.5 pb-0.5">
+                <Checkbox id={`final-${trackId}`} checked={uploadIsFinal} onCheckedChange={(v) => setUploadIsFinal(!!v)} data-testid={`checkbox-contract-final-${trackId}`} />
+                <Label htmlFor={`final-${trackId}`} className="text-[10px] cursor-pointer whitespace-nowrap">Final</Label>
+              </div>
+              <Button size="sm" className="h-7 text-xs" onClick={() => uploadMutation.mutate()} disabled={!uploadFileName || uploadMutation.isPending} data-testid={`button-upload-contract-${trackId}`}>
+                {uploadMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                {isPt ? "Enviar" : "Upload"}
+              </Button>
+            </div>
+          </div>
+
+          {(status === 'READY' || status === 'SENT') && (
+            <div>
+              <Button size="sm" className="h-7 text-xs bg-amber-600 hover:bg-amber-700" onClick={() => {
+                if (contract?.clientName) setSendName(contract.clientName);
+                if (contract?.clientEmail) setSendEmail(contract.clientEmail);
+                if (contract?.clientWhatsapp) setSendWhatsapp(contract.clientWhatsapp);
+                setShowSendModal(true);
+              }} data-testid={`button-send-contract-${trackId}`}>
+                <Send className="w-3 h-3 mr-1" />
+                {status === 'SENT' ? (isPt ? "Reenviar para o Cliente" : "Resend to Client") : (isPt ? "Enviar para o Cliente" : "Send to Client")}
+              </Button>
+            </div>
+          )}
+
+          {(status === 'SENT' || status === 'READY') && (
+            <div>
+              <p className="text-xs font-medium mb-1.5">{isPt ? "Enviar Contrato Assinado (Manual)" : "Upload Signed Contract (Manual)"}</p>
+              <div className="flex gap-2 items-end">
+                <div className="space-y-1 flex-1">
+                  <Input value={signedFileName} onChange={(e) => setSignedFileName(e.target.value)} placeholder="contrato_assinado.pdf" className="h-7 text-xs" data-testid={`input-signed-filename-${trackId}`} />
+                </div>
+                <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700" onClick={() => markSignedMutation.mutate()} disabled={!signedFileName || markSignedMutation.isPending} data-testid={`button-mark-signed-${trackId}`}>
+                  {markSignedMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                  {isPt ? "Marcar Assinado" : "Mark Signed"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showSendModal && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowSendModal(false)}>
+            <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{isPt ? "Enviar Contrato para Assinatura" : "Send Contract for Signature"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">{isPt ? "Nome do Cliente" : "Client Name"}</Label>
+                  <Input value={sendName} onChange={(e) => setSendName(e.target.value)} placeholder="João Silva" className="h-8 text-sm" data-testid="input-send-name" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Email</Label>
+                  <Input value={sendEmail} onChange={(e) => setSendEmail(e.target.value)} placeholder="cliente@empresa.com" type="email" className="h-8 text-sm" data-testid="input-send-email" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">WhatsApp</Label>
+                  <Input value={sendWhatsapp} onChange={(e) => setSendWhatsapp(e.target.value)} placeholder="+5511999999999" className="h-8 text-sm" data-testid="input-send-whatsapp" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{isPt ? "Canal" : "Channel"}</Label>
+                  <Select value={sendChannel} onValueChange={setSendChannel}>
+                    <SelectTrigger className="h-8 text-sm" data-testid="select-send-channel">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="both">{isPt ? "Ambos" : "Both"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {waLink && (
+                  <div className="p-2 rounded bg-green-50 border border-green-200 space-y-1">
+                    <p className="text-xs font-medium text-green-800">{isPt ? "Link WhatsApp gerado:" : "WhatsApp link generated:"}</p>
+                    <a href={waLink} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 underline break-all" data-testid="link-whatsapp">{waLink}</a>
+                    {waMessage && (
+                      <div className="mt-1">
+                        <p className="text-[10px] text-muted-foreground">{isPt ? "Mensagem:" : "Message:"}</p>
+                        <p className="text-xs text-gray-600 whitespace-pre-line">{waMessage}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button size="sm" variant="outline" onClick={() => { setShowSendModal(false); setWaLink(null); setWaMessage(null); }} data-testid="button-cancel-send">
+                    {isPt ? "Cancelar" : "Cancel"}
+                  </Button>
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => sendMutation.mutate()} disabled={!sendName || !sendEmail || sendMutation.isPending} data-testid="button-confirm-send">
+                    {sendMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                    {isPt ? "Enviar" : "Send"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

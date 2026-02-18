@@ -1,0 +1,432 @@
+You are working in the existing Otima Energia portal codebase (React + TypeScript frontend, Node/Express backend, Postgres + Drizzle). Do not break or refactor existing flows. Add new functionality in an additive, backwards-compatible way.
+
+Goal
+
+Implement a complete Contracts & E-Sign workflow that starts after proposal/negotiation and ends at CONTRACT_SIGNED, with a clean UX for sales + ops. We will plan for Clicksign integration, but the build must work end-to-end first using a “manual send + manual signed upload” workflow, and be Clicksign-ready later.
+
+A) Product Requirements
+A1. Contract workflow (per Track)
+
+We need to receive supplier contracts, store them, send them to clients for e-signature, track status, and store signed contracts.
+
+Contract states (per deal track):
+
+CONTRACT_NOT_READY (default)
+
+CONTRACT_READY (final supplier contract uploaded)
+
+CONTRACT_SENT (sent to client)
+
+CONTRACT_SIGNED (signed PDF received or Clicksign completed)
+
+CONTRACT_DECLINED (optional)
+
+CONTRACT_EXPIRED (optional)
+
+This is per deal track, not per deal globally.
+
+A2. Where it lives in the portal
+
+Inside Deal → Tracks tab → each Track expanded view, add a new section:
+
+“Contracts”
+
+This section must:
+
+show contract readiness + status
+
+allow internal upload of supplier contract (PDF)
+
+allow marking contract as “Final”
+
+allow sending to client for signature
+
+show signing status + timestamps
+
+allow uploading the signed contract PDF manually (until Clicksign is live)
+
+store everything as documents linked to the track
+
+never break intake/chase/zoho mirror
+
+B) EXACT STAGE MAPPING RULES (CRITICAL)
+
+Your portal has:
+
+Deal-level stages (state machine): e.g. RFQ_SENT, QUOTES_IN, NEGOTIATION, CONTRACT_SENT, CONTRACT_SIGNED, etc.
+
+Track-level statuses/workflows (each track independent)
+
+We must define deterministic rules so contracts integrate cleanly without breaking the existing deal stage engine.
+
+B1. Principle: Tracks drive Deal Stage (only when appropriate)
+
+A deal can have multiple tracks. The deal stage should reflect the most advanced active track, but must not regress automatically.
+
+Deal Stage Precedence Order (highest wins)
+
+SUPPLY_LIVE
+CONTRACT_SIGNED
+CONTRACT_SENT
+NEGOTIATION
+QUOTES_IN
+RFQ_SENT
+RFQ_READY
+DOSSIER_BUILDING
+NOVO
+
+B2. When to set Deal Stage based on Track Contract state
+
+We only auto-advance deal stage when:
+
+The track belongs to the deal, is active (not closed/lost)
+
+The resulting stage is ahead of current deal stage
+
+We never auto-regress
+
+Mapping from Track Contract Status → Deal Stage
+
+Track CONTRACT_READY
+✅ does NOT automatically change the deal stage
+Reason: readiness is internal; deal may still be in negotiation/proposal refinement.
+
+Track CONTRACT_SENT
+✅ set deal stage to CONTRACT_SENT IF current deal stage is earlier than CONTRACT_SENT
+
+Track CONTRACT_SIGNED
+✅ set deal stage to CONTRACT_SIGNED IF current deal stage is earlier than CONTRACT_SIGNED
+
+Mapping from Track “commercial” progress → Deal Stage (existing)
+
+Do not change existing mapping, but ensure contracts integrate:
+
+If a deal is in NEGOTIATION, and the track contract gets sent, deal advances to CONTRACT_SENT.
+
+If a deal is in CONTRACT_SENT, and signed arrives, deal advances to CONTRACT_SIGNED.
+
+B3. Multi-track rule (very important)
+
+If multiple tracks exist:
+
+Deal stage should reflect the highest-stage active track (using precedence order above).
+
+A track can be CONTRACT_SIGNED while another is still NEGOTIATION. Deal stage should be CONTRACT_SIGNED.
+
+If a signed track is later marked closed/lost (rare), do not auto-regress deal stage. Only manual admin can regress.
+
+B4. Manual overrides
+
+Add an admin-only “Override Deal Stage” already exists? If not, do NOT build it now.
+Do not regress deal stage automatically under any circumstance.
+
+B5. Track status integration
+
+Do NOT replace existing track status machine. Add contract status alongside it:
+
+Track has “workflow status” (existing: dossier/rfq/quotes/etc)
+
+Track now also has “contract status” (new, separate)
+This avoids breaking existing track transitions.
+
+C) Database / Schema (Drizzle)
+C1. Extend deal_track_documents
+
+Extend safely by adding:
+
+category text nullable: 'INTAKE' | 'CONTRACT' | 'OTHER'
+
+versionLabel text nullable
+
+isFinal boolean default false
+
+signedByClient boolean default false
+
+provider text nullable (e.g. “clicksign”)
+
+providerEnvelopeId text nullable
+
+providerStatus text nullable
+
+sentAt timestamp nullable
+
+signedAt timestamp nullable
+
+Add new documentType values:
+
+SUPPLIER_CONTRACT
+
+SIGNED_CONTRACT
+
+Do NOT break existing document types.
+
+C2. New table: deal_track_contracts (recommended)
+
+Create:
+
+deal_track_contracts
+
+id serial pk
+
+trackId fk to deal_tracks.id (unique: one per track)
+
+status text: NOT_READY/READY/SENT/SIGNED/DECLINED/EXPIRED
+
+clientName text nullable
+
+clientEmail text nullable
+
+clientWhatsapp text nullable
+
+sentByUserId text nullable
+
+sentAt timestamp nullable
+
+signedAt timestamp nullable
+
+provider text default 'manual'
+
+providerEnvelopeId text nullable
+
+providerStatus text nullable
+
+lastError text nullable
+
+createdAt timestamp
+
+updatedAt timestamp
+
+This is the single source of truth for contract status per track.
+
+D) Backend API (Express)
+
+All endpoints must be admin-auth protected and follow existing patterns.
+
+D1. Get contract state
+
+GET /api/tracks/:trackId/contract
+Returns:
+
+contract state record
+
+related contract documents (supplier + signed)
+
+D2. Upload supplier contract
+
+POST /api/tracks/:trackId/contracts/upload-supplier
+Payload:
+
+fileKey, fileName, versionLabel, isFinal
+
+Server:
+
+create deal_track_document with documentType=SUPPLIER_CONTRACT, category=CONTRACT
+
+if isFinal=true:
+
+unset isFinal on previous supplier contracts for track
+
+set contract status to READY
+
+audit log event
+
+D3. Send contract to client (manual now, Clicksign-ready)
+
+POST /api/tracks/:trackId/contracts/send
+Payload:
+
+clientName
+
+clientEmail
+
+clientWhatsapp (optional)
+
+channel: 'email' | 'whatsapp' | 'both'
+
+Rules:
+
+require final supplier contract exists
+
+set contract status to SENT (idempotent; allow resend)
+
+store sentAt, contact details, sentByUserId
+
+send branded email via nodemailer
+
+return WhatsApp template + wa.me link for UI
+
+audit log CONTRACT_SENT / CONTRACT_RESENT
+
+Deal stage mapping hook:
+
+When contract status becomes SENT:
+
+evaluate deal stage update rules (Section B)
+
+if deal stage is earlier than CONTRACT_SENT → advance to CONTRACT_SENT
+
+D4. Mark signed (manual upload)
+
+POST /api/tracks/:trackId/contracts/mark-signed
+Payload:
+
+signedFileKey, signedFileName
+
+Server:
+
+create deal_track_document type SIGNED_CONTRACT
+
+update deal_track_contracts status SIGNED + signedAt
+
+audit log SIGNED_CONTRACT_UPLOADED
+
+apply deal stage mapping:
+
+if deal stage earlier than CONTRACT_SIGNED → advance to CONTRACT_SIGNED
+
+D5. Clicksign webhook stub
+
+POST /api/webhooks/clicksign
+
+stub only (signature verification TODO)
+
+update providerStatus
+
+if Clicksign says signed:
+
+store signed PDF (later)
+
+set contract status SIGNED
+
+run deal stage mapping (advance to CONTRACT_SIGNED)
+
+E) Frontend UX (React)
+E1. Track Detail: Contracts section
+
+Add Contracts card in expanded Track view showing:
+
+status badge: Not Ready / Ready / Sent / Signed
+
+final supplier contract file (view/download)
+
+signed contract file (view/download)
+
+sent to: name/email/whatsapp
+
+sentAt / signedAt in America/Sao_Paulo timezone
+
+Actions:
+
+Upload supplier contract (PDF)
+
+versionLabel field
+
+checkbox “Mark as Final”
+
+Send for signature (modal)
+
+clientName, clientEmail, clientWhatsapp
+
+channel select email/whatsapp/both
+
+preview WhatsApp message
+
+Resend (if already SENT)
+
+does not reset status/level; updates sentAt; audit as resend
+
+Upload signed contract (manual)
+
+Admin-only reset contract status (optional, confirm dialog)
+
+E2. Deal Registry improvements (Renan UX)
+
+In deal list:
+
+add filter “Awaiting Signature”
+
+add badge/column “Contract: Not Ready / Sent / Signed”
+Use the “most urgent track” rule:
+
+If any active track is SENT but not SIGNED → show SENT
+
+If any active track SIGNED → show SIGNED
+
+Else READY/NOT_READY
+
+E3. “My Actions Today” panel
+
+On dashboard:
+
+Contracts awaiting signature count (tracks with status SENT)
+
+Intakes incomplete count (existing intake status)
+Clicking an item filters deal registry.
+
+Keep minimal.
+
+F) Templates
+Contract Email (PT-BR)
+
+Subject: “Assinatura do contrato — Ótima Energia”
+
+Body:
+
+short greeting
+
+“conforme sua conversa com o Renan…”
+
+contract link
+
+support line
+
+footer
+
+WhatsApp template (PT-BR)
+
+“Olá {Nome}, tudo bem? Aqui é da Ótima Energia (equipe do Renan).
+
+Segue o contrato para assinatura:
+{LINK}
+
+Qualquer dúvida, é só me responder por aqui.”
+
+Return this from backend so UI can copy + wa.me deep link.
+
+G) Security & Audit
+
+All endpoints admin-auth protected
+
+Do not expose raw object keys publicly
+
+Audit events:
+
+SUPPLIER_CONTRACT_UPLOADED
+
+SUPPLIER_CONTRACT_MARKED_FINAL
+
+CONTRACT_SENT / CONTRACT_RESENT
+
+SIGNED_CONTRACT_UPLOADED
+
+CONTRACT_STATUS_RESET (if built)
+
+H) Acceptance Criteria
+
+Working end-to-end without Clicksign:
+
+Upload supplier contract → mark final → contract status READY
+
+Send to client (email + WhatsApp copy) → contract status SENT → deal stage advances to CONTRACT_SENT (if earlier)
+
+Upload signed contract → contract status SIGNED → deal stage advances to CONTRACT_SIGNED (if earlier)
+
+Deal list shows contract badges + filter “Awaiting Signature”
+
+Action Today panel shows contracts awaiting signature
+
+All timestamps displayed in America/Sao_Paulo timezone
+
+No regressions: intake, chase, track docs, Zoho mirror remain unchanged
+
+Deal stage never auto-regresses; only advances according to rules

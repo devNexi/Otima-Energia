@@ -113,7 +113,9 @@ import {
   consentRecords,
   dealTracks, dealTrackEvents, dealTrackDocuments,
   dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs,
-  trackChaseState, type TrackChaseState, type InsertTrackChaseState
+  trackChaseState, type TrackChaseState, type InsertTrackChaseState,
+  dealTrackContracts, type DealTrackContract, type InsertDealTrackContract,
+  DEAL_STATE_PRECEDENCE
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -826,6 +828,12 @@ export interface IStorage {
   upsertChaseState(data: InsertTrackChaseState): Promise<TrackChaseState>;
   updateChaseState(trackId: number, data: Partial<InsertTrackChaseState>): Promise<TrackChaseState | undefined>;
   stopChase(trackId: number, reason: string, userId?: string): Promise<TrackChaseState | undefined>;
+
+  getTrackContract(trackId: number): Promise<DealTrackContract | undefined>;
+  createTrackContract(data: InsertDealTrackContract): Promise<DealTrackContract>;
+  updateTrackContract(trackId: number, data: Partial<InsertDealTrackContract>): Promise<DealTrackContract | undefined>;
+  updateDealTrackDocument(id: number, data: Partial<InsertDealTrackDocument>): Promise<DealTrackDocument | undefined>;
+  getContractsAwaitingSignature(): Promise<DealTrackContract[]>;
 }
 
 export class Storage implements IStorage {
@@ -4862,6 +4870,36 @@ export class Storage implements IStorage {
       .where(eq(trackChaseState.trackId, trackId))
       .returning();
     return result[0];
+  }
+
+  async getTrackContract(trackId: number): Promise<DealTrackContract | undefined> {
+    const result = await db.select().from(dealTrackContracts).where(eq(dealTrackContracts.trackId, trackId));
+    return result[0];
+  }
+
+  async createTrackContract(data: InsertDealTrackContract): Promise<DealTrackContract> {
+    const result = await db.insert(dealTrackContracts).values(data).returning();
+    return result[0];
+  }
+
+  async updateTrackContract(trackId: number, data: Partial<InsertDealTrackContract>): Promise<DealTrackContract | undefined> {
+    const result = await db.update(dealTrackContracts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(dealTrackContracts.trackId, trackId))
+      .returning();
+    return result[0];
+  }
+
+  async updateDealTrackDocument(id: number, data: Partial<InsertDealTrackDocument>): Promise<DealTrackDocument | undefined> {
+    const result = await db.update(dealTrackDocuments)
+      .set(data)
+      .where(eq(dealTrackDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getContractsAwaitingSignature(): Promise<DealTrackContract[]> {
+    return db.select().from(dealTrackContracts).where(eq(dealTrackContracts.status, 'SENT'));
   }
 }
 

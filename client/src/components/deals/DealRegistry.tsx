@@ -31,6 +31,7 @@ const DEAL_STATES = [
   'RFQ_SENT',
   'QUOTES_RECEIVED',
   'OFFER_SELECTED',
+  'CONTRACT_SENT',
   'CONTRACT_SIGNED',
   'SUPPLY_LIVE',
   'COMMISSION_ACTIVE',
@@ -45,6 +46,7 @@ const stateColors: Record<DealState, string> = {
   RFQ_SENT: "bg-blue-100 text-blue-800 border-blue-300",
   QUOTES_RECEIVED: "bg-indigo-100 text-indigo-800 border-indigo-300",
   OFFER_SELECTED: "bg-purple-100 text-purple-800 border-purple-300",
+  CONTRACT_SENT: "bg-yellow-100 text-yellow-800 border-yellow-300",
   CONTRACT_SIGNED: "bg-amber-100 text-amber-800 border-amber-300",
   SUPPLY_LIVE: "bg-emerald-100 text-emerald-800 border-emerald-300",
   COMMISSION_ACTIVE: "bg-green-100 text-green-800 border-green-300",
@@ -57,6 +59,7 @@ const stateLabels: Record<DealState, { en: string; pt: string }> = {
   RFQ_SENT: { en: "RFQ Sent", pt: "RFQ Enviado" },
   QUOTES_RECEIVED: { en: "Quotes Received", pt: "Cotações Recebidas" },
   OFFER_SELECTED: { en: "Offer Selected", pt: "Oferta Selecionada" },
+  CONTRACT_SENT: { en: "Contract Sent", pt: "Contrato Enviado" },
   CONTRACT_SIGNED: { en: "Contract Signed", pt: "Contrato Assinado" },
   SUPPLY_LIVE: { en: "Supply Live", pt: "Fornecimento Ativo" },
   COMMISSION_ACTIVE: { en: "Commission Active", pt: "Comissão Ativa" },
@@ -133,7 +136,9 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
   const clients = (clientsData as any)?.clients || [];
 
   const filteredDeals = deals.filter((deal: any) => {
-    if (statusFilter !== "all" && deal.status !== statusFilter) return false;
+    if (statusFilter === "AWAITING_SIGNATURE") {
+      if (deal.status !== "CONTRACT_SENT") return false;
+    } else if (statusFilter !== "all" && deal.status !== statusFilter) return false;
     if (ownerFilter && !deal.internalOwner?.toLowerCase().includes(ownerFilter.toLowerCase())) return false;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -400,6 +405,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{language === "pt" ? "Todos os Status" : "All Statuses"}</SelectItem>
+                  <SelectItem value="AWAITING_SIGNATURE" className="font-medium text-amber-700">{language === "pt" ? "Aguardando Assinatura" : "Awaiting Signature"}</SelectItem>
                   {DEAL_STATES.map(state => (
                     <SelectItem key={state} value={state}>
                       {stateLabels[state][language as "en" | "pt"]}

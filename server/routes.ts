@@ -47,8 +47,10 @@ import {
   invoices,
   DEAL_STATES,
   DEAL_STATE_TRANSITIONS,
+  DEAL_STATE_PRECEDENCE,
   type DealState,
   dealTracks,
+  dealTrackContracts,
   insertConsentRecordSchema,
   consentRecords,
   dealTrackDocuments,
@@ -11879,6 +11881,380 @@ export async function registerRoutes(
   });
 
   // ============== END CHASE STATE ENGINE ==============
+
+  // ============== CONTRACT WORKFLOW ==============
+
+  app.get("/api/tracks/:trackId/contract", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      let contract = await storage.getTrackContract(trackId);
+      if (!contract) {
+        contract = await storage.createTrackContract({ trackId, status: 'NOT_READY' });
+      }
+
+      const documents = await storage.getDealTrackDocuments(trackId);
+      const supplierContracts = documents.filter((d: any) => d.documentType === 'SUPPLIER_CONTRACT');
+      const signedContracts = documents.filter((d: any) => d.documentType === 'SIGNED_CONTRACT');
+
+      res.json({
+        success: true,
+        contract,
+        supplierContracts,
+        signedContracts,
+        finalContract: supplierContracts.find((d: any) => d.isFinal) || null,
+      });
+    } catch (error: any) {
+      console.error("Error getting track contract:", error);
+      res.status(500).json({ success: false, error: "Failed to get contract state" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/contracts/upload-supplier", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { fileKey, fileName, versionLabel, isFinal } = req.body;
+
+      if (!fileName) {
+        return res.status(400).json({ success: false, error: "fileName is required" });
+      }
+
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      if (isFinal) {
+        const existingDocs = await storage.getDealTrackDocuments(trackId);
+        const previousFinals = existingDocs.filter((d: any) => d.documentType === 'SUPPLIER_CONTRACT' && d.isFinal);
+        for (const prev of previousFinals) {
+          await storage.updateDealTrackDocument(prev.id, { isFinal: false });
+        }
+      }
+
+      const doc = await storage.createDealTrackDocument({
+        trackId,
+        documentType: 'SUPPLIER_CONTRACT',
+        fileName,
+        fileKey: fileKey || null,
+        uploadedByUserId: user?.id || null,
+        source: 'admin',
+        category: 'CONTRACT',
+        versionLabel: versionLabel || null,
+        isFinal: isFinal || false,
+      });
+
+      let contract = await storage.getTrackContract(trackId);
+      if (!contract) {
+        contract = await storage.createTrackContract({ trackId, status: isFinal ? 'READY' : 'NOT_READY' });
+      } else if (isFinal && contract.status === 'NOT_READY') {
+        contract = await storage.updateTrackContract(trackId, { status: 'READY' });
+      }
+
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: isFinal ? "SUPPLIER_CONTRACT_MARKED_FINAL" : "SUPPLIER_CONTRACT_UPLOADED",
+        entityType: "deal_track_contract",
+        entityId: doc.id,
+        dealId: track.dealId,
+        detailsJson: { trackId, fileName, versionLabel, isFinal }
+      });
+
+      await storage.createDealTrackEvent({
+        trackId,
+        eventType: isFinal ? 'SUPPLIER_CONTRACT_MARKED_FINAL' : 'SUPPLIER_CONTRACT_UPLOADED',
+        payload: { fileName, versionLabel, isFinal },
+        createdByUserId: user?.id || null,
+      });
+
+      res.json({ success: true, document: doc, contract });
+    } catch (error: any) {
+      console.error("Error uploading supplier contract:", error);
+      res.status(500).json({ success: false, error: "Failed to upload supplier contract" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/contracts/send", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { clientName, clientEmail, clientWhatsapp, channel } = req.body;
+
+      if (!clientName || !clientEmail) {
+        return res.status(400).json({ success: false, error: "clientName and clientEmail are required" });
+      }
+
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const documents = await storage.getDealTrackDocuments(trackId);
+      const finalContract = documents.find((d: any) => d.documentType === 'SUPPLIER_CONTRACT' && d.isFinal);
+      if (!finalContract) {
+        return res.status(400).json({ success: false, error: "No final supplier contract found. Mark a contract as Final first." });
+      }
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      let contract = await storage.getTrackContract(trackId);
+      const isResend = contract?.status === 'SENT';
+
+      if (!contract) {
+        contract = await storage.createTrackContract({
+          trackId,
+          status: 'SENT',
+          clientName,
+          clientEmail,
+          clientWhatsapp: clientWhatsapp || null,
+          sentByUserId: user?.id || null,
+          sentAt: new Date(),
+        });
+      } else {
+        contract = await storage.updateTrackContract(trackId, {
+          status: 'SENT',
+          clientName,
+          clientEmail,
+          clientWhatsapp: clientWhatsapp || null,
+          sentByUserId: user?.id || null,
+          sentAt: new Date(),
+        });
+      }
+
+      let emailSent = false;
+      if (channel !== 'whatsapp') {
+        try {
+          const nodemailer = await import('nodemailer');
+          const smtpHost = process.env.SMTP_HOST;
+          const smtpUser = process.env.SMTP_USER;
+          const smtpPass = process.env.SMTP_PASS;
+
+          if (smtpHost && smtpUser && smtpPass) {
+            const transporter = nodemailer.createTransport({
+              host: smtpHost,
+              port: parseInt(process.env.SMTP_PORT || '587'),
+              secure: process.env.SMTP_SECURE === 'true',
+              auth: { user: smtpUser, pass: smtpPass },
+            });
+
+            await transporter.sendMail({
+              from: `"${process.env.SMTP_FROM_NAME || 'Ótima Energia'}" <${process.env.SMTP_FROM_EMAIL || 'ops@otimaenergia.com'}>`,
+              to: clientEmail,
+              subject: 'Assinatura do contrato — Ótima Energia',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="background: linear-gradient(135deg, #9e3ffd, #df0af2); padding: 30px; border-radius: 12px 12px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">Ótima Energia</h1>
+                    <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0;">Energia inteligente para o seu negócio</p>
+                  </div>
+                  <div style="padding: 30px; background: #f9f9f9; border: 1px solid #eee;">
+                    <h2 style="color: #333; margin-top: 0;">Assinatura do Contrato</h2>
+                    <p style="color: #555;">Olá ${clientName},</p>
+                    <p style="color: #555;">Conforme sua conversa com o Renan, segue em anexo o contrato de energia para sua assinatura.</p>
+                    <p style="color: #555;">Após revisar, por favor assine e nos envie de volta.</p>
+                    <p style="color: #555;">Qualquer dúvida, estamos à disposição.</p>
+                  </div>
+                  <div style="padding: 20px; background: #f0f0f0; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="color: #999; font-size: 12px; margin: 0;">Ótima Energia — Intermediação inteligente de energia</p>
+                  </div>
+                </div>
+              `,
+            });
+            emailSent = true;
+          }
+        } catch (emailErr: any) {
+          console.error("Contract email send error:", emailErr);
+        }
+      }
+
+      const whatsappMessage = `Olá ${clientName}, tudo bem? Aqui é da Ótima Energia (equipe do Renan).\n\nSegue o contrato para assinatura.\n\nQualquer dúvida, é só me responder por aqui.`;
+      const waLink = clientWhatsapp
+        ? `https://wa.me/${clientWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`
+        : null;
+
+      const deal = await storage.getDeal(track.dealId);
+      if (deal) {
+        const currentIdx = DEAL_STATE_PRECEDENCE.indexOf(deal.status as DealState);
+        const targetIdx = DEAL_STATE_PRECEDENCE.indexOf('CONTRACT_SENT');
+        if (targetIdx > currentIdx && currentIdx >= 0) {
+          await storage.transitionDealState(
+            track.dealId,
+            'CONTRACT_SENT' as DealState,
+            user?.username || 'system',
+            'system',
+            'Auto-advanced: contract sent to client',
+            undefined,
+            false
+          );
+        }
+      }
+
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: isResend ? "CONTRACT_RESENT" : "CONTRACT_SENT",
+        entityType: "deal_track_contract",
+        entityId: contract?.id || null,
+        dealId: track.dealId,
+        detailsJson: { trackId, clientName, clientEmail, clientWhatsapp, channel, emailSent }
+      });
+
+      await storage.createDealTrackEvent({
+        trackId,
+        eventType: isResend ? 'CONTRACT_RESENT' : 'CONTRACT_SENT',
+        payload: { clientName, clientEmail, channel, emailSent },
+        createdByUserId: user?.id || null,
+      });
+
+      res.json({
+        success: true,
+        contract,
+        emailSent,
+        whatsappMessage,
+        waLink,
+      });
+    } catch (error: any) {
+      console.error("Error sending contract:", error);
+      res.status(500).json({ success: false, error: "Failed to send contract" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/contracts/mark-signed", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { signedFileKey, signedFileName } = req.body;
+
+      if (!signedFileName) {
+        return res.status(400).json({ success: false, error: "signedFileName is required" });
+      }
+
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      const doc = await storage.createDealTrackDocument({
+        trackId,
+        documentType: 'SIGNED_CONTRACT',
+        fileName: signedFileName,
+        fileKey: signedFileKey || null,
+        uploadedByUserId: user?.id || null,
+        source: 'admin',
+        category: 'CONTRACT',
+        signedByClient: true,
+        signedAt: new Date(),
+      });
+
+      let contract = await storage.getTrackContract(trackId);
+      if (!contract) {
+        contract = await storage.createTrackContract({
+          trackId,
+          status: 'SIGNED',
+          signedAt: new Date(),
+        });
+      } else {
+        contract = await storage.updateTrackContract(trackId, {
+          status: 'SIGNED',
+          signedAt: new Date(),
+        });
+      }
+
+      const deal = await storage.getDeal(track.dealId);
+      if (deal) {
+        const currentIdx = DEAL_STATE_PRECEDENCE.indexOf(deal.status as DealState);
+        const targetIdx = DEAL_STATE_PRECEDENCE.indexOf('CONTRACT_SIGNED');
+        if (targetIdx > currentIdx && currentIdx >= 0) {
+          await storage.transitionDealState(
+            track.dealId,
+            'CONTRACT_SIGNED' as DealState,
+            user?.username || 'system',
+            'system',
+            'Auto-advanced: signed contract uploaded',
+            undefined,
+            false
+          );
+        }
+      }
+
+      await logAuditEvent({
+        actor: user?.username || "system",
+        actorRole: user?.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "SIGNED_CONTRACT_UPLOADED",
+        entityType: "deal_track_contract",
+        entityId: doc.id,
+        dealId: track.dealId,
+        detailsJson: { trackId, signedFileName }
+      });
+
+      await storage.createDealTrackEvent({
+        trackId,
+        eventType: 'SIGNED_CONTRACT_UPLOADED',
+        payload: { signedFileName },
+        createdByUserId: user?.id || null,
+      });
+
+      res.json({ success: true, document: doc, contract });
+    } catch (error: any) {
+      console.error("Error marking contract signed:", error);
+      res.status(500).json({ success: false, error: "Failed to mark contract signed" });
+    }
+  });
+
+  app.post("/api/webhooks/clicksign", async (req, res) => {
+    try {
+      const { event, envelope_id, status } = req.body;
+
+      if (!envelope_id) {
+        return res.status(400).json({ success: false, error: "envelope_id required" });
+      }
+
+      console.log(`Clicksign webhook: event=${event}, envelope=${envelope_id}, status=${status}`);
+      res.json({ success: true, message: "Webhook received (stub)" });
+    } catch (error: any) {
+      console.error("Clicksign webhook error:", error);
+      res.status(500).json({ success: false, error: "Webhook processing failed" });
+    }
+  });
+
+  app.get("/api/contracts/awaiting-signature", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const contracts = await storage.getContractsAwaitingSignature();
+      const enriched = await Promise.all(contracts.map(async (c: any) => {
+        const track = await storage.getDealTrack(c.trackId);
+        const deal = track ? await storage.getDeal(track.dealId) : null;
+        const client = deal?.clientId ? await storage.getClient(deal.clientId) : null;
+        return {
+          ...c,
+          trackType: track?.type,
+          dealId: track?.dealId,
+          companyName: client?.companyName,
+        };
+      }));
+      res.json({ success: true, contracts: enriched, count: enriched.length });
+    } catch (error: any) {
+      console.error("Error getting awaiting signature contracts:", error);
+      res.status(500).json({ success: false, error: "Failed to get contracts" });
+    }
+  });
+
+  // ============== END CONTRACT WORKFLOW ==============
 
   // ============== DEV SEED: Chase State QA (dev only) ==============
   if (process.env.NODE_ENV !== 'production') {

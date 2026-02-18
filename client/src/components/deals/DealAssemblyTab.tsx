@@ -71,6 +71,7 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
   QUOTE_SELECTED: FileCheck,
   PROPOSAL_GENERATED: FileText,
   ONBOARDING: Clock,
+  CONTRACT_SENT: Send,
   CONTRACT_SIGNED: ShieldCheck,
   SUPPLY_LIVE: Zap
 };
@@ -84,6 +85,7 @@ const STAGE_LABELS: Record<string, { pt: string; en: string }> = {
   QUOTE_SELECTED: { pt: 'Cotação Selecionada', en: 'Quote Selected' },
   PROPOSAL_GENERATED: { pt: 'Proposta Gerada', en: 'Proposal Generated' },
   ONBOARDING: { pt: 'Onboarding (Docs)', en: 'Onboarding (Docs)' },
+  CONTRACT_SENT: { pt: 'Contrato Enviado', en: 'Contract Sent' },
   CONTRACT_SIGNED: { pt: 'Contrato Assinado', en: 'Contract Signed' },
   SUPPLY_LIVE: { pt: 'Fornecimento Ativo', en: 'Supply Live' }
 };
