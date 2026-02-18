@@ -250,6 +250,17 @@ export async function registerRoutes(
   const SALT_ROUNDS = 12;
   const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+  try {
+    const existing = await storage.getUserByUsername("admin");
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash("Admin123!", SALT_ROUNDS);
+      await storage.createUser({ username: "admin", password: hashedPassword, role: "admin" });
+      console.log("[auth] Default admin user created");
+    }
+  } catch (e) {
+    console.error("[auth] Failed to ensure admin user:", e);
+  }
+
   // Bootstrap endpoint for initial production setup (use ADMIN_BOOTSTRAP_TOKEN env var)
   app.post("/api/auth/bootstrap", async (req, res) => {
     try {
