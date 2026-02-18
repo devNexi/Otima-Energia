@@ -445,8 +445,8 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                         <h3 className="font-medium text-lg">
                           {deal.client?.companyName || `Client #${deal.clientId}`}
                         </h3>
-                        <Badge className={`${stateColors[deal.status as DealState]} border`}>
-                          {stateLabels[deal.status as DealState][language as "en" | "pt"]}
+                        <Badge className={`${stateColors[deal.status as DealState] || "bg-gray-100 text-gray-800 border-gray-300"} border`}>
+                          {stateLabels[deal.status as DealState]?.[language as "en" | "pt"] || deal.status}
                         </Badge>
                         {deal.manualOverrideRequired && (
                           <Badge variant="destructive" className="text-xs">
