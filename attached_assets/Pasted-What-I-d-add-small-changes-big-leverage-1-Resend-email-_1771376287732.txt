@@ -1,0 +1,130 @@
+What I’d add (small changes, big leverage)
+1) “Resend email” without restarting chase
+
+Right now it sounds like send is blocked if chase is active (good), but you still need a safe way to resend the email if:
+
+client says “didn’t receive”
+
+typo fixed
+
+inbox spam
+
+Add a button in “Active” state:
+
+Resend Email (does not restart chase level, does not fire chase.start again)
+
+Logs “email_resent”
+
+Updates contact email if changed
+
+This prevents Renan doing awkward workarounds.
+
+2) “Update contact details” while chase is active
+
+Often the number/email is wrong after sending.
+
+Add:
+
+“Edit contact details” (name/email/WhatsApp) while active
+
+Save updates to track_chase_state
+
+Fire optional webhook chase.update (nice-to-have) so the agent system sends to the updated number/email
+
+If you don’t want a new webhook, at least store it for internal truth and make the devs poll for it.
+
+3) Add explicit “Stop reason taxonomy”
+
+Your grey card says intake complete vs manual override—good.
+
+Add a few more stop reasons now so you don’t need schema changes later:
+
+intake_complete
+
+manual_override
+
+client_opt_out
+
+invalid_contact
+
+lost_interest
+
+other
+
+Even if only two are used today, you’ll thank yourself later.
+
+4) Expose an Intake Summary endpoint for agents
+
+Agents need to know what’s missing to send the right message.
+
+Portal should expose:
+
+GET /api/tracks/:trackId/intake-summary
+
+Return:
+
+status: none/partial/complete
+
+billsUploaded / billsRequired
+
+missing months/list (if you can infer)
+
+LGPD captured (true/false)
+
+LOA captured (true/false)
+
+intakeLink + expiry (if present)
+
+This lets n8n/agents do “missing docs” messages cleanly without guessing.
+
+5) Ensure webhook delivery reliability reporting is visible
+
+You’re tracking webhook delivery status—great.
+
+Make it visible in the modal:
+
+last webhook: start/stop
+
+delivery: success/failed
+
+lastError (if failed)
+
+“Retry webhook” button (admin-only)
+
+This prevents silent failures when n8n is down.
+
+6) Add a “Start chase level” field only if you need manual entry
+
+You already store level 0–7. Keep it, but do not let Renan change it unless necessary.
+
+If you want flexibility later:
+
+Allow admin-only “Set chase level” for recovery
+
+Log it
+
+Otherwise keep it locked.
+
+7) Make sure SEND also writes the link + expiry back to Zoho
+
+This is optional, but very useful for sales visibility:
+
+When SEND happens:
+
+Update Zoho deal fields:
+
+Upload_Link
+
+Upload_Link_Expiry
+
+Document_Status = Not Started
+
+Chasing_Active = Yes
+
+And on stop:
+
+Chasing_Active = No
+
+Document_Status = Complete/Received Manually
+
+This keeps Zoho aligned even if someone isn’t in the portal.

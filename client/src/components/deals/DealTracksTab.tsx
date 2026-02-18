@@ -888,6 +888,11 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
   const [contactEmail, setContactEmail] = useState('');
   const [contactWhatsapp, setContactWhatsapp] = useState('');
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactEmail, setEditContactEmail] = useState('');
+  const [editContactWhatsapp, setEditContactWhatsapp] = useState('');
+  const [stopReason, setStopReason] = useState<string>('manual_override');
   const [linkConfig, setLinkConfig] = useState({
     requireLGPD: true,
     requireLOA: true,
@@ -1003,11 +1008,59 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
 
   const stopChaseMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/tracks/${trackId}/chase-stop`, { reason: 'manual_override' });
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/chase-stop`, { reason: stopReason });
       return res.json();
     },
     onSuccess: () => {
       toast({ title: isPt ? "Chase parado" : "Chase stopped" });
+      refetchChase();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resendEmailMutation = useMutation({
+    mutationFn: async (newEmail?: string) => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/chase-resend-email`, {
+        contactEmail: newEmail || undefined,
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: isPt ? `E-mail reenviado para ${data.resentTo}` : `Email resent to ${data.resentTo}` });
+      refetchChase();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro ao reenviar" : "Resend failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateContactMutation = useMutation({
+    mutationFn: async (updates: Record<string, any>) => {
+      const res = await apiRequest("PATCH", `/api/tracks/${trackId}/chase-contact`, updates);
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Contato atualizado" : "Contact updated" });
+      setEditingContact(false);
+      refetchChase();
+    },
+    onError: (error: Error) => {
+      toast({ title: isPt ? "Erro" : "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const retryWebhookMutation = useMutation({
+    mutationFn: async (webhookType: string) => {
+      const res = await apiRequest("POST", `/api/tracks/${trackId}/chase-retry-webhook`, { webhookType });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: data.delivered ? (isPt ? "Webhook entregue" : "Webhook delivered") : (isPt ? "Webhook falhou" : "Webhook failed"), variant: data.delivered ? "default" : "destructive" });
       refetchChase();
     },
     onError: (error: Error) => {
@@ -1242,23 +1295,95 @@ function IntakeReadinessSection({ trackId, dealId, trackType, isPt }: { trackId:
                         {isPt ? "Chase ativo" : "Chase active"}
                       </Badge>
                     </div>
-                    <div className="text-[10px] text-blue-700 space-y-0.5">
-                      <p><strong>{isPt ? "Para" : "To"}:</strong> {chaseState.contactName || ''} ({chaseState.contactEmail})</p>
-                      {chaseState.contactWhatsapp && <p><strong>WhatsApp:</strong> {chaseState.contactWhatsapp}</p>}
-                      <p><strong>{isPt ? "Enviado em" : "Sent"}:</strong> {new Date(chaseState.lastSentAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+
+                    {!editingContact ? (
+                      <div className="text-[10px] text-blue-700 space-y-0.5">
+                        <p><strong>{isPt ? "Para" : "To"}:</strong> {chaseState.contactName || ''} ({chaseState.contactEmail})</p>
+                        {chaseState.contactWhatsapp && <p><strong>WhatsApp:</strong> {chaseState.contactWhatsapp}</p>}
+                        <p><strong>{isPt ? "Enviado em" : "Sent"}:</strong> {new Date(chaseState.lastSentAt).toLocaleString(isPt ? 'pt-BR' : 'en-US')}</p>
+                        <Button size="sm" variant="link" className="text-[10px] h-5 p-0 text-blue-600" onClick={() => { setEditContactName(chaseState.contactName || ''); setEditContactEmail(chaseState.contactEmail || ''); setEditContactWhatsapp(chaseState.contactWhatsapp || ''); setEditingContact(true); }} data-testid="button-edit-contact">
+                          {isPt ? "Editar contato" : "Edit contact"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 bg-white/60 rounded p-2">
+                        <Input value={editContactName} onChange={(e) => setEditContactName(e.target.value)} placeholder={isPt ? "Nome" : "Name"} className="text-xs h-6" data-testid="input-edit-contact-name" />
+                        <Input type="email" value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} placeholder="E-mail" className="text-xs h-6" data-testid="input-edit-contact-email" />
+                        <Input value={editContactWhatsapp} onChange={(e) => setEditContactWhatsapp(e.target.value)} placeholder="WhatsApp +55..." className="text-xs h-6" data-testid="input-edit-contact-whatsapp" />
+                        <div className="flex gap-1">
+                          <Button size="sm" className="text-[10px] h-6 flex-1" onClick={() => updateContactMutation.mutate({ contactName: editContactName, contactEmail: editContactEmail, contactWhatsapp: editContactWhatsapp })} disabled={updateContactMutation.isPending} data-testid="button-save-contact">
+                            {updateContactMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : (isPt ? "Salvar" : "Save")}
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-[10px] h-6" onClick={() => setEditingContact(false)} data-testid="button-cancel-edit">
+                            {isPt ? "Cancelar" : "Cancel"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="outline" className="text-xs h-7 flex-1 text-blue-700 border-blue-300" onClick={() => resendEmailMutation.mutate(undefined)} disabled={resendEmailMutation.isPending} data-testid="button-resend-email">
+                        {resendEmailMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
+                        {isPt ? "Reenviar E-mail" : "Resend Email"}
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" className="text-xs h-7 text-red-600 border-red-300 hover:bg-red-50 w-full" onClick={() => stopChaseMutation.mutate()} disabled={stopChaseMutation.isPending} data-testid="button-stop-chase">
-                      {stopChaseMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <StopCircle className="w-3 h-3 mr-1" />}
-                      {isPt ? "Parar Chase" : "Stop Chase"}
-                    </Button>
+
+                    <div className="border-t border-blue-200 pt-2 space-y-1.5">
+                      <Label className="text-[10px] text-blue-600">{isPt ? "Motivo para parar" : "Stop reason"}</Label>
+                      <Select value={stopReason} onValueChange={setStopReason}>
+                        <SelectTrigger className="h-7 text-xs" data-testid="select-stop-reason">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual_override">{isPt ? "Parado manualmente" : "Manual override"}</SelectItem>
+                          <SelectItem value="client_opt_out">{isPt ? "Cliente recusou" : "Client opt-out"}</SelectItem>
+                          <SelectItem value="invalid_contact">{isPt ? "Contato inválido" : "Invalid contact"}</SelectItem>
+                          <SelectItem value="lost_interest">{isPt ? "Perdeu interesse" : "Lost interest"}</SelectItem>
+                          <SelectItem value="other">{isPt ? "Outro" : "Other"}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" variant="outline" className="text-xs h-7 text-red-600 border-red-300 hover:bg-red-50 w-full" onClick={() => stopChaseMutation.mutate()} disabled={stopChaseMutation.isPending} data-testid="button-stop-chase">
+                        {stopChaseMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <StopCircle className="w-3 h-3 mr-1" />}
+                        {isPt ? "Parar Chase" : "Stop Chase"}
+                      </Button>
+                    </div>
+
+                    {(chaseState.webhookStartFired === false || chaseState.webhookStopFired === false) && (
+                      <div className="border-t border-blue-200 pt-2 space-y-1">
+                        <Label className="text-[10px] text-amber-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {isPt ? "Webhook pendente" : "Webhook pending"}
+                        </Label>
+                        {chaseState.webhookStartFired === false && (
+                          <Button size="sm" variant="outline" className="text-[10px] h-6 w-full" onClick={() => retryWebhookMutation.mutate('start')} disabled={retryWebhookMutation.isPending} data-testid="button-retry-start-webhook">
+                            {retryWebhookMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                            {isPt ? "Reenviar webhook start" : "Retry start webhook"}
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : chaseState && !chaseState.active ? (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-3 space-y-1" data-testid="chase-stopped-state">
                     <div className="flex items-center gap-1 text-xs text-gray-600">
                       <StopCircle className="w-3.5 h-3.5" />
-                      {isPt ? "Chase encerrado" : "Chase stopped"}: {chaseState.stoppedReason === 'intake_complete' ? (isPt ? 'Intake completo' : 'Intake complete') : (isPt ? 'Parado manualmente' : 'Manual override')}
+                      {isPt ? "Chase encerrado" : "Chase stopped"}: {
+                        { intake_complete: isPt ? 'Intake completo' : 'Intake complete',
+                          manual_override: isPt ? 'Parado manualmente' : 'Manual override',
+                          client_opt_out: isPt ? 'Cliente recusou' : 'Client opt-out',
+                          invalid_contact: isPt ? 'Contato inválido' : 'Invalid contact',
+                          lost_interest: isPt ? 'Perdeu interesse' : 'Lost interest',
+                          other: isPt ? 'Outro' : 'Other',
+                        }[chaseState.stoppedReason as string] || chaseState.stoppedReason
+                      }
                     </div>
                     {chaseState.contactEmail && <p className="text-[10px] text-gray-500">{isPt ? "Enviado para" : "Sent to"}: {chaseState.contactEmail}</p>}
+                    {chaseState.webhookStopFired === false && (
+                      <Button size="sm" variant="outline" className="text-[10px] h-6 mt-1" onClick={() => retryWebhookMutation.mutate('stop')} disabled={retryWebhookMutation.isPending} data-testid="button-retry-stop-webhook">
+                        {retryWebhookMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                        {isPt ? "Reenviar webhook stop" : "Retry stop webhook"}
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">

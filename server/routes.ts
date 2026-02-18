@@ -1183,6 +1183,7 @@ export async function registerRoutes(
           if (webhookUrl) {
             try {
               const crmLink = session.dealId ? await storage.getDealCrmLink(session.dealId) : null;
+              const completedTrack = await storage.getDealTrack(session.trackId);
               const resp = await fetch(`${webhookUrl}/webhook/chase/stop`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1190,6 +1191,7 @@ export async function registerRoutes(
                   event: 'chase.stop',
                   dealId: session.dealId,
                   trackId: session.trackId,
+                  trackType: completedTrack?.type || null,
                   zohoDealId: crmLink?.zohoDealId || null,
                   reason: 'intake_complete',
                   stoppedAt: new Date().toISOString(),
@@ -11276,11 +11278,13 @@ export async function registerRoutes(
       const webhookUrl = process.env.CHASE_WEBHOOK_URL;
       if (webhookUrl) {
         try {
+          const crmLink = await storage.getDealCrmLink(deal.id);
           const webhookPayload = {
             event: 'chase.start',
             dealId: deal.id,
             trackId,
             trackType: track.type,
+            zohoDealId: crmLink?.zohoDealId || null,
             companyName,
             contact: {
               name: contactName || null,
@@ -11345,7 +11349,11 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
     try {
       const trackId = parseInt(req.params.trackId);
+      const VALID_STOP_REASONS = ['manual_override', 'client_opt_out', 'invalid_contact', 'lost_interest', 'other'] as const;
       const { reason = 'manual_override' } = req.body;
+      if (!VALID_STOP_REASONS.includes(reason)) {
+        return res.status(400).json({ success: false, error: `Invalid stop reason. Valid: ${VALID_STOP_REASONS.join(', ')}` });
+      }
       const track = await storage.getDealTrack(trackId);
       if (!track) {
         return res.status(404).json({ success: false, error: "Track not found" });
@@ -11421,6 +11429,315 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error stopping chase:", error);
       res.status(500).json({ success: false, error: "Failed to stop chase" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/chase-resend-email", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+
+      const chaseState = await storage.getChaseState(trackId);
+      if (!chaseState || !chaseState.active) {
+        return res.status(400).json({ success: false, error: "No active chase to resend for" });
+      }
+
+      const { contactEmail: newEmail } = req.body;
+      const emailToUse = newEmail || chaseState.contactEmail;
+      if (!emailToUse || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToUse)) {
+        return res.status(400).json({ success: false, error: "Valid email required" });
+      }
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+      if (!activeSession) {
+        return res.status(400).json({ success: false, error: "No active intake session" });
+      }
+
+      const portalUrl = `${req.protocol}://${req.get('host')}/client/intake/${activeSession.token}`;
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+      const companyName = client?.companyName || chaseState.contactName || 'Cliente';
+
+      const smtpPass = process.env.SMTP_PASS;
+      if (!smtpPass) return res.status(500).json({ success: false, error: "SMTP not configured" });
+
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: "smtp.zoho.com", port: 465, secure: true,
+        auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+      });
+
+      const codeBlock = activeSession.accessCode
+        ? `\n\nCódigo de acesso: ${activeSession.accessCode}\n(Você precisará deste código para acessar o portal)`
+        : '';
+
+      await transporter.sendMail({
+        from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
+        to: emailToUse,
+        subject: `Ótima Energia – Portal de Documentos (Lembrete)`,
+        text: `Olá ${companyName},\n\nEstamos reenviando o link para o nosso portal de documentos de energia.\n\nAcesse:\n${portalUrl}${codeBlock}\n\nAtenciosamente,\nEquipe Ótima Energia`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #16803C; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Ótima Energia</h1>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+            <p>Olá <strong>${companyName}</strong>,</p>
+            <p>Estamos reenviando o link para o nosso portal seguro de documentos.</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <a href="${portalUrl}" style="background: #16803C; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Acessar Portal</a>
+            </div>
+            ${activeSession.accessCode ? `<div style="background: #f3f4f6; padding: 16px; border-radius: 6px; text-align: center; margin: 16px 0;">
+              <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;">Código de acesso:</p>
+              <p style="margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #111827;">${activeSession.accessCode}</p>
+            </div>` : ''}
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 12px; color: #9ca3af;">Este é um lembrete. Se já completou o envio, ignore este e-mail.</p>
+          </div>
+        </div>`,
+      });
+
+      if (newEmail && newEmail !== chaseState.contactEmail) {
+        await storage.updateChaseState(trackId, { contactEmail: newEmail });
+      }
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "EMAIL_RESENT",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { dealId: deal.id, emailTo: emailToUse, emailChanged: newEmail !== chaseState.contactEmail }
+      });
+
+      res.json({ success: true, resentTo: emailToUse });
+    } catch (error: any) {
+      console.error("Error resending chase email:", error);
+      res.status(500).json({ success: false, error: "Failed to resend email" });
+    }
+  });
+
+  app.patch("/api/tracks/:trackId/chase-contact", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const chaseState = await storage.getChaseState(trackId);
+      if (!chaseState) {
+        return res.status(404).json({ success: false, error: "No chase state found" });
+      }
+
+      const { contactName, contactEmail, contactWhatsapp, whatsappOptIn } = req.body;
+      const updates: Record<string, any> = {};
+      if (contactName !== undefined) updates.contactName = contactName;
+      if (contactEmail !== undefined) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+          return res.status(400).json({ success: false, error: "Invalid email" });
+        }
+        updates.contactEmail = contactEmail;
+      }
+      if (contactWhatsapp !== undefined) {
+        if (contactWhatsapp && !/^\+55\d{10,11}$/.test(contactWhatsapp)) {
+          return res.status(400).json({ success: false, error: "WhatsApp must be E.164 +55" });
+        }
+        updates.contactWhatsapp = contactWhatsapp;
+      }
+      if (whatsappOptIn !== undefined) updates.whatsappOptIn = whatsappOptIn;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: "No fields to update" });
+      }
+
+      await storage.updateChaseState(trackId, updates);
+
+      const sessionId = req.headers["x-session-id"] as string;
+      const adminSession = sessionId ? await storage.getAdminSession(sessionId) : null;
+      const user = adminSession ? await storage.getUser(adminSession.userId) : null;
+
+      await storage.logAdminAction({
+        actor: user?.username || "system",
+        actorIp: req.ip || null,
+        action: "CHASE_CONTACT_UPDATED",
+        entityType: "track",
+        entityId: trackId,
+        detailsJson: { updates }
+      });
+
+      const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+      if (webhookUrl && chaseState.active) {
+        try {
+          const track = await storage.getDealTrack(trackId);
+          await fetch(`${webhookUrl}/webhook/chase/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'chase.update',
+              trackId,
+              dealId: track?.dealId || null,
+              trackType: track?.type || null,
+              updatedFields: updates,
+              updatedAt: new Date().toISOString(),
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+        } catch (err) {
+          console.error("[chase] Update webhook failed:", err);
+        }
+      }
+
+      res.json({ success: true, updated: updates });
+    } catch (error: any) {
+      console.error("Error updating chase contact:", error);
+      res.status(500).json({ success: false, error: "Failed to update contact" });
+    }
+  });
+
+  app.get("/api/tracks/:trackId/intake-summary", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const sessions = await storage.getUploadSessionsByTrack(trackId);
+      const activeSession = sessions.find(s => s.intakeType === 'full_intake');
+      const isComplete = activeSession?.usedAt != null;
+
+      let billsUploaded = 0;
+      let lgpdCaptured = false;
+      let loaCaptured = false;
+
+      if (activeSession) {
+        const profiles = await storage.getConsumptionProfilesBySession(activeSession.id);
+        billsUploaded = profiles.length;
+        const consents = await storage.getConsentRecordsBySession(activeSession.id);
+        lgpdCaptured = consents.some((c: any) => c.consentType === 'LGPD');
+        loaCaptured = consents.some((c: any) => c.consentType === 'LOA');
+      }
+
+      const billsRequired = activeSession?.expectedBillsCount || 6;
+      const chaseState = await storage.getChaseState(trackId);
+
+      const intakeLink = activeSession && !activeSession.usedAt
+        ? `${req.protocol}://${req.get('host')}/client/intake/${activeSession.token}`
+        : null;
+
+      res.json({
+        success: true,
+        summary: {
+          status: !activeSession ? 'none' : isComplete ? 'complete' : billsUploaded > 0 ? 'partial' : 'pending',
+          trackType: track.type,
+          billsUploaded,
+          billsRequired,
+          lgpdCaptured,
+          lgpdRequired: activeSession?.requireLGPD ?? true,
+          loaCaptured,
+          loaRequired: activeSession?.requireLOA ?? true,
+          intakeLink,
+          accessCode: activeSession?.accessCode || null,
+          expiresAt: activeSession?.expiresAt?.toISOString() || null,
+          completedAt: activeSession?.usedAt?.toISOString() || null,
+          chase: chaseState ? {
+            active: chaseState.active,
+            level: chaseState.level,
+            lastSentAt: chaseState.lastSentAt?.toISOString() || null,
+            contactEmail: chaseState.contactEmail,
+            contactWhatsapp: chaseState.contactWhatsapp,
+            stoppedReason: chaseState.stoppedReason,
+          } : null,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error getting intake summary:", error);
+      res.status(500).json({ success: false, error: "Failed to get intake summary" });
+    }
+  });
+
+  app.post("/api/tracks/:trackId/chase-retry-webhook", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin'])) return;
+    try {
+      const trackId = parseInt(req.params.trackId);
+      const { webhookType } = req.body;
+      if (!['start', 'stop'].includes(webhookType)) {
+        return res.status(400).json({ success: false, error: "webhookType must be 'start' or 'stop'" });
+      }
+
+      const chaseState = await storage.getChaseState(trackId);
+      if (!chaseState) return res.status(404).json({ success: false, error: "No chase state" });
+
+      const track = await storage.getDealTrack(trackId);
+      if (!track) return res.status(404).json({ success: false, error: "Track not found" });
+
+      const deal = await storage.getDeal(track.dealId);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+
+      const webhookUrl = process.env.CHASE_WEBHOOK_URL;
+      if (!webhookUrl) return res.status(400).json({ success: false, error: "CHASE_WEBHOOK_URL not configured" });
+
+      const crmLink = await storage.getDealCrmLink(deal.id);
+      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+
+      let payload: any;
+      if (webhookType === 'start') {
+        const sessions = await storage.getUploadSessionsByTrack(trackId);
+        const activeSession = sessions.find(s => s.intakeType === 'full_intake' && !s.usedAt);
+        const portalUrl = activeSession ? `${req.protocol}://${req.get('host')}/client/intake/${activeSession.token}` : null;
+
+        payload = {
+          event: 'chase.start',
+          dealId: deal.id,
+          trackId,
+          trackType: track.type,
+          zohoDealId: crmLink?.zohoDealId || null,
+          companyName: client?.companyName || chaseState.contactName || 'Cliente',
+          contact: {
+            name: chaseState.contactName,
+            email: chaseState.contactEmail,
+            whatsapp: chaseState.contactWhatsapp,
+            whatsappOptIn: chaseState.whatsappOptIn,
+          },
+          intakeLink: portalUrl,
+          accessCode: activeSession?.accessCode || null,
+          expiresAt: activeSession?.expiresAt?.toISOString() || null,
+          requiredBills: activeSession?.expectedBillsCount || 6,
+          sentAt: chaseState.lastSentAt?.toISOString() || new Date().toISOString(),
+          sentEventId: chaseState.sentEventId,
+          isRetry: true,
+        };
+      } else {
+        payload = {
+          event: 'chase.stop',
+          dealId: deal.id,
+          trackId,
+          trackType: track.type,
+          zohoDealId: crmLink?.zohoDealId || null,
+          reason: chaseState.stoppedReason || 'manual_override',
+          stoppedAt: new Date().toISOString(),
+          isRetry: true,
+        };
+      }
+
+      const resp = await fetch(`${webhookUrl}/webhook/chase/${webhookType}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const updateField = webhookType === 'start' ? 'webhookStartFired' : 'webhookStopFired';
+      await storage.updateChaseState(trackId, { [updateField]: resp.ok });
+
+      res.json({ success: true, delivered: resp.ok, status: resp.status });
+    } catch (error: any) {
+      console.error("Error retrying webhook:", error);
+      res.status(500).json({ success: false, error: "Failed to retry webhook" });
     }
   });
 
