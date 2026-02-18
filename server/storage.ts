@@ -105,7 +105,7 @@ import {
   supplierRfqPlaybooks, rfqDispatches, dossierEditLogs, dealTransitionOverrides,
   userTooltipState, opsChecklists, opsChecklistItems, dealChecklistCompletions,
   opsPlaybooks, opsErrorEvents, opsPerformanceSnapshots, dealEcosSnapshots,
-  prcDocuments, prcRows, prcPublishBatches,
+  prcDocuments, prcRows, prcPublishBatches, canonicalPricingRows,
   brandKit, dealProposals, dealProposalItems, dealProposalSnapshots, dealProposalViews,
   invoices, invoiceEvents, invoicePermissions,
   qaTestRuns,
@@ -729,6 +729,22 @@ export interface IStorage {
   deletePrcRowsForDocument(documentId: number): Promise<void>;
   getFlaggedPrcRows(referenceMonth?: string): Promise<PrcRow[]>;
   
+  // Canonical Pricing
+  createCanonicalPricingRows(rows: Array<{
+    source: string;
+    sourceId?: number;
+    supplierId: number;
+    referenceMonth: string;
+    submarket: string;
+    productType: string;
+    termMonths?: number;
+    priceRPerMWh: string;
+    currency?: string;
+    confidence: number;
+    isOutlierFlag?: boolean;
+  }>): Promise<void>;
+  deleteCanonicalPricingRowsBySource(source: string, sourceId: number): Promise<void>;
+
   // PRC Publish Batches
   createPrcPublishBatch(data: InsertPrcPublishBatch): Promise<PrcPublishBatch>;
   getPrcPublishBatches(filters?: { referenceMonth?: string; status?: string }): Promise<PrcPublishBatch[]>;
@@ -4276,6 +4292,43 @@ export class Storage implements IStorage {
   
   async deletePrcRowsForDocument(documentId: number): Promise<void> {
     await db.delete(prcRows).where(eq(prcRows.prcDocumentId, documentId));
+  }
+
+  async createCanonicalPricingRows(rows: Array<{
+    source: string;
+    sourceId?: number;
+    supplierId: number;
+    referenceMonth: string;
+    submarket: string;
+    productType: string;
+    termMonths?: number;
+    priceRPerMWh: string;
+    currency?: string;
+    confidence: number;
+    isOutlierFlag?: boolean;
+  }>): Promise<void> {
+    if (rows.length === 0) return;
+    await db.insert(canonicalPricingRows).values(rows.map(r => ({
+      source: r.source,
+      sourceId: r.sourceId ?? null,
+      supplierId: r.supplierId,
+      referenceMonth: r.referenceMonth,
+      submarket: r.submarket,
+      productType: r.productType,
+      termMonths: r.termMonths ?? null,
+      priceRPerMWh: r.priceRPerMWh,
+      currency: r.currency || 'BRL',
+      confidence: r.confidence,
+      isOutlierFlag: r.isOutlierFlag || false,
+    })));
+  }
+
+  async deleteCanonicalPricingRowsBySource(source: string, sourceId: number): Promise<void> {
+    await db.delete(canonicalPricingRows)
+      .where(and(
+        eq(canonicalPricingRows.source, source),
+        eq(canonicalPricingRows.sourceId, sourceId)
+      ));
   }
   
   async getFlaggedPrcRows(referenceMonth?: string): Promise<PrcRow[]> {

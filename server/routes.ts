@@ -9054,7 +9054,7 @@ export async function registerRoutes(
         fileStorageKey: storageKey,
         isImage,
         idempotencyKey: `prc_parse_${document.id}`,
-      });
+      }, undefined, 3);
       
       res.json({ 
         success: true, 
@@ -9157,7 +9157,7 @@ export async function registerRoutes(
         fileStorageKey: document.fileStorageKey,
         isImage,
         idempotencyKey: `prc_reparse_${docId}_${Date.now()}`,
-      });
+      }, undefined, 3);
 
       const userId = await getSessionUserId(req) || 'system';
       await storage.logAdminAction({

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { useAuth } from "@/lib/auth";
 import { Redirect } from "wouter";
-import { 
+import {
   Upload,
   FileText,
   Loader2,
@@ -28,12 +28,21 @@ import {
   Zap,
   RotateCcw,
   Bug,
+  Download,
+  Filter,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Link } from "wouter";
 
 const SUBMARKETS = ["SECO", "SUL", "NNE", "NORTE"];
 const SOURCES = ["Email", "Portal", "Direct Upload", "API"];
+const MAX_CONCURRENT_UPLOADS = 3;
+const ROWS_PER_PAGE = 10;
 
 interface PrcDocument {
   id: number;
@@ -74,18 +83,77 @@ interface FileUploadState {
   documentId?: number;
 }
 
+type StatusFilter = "ALL" | "PARSING" | "FAILED" | "NEEDS_REVIEW" | "PARSED" | "VERIFIED";
+
+function generateCsv(rows: any[]): string {
+  const headers = ["submarket", "productType", "termMonths", "priceRPerMWh", "confidence", "isOutlierFlag", "outlierReason"];
+  const lines = [headers.join(",")];
+  for (const r of rows) {
+    const vals = headers.map(h => {
+      const v = r[h];
+      if (v === null || v === undefined) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    });
+    lines.push(vals.join(","));
+  }
+  return lines.join("\n");
+}
+
+function downloadCsvBlob(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function PrcUploadCenter() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"upload" | "queue">("upload");
   const [uploadQueue, setUploadQueue] = useState<FileUploadState[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [debugDocId, setDebugDocId] = useState<number | null>(null);
+  const [debugRowPage, setDebugRowPage] = useState(0);
+  const [rawTextOpen, setRawTextOpen] = useState(false);
+  const [debugJsonOpen, setDebugJsonOpen] = useState(false);
+  const [batchReparseLoading, setBatchReparseLoading] = useState<string | null>(null);
+  const [exportingDocId, setExportingDocId] = useState<number | null>(null);
+  const [exportingAll, setExportingAll] = useState(false);
+  const isProcessingRef = useRef(false);
+
   const defaultMonth = new Date().toISOString().slice(0, 7);
   const [defaultSupplierId, setDefaultSupplierId] = useState<number | null>(null);
   const [defaultSubmarket, setDefaultSubmarket] = useState<string>("SECO");
   const [defaultSource, setDefaultSource] = useState<string>("Email");
-  const [debugDocId, setDebugDocId] = useState<number | null>(null);
+  const [defaultNotes, setDefaultNotes] = useState<string>("");
+
+  const { data: suppliersData } = useQuery<{ success: boolean; suppliers: Supplier[] }>({
+    queryKey: ["/api/suppliers"],
+    enabled: isAuthenticated
+  });
+
+  const { data: documentsData, isLoading: docsLoading, refetch: refetchDocs } = useQuery<{ success: boolean; documents: PrcDocument[] }>({
+    queryKey: ["/api/prc/documents"],
+    enabled: isAuthenticated,
+    refetchInterval: (query) => {
+      const docs = query.state.data?.documents || [];
+      return docs.some(d => d.parseStatus === "PARSING") ? 5000 : false;
+    },
+  });
+
+  const suppliers = suppliersData?.suppliers || [];
+  const documents = documentsData?.documents || [];
+
+  const filteredDocuments = statusFilter === "ALL"
+    ? documents
+    : documents.filter(d => d.parseStatus === statusFilter);
 
   const reparseMutation = useMutation({
     mutationFn: async (docId: number) => {
@@ -118,23 +186,15 @@ export default function PrcUploadCenter() {
     },
     enabled: debugDocId !== null,
   });
-  const [defaultNotes, setDefaultNotes] = useState<string>("");
 
-  const { data: suppliersData } = useQuery<{ success: boolean; suppliers: Supplier[] }>({
-    queryKey: ["/api/suppliers"],
-    enabled: isAuthenticated
-  });
-
-  const { data: documentsData, isLoading: docsLoading, refetch: refetchDocs } = useQuery<{ success: boolean; documents: PrcDocument[] }>({
-    queryKey: ["/api/prc/documents"],
-    enabled: isAuthenticated
-  });
-
-  const suppliers = suppliersData?.suppliers || [];
-  const documents = documentsData?.documents || [];
+  useEffect(() => {
+    setDebugRowPage(0);
+    setRawTextOpen(false);
+    setDebugJsonOpen(false);
+  }, [debugDocId]);
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ file, supplierId, referenceMonth, submarketHint, source, notes }: { 
+    mutationFn: async ({ file, supplierId, referenceMonth, submarketHint, source, notes }: {
       file: File;
       supplierId?: number;
       referenceMonth: string;
@@ -175,11 +235,11 @@ export default function PrcUploadCenter() {
   const handleFileDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files).filter(
       f => f.type === "application/pdf" || f.type.startsWith("image/")
     );
-    
+
     if (files.length === 0) {
       toast.error("Only PDF and image files are supported");
       return;
@@ -227,7 +287,7 @@ export default function PrcUploadCenter() {
   };
 
   const updateQueueItem = (index: number, updates: Partial<FileUploadState>) => {
-    setUploadQueue(prev => prev.map((item, i) => 
+    setUploadQueue(prev => prev.map((item, i) =>
       i === index ? { ...item, ...updates } : item
     ));
   };
@@ -236,48 +296,154 @@ export default function PrcUploadCenter() {
     setUploadQueue(prev => prev.filter((_, i) => i !== index));
   };
 
+  const uploadSingleFile = async (item: FileUploadState, index: number) => {
+    updateQueueItem(index, { status: "uploading", progress: 20 });
+    try {
+      updateQueueItem(index, { progress: 50 });
+      const result = await uploadMutation.mutateAsync({
+        file: item.file,
+        supplierId: item.supplierId || undefined,
+        referenceMonth: item.referenceMonth,
+        submarketHint: item.submarketHint,
+        source: item.source,
+        notes: item.notes
+      });
+      updateQueueItem(index, {
+        status: result.parsing ? "processing" : "success",
+        progress: 100,
+        documentId: result.document?.id
+      });
+    } catch (error: any) {
+      updateQueueItem(index, {
+        status: "error",
+        error: error.message || "Upload failed"
+      });
+    }
+  };
+
   const processQueue = async () => {
-    const pendingItems = uploadQueue.filter(item => item.status === "pending");
-    
-    if (pendingItems.length === 0) {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    const pendingIndices: number[] = [];
+    uploadQueue.forEach((item, i) => {
+      if (item.status === "pending") pendingIndices.push(i);
+    });
+
+    if (pendingIndices.length === 0) {
       toast.error("No pending files to upload");
+      isProcessingRef.current = false;
       return;
     }
 
-    for (let i = 0; i < uploadQueue.length; i++) {
-      const item = uploadQueue[i];
-      if (item.status !== "pending") continue;
-
-      updateQueueItem(i, { status: "uploading", progress: 20 });
-
-      try {
-        updateQueueItem(i, { progress: 50 });
-        
-        const result = await uploadMutation.mutateAsync({
-          file: item.file,
-          supplierId: item.supplierId || undefined,
-          referenceMonth: item.referenceMonth,
-          submarketHint: item.submarketHint,
-          source: item.source,
-          notes: item.notes
-        });
-
-        updateQueueItem(i, { 
-          status: result.parsing ? "processing" : "success", 
-          progress: 100,
-          documentId: result.document?.id 
-        });
-
-      } catch (error: any) {
-        updateQueueItem(i, { 
-          status: "error", 
-          error: error.message || "Upload failed" 
-        });
-      }
+    let i = 0;
+    while (i < pendingIndices.length) {
+      const batch = pendingIndices.slice(i, i + MAX_CONCURRENT_UPLOADS);
+      const currentQueue = uploadQueue;
+      await Promise.all(
+        batch.map(idx => uploadSingleFile(currentQueue[idx], idx))
+      );
+      i += MAX_CONCURRENT_UPLOADS;
     }
 
     toast.success("Queue processing complete");
     refetchDocs();
+    isProcessingRef.current = false;
+  };
+
+  const handleBatchReparse = async (targetStatus: string) => {
+    const targets = filteredDocuments.filter(d => d.parseStatus === targetStatus);
+    if (targets.length === 0) {
+      toast.info(`No ${targetStatus} documents found`);
+      return;
+    }
+
+    setBatchReparseLoading(targetStatus);
+    let success = 0;
+    let failed = 0;
+
+    for (const doc of targets) {
+      try {
+        await fetch(`/api/prc/documents/${doc.id}/reparse`, {
+          method: "POST",
+          credentials: "include",
+        });
+        success++;
+        toast.info(`Re-parsed ${success}/${targets.length}...`);
+      } catch {
+        failed++;
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["/api/prc/documents"] });
+    toast.success(`Batch re-parse complete: ${success} queued, ${failed} failed`);
+    setBatchReparseLoading(null);
+  };
+
+  const handleDownloadCsv = async (doc: PrcDocument) => {
+    setExportingDocId(doc.id);
+    try {
+      const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch rows");
+      const data = await res.json();
+      const rows = data.rows || [];
+      if (rows.length === 0) {
+        toast.info("No rows to export");
+        return;
+      }
+      const csv = generateCsv(rows);
+      const safeName = doc.originalFilename.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      downloadCsvBlob(csv, `prc_${doc.id}_${safeName}.csv`);
+      toast.success("CSV downloaded");
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    } finally {
+      setExportingDocId(null);
+    }
+  };
+
+  const handleExportAllCsv = async () => {
+    setExportingAll(true);
+    try {
+      let allRows: any[] = [];
+      for (const doc of filteredDocuments) {
+        try {
+          const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.rows) allRows = allRows.concat(data.rows);
+          }
+        } catch {}
+      }
+      if (allRows.length === 0) {
+        toast.info("No rows to export");
+        return;
+      }
+      const csv = generateCsv(allRows);
+      downloadCsvBlob(csv, `prc_all_rows_${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success(`Exported ${allRows.length} rows`);
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
+  const handleCopyDebugBundle = () => {
+    if (!debugData?.debug) return;
+    const d = debugData.debug;
+    const bundle = {
+      docId: d.id,
+      originalFilename: d.originalFilename,
+      fileStorageKey: d.fileStorageKey,
+      parseStatus: d.parseStatus,
+      parseConfidence: d.parseConfidence,
+      parseErrors: d.parseErrors,
+      rowCount: d.rowCount,
+      parseDebugJson: d.parseDebugJson,
+    };
+    navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
+    toast.success("Debug bundle copied to clipboard");
   };
 
   const getStatusBadge = (parseStatus: string) => {
@@ -287,7 +453,7 @@ export default function PrcUploadCenter() {
       case "PARSING":
         return <Badge className="bg-blue-100 text-blue-700" data-testid="badge-status-parsing"><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Parsing</Badge>;
       case "PARSED":
-        return <Badge className="bg-yellow-100 text-yellow-700" data-testid="badge-status-parsed"><AlertCircle className="h-3 w-3 mr-1" /> Needs Review</Badge>;
+        return <Badge className="bg-green-100 text-green-700" data-testid="badge-status-parsed"><CheckCircle2 className="h-3 w-3 mr-1" /> Parsed</Badge>;
       case "NEEDS_REVIEW":
         return <Badge className="bg-yellow-100 text-yellow-700" data-testid="badge-status-needs-review"><AlertCircle className="h-3 w-3 mr-1" /> Needs Review</Badge>;
       case "VERIFIED":
@@ -301,6 +467,15 @@ export default function PrcUploadCenter() {
     }
   };
 
+  const getDebugDuration = () => {
+    if (!debugData?.debug?.parseStartedAt || !debugData?.debug?.parseCompletedAt) return null;
+    const start = new Date(debugData.debug.parseStartedAt).getTime();
+    const end = new Date(debugData.debug.parseCompletedAt).getTime();
+    const diffMs = end - start;
+    if (diffMs < 1000) return `${diffMs}ms`;
+    return `${(diffMs / 1000).toFixed(1)}s`;
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -312,6 +487,13 @@ export default function PrcUploadCenter() {
   if (!isAuthenticated || !user || !["admin", "ops"].includes(user.role)) {
     return <Redirect to="/admin" />;
   }
+
+  const debugRows = debugData?.debug?.rows || [];
+  const debugRowPageCount = Math.ceil(debugRows.length / ROWS_PER_PAGE);
+  const debugRowsSlice = debugRows.slice(debugRowPage * ROWS_PER_PAGE, (debugRowPage + 1) * ROWS_PER_PAGE);
+
+  const failedCount = documents.filter(d => d.parseStatus === "FAILED").length;
+  const needsReviewCount = documents.filter(d => d.parseStatus === "NEEDS_REVIEW").length;
 
   return (
     <AdminLayout>
@@ -358,8 +540,8 @@ export default function PrcUploadCenter() {
                   <CardContent>
                     <div
                       className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer ${
-                        isDragging 
-                          ? "border-primary bg-primary/5" 
+                        isDragging
+                          ? "border-primary bg-primary/5"
                           : "border-muted-foreground/25 hover:border-primary/50"
                       }`}
                       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -373,7 +555,7 @@ export default function PrcUploadCenter() {
                         {isDragging ? "Drop files here" : "Drag files here or click to upload"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Supports PDF, JPG, PNG files
+                        Supports PDF, JPG, PNG files (up to 20 at once)
                       </p>
                       <input
                         id="file-input"
@@ -402,10 +584,10 @@ export default function PrcUploadCenter() {
                             <Button
                               size="sm"
                               onClick={processQueue}
-                              disabled={uploadMutation.isPending || !uploadQueue.some(i => i.status === "pending")}
+                              disabled={isProcessingRef.current || !uploadQueue.some(i => i.status === "pending")}
                               data-testid="button-process-queue"
                             >
-                              {uploadMutation.isPending ? (
+                              {isProcessingRef.current ? (
                                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing</>
                               ) : (
                                 <><Zap className="h-4 w-4 mr-2" /> Process All</>
@@ -428,7 +610,7 @@ export default function PrcUploadCenter() {
                                       ({(item.file.size / 1024).toFixed(1)} KB)
                                     </span>
                                   </div>
-                                  
+
                                   <div className="grid grid-cols-2 gap-2 mb-2">
                                     <Select
                                       value={item.supplierId?.toString() || "auto"}
@@ -573,17 +755,81 @@ export default function PrcUploadCenter() {
           <TabsContent value="queue">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <CardTitle>Recent Documents</CardTitle>
                     <CardDescription>
                       PRC documents uploaded for processing
                     </CardDescription>
                   </div>
-                  <Button variant="outline" onClick={() => refetchDocs()} data-testid="button-refresh-docs">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                        <SelectTrigger className="w-[160px] h-8" data-testid="select-status-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All</SelectItem>
+                          <SelectItem value="PARSING">Parsing</SelectItem>
+                          <SelectItem value="FAILED">Failed</SelectItem>
+                          <SelectItem value="NEEDS_REVIEW">Needs Review</SelectItem>
+                          <SelectItem value="PARSED">Parsed</SelectItem>
+                          <SelectItem value="VERIFIED">Verified</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchReparse("FAILED")}
+                      disabled={batchReparseLoading !== null || failedCount === 0}
+                      data-testid="button-reparse-all-failed"
+                    >
+                      {batchReparseLoading === "FAILED" ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                      )}
+                      Re-parse Failed ({failedCount})
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBatchReparse("NEEDS_REVIEW")}
+                      disabled={batchReparseLoading !== null || needsReviewCount === 0}
+                      data-testid="button-reparse-all-needs-review"
+                    >
+                      {batchReparseLoading === "NEEDS_REVIEW" ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                      )}
+                      Re-parse Needs Review ({needsReviewCount})
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportAllCsv}
+                      disabled={exportingAll || filteredDocuments.length === 0}
+                      data-testid="button-export-all-csv"
+                    >
+                      {exportingAll ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-1" />
+                      )}
+                      Export All Rows CSV
+                    </Button>
+
+                    <Button variant="outline" size="sm" onClick={() => refetchDocs()} data-testid="button-refresh-docs">
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -591,9 +837,9 @@ export default function PrcUploadCenter() {
                   <div className="flex justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
-                ) : documents.length === 0 ? (
+                ) : filteredDocuments.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    No documents uploaded yet
+                    {statusFilter === "ALL" ? "No documents uploaded yet" : `No ${statusFilter} documents`}
                   </div>
                 ) : (
                   <Table>
@@ -610,7 +856,7 @@ export default function PrcUploadCenter() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {documents.map((doc) => (
+                      {filteredDocuments.map((doc) => (
                         <TableRow key={doc.id} data-testid={`row-doc-${doc.id}`}>
                           <TableCell className="font-medium">
                             <Link href={`/admin/prc/review/${doc.id}`}>
@@ -663,6 +909,21 @@ export default function PrcUploadCenter() {
                               >
                                 <Bug className="h-3.5 w-3.5" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleDownloadCsv(doc)}
+                                disabled={exportingDocId === doc.id || doc.rowsExtracted === 0}
+                                title="Download CSV"
+                                data-testid={`button-csv-${doc.id}`}
+                              >
+                                {exportingDocId === doc.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Download className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -674,12 +935,18 @@ export default function PrcUploadCenter() {
             </Card>
           </TabsContent>
         </Tabs>
+
         <Dialog open={debugDocId !== null} onOpenChange={(open) => !open && setDebugDocId(null)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Bug className="h-5 w-5" />
                 Parse Debug View
+                {debugData?.debug?.originalFilename && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    — {debugData.debug.originalFilename}
+                  </span>
+                )}
               </DialogTitle>
             </DialogHeader>
             {debugLoading ? (
@@ -687,71 +954,122 @@ export default function PrcUploadCenter() {
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             ) : debugData?.debug ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Status:</span>{" "}
+                    <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Status</span>
                     {getStatusBadge(debugData.debug.parseStatus)}
                   </div>
                   <div>
-                    <span className="font-medium">Confidence:</span>{" "}
-                    {debugData.debug.parseConfidence ?? "-"}%
+                    <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Rows</span>
+                    {debugData.debug.rowCount} extracted, {debugData.debug.rowsFlagged || 0} flagged
                   </div>
                   <div>
-                    <span className="font-medium">Rows Extracted:</span>{" "}
-                    {debugData.debug.rowCount}
-                  </div>
-                  <div>
-                    <span className="font-medium">Flagged:</span>{" "}
-                    {debugData.debug.rowsFlagged || 0}
+                    <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Confidence</span>
+                    <div className="flex items-center gap-2">
+                      <Progress value={debugData.debug.parseConfidence ?? 0} className="h-2 flex-1" />
+                      <span className="font-mono text-sm">{debugData.debug.parseConfidence ?? 0}%</span>
+                    </div>
                   </div>
                   {debugData.debug.parseStartedAt && (
                     <div>
-                      <span className="font-medium">Parse Started:</span>{" "}
+                      <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Parse Started</span>
                       {new Date(debugData.debug.parseStartedAt).toLocaleString()}
                     </div>
                   )}
                   {debugData.debug.parseCompletedAt && (
                     <div>
-                      <span className="font-medium">Parse Completed:</span>{" "}
+                      <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Parse Completed</span>
                       {new Date(debugData.debug.parseCompletedAt).toLocaleString()}
+                    </div>
+                  )}
+                  {getDebugDuration() && (
+                    <div>
+                      <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Duration</span>
+                      {getDebugDuration()}
                     </div>
                   )}
                 </div>
 
                 {debugData.debug.parseErrors && (debugData.debug.parseErrors as any[]).length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-red-600 mb-1">Errors</h4>
-                    <div className="bg-red-50 p-3 rounded text-sm space-y-1">
+                  <div className="border border-red-300 bg-red-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Validation Errors ({(debugData.debug.parseErrors as any[]).length})
+                    </h4>
+                    <div className="space-y-1">
                       {(debugData.debug.parseErrors as string[]).map((e, i) => (
-                        <div key={i} className="text-red-700">{e}</div>
+                        <div key={i} className="text-sm text-red-700 font-mono">{e}</div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {debugData.debug.parseDebugJson && (
-                  <div>
-                    <h4 className="font-medium mb-1">Debug Info</h4>
-                    <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(debugData.debug.parseDebugJson, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
                 {debugData.debug.rawExtractedText && (
-                  <div>
-                    <h4 className="font-medium mb-1">Raw Extracted Text</h4>
-                    <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
-                      {debugData.debug.rawExtractedText.slice(0, 5000)}
-                      {debugData.debug.rawExtractedText.length > 5000 && "\n...(truncated)"}
-                    </pre>
-                  </div>
+                  <Collapsible open={rawTextOpen} onOpenChange={setRawTextOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2 w-full justify-start p-2 h-auto" data-testid="button-toggle-raw-text">
+                        {rawTextOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <span className="font-medium">Raw Extracted Text</span>
+                        <span className="text-xs text-muted-foreground ml-2">({debugData.debug.rawExtractedText.length} chars)</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <pre className="bg-gray-50 border rounded p-3 text-xs font-mono overflow-auto max-h-[300px] whitespace-pre-wrap mt-2" data-testid="text-raw-extracted">
+                        {debugData.debug.rawExtractedText}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
-                {debugData.debug.rows && debugData.debug.rows.length > 0 && (
+                {debugData.debug.parseDebugJson && (
+                  <Collapsible open={debugJsonOpen} onOpenChange={setDebugJsonOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2 w-full justify-start p-2 h-auto" data-testid="button-toggle-debug-json">
+                        {debugJsonOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <span className="font-medium">Parse Debug JSON</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <pre className="bg-gray-50 border rounded p-3 text-xs font-mono overflow-auto max-h-[300px] whitespace-pre-wrap mt-2" data-testid="text-debug-json">
+                        {JSON.stringify(debugData.debug.parseDebugJson, null, 2)}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {debugRows.length > 0 && (
                   <div>
-                    <h4 className="font-medium mb-1">Extracted Rows ({debugData.debug.rows.length})</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium">Extracted Rows ({debugRows.length})</h4>
+                      {debugRowPageCount > 1 && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={debugRowPage === 0}
+                            onClick={() => setDebugRowPage(p => p - 1)}
+                            data-testid="button-debug-rows-prev"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            {debugRowPage + 1} / {debugRowPageCount}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={debugRowPage >= debugRowPageCount - 1}
+                            onClick={() => setDebugRowPage(p => p + 1)}
+                            data-testid="button-debug-rows-next"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -765,8 +1083,8 @@ export default function PrcUploadCenter() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {debugData.debug.rows.map((r: any) => (
-                            <TableRow key={r.id}>
+                          {debugRowsSlice.map((r: any) => (
+                            <TableRow key={r.id} data-testid={`row-debug-${r.id}`}>
                               <TableCell className="text-xs">{r.submarket}</TableCell>
                               <TableCell className="text-xs">{r.productType}</TableCell>
                               <TableCell className="text-xs">{r.termMonths || "-"}</TableCell>
@@ -786,6 +1104,18 @@ export default function PrcUploadCenter() {
                     </div>
                   </div>
                 )}
+
+                <div className="flex justify-end pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyDebugBundle}
+                    data-testid="button-copy-debug-bundle"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Debug Bundle
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

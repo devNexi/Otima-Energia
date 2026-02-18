@@ -14,13 +14,13 @@ const STUCK_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 let isRunning = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-export async function enqueueJob(type: string, payload: Record<string, any>, nextRunAt?: Date): Promise<number> {
+export async function enqueueJob(type: string, payload: Record<string, any>, nextRunAt?: Date, maxAttempts?: number): Promise<number> {
   const result = await db.insert(jobs).values({
     type,
     payload,
     status: 'PENDING',
     attempts: 0,
-    maxAttempts: 5,
+    maxAttempts: maxAttempts || 5,
     nextRunAt: nextRunAt || new Date(),
   }).returning();
   console.log(`[JobRunner] Enqueued job ${result[0].id} type=${type}`);

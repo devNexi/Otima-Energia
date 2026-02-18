@@ -1,0 +1,201 @@
+Thanks — job-based PRC parsing + reparse + debug endpoint is exactly the right direction.
+
+Now I need you to prove it works end-to-end on real PRCs and make it reliable for bulk upload (I have 11 more). Please do the following:
+
+1) PROVE PRC_Julho25.pdf WORKS RIGHT NOW (no theory)
+
+For the PRC I uploaded:
+
+Confirm the document record exists in prcDocuments and has:
+
+status transitions: UPLOADED → PARSING → PARSED/REVIEW_REQUIRED/FAILED
+
+parsingStartedAt / parsingCompletedAt set
+
+extractedRowCount populated
+
+confidence score populated
+
+rawExtractedText + parseDebugJson populated
+
+Run the parse (or re-parse) and show me:
+
+final status
+
+confidence score
+
+extractedRowCount
+
+top 10 extracted rows as JSON
+
+any validation warnings
+
+If it’s still failing, tell me the exact error and fix it immediately.
+
+2) BULK UPLOAD UX (CRITICAL)
+
+In the PRC Upload Center, I need to upload many PRCs quickly and not babysit them.
+
+Please add:
+
+Multi-file upload (select 10–20 at once)
+
+Per-file live status row updates (PARSING / PARSED / FAILED / REVIEW_REQUIRED)
+
+“Re-parse all FAILED” button
+
+“Re-parse all REVIEW_REQUIRED” button
+
+“Download extracted rows CSV” for each PRC
+
+A filter dropdown: All / Parsing / Failed / Needs review / Parsed
+
+3) PARSING QUALITY: SHIT HOT ACROSS DIFFERENT FORMATS
+
+Right now the system is reliable, but I need it accurate across structurally different PRCs.
+
+Implement a two-pass parser with scoring:
+
+Pass A — Heuristic parser
+
+table candidate detection
+
+fuzzy header mapping
+
+row extraction
+
+Pass B — AI fallback (only when needed)
+
+Trigger AI fallback when:
+
+confidence < 0.80
+
+row count = 0
+
+validation errors exceed threshold
+
+header mapping ambiguous
+
+The AI fallback should:
+
+take rawExtractedText (or extracted blocks)
+
+output strict JSON in canonical schema
+
+return confidence + reasons
+
+Then:
+
+choose best result (A vs B)
+
+store both in parseDebugJson for audit
+
+If still low confidence:
+→ status = REVIEW_REQUIRED (never PARSED)
+
+4) VALIDATION RULES (MUST EXIST)
+
+Before marking PARSED:
+
+required fields present
+
+no negative tariffs
+
+numeric formats sane
+
+expected group/modality patterns valid
+
+no duplicate rows
+
+If validation fails:
+→ REVIEW_REQUIRED with validationErrors[] stored
+
+5) CANONICAL PRICING TABLE — CONFIRM IT’S ACTUALLY USED
+
+You created canonical_pricing_rows. Good.
+
+Now confirm:
+
+PRC parse writes into canonical_pricing_rows
+
+each row links back to:
+
+sourceType=PRC
+
+prcDocumentId
+
+supplier/distributor/UF where possible
+
+confidence score
+
+We will later ingest SUPPLIER_QUOTES into the same table, so this must be solid.
+
+6) OBSERVABILITY / DEBUG VIEW MUST BE ACTIONABLE
+
+In the Debug modal, show:
+
+status + timestamps
+
+confidence score
+
+extractedRowCount
+
+validation errors (if any)
+
+rawExtractedText (collapsible)
+
+parseDebugJson (collapsible)
+
+extracted rows table (paginated)
+
+Also add:
+
+“Copy debug bundle” button:
+
+docId
+
+storageKey
+
+status
+
+error
+
+confidence
+
+row count
+
+requestId if available
+
+7) PERFORMANCE + RELIABILITY
+
+Confirm:
+
+Parse timeout is enforced
+
+Stuck recovery marks FAILED after threshold
+
+retries max 3 with backoff
+
+a FAILED parse always has parsingError set
+
+status never stays PARSING indefinitely
+
+8) TELL ME EXACTLY HOW TO TEST IN 2 MINUTES
+
+Give me a short checklist:
+
+Upload PRC
+
+Confirm job created
+
+Watch status change
+
+Open debug view
+
+Confirm extracted rows present
+
+Export CSV
+
+Re-parse a failed doc
+
+Once this is confirmed working, I will upload the remaining 11 PRCs.
