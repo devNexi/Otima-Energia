@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +121,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const { data: dealData, isLoading } = useQuery({
     queryKey: [`/api/deals/${dealId}`],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}`);
+      const res = await apiRequest("GET", `/api/deals/${dealId}`);
       return res.json();
     }
   });
@@ -128,21 +129,17 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const { data: transitionsData } = useQuery({
     queryKey: [`/api/deals/${dealId}/transitions`],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/${dealId}/transitions`);
+      const res = await apiRequest("GET", `/api/deals/${dealId}/transitions`);
       return res.json();
     }
   });
 
   const transitionMutation = useMutation({
     mutationFn: async (data: { toState: string; reason: string; notes?: string }) => {
-      const res = await fetch(`/api/deals/${dealId}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          triggeredBy: "admin",
-          triggeredByType: "user"
-        })
+      const res = await apiRequest("POST", `/api/deals/${dealId}/transition`, {
+        ...data,
+        triggeredBy: "admin",
+        triggeredByType: "user"
       });
       return res.json();
     },
