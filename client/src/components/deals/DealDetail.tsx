@@ -100,6 +100,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const { language } = useI18n();
   const queryClient = useQueryClient();
   
+  const [activeTab, setActiveTab] = useState("overview");
   const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
   const [clientPriceQuote, setClientPriceQuote] = useState<any>(null);
   const [clientPriceModalOpen, setClientPriceModalOpen] = useState(false);
@@ -297,7 +298,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   };
 
   return (
-    <div className="space-y-6" data-testid="deal-detail">
+    <div className="space-y-6 min-w-0 overflow-hidden" data-testid="deal-detail">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onBack} data-testid="button-back">
@@ -426,34 +427,34 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </Card>
       )}
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-gray-500">
             {language === "pt" ? "Progresso do Deal" : "Deal Progress"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <CardContent className="overflow-x-auto">
+          <div className="flex items-center gap-1 pb-2 min-w-0">
             {DEAL_STATES.map((state, index) => {
               const isActive = state === deal.status;
               const isPast = getStateIndex(deal.status) > index;
               const isFuture = getStateIndex(deal.status) < index;
               
               return (
-                <div key={state} className="flex items-center">
+                <div key={state} className="flex items-center shrink-0">
                   <div className={`
-                    flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium
+                    flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-medium
                     ${isActive ? "bg-violet-600 text-white" : ""}
                     ${isPast ? "bg-green-500 text-white" : ""}
                     ${isFuture ? "bg-gray-200 text-gray-500" : ""}
                   `}>
-                    {isPast ? <CheckCircle2 className="w-4 h-4" /> : index + 1}
+                    {isPast ? <CheckCircle2 className="w-3 h-3" /> : index + 1}
                   </div>
-                  <span className={`ml-2 text-xs whitespace-nowrap ${isActive ? "font-bold" : ""} ${isFuture ? "text-gray-400" : ""}`}>
+                  <span className={`ml-1 text-[10px] whitespace-nowrap ${isActive ? "font-bold" : ""} ${isFuture ? "text-gray-400" : ""}`}>
                     {stateLabels[state]?.[language as "en" | "pt"] || state}
                   </span>
                   {index < DEAL_STATES.length - 1 && (
-                    <ArrowRight className={`w-4 h-4 mx-2 ${isPast ? "text-green-500" : "text-gray-300"}`} />
+                    <ArrowRight className={`w-3 h-3 mx-1 shrink-0 ${isPast ? "text-green-500" : "text-gray-300"}`} />
                   )}
                 </div>
               );
@@ -557,12 +558,28 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           if (action === "open_checklist") {
             const checklistBtn = document.querySelector('[data-testid="checklist-drawer-trigger"]');
             if (checklistBtn) (checklistBtn as HTMLButtonElement).click();
+          } else if (action === "open_dossier") {
+            setActiveTab("overview");
+          } else if (action === "select_suppliers") {
+            setActiveTab("rfq");
+          } else if (action === "open_rfq" || action === "track_responses" || action === "send_followup") {
+            setActiveTab("rfq");
+          } else if (action === "compare_quotes" || action === "verify_terms" || action === "request_approval") {
+            setActiveTab("quotes");
+          } else if (action === "finalize_contract" || action === "view_documents" || action === "run_compliance") {
+            setActiveTab("compliance");
+          } else if (action === "view_commissions" || action === "setup_commission" || action === "reconcile") {
+            setActiveTab("commission");
+          } else if (action === "submit_ccee" || action === "confirm_date" || action === "verify_supply") {
+            setActiveTab("assembly");
+          } else if (action === "assess_renewal") {
+            setActiveTab("overview");
           }
         }}
       />
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="assembly" className="flex items-center gap-2" data-testid="tab-assembly">
             <Zap className="w-4 h-4" />
             {language === "pt" ? "Montagem" : "Assembly"}
