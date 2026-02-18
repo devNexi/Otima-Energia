@@ -1,0 +1,417 @@
+We have uploaded our first PRC (PRC_Julho25.pdf) and it is stuck in PARSING.
+
+This is unacceptable.
+
+We will be uploading 11 more supplier PRCs and they will all be structurally different.
+
+This ingestion engine must be:
+
+Deterministic
+
+Observable
+
+Resilient
+
+Supplier-agnostic
+
+Self-healing
+
+AI-assisted when needed
+
+Zero manual data entry
+
+We are building the ECOS backbone.
+This must be production-grade.
+
+PART 1 — IMMEDIATE ROOT CAUSE ANALYSIS
+
+For PRC_Julho25.pdf:
+
+Show me the exact lifecycle:
+
+Upload timestamp
+
+Job enqueue timestamp
+
+Job start timestamp
+
+Parsing start
+
+Parsing end (if any)
+
+Status update attempts
+
+Errors thrown
+
+Check:
+
+Is the job stuck RUNNING?
+
+Did it fail but not mark FAILED?
+
+Did a promise hang?
+
+Is the job runner polling correctly?
+
+Did PDF extraction crash silently?
+
+Dump logs for this specific document.
+
+If errors are swallowed anywhere, remove that immediately.
+
+No silent failures.
+
+PART 2 — GUARANTEED STATUS TRANSITIONS
+
+A PRC document may only be in one of:
+
+UPLOADED
+
+PARSING
+
+PARSED
+
+REVIEW_REQUIRED
+
+FAILED
+
+It must NEVER remain in PARSING indefinitely.
+
+Implement:
+
+parsingStartedAt
+
+parsingCompletedAt
+
+parsingError
+
+extractedRowCount
+
+parsingConfidenceScore
+
+retryCount
+
+If parsing throws:
+→ status = FAILED
+
+If extraction incomplete:
+→ status = REVIEW_REQUIRED
+
+If successful:
+→ status = PARSED
+
+Add hard timeout (2 minutes max per document).
+
+PART 3 — PROPER JOB ENGINE HARDENING
+
+Audit the job runner:
+
+Ensure async functions are awaited
+
+Ensure try/catch wraps entire parsing pipeline
+
+Ensure transaction commit happens
+
+Ensure status updates are not outside error handling
+
+Add exponential backoff retry (max 3 attempts)
+
+After 3 failures → mark FAILED
+
+Also:
+
+If job stuck RUNNING > 5 minutes
+→ Auto mark FAILED
+→ Log reason: STALE_JOB_TIMEOUT
+
+PART 4 — UPGRADE PARSING ARCHITECTURE (CRITICAL)
+
+We cannot rely on fixed layouts.
+
+All suppliers format PRCs differently.
+
+Implement a hybrid pipeline:
+
+Stage 1 — Raw PDF Extraction
+
+Extract:
+
+Raw text
+
+Structured blocks
+
+Table candidates
+
+Store raw extraction in DB (for debugging).
+
+Stage 2 — Table Detection Engine
+
+Instead of static offsets:
+
+Detect repeating numeric columns
+
+Identify rows containing:
+
+currency values
+
+kWh
+
+TE
+
+TUSD
+
+Grupo A / B
+
+Modalidade
+
+Subgrupo
+
+Ponta / Fora Ponta
+
+etc.
+
+Use heuristics:
+
+2+ numeric values per row
+
+Similar spacing pattern
+
+Consistent column count
+
+Stage 3 — Semantic Column Mapping (AI-Assisted)
+
+Implement fuzzy semantic matching.
+
+Do NOT depend on exact header names.
+
+Example matching logic:
+
+Map to internal schema fields:
+
+grupo
+
+subgrupo
+
+modalidade
+
+tensao
+
+te_valor
+
+tusd_valor
+
+bandeira
+
+encargos
+
+icms
+
+pis_cofins
+
+Use:
+
+Levenshtein similarity
+
+Lowercase normalization
+
+Remove accents
+
+Token similarity scoring
+
+If confidence < threshold:
+→ escalate to LLM structure extraction fallback
+
+PART 5 — LLM FALLBACK PARSER (THIS IS WHAT MAKES IT SHIT HOT)
+
+If rule-based parsing confidence < 80%:
+
+Send extracted raw text to structured prompt:
+
+Ask model to extract rows into JSON
+
+Enforce strict schema
+
+Validate numeric fields
+
+Run post-validation on AI output:
+
+All required columns present?
+
+Numeric fields valid?
+
+No null groups?
+
+Row count reasonable?
+
+Compare deterministic parser vs AI parser
+
+Choose higher confidence
+
+Store both for audit
+
+This hybrid approach prevents brittle logic.
+
+PART 6 — VALIDATION ENGINE
+
+Before marking PARSED:
+
+Run validation:
+
+No negative tariff values
+
+Currency fields valid decimals
+
+Required fields present
+
+Duplicate rows eliminated
+
+Grupo/Subgrupo combinations logical
+
+If validation fails:
+→ REVIEW_REQUIRED
+→ Store validation errors
+
+PART 7 — OBSERVABILITY (MANDATORY)
+
+Add structured logs:
+
+file_received
+
+parsing_started
+
+text_extracted
+
+table_candidates_found
+
+rows_detected
+
+semantic_mapping_confidence
+
+ai_fallback_used
+
+validation_passed
+
+status_updated
+
+Expose debug view in admin:
+
+PRC Detail Page:
+
+Raw text preview
+
+Extracted structured JSON
+
+Confidence score
+
+Parsing time
+
+Error messages
+
+Retry count
+
+No black box behavior.
+
+PART 8 — UX IMPROVEMENTS
+
+On PRC screen:
+
+If PARSING:
+→ Spinner + “Extracting tariff data…”
+
+If FAILED:
+→ Red badge + tooltip with parsingError
+
+If REVIEW_REQUIRED:
+→ Amber badge + “Needs Review”
+
+If PARSED:
+→ Green badge + show row count
+
+Show:
+
+parsing duration
+
+confidence %
+
+retry attempts
+
+PART 9 — PERFORMANCE TARGETS
+
+Parsing must:
+
+Complete in < 10 seconds average
+
+Never block event loop
+
+Handle large PDFs (10–20 pages)
+
+Handle scanned PDFs (OCR fallback if needed)
+
+If PDF has no text layer:
+→ Detect automatically
+→ Run OCR pipeline
+
+PART 10 — TEST THIS FILE NOW
+
+Using PRC_Julho25.pdf:
+
+Re-run parser
+
+Show extracted JSON
+
+Show confidence score
+
+Show final DB state
+
+Show logs
+
+I want proof.
+
+PART 11 — ARCHITECTURAL STANDARD
+
+This PRC ingestion system must be:
+
+Supplier-agnostic
+
+Layout-agnostic
+
+Self-correcting
+
+Auditable
+
+Retry-safe
+
+Timeout-safe
+
+AI-augmented
+
+Deterministic in status transitions
+
+We are building the ECOS intelligence engine.
+This is foundational.
+
+Do not move forward until:
+
+Parsing works
+
+Status transitions are correct
+
+Observability exists
+
+Failure states are handled
+
+This file parses cleanly
+
+When complete, reply with:
+
+Root cause
+
+What was broken
+
+What you changed
+
+New architecture implemented
+
+Proof of successful parse
+
+Confidence metrics

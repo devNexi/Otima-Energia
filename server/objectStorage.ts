@@ -228,6 +228,16 @@ export class ObjectStorageService {
     });
   }
 
+  async downloadBuffer(key: string): Promise<Buffer> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const fullPath = `${privateObjectDir}/${key}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    const [contents] = await file.download();
+    return contents;
+  }
+
   /**
    * Get a signed URL for reading an object
    * @param key - The object key/path

@@ -1,0 +1,246 @@
+UPDATED SUPER PROMPT — PRC Parsing + Future Quote Architecture
+
+PRCs are temporary bootstrap data.
+
+ECOS will ultimately run on our own historical supplier quotes.
+
+Therefore:
+
+The PRC ingestion system must be built as a generic pricing ingestion engine, not a PRC-only feature.
+
+1️⃣ Immediate Fix — PRC Stuck at PARSING
+
+(Keep everything from previous prompt regarding logging, status transitions, job runner hardening, AI fallback, validation, etc.)
+
+Do not skip this.
+
+PRC_Julho25.pdf must parse successfully.
+
+2️⃣ Architectural Constraint (CRITICAL)
+
+Do NOT hard-code PRC-specific logic into the core ECOS layer.
+
+Instead:
+
+Create a generic ingestion framework with:
+
+pricing_documents
+pricing_rows
+pricing_source_type (PRC | SUPPLIER_QUOTE | API)
+
+
+PRC must be treated as:
+
+sourceType = PRC_DOCUMENT
+
+Later we will ingest:
+
+sourceType = SUPPLIER_QUOTE
+
+ECOS must read from a unified normalized pricing table, not directly from PRC documents.
+
+3️⃣ Canonical Pricing Schema (Must Be Implemented Now)
+
+Design a normalized pricing row model that both PRCs and Quotes map into:
+
+Example structure:
+
+id
+
+sourceType
+
+supplierId
+
+distributor
+
+uf
+
+trackType (GDL/ACL/ACR)
+
+grupo
+
+subgrupo
+
+modalidade
+
+tensao
+
+contractTermMonths
+
+teValue
+
+tusdValue
+
+pricePerMWh
+
+discountPercent
+
+demandCharge
+
+flags
+
+validFrom
+
+validTo
+
+confidenceScore
+
+rawExtractionRef
+
+PRC parser maps into this.
+
+Later, quote parser maps into same structure.
+
+ECOS queries this unified layer.
+
+4️⃣ Build Supplier Quote Vault NOW (Minimal Version)
+
+Even if parsing is basic initially:
+
+Create:
+
+supplier_quote_documents
+
+Fields:
+
+supplierId
+
+dealId
+
+trackId
+
+fileUrl
+
+uploadedBy
+
+uploadedAt
+
+extracted (boolean)
+
+normalized (boolean)
+
+confidenceScore
+
+We must start storing every quote immediately.
+
+No more quotes living in email inboxes.
+
+5️⃣ Ingestion Engine Requirements (Reusable)
+
+Your ingestion engine must:
+
+Accept arbitrary PDF
+
+Extract raw text
+
+Detect structured rows
+
+Map semantically to canonical schema
+
+Validate
+
+Produce confidence score
+
+Store raw + structured
+
+Log everything
+
+This engine must work for:
+
+PRCs (temporary)
+
+Supplier Quotes (primary)
+
+Future APIs
+
+No duplication of logic later.
+
+6️⃣ ECOS Query Layer Rule
+
+ECOS must NOT query:
+
+prc_documents
+
+supplier_quote_documents
+
+ECOS must query:
+
+ecos_reference_prices_view
+
+This view should union:
+
+normalized PRC rows
+
+normalized Supplier Quote rows
+
+Later:
+
+live API data
+
+This avoids refactoring later.
+
+7️⃣ PRC Parser Still Must Be Bulletproof
+
+Keep all previous requirements:
+
+Timeout safety
+
+Retry safety
+
+Hard status transitions
+
+AI fallback
+
+Validation engine
+
+OCR fallback
+
+Observability UI
+
+Confidence score
+
+Debug view
+
+But implement inside reusable ingestion framework.
+
+8️⃣ Why This Matters
+
+PRCs are generic public reference cards.
+
+Supplier Quotes are:
+
+Contextual
+
+Negotiated
+
+Term-sensitive
+
+Time-sensitive
+
+Discount-based
+
+Real
+
+Your competitive moat will come from:
+
+Quote history + deal metadata + outcomes.
+
+We are laying the foundation now.
+
+9️⃣ Deliverables Required
+
+Reply with:
+
+Root cause of current PRC stuck state
+
+Fix implemented
+
+New ingestion architecture diagram
+
+Canonical pricing schema
+
+Proof PRC_Julho25.pdf parsed successfully
+
+Confirmation ECOS reads from unified pricing layer
+
+Confirmation Supplier Quote Vault exists

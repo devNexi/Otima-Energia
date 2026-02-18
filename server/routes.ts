@@ -70,7 +70,6 @@ import { logAuditEvent } from "./audit";
 import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
-import { processPrcDocumentWithBuffer } from "./prc-parser";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
 import { getZohoLeadDeepLink, getZohoStatus } from "./zohoClient";
 
@@ -9050,11 +9049,12 @@ export async function registerRoutes(
         detailsJson: { supplierId: parsedSupplierId, referenceMonth, originalFilename: file.originalname, sourceName, fileType: isPdf ? 'pdf' : 'image' }
       });
       
-      // Trigger auto-parse pipeline (async - don't await to respond quickly)
-      // Pass isImage flag to parser to use OCR directly for images
-      processPrcDocumentWithBuffer(document.id, file.buffer, isImage)
-        .then(() => console.log(`PRC document ${document.id} parsing completed`))
-        .catch((err) => console.error(`PRC document ${document.id} parsing failed:`, err));
+      await enqueueJob('PRC_PARSE', {
+        documentId: document.id,
+        fileStorageKey: storageKey,
+        isImage,
+        idempotencyKey: `prc_parse_${document.id}`,
+      });
       
       res.json({ 
         success: true, 
@@ -9128,6 +9128,53 @@ export async function registerRoutes(
     }
   });
   
+  app.post("/api/prc/documents/:id/reparse", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const docId = parseInt(req.params.id);
+      const document = await storage.getPrcDocument(docId);
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+
+      if (document.parseStatus === 'PARSING') {
+        return res.status(409).json({ success: false, error: "Document is already being parsed" });
+      }
+
+      await storage.deletePrcRowsForDocument(docId);
+      await storage.updatePrcDocumentParseStatus(docId, 'UPLOADED', undefined, undefined, {
+        rawExtractedText: undefined,
+        parseDebugJson: undefined,
+        rowsExtracted: 0,
+        rowsFlagged: 0,
+      });
+
+      const isImage = !document.originalFilename?.toLowerCase().endsWith('.pdf');
+
+      await enqueueJob('PRC_PARSE', {
+        documentId: docId,
+        fileStorageKey: document.fileStorageKey,
+        isImage,
+        idempotencyKey: `prc_reparse_${docId}_${Date.now()}`,
+      });
+
+      const userId = await getSessionUserId(req) || 'system';
+      await storage.logAdminAction({
+        action: 'PRC_DOCUMENT_REPARSE',
+        entityType: 'prc_documents',
+        entityId: docId,
+        actor: userId,
+        detailsJson: { supplierId: document.supplierId, referenceMonth: document.referenceMonth }
+      });
+
+      res.json({ success: true, message: "Re-parse job enqueued" });
+    } catch (error: any) {
+      console.error("Error re-parsing PRC document:", error);
+      res.status(500).json({ success: false, error: "Failed to re-parse document" });
+    }
+  });
+
   // Get signed URL for PRC document file access
   app.get("/api/prc/documents/:id/signed-url", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -9308,6 +9355,51 @@ export async function registerRoutes(
     }
   });
   
+  app.get("/api/prc/documents/:id/debug", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    
+    try {
+      const document = await storage.getPrcDocument(parseInt(req.params.id));
+      if (!document) {
+        return res.status(404).json({ success: false, error: "PRC document not found" });
+      }
+      
+      const rows = await storage.getPrcRows(document.id);
+      
+      res.json({
+        success: true,
+        debug: {
+          id: document.id,
+          originalFilename: document.originalFilename,
+          parseStatus: document.parseStatus,
+          parseConfidence: document.parseConfidence,
+          parseErrors: document.parseErrors,
+          parseStartedAt: document.parseStartedAt,
+          parseCompletedAt: document.parseCompletedAt,
+          rawExtractedText: document.rawExtractedText,
+          parseDebugJson: document.parseDebugJson,
+          rowsExtracted: document.rowsExtracted,
+          rowsFlagged: document.rowsFlagged,
+          rowCount: rows.length,
+          rows: rows.map(r => ({
+            id: r.id,
+            submarket: r.submarket,
+            productType: r.productType,
+            termMonths: r.termMonths,
+            priceRPerMWh: r.priceRPerMWh,
+            confidence: r.confidence,
+            isOutlierFlag: r.isOutlierFlag,
+            outlierReason: r.outlierReason,
+            rawSnippet: r.rawSnippet,
+          })),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching PRC debug info:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch debug info" });
+    }
+  });
+
   // --- PRC Month Summary & Publishing ---
   
   // Get month summary (for publish preview)

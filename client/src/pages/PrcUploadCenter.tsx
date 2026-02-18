@@ -25,8 +25,11 @@ import {
   RefreshCw,
   X,
   FileUp,
-  Zap
+  Zap,
+  RotateCcw,
+  Bug,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 
 const SUBMARKETS = ["SECO", "SUL", "NNE", "NORTE"];
@@ -82,6 +85,39 @@ export default function PrcUploadCenter() {
   const [defaultSupplierId, setDefaultSupplierId] = useState<number | null>(null);
   const [defaultSubmarket, setDefaultSubmarket] = useState<string>("SECO");
   const [defaultSource, setDefaultSource] = useState<string>("Email");
+  const [debugDocId, setDebugDocId] = useState<number | null>(null);
+
+  const reparseMutation = useMutation({
+    mutationFn: async (docId: number) => {
+      const res = await fetch(`/api/prc/documents/${docId}/reparse`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Re-parse failed");
+      }
+      return res.json();
+    },
+    onSuccess: (_, docId) => {
+      toast.success("Re-parse job queued");
+      queryClient.invalidateQueries({ queryKey: ["/api/prc/documents"] });
+      if (debugDocId === docId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/prc/documents", docId, "debug"] });
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const { data: debugData, isLoading: debugLoading } = useQuery({
+    queryKey: ["/api/prc/documents", debugDocId, "debug"],
+    queryFn: async () => {
+      const res = await fetch(`/api/prc/documents/${debugDocId}/debug`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch debug info");
+      return res.json();
+    },
+    enabled: debugDocId !== null,
+  });
   const [defaultNotes, setDefaultNotes] = useState<string>("");
 
   const { data: suppliersData } = useQuery<{ success: boolean; suppliers: Supplier[] }>({
@@ -570,6 +606,7 @@ export default function PrcUploadCenter() {
                         <TableHead>Confidence</TableHead>
                         <TableHead>Rows</TableHead>
                         <TableHead>Uploaded</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -603,6 +640,31 @@ export default function PrcUploadCenter() {
                           <TableCell className="text-muted-foreground">
                             {new Date(doc.createdAt).toLocaleDateString()}
                           </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                disabled={doc.parseStatus === "PARSING" || reparseMutation.isPending}
+                                onClick={() => reparseMutation.mutate(doc.id)}
+                                title="Re-parse"
+                                data-testid={`button-reparse-${doc.id}`}
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setDebugDocId(doc.id)}
+                                title="Debug view"
+                                data-testid={`button-debug-${doc.id}`}
+                              >
+                                <Bug className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -612,6 +674,126 @@ export default function PrcUploadCenter() {
             </Card>
           </TabsContent>
         </Tabs>
+        <Dialog open={debugDocId !== null} onOpenChange={(open) => !open && setDebugDocId(null)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Bug className="h-5 w-5" />
+                Parse Debug View
+              </DialogTitle>
+            </DialogHeader>
+            {debugLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : debugData?.debug ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Status:</span>{" "}
+                    {getStatusBadge(debugData.debug.parseStatus)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Confidence:</span>{" "}
+                    {debugData.debug.parseConfidence ?? "-"}%
+                  </div>
+                  <div>
+                    <span className="font-medium">Rows Extracted:</span>{" "}
+                    {debugData.debug.rowCount}
+                  </div>
+                  <div>
+                    <span className="font-medium">Flagged:</span>{" "}
+                    {debugData.debug.rowsFlagged || 0}
+                  </div>
+                  {debugData.debug.parseStartedAt && (
+                    <div>
+                      <span className="font-medium">Parse Started:</span>{" "}
+                      {new Date(debugData.debug.parseStartedAt).toLocaleString()}
+                    </div>
+                  )}
+                  {debugData.debug.parseCompletedAt && (
+                    <div>
+                      <span className="font-medium">Parse Completed:</span>{" "}
+                      {new Date(debugData.debug.parseCompletedAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+
+                {debugData.debug.parseErrors && (debugData.debug.parseErrors as any[]).length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-red-600 mb-1">Errors</h4>
+                    <div className="bg-red-50 p-3 rounded text-sm space-y-1">
+                      {(debugData.debug.parseErrors as string[]).map((e, i) => (
+                        <div key={i} className="text-red-700">{e}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {debugData.debug.parseDebugJson && (
+                  <div>
+                    <h4 className="font-medium mb-1">Debug Info</h4>
+                    <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
+                      {JSON.stringify(debugData.debug.parseDebugJson, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {debugData.debug.rawExtractedText && (
+                  <div>
+                    <h4 className="font-medium mb-1">Raw Extracted Text</h4>
+                    <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
+                      {debugData.debug.rawExtractedText.slice(0, 5000)}
+                      {debugData.debug.rawExtractedText.length > 5000 && "\n...(truncated)"}
+                    </pre>
+                  </div>
+                )}
+
+                {debugData.debug.rows && debugData.debug.rows.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-1">Extracted Rows ({debugData.debug.rows.length})</h4>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Submarket</TableHead>
+                            <TableHead className="text-xs">Product</TableHead>
+                            <TableHead className="text-xs">Term</TableHead>
+                            <TableHead className="text-xs">Price (R$/MWh)</TableHead>
+                            <TableHead className="text-xs">Confidence</TableHead>
+                            <TableHead className="text-xs">Flags</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {debugData.debug.rows.map((r: any) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-xs">{r.submarket}</TableCell>
+                              <TableCell className="text-xs">{r.productType}</TableCell>
+                              <TableCell className="text-xs">{r.termMonths || "-"}</TableCell>
+                              <TableCell className="text-xs font-mono">{r.priceRPerMWh}</TableCell>
+                              <TableCell className="text-xs">{r.confidence}%</TableCell>
+                              <TableCell className="text-xs">
+                                {r.isOutlierFlag && (
+                                  <Badge variant="outline" className="text-xs text-orange-600">
+                                    {r.outlierReason || "Outlier"}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No debug data available
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

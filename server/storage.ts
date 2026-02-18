@@ -714,7 +714,7 @@ export interface IStorage {
   getPrcDocuments(filters?: { supplierId?: number; referenceMonth?: string; parseStatus?: string; isDemo?: boolean }): Promise<PrcDocument[]>;
   getPrcDocument(id: number): Promise<PrcDocument | undefined>;
   updatePrcDocument(id: number, data: Partial<InsertPrcDocument>): Promise<PrcDocument | undefined>;
-  updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[]): Promise<PrcDocument | undefined>;
+  updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[], extra?: { rawExtractedText?: string; parseDebugJson?: any; rowsExtracted?: number; rowsFlagged?: number }): Promise<PrcDocument | undefined>;
   verifyPrcDocument(id: number, verifiedByUserId: string): Promise<PrcDocument | undefined>;
   deletePrcDocument(id: number): Promise<void>;
   
@@ -2087,6 +2087,7 @@ export class Storage implements IStorage {
       'QUOTES_RECEIVED': 'quotesReceivedAt',
       'OFFER_SELECTED': 'offerSelectedAt',
       'ONBOARDING_PENDING': 'onboardingPendingAt',
+      'CONTRACT_SENT': 'contractSentAt',
       'CONTRACT_SIGNED': 'contractSignedAt',
       'SUPPLY_LIVE': 'supplyLiveAt',
       'CONTRACT_ENDED': 'contractEndedAt',
@@ -4148,7 +4149,7 @@ export class Storage implements IStorage {
     return result[0];
   }
   
-  async updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[]): Promise<PrcDocument | undefined> {
+  async updatePrcDocumentParseStatus(id: number, status: string, confidence?: number, errors?: any[], extra?: { rawExtractedText?: string; parseDebugJson?: any; rowsExtracted?: number; rowsFlagged?: number }): Promise<PrcDocument | undefined> {
     const updateData: any = {
       parseStatus: status,
       updatedAt: new Date()
@@ -4163,8 +4164,20 @@ export class Storage implements IStorage {
     if (status === 'PARSING') {
       updateData.parseStartedAt = new Date();
     }
-    if (status === 'PARSED' || status === 'FAILED') {
+    if (status === 'PARSED' || status === 'FAILED' || status === 'NEEDS_REVIEW') {
       updateData.parseCompletedAt = new Date();
+    }
+    if (extra?.rawExtractedText !== undefined) {
+      updateData.rawExtractedText = extra.rawExtractedText;
+    }
+    if (extra?.parseDebugJson !== undefined) {
+      updateData.parseDebugJson = extra.parseDebugJson;
+    }
+    if (extra?.rowsExtracted !== undefined) {
+      updateData.rowsExtracted = extra.rowsExtracted;
+    }
+    if (extra?.rowsFlagged !== undefined) {
+      updateData.rowsFlagged = extra.rowsFlagged;
     }
     
     const result = await db.update(prcDocuments)

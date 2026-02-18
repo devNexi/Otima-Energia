@@ -3895,6 +3895,10 @@ export const prcDocuments = pgTable("prc_documents", {
   parseStartedAt: timestamp("parse_started_at"),
   parseCompletedAt: timestamp("parse_completed_at"),
   
+  // Raw extracted text for observability
+  rawExtractedText: text("raw_extracted_text"),
+  parseDebugJson: jsonb("parse_debug_json"),
+  
   // Row counts (denormalized for quick display)
   rowsExtracted: integer("rows_extracted").default(0),
   rowsFlagged: integer("rows_flagged").default(0),
@@ -3925,6 +3929,8 @@ export const insertPrcDocumentSchema = createInsertSchema(prcDocuments).omit({
   parseErrors: true,
   parseStartedAt: true,
   parseCompletedAt: true,
+  rawExtractedText: true,
+  parseDebugJson: true,
   rowsExtracted: true,
   rowsFlagged: true,
   verifiedByUserId: true,
@@ -4067,6 +4073,26 @@ export const prcRowsRelations = relations(prcRows, ({ one }) => ({
     references: [suppliers.id],
   }),
 }));
+
+// Canonical Pricing Rows - Unified pricing layer (PRC, quotes, API feeds)
+export const canonicalPricingRows = pgTable("canonical_pricing_rows", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(), // 'prc' | 'quote' | 'api_feed'
+  sourceId: integer("source_id"), // prcRows.id or dealQuotes.id
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  referenceMonth: text("reference_month").notNull(),
+  submarket: text("submarket").notNull(),
+  productType: text("product_type").notNull(),
+  termMonths: integer("term_months"),
+  priceRPerMWh: decimal("price_r_per_mwh", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("BRL").notNull(),
+  confidence: integer("confidence").notNull(),
+  isOutlierFlag: boolean("is_outlier_flag").default(false),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CanonicalPricingRow = typeof canonicalPricingRows.$inferSelect;
 
 // ============== END PRC DOCUMENTS ==============
 

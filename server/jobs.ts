@@ -1,9 +1,11 @@
 import { db } from "./db";
-import { jobs, dealZohoTaskLinks, uploadSessions } from "@shared/schema";
+import { jobs, dealZohoTaskLinks, uploadSessions, prcDocuments } from "@shared/schema";
 import { eq, and, lte, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { computeNextCallbackDateTime } from "./scheduler";
 import { fetchZohoSnapshot, createZohoCallbackTask, createZohoTask, isZohoEnabled, isZohoCallbackTaskEnabled } from "./zohoClient";
 import { dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, deals, clients } from "@shared/schema";
+import { processPrcDocumentWithBuffer } from "./prc-parser";
+import { ObjectStorageService } from "./objectStorage";
 
 const POLL_INTERVAL_MS = parseInt(process.env.JOB_POLL_INTERVAL_MS || '30000', 10);
 const MAX_CONCURRENT_JOBS = 3;
@@ -69,6 +71,24 @@ async function recoverStuckJobs(): Promise<void> {
 
   if (stuckJobs.length > 0) {
     console.log(`[JobRunner] Recovered ${stuckJobs.length} stuck jobs`);
+  }
+
+  const prcStuckCutoff = new Date(Date.now() - 10 * 60 * 1000);
+  const stuckPrcs = await db.update(prcDocuments)
+    .set({
+      parseStatus: 'FAILED',
+      parseErrors: ['STALE_JOB_TIMEOUT: stuck in PARSING > 10 minutes, auto-marked FAILED'],
+      parseCompletedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(prcDocuments.parseStatus, 'PARSING'),
+      lte(prcDocuments.parseStartedAt, prcStuckCutoff)
+    ))
+    .returning();
+
+  if (stuckPrcs.length > 0) {
+    console.log(`[JobRunner] Recovered ${stuckPrcs.length} stuck PRC documents from PARSING → FAILED`);
   }
 }
 
@@ -249,6 +269,40 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
       } catch (emailErr) {
         console.error(`[JobRunner] Failed to send intake completion email:`, emailErr);
       }
+      break;
+    }
+
+    case 'PRC_PARSE': {
+      const documentId = payload.documentId as number;
+      const fileStorageKey = payload.fileStorageKey as string;
+      const isImage = payload.isImage as boolean || false;
+      const retryCount = (job.attempts || 1) - 1;
+
+      if (!documentId || !fileStorageKey) throw new Error('Missing documentId or fileStorageKey in PRC_PARSE payload');
+
+      console.log(`[JobRunner] PRC_PARSE: downloading file for doc ${documentId} (attempt ${job.attempts}/${job.maxAttempts})`);
+
+      let fileBuffer: Buffer;
+      try {
+        const objectStorage = new ObjectStorageService();
+        fileBuffer = await objectStorage.downloadBuffer(fileStorageKey);
+      } catch (downloadErr: any) {
+        console.error(`[JobRunner] PRC_PARSE: download failed for doc ${documentId}: ${downloadErr.message}`);
+        await db.update(prcDocuments)
+          .set({
+            parseStatus: 'FAILED',
+            parseErrors: [`FILE_DOWNLOAD_ERROR: ${downloadErr.message}`],
+            parseCompletedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(prcDocuments.id, documentId));
+        throw downloadErr;
+      }
+
+      console.log(`[JobRunner] PRC_PARSE: file downloaded (${fileBuffer.length} bytes), starting parse`);
+      await processPrcDocumentWithBuffer(documentId, fileBuffer, isImage, retryCount);
+
+      console.log(`[JobRunner] PRC_PARSE: doc ${documentId} processing completed`);
       break;
     }
 
