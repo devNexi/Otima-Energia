@@ -21,6 +21,23 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Language**: TypeScript with ESM modules
 - **API Pattern**: RESTful endpoints (`/api/*`)
 
+### Parser Service (VPS)
+- **Framework**: Python FastAPI
+- **Location**: `parser-service/` directory (deploy to VPS separately)
+- **Purpose**: Heavy PDF/OCR parsing offloaded from portal
+- **Endpoints**: `/parse` (multipart file upload), `/health`, `/debug/{docId}`
+- **Auth**: `X-Parser-Key` header
+- **Extraction**: pdfplumber text extraction + Tesseract OCR fallback (pdftoppm 300dpi)
+- **Document Types**: PRC (tariff benchmarks), BILL (electricity invoices), OTHER
+- **PRC Extraction**: Deterministic submarket/term/price detection, >=12 rows expected, 50-1500 R$/MWh range
+- **Bill Extraction**: distributor, referenceMonth, totalAmount, totalEnergyKwh, customerName, customerId, tariffGroup
+- **Validation**: Two-pass with confidence scoring (0.0-1.0)
+- **Portal Integration**: `PARSER_SERVICE_URL` and `PARSER_API_KEY` env vars; fallback to local parser if VPS unavailable
+- **Portal Client**: `server/parser-client.ts` - HTTP client for VPS parser
+- **Job Types**: `PRC_PARSE` (enhanced with VPS support + fallback), `BILL_PARSE` (new, VPS-only)
+- **Bill Storage**: `bills_extracted` table for parsed bill data
+- **Tests**: `parser-service/run_tests.py` - classifier, PRC extractor, bill extractor tests with golden JSON snapshots
+
 ### SEO & Prerendering
 - **Static HTML Generation**: Puppeteer-based prerendering for marketing pages.
 

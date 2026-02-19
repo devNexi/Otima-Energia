@@ -4096,6 +4096,55 @@ export type CanonicalPricingRow = typeof canonicalPricingRows.$inferSelect;
 
 // ============== END PRC DOCUMENTS ==============
 
+// ============== BILLS EXTRACTED ==============
+export const billsExtracted = pgTable("bills_extracted", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id),
+  fileStorageKey: text("file_storage_key").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  fileSizeBytes: integer("file_size_bytes"),
+  parseStatus: text("parse_status").default("UPLOADED").notNull(),
+  parseConfidence: integer("parse_confidence"),
+  distributor: text("distributor"),
+  referenceMonth: text("reference_month"),
+  dueDate: text("due_date"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  totalEnergyKwh: decimal("total_energy_kwh", { precision: 12, scale: 2 }),
+  customerName: text("customer_name"),
+  customerId: text("customer_id"),
+  tariffGroup: text("tariff_group"),
+  invoiceKey: text("invoice_key"),
+  validated: boolean("validated").default(false),
+  parseErrors: jsonb("parse_errors"),
+  parseWarnings: jsonb("parse_warnings"),
+  parseDebugJson: jsonb("parse_debug_json"),
+  rawExtractedText: text("raw_extracted_text"),
+  textSource: text("text_source"),
+  uploadedByUserId: text("uploaded_by_user_id").references(() => users.id),
+  parsedAt: timestamp("parsed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBillExtractedSchema = createInsertSchema(billsExtracted).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  parseStatus: true,
+  parseConfidence: true,
+  parseErrors: true,
+  parseWarnings: true,
+  parseDebugJson: true,
+  rawExtractedText: true,
+  textSource: true,
+  validated: true,
+  parsedAt: true,
+});
+
+export type InsertBillExtracted = z.infer<typeof insertBillExtractedSchema>;
+export type BillExtracted = typeof billsExtracted.$inferSelect;
+// ============== END BILLS EXTRACTED ==============
+
 // ============== BRAND KIT ==============
 // Admin-editable branding configuration for customer-facing documents
 

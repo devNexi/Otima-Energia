@@ -9400,6 +9400,115 @@ export async function registerRoutes(
     }
   });
 
+  // --- Parser Service Health ---
+  app.get("/api/parser/health", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { checkParserHealth } = await import("./parser-client");
+      const health = await checkParserHealth();
+      res.json({ success: true, ...health });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // --- Bill Parsing ---
+  app.post("/api/bills/upload", upload.single("file"), async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: "No file uploaded" });
+      }
+
+      const clientId = req.body.clientId ? parseInt(req.body.clientId) : null;
+      const userId = await getSessionUserId(req);
+
+      const objectStorage = new (await import("./objectStorage")).ObjectStorageService();
+      const storageKey = `bills/${Date.now()}_${file.originalname}`;
+      await objectStorage.uploadBuffer(storageKey, file.buffer, file.mimetype);
+
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const inserted = await db.insert(billsExtracted).values({
+        clientId,
+        fileStorageKey: storageKey,
+        originalFilename: file.originalname,
+        fileSizeBytes: file.size,
+        uploadedByUserId: userId,
+      }).returning();
+
+      const bill = inserted[0];
+
+      await enqueueJob('BILL_PARSE', {
+        billId: bill.id,
+        fileStorageKey: storageKey,
+      }, undefined, 3);
+
+      res.json({ success: true, bill });
+    } catch (error: any) {
+      console.error("Error uploading bill for parsing:", error);
+      res.status(500).json({ success: false, error: "Failed to upload bill" });
+    }
+  });
+
+  app.get("/api/bills/extracted", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { desc } = await import("drizzle-orm");
+      const bills = await db.select().from(billsExtracted).orderBy(desc(billsExtracted.createdAt)).limit(100);
+      res.json({ success: true, bills });
+    } catch (error: any) {
+      console.error("Error fetching extracted bills:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch bills" });
+    }
+  });
+
+  app.get("/api/bills/extracted/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const bill = await db.select().from(billsExtracted).where(eq(billsExtracted.id, parseInt(req.params.id))).limit(1);
+      if (!bill[0]) {
+        return res.status(404).json({ success: false, error: "Bill not found" });
+      }
+      res.json({ success: true, bill: bill[0] });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: "Failed to fetch bill" });
+    }
+  });
+
+  app.post("/api/bills/extracted/:id/reparse", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const billId = parseInt(req.params.id);
+      const bill = await db.select().from(billsExtracted).where(eq(billsExtracted.id, billId)).limit(1);
+      if (!bill[0]) {
+        return res.status(404).json({ success: false, error: "Bill not found" });
+      }
+
+      await db.update(billsExtracted)
+        .set({ parseStatus: 'UPLOADED', parseErrors: null, parseWarnings: null, updatedAt: new Date() })
+        .where(eq(billsExtracted.id, billId));
+
+      await enqueueJob('BILL_PARSE', {
+        billId,
+        fileStorageKey: bill[0].fileStorageKey,
+      }, undefined, 3);
+
+      res.json({ success: true, message: "Re-parse job enqueued" });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: "Failed to re-parse bill" });
+    }
+  });
+
   // --- PRC Month Summary & Publishing ---
   
   // Get month summary (for publish preview)

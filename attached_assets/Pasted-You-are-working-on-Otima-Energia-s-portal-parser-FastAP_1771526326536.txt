@@ -1,0 +1,134 @@
+You are working on Otima Energia’s “portal-parser” FastAPI service (VPS) and the Otima portal (Replit) integration.
+
+GOAL
+Make parsing production-grade for:
+(A) PRC benchmark documents (tables of prices by region/term/product)
+(B) Brazilian electricity bills (OCR + structured extraction)
+
+NON-NEGOTIABLE REQUIREMENTS
+1) Parsing must be deterministic + validated. Do NOT return “parsed” unless required fields exist.
+2) Use a 2-lane extraction pipeline:
+   - Lane 1: PDF text extraction (fast) using pdfplumber / pypdf / pdfminer
+   - Lane 2: OCR fallback when text is missing/garbled OR when tables are image-based
+3) Must produce structured JSON outputs with confidence + validation + warnings, and store raw text/OCR text for debugging.
+4) Must support multiple layouts (different utilities, different PRC formats).
+5) Portal must never do heavy parsing — portal uploads file → parser service → portal receives structured result + rows.
+
+DOCUMENT TYPES
+Implement a classifier step that outputs docType ∈ {PRC, BILL, OTHER}.
+Heuristics:
+- If contains “Preço(s) de Referência Comparável”, “PRC”, “Submercado”, “R$/MWh” → PRC
+- If contains “NOTA FISCAL”, “NF3E”, “Unidade consumidora”, “kWh”, “Leitura”, “Vencimento” → BILL
+Fallback: OTHER
+
+OUTPUT CONTRACTS (STRICT)
+All responses:
+{
+  "status": "parsed" | "failed",
+  "docType": "PRC" | "BILL" | "OTHER",
+  "confidence": 0.00-1.00,
+  "validated": boolean,
+  "data": { ...document summary fields... },
+  "rows": [ ...optional canonical rows... ],
+  "warnings": [ ...strings... ],
+  "debug": { "textSource":"pdf_text|ocr", "pages":n, "timingsMs":{...} }
+}
+
+PRC REQUIRED FIELDS
+data: { supplier?, referenceMonth?, unit:"R$/MWh", productTypesFound:[...], notes? }
+rows: canonical_pricing_rows MUST be produced:
+{
+  "docType":"PRC",
+  "supplier": string,
+  "referenceMonth": "YYYY-MM",
+  "product": "CONVENCIONAL" | "INCENTIVADA_50",
+  "submarket": "SE_CO" | "SUL" | "NE" | "N",
+  "termMonths": 12|36|60,
+  "price": number,
+  "currency": "BRL",
+  "unit": "R$/MWh",
+  "sourceDocId": string
+}
+Validation rules:
+- Must produce >= 12 rows for a single product (4 submarkets x 3 terms) OR >= 4 rows if the document only provides one product and one term set.
+- Prices must be within plausible bounds 50–1500 R$/MWh, else warning + reduce confidence.
+
+BILL REQUIRED FIELDS (Brazil)
+data must include at least:
+- distributor (infer from logo/header if possible)
+- referenceMonth (YYYY-MM)
+- dueDate (YYYY-MM-DD) if present
+- totalAmount (number) if present
+- totalEnergyKwh (number) if present
+- customerName (string)
+- customerId (UC/unidade consumidora OR invoice key OR meter id)
+Optional but valuable:
+- tariffGroup (Grupo A/B, subgrupo)
+- reading dates (previous/current)
+Validation rules:
+- validated=true only if referenceMonth AND (totalAmount OR totalEnergyKwh) AND some stable identifier (UC/invoice key/meter) exist.
+- For OCR extraction, normalise Brazilian number formats (1.337,95 → 1337.95).
+
+OCR IMPLEMENTATION (VPS)
+- Use pdftoppm to render each PDF page to 300dpi PNG.
+- Run Tesseract with por (and optionally eng) on each page.
+- Concatenate OCR text with page separators.
+- Store:
+  - rawPdfText
+  - rawOcrText
+  - chosenText (the one used for extraction)
+- Add page-level confidence heuristics (e.g., OCR char count, presence of key tokens).
+
+TABLE EXTRACTION FOR PRC
+Do NOT rely only on LLM.
+Implement deterministic parsers:
+- Detect submarket labels: “Sudeste”, “Sudeste/Centro-Oeste”, “SE/CO”, “Sul”, “Nordeste”, “Norte”
+- Detect term labels: “12 meses”, “36 meses”, “60 meses” OR “1 ano”, “3 anos”, “5 anos”
+- Map to 12/36/60.
+- Extract all numbers in the table row/column structure:
+   - For text-based tables: regex + line parsing
+   - For image tables: OCR then regex + column inference
+Then optionally run an LLM “repair pass” ONLY if deterministic extraction yields partial rows.
+LLM MUST output JSON only, validated by Pydantic. If JSON parsing fails → fallback to deterministic output with validated=false.
+
+OBSERVABILITY
+- Add /health endpoint that verifies:
+  - Tesseract por available
+  - pdftoppm available
+  - OpenAI key configured (if used)
+- Add /debug/{docId} that returns raw texts + extracted rows + validation results.
+- Add job-based parsing in portal (already exists for PRC_PARSE) but ensure all failures show actionable errors in UI.
+
+PORTAL INTEGRATION (Replit)
+- Update PRC ingestion workflow:
+  Upload → create PRC document → enqueue parse job → call VPS parser → store canonical_pricing_rows
+- Add “Reparse” button (already exists) but ensure it:
+  - clears rows
+  - triggers VPS parse
+  - refreshes debug panel
+- Add “Bill Parse” support:
+  allow uploading a BILL test set; parse results show extracted fields; store to a new bills_extracted table for later dossier use.
+- Make sure portal NEVER breaks if parser fails:
+  status=FAILED + error shown + “Reparse” available.
+
+TESTING (MANDATORY)
+Create automated tests using the sample PDFs already in repo:
+- PRC formats: Axia-style, Boven-style, Capacitech-style
+- Bill: Light NF3e example
+Each test asserts:
+- PRC: >= 12 canonical rows and validated=true
+- Bill: referenceMonth extracted and validated=true
+Also add a “golden JSON” snapshot per sample doc.
+
+SECURITY
+- Parser service must require an API key header: X-Parser-Key
+- Portal stores PARSER_API_KEY in env and passes it.
+- Reject requests missing/invalid key.
+
+DELIVERABLES
+1) VPS parser service: stable /parse endpoint with docType routing + OCR fallback + deterministic PRC/BILL extraction + validations.
+2) Portal updates: PRC ingestion reliably populates canonical_pricing_rows; bill parsing available for testing; UI shows status + debug.
+3) Tests: run in CI or at least via a script, producing a clear pass/fail report.
+
+DO NOT BREAK existing deal flows, tracks, intake, or chase system.
+All changes must be additive and behind clear feature flags if needed.

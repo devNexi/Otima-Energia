@@ -1,0 +1,9 @@
+{
+  "supplier": "Boven",
+  "referenceMonth": "2025-03",
+  "minRows": 12,
+  "products": [
+    "CONVENCIONAL",
+    "INCENTIVADA_50"
+  ]
+}

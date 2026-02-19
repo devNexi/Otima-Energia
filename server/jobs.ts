@@ -1,11 +1,12 @@
 import { db } from "./db";
-import { jobs, dealZohoTaskLinks, uploadSessions, prcDocuments } from "@shared/schema";
+import { jobs, dealZohoTaskLinks, uploadSessions, prcDocuments, prcRows, canonicalPricingRows, suppliers, billsExtracted } from "@shared/schema";
 import { eq, and, lte, sql, or, isNull, isNotNull } from "drizzle-orm";
 import { computeNextCallbackDateTime } from "./scheduler";
 import { fetchZohoSnapshot, createZohoCallbackTask, createZohoTask, isZohoEnabled, isZohoCallbackTaskEnabled } from "./zohoClient";
 import { dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, deals, clients } from "@shared/schema";
 import { processPrcDocumentWithBuffer } from "./prc-parser";
 import { ObjectStorageService } from "./objectStorage";
+import { isParserServiceConfigured, callParserService } from "./parser-client";
 
 const POLL_INTERVAL_MS = parseInt(process.env.JOB_POLL_INTERVAL_MS || '30000', 10);
 const MAX_CONCURRENT_JOBS = 3;
@@ -299,10 +300,183 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
         throw downloadErr;
       }
 
-      console.log(`[JobRunner] PRC_PARSE: file downloaded (${fileBuffer.length} bytes), starting parse`);
-      await processPrcDocumentWithBuffer(documentId, fileBuffer, isImage, retryCount);
+      console.log(`[JobRunner] PRC_PARSE: file downloaded (${fileBuffer.length} bytes)`);
+
+      if (isParserServiceConfigured()) {
+        console.log(`[JobRunner] PRC_PARSE: using VPS parser service`);
+        await db.update(prcDocuments)
+          .set({ parseStatus: 'PARSING', parseStartedAt: new Date(), updatedAt: new Date() })
+          .where(eq(prcDocuments.id, documentId));
+
+        try {
+          const doc = await db.select().from(prcDocuments).where(eq(prcDocuments.id, documentId)).limit(1);
+          const supplierRow = doc[0]?.supplierId
+            ? await db.select().from(suppliers).where(eq(suppliers.id, doc[0].supplierId)).limit(1)
+            : [];
+
+          const result = await callParserService(fileBuffer, doc[0]?.originalFilename || 'document.pdf', {
+            sourceDocId: String(documentId),
+            hintSupplier: supplierRow[0]?.name,
+            hintDocType: 'PRC',
+          });
+
+          const insertedPrcRows = [];
+          for (const row of result.rows) {
+            const inserted = await db.insert(prcRows).values({
+              prcDocumentId: documentId,
+              supplierId: doc[0].supplierId,
+              referenceMonth: result.data?.referenceMonth || doc[0].referenceMonth,
+              submarket: row.submarket || 'UNKNOWN',
+              productType: row.product || 'CONVENCIONAL',
+              termMonths: row.termMonths || null,
+              priceRPerMWh: String(row.price || '0'),
+              confidence: Math.round((row.confidence || result.confidence) * 100),
+              isOutlierFlag: row.isOutlier || false,
+              outlierReason: row.outlierReason || null,
+              rawSnippet: row.submarket ? `${row.submarket} ${row.product} ${row.termMonths}m: ${row.price}` : null,
+            }).returning();
+            insertedPrcRows.push(inserted[0]);
+          }
+
+          if (doc[0]?.supplierId && result.data?.referenceMonth) {
+            for (const prcRow of insertedPrcRows) {
+              await db.insert(canonicalPricingRows).values({
+                source: 'prc',
+                sourceId: prcRow.id,
+                supplierId: doc[0].supplierId,
+                referenceMonth: result.data.referenceMonth,
+                submarket: prcRow.submarket || 'UNKNOWN',
+                productType: prcRow.productType || 'CONVENCIONAL',
+                termMonths: prcRow.termMonths,
+                priceRPerMWh: prcRow.priceRPerMWh,
+                currency: 'BRL',
+                confidence: prcRow.confidence || 0,
+                isOutlierFlag: prcRow.isOutlierFlag || false,
+              }).onConflictDoNothing();
+            }
+          }
+
+          await db.update(prcDocuments)
+            .set({
+              parseStatus: result.validated ? 'PARSED' : 'FAILED',
+              parseConfidence: Math.round(result.confidence * 100),
+              parseErrors: result.status === 'failed' ? result.warnings : null,
+              rawExtractedText: result.debug?.chosenText?.substring(0, 5000) || null,
+              parseDebugJson: result.debug as any,
+              rowsExtracted: insertedPrcRows.length,
+              rowsFlagged: insertedPrcRows.filter(r => r.isOutlierFlag).length,
+              parseCompletedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(prcDocuments.id, documentId));
+
+          console.log(`[JobRunner] PRC_PARSE: VPS parser returned ${insertedPrcRows.length} rows, validated=${result.validated}`);
+        } catch (parserErr: any) {
+          console.error(`[JobRunner] PRC_PARSE: VPS parser failed for doc ${documentId}: ${parserErr.message}`);
+          const allowLocalFallback = process.env.ALLOW_LOCAL_PARSER_FALLBACK === 'true';
+          if (allowLocalFallback) {
+            console.log(`[JobRunner] PRC_PARSE: falling back to local parser (ALLOW_LOCAL_PARSER_FALLBACK=true)`);
+            await processPrcDocumentWithBuffer(documentId, fileBuffer, isImage, retryCount);
+          } else {
+            await db.update(prcDocuments)
+              .set({
+                parseStatus: 'FAILED',
+                parseErrors: [`VPS_PARSER_ERROR: ${parserErr.message}`],
+                parseCompletedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(eq(prcDocuments.id, documentId));
+            throw parserErr;
+          }
+        }
+      } else {
+        console.log(`[JobRunner] PRC_PARSE: using local parser (VPS not configured)`);
+        await processPrcDocumentWithBuffer(documentId, fileBuffer, isImage, retryCount);
+      }
 
       console.log(`[JobRunner] PRC_PARSE: doc ${documentId} processing completed`);
+      break;
+    }
+
+    case 'BILL_PARSE': {
+      const billId = payload.billId as number;
+      const fileStorageKey = payload.fileStorageKey as string;
+
+      if (!billId || !fileStorageKey) throw new Error('Missing billId or fileStorageKey in BILL_PARSE payload');
+
+      console.log(`[JobRunner] BILL_PARSE: processing bill ${billId}`);
+
+      await db.update(billsExtracted)
+        .set({ parseStatus: 'PARSING', updatedAt: new Date() })
+        .where(eq(billsExtracted.id, billId));
+
+      if (!isParserServiceConfigured()) {
+        await db.update(billsExtracted)
+          .set({
+            parseStatus: 'FAILED',
+            parseErrors: ['PARSER_NOT_CONFIGURED: VPS parser service URL not set'],
+            updatedAt: new Date(),
+          })
+          .where(eq(billsExtracted.id, billId));
+        throw new Error('Parser service not configured for bill parsing');
+      }
+
+      let fileBuffer: Buffer;
+      try {
+        const objectStorage = new ObjectStorageService();
+        fileBuffer = await objectStorage.downloadBuffer(fileStorageKey);
+      } catch (downloadErr: any) {
+        await db.update(billsExtracted)
+          .set({
+            parseStatus: 'FAILED',
+            parseErrors: [`FILE_DOWNLOAD_ERROR: ${downloadErr.message}`],
+            updatedAt: new Date(),
+          })
+          .where(eq(billsExtracted.id, billId));
+        throw downloadErr;
+      }
+
+      try {
+        const result = await callParserService(fileBuffer, 'bill.pdf', {
+          sourceDocId: String(billId),
+          hintDocType: 'BILL',
+        });
+
+        await db.update(billsExtracted)
+          .set({
+            parseStatus: result.validated ? 'PARSED' : 'FAILED',
+            parseConfidence: Math.round(result.confidence * 100),
+            distributor: result.data?.distributor || null,
+            referenceMonth: result.data?.referenceMonth || null,
+            dueDate: result.data?.dueDate || null,
+            totalAmount: result.data?.totalAmount ? String(result.data.totalAmount) : null,
+            totalEnergyKwh: result.data?.totalEnergyKwh ? String(result.data.totalEnergyKwh) : null,
+            customerName: result.data?.customerName || null,
+            customerId: result.data?.customerId || null,
+            tariffGroup: result.data?.tariffGroup || null,
+            invoiceKey: result.data?.invoiceKey || null,
+            validated: result.validated,
+            parseErrors: result.status === 'failed' ? result.warnings : null,
+            parseWarnings: result.warnings?.length > 0 ? result.warnings : null,
+            parseDebugJson: result.debug as any,
+            rawExtractedText: result.debug?.chosenText?.substring(0, 5000) || null,
+            textSource: result.debug?.textSource || null,
+            parsedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(billsExtracted.id, billId));
+
+        console.log(`[JobRunner] BILL_PARSE: bill ${billId} parsed, validated=${result.validated}`);
+      } catch (parserErr: any) {
+        await db.update(billsExtracted)
+          .set({
+            parseStatus: 'FAILED',
+            parseErrors: [`PARSER_ERROR: ${parserErr.message}`],
+            updatedAt: new Date(),
+          })
+          .where(eq(billsExtracted.id, billId));
+        throw parserErr;
+      }
       break;
     }
 

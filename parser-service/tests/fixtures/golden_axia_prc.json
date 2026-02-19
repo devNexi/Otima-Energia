@@ -1,0 +1,14 @@
+{
+  "supplier": "Axia",
+  "referenceMonth": "2025-01",
+  "minRows": 12,
+  "submarkets": [
+    "N",
+    "NE",
+    "SE_CO",
+    "SUL"
+  ],
+  "products": [
+    "CONVENCIONAL"
+  ]
+}
