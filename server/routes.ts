@@ -14222,5 +14222,16 @@ export async function registerRoutes(
 
   // ============== END SALES ACTIVITY MIRROR ==============
 
+  // Temporary download endpoint for portal-parser.zip
+  app.get("/api/download/portal-parser", (req: Request, res: Response) => {
+    const path = require("path");
+    const filePath = path.resolve("portal-parser.zip");
+    const fs = require("fs");
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    res.download(filePath, "portal-parser.zip");
+  });
+
   return httpServer;
 }
