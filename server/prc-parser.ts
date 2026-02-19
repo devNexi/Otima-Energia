@@ -956,15 +956,23 @@ export async function processPrcDocumentWithBuffer(
     let result: PrcParseResult;
 
     if (isImage) {
-      result = await parsePrcDocumentWithOcr(fileBuffer);
+      try {
+        result = await parsePrcDocumentWithOcr(fileBuffer);
+      } catch (ocrErr: any) {
+        console.error(`${tag} ocr_failed | error=${ocrErr.message}`);
+        result = {
+          success: false,
+          rows: [],
+          parseMethod: 'ocr',
+          confidence: 0,
+          errors: [`OCR failed: ${ocrErr.message}`],
+          warnings: [],
+          rawExtractedText: '',
+        };
+      }
     } else {
       result = await parsePrcDocument(fileBuffer);
       console.log(`${tag} text_extracted | length=${result.rawExtractedText.length}`);
-
-      if (!result.success || result.rows.length === 0) {
-        console.log(`${tag} text_extraction_insufficient | falling_back_to_ocr`);
-        result = await parsePrcDocumentWithOcr(fileBuffer);
-      }
     }
 
     const passAData = (result as any)._passA || null;

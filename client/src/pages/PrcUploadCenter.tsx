@@ -113,7 +113,7 @@ function downloadCsvBlob(csv: string, filename: string) {
 }
 
 export default function PrcUploadCenter() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, sessionId } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"upload" | "queue">("upload");
   const [uploadQueue, setUploadQueue] = useState<FileUploadState[]>([]);
@@ -159,6 +159,7 @@ export default function PrcUploadCenter() {
     mutationFn: async (docId: number) => {
       const res = await fetch(`/api/prc/documents/${docId}/reparse`, {
         method: "POST",
+        headers: { "x-session-id": sessionId || "" },
         credentials: "include",
       });
       if (!res.ok) {
@@ -180,7 +181,7 @@ export default function PrcUploadCenter() {
   const { data: debugData, isLoading: debugLoading } = useQuery({
     queryKey: ["/api/prc/documents", debugDocId, "debug"],
     queryFn: async () => {
-      const res = await fetch(`/api/prc/documents/${debugDocId}/debug`, { credentials: "include" });
+      const res = await fetch(`/api/prc/documents/${debugDocId}/debug`, { headers: { "x-session-id": sessionId || "" }, credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch debug info");
       return res.json();
     },
@@ -215,6 +216,7 @@ export default function PrcUploadCenter() {
 
       const res = await fetch("/api/prc/documents/upload", {
         method: "POST",
+        headers: { "x-session-id": sessionId || "" },
         body: formData,
         credentials: "include"
       });
@@ -309,10 +311,11 @@ export default function PrcUploadCenter() {
         notes: item.notes
       });
       updateQueueItem(index, {
-        status: result.parsing ? "processing" : "success",
+        status: "success",
         progress: 100,
         documentId: result.document?.id
       });
+      toast.success(`${item.file.name} uploaded — parsing job queued`);
     } catch (error: any) {
       updateQueueItem(index, {
         status: "error",
@@ -366,6 +369,7 @@ export default function PrcUploadCenter() {
       try {
         await fetch(`/api/prc/documents/${doc.id}/reparse`, {
           method: "POST",
+          headers: { "x-session-id": sessionId || "" },
           credentials: "include",
         });
         success++;
@@ -383,7 +387,7 @@ export default function PrcUploadCenter() {
   const handleDownloadCsv = async (doc: PrcDocument) => {
     setExportingDocId(doc.id);
     try {
-      const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { credentials: "include" });
+      const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { headers: { "x-session-id": sessionId || "" }, credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch rows");
       const data = await res.json();
       const rows = data.rows || [];
@@ -408,7 +412,7 @@ export default function PrcUploadCenter() {
       let allRows: any[] = [];
       for (const doc of filteredDocuments) {
         try {
-          const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { credentials: "include" });
+          const res = await fetch(`/api/prc/documents/${doc.id}/rows`, { headers: { "x-session-id": sessionId || "" }, credentials: "include" });
           if (res.ok) {
             const data = await res.json();
             if (data.rows) allRows = allRows.concat(data.rows);
@@ -451,7 +455,7 @@ export default function PrcUploadCenter() {
       case "UPLOADED":
         return <Badge variant="secondary" data-testid="badge-status-uploaded"><Clock className="h-3 w-3 mr-1" /> Uploaded</Badge>;
       case "PARSING":
-        return <Badge className="bg-blue-100 text-blue-700" data-testid="badge-status-parsing"><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Parsing</Badge>;
+        return <Badge className="bg-blue-100 text-blue-700 animate-pulse" data-testid="badge-status-parsing"><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Parsing...</Badge>;
       case "PARSED":
         return <Badge className="bg-green-100 text-green-700" data-testid="badge-status-parsed"><CheckCircle2 className="h-3 w-3 mr-1" /> Parsed</Badge>;
       case "NEEDS_REVIEW":
@@ -876,7 +880,19 @@ export default function PrcUploadCenter() {
                             </span>
                           </TableCell>
                           <TableCell>{doc.referenceMonth}</TableCell>
-                          <TableCell>{getStatusBadge(doc.parseStatus)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              {getStatusBadge(doc.parseStatus)}
+                              {doc.parseStatus === "PARSING" && (
+                                <div className="w-full">
+                                  <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '70%' }} />
+                                  </div>
+                                  <span className="text-[10px] text-blue-500">Extracting data...</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             {doc.parseConfidence != null
                               ? `${doc.parseConfidence}%`
