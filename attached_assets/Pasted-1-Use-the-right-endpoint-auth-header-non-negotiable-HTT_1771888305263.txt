@@ -1,0 +1,130 @@
+1) Use the right endpoint + auth header (non-negotiable)
+
+HTTP
+
+POST https://<YOUR_DOMAIN_OR_IP>/parse
+
+Header: X-Parser-Key: <PARSER_API_KEY>
+
+Body
+
+multipart/form-data
+
+field name must be: file
+
+value: the uploaded PDF bytes
+
+If Replit sends JSON, base64, or the wrong field name → it’ll fail or misbehave.
+
+2) Always send PDFs as real files (not “text-bytes mode”)
+
+This was literally the root of earlier failures.
+
+✅ Do:
+
+multipart upload with file=@whatever.pdf
+
+❌ Don’t:
+
+send extracted text
+
+send application/json
+
+send text/plain
+
+3) Never rely on force= in production
+
+Let AUTO classify. It’s now reliable.
+
+Use: POST /parse
+
+Only use ?force=BILL for debugging/manual testing.
+
+4) What the portal should expect back (and how to read it)
+
+Response JSON:
+
+docType will be "BILL" or "PRC" (or "OTHER")
+
+For bills, look in data:
+
+BILL fields you should use
+
+data.customerId ✅ CNPJ (14 digits)
+
+data.invoiceKey ✅ 44 digits
+
+data.referenceMonth ✅ like "2026-01"
+
+data.totalAmount ✅ float (Brazilian formatted amounts normalized)
+
+Your portal should treat parse as SUCCESS when:
+
+HTTP status is 200
+
+and response JSON parses
+
+and status is "ok" (or validated == true depending on your logic)
+
+5) Guardrails Replit must implement (prevents “silent failures”)
+A) Verify auth is set
+
+If X-Parser-Key missing/empty → you’ll get 401.
+
+B) Verify you actually sent a PDF
+
+Before POST:
+
+filename ends with .pdf OR mime is application/pdf
+
+size > 0
+
+C) Fail loudly if response isn’t JSON
+
+If response body can’t be JSON parsed:
+
+log the first 500 chars of body
+
+show user “Parser error” and store the raw body in logs
+
+This prevents the “python json decode error” kind of debugging hell you hit earlier.
+
+6) Timeout + retries (OCR can be slow)
+
+OCR can take 30 seconds (you saw ocrMs ~ 30937ms).
+
+Replit client must set:
+
+timeout: 120s minimum (I’d use 180s to be safe)
+
+retry once only on network errors / 502 / 503 (not on 4xx)
+
+7) The exact curl the portal should be equivalent to
+
+This is the gold standard request:
+
+curl -s -X POST "http://31.97.92.76:8000/parse" \
+  -H "X-Parser-Key: YOUR_KEY" \
+  -F "file=@/path/to/upload.pdf"
+
+If the portal’s request differs from that materially (header, multipart, field name), fix the portal.
+
+8) One “production self-check” endpoint in Replit (do this!)
+
+Add a “Test parser” button (admin-only) that:
+
+Calls GET /health
+
+Uploads a known BILL fixture PDF
+
+Asserts:
+
+docType == "BILL"
+
+data.customerId exists and is 14 digits
+
+data.totalAmount != null
+
+If it fails: show the raw response + status code.
+
+This prevents shipping regressions.

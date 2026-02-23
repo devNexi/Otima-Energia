@@ -9412,6 +9412,20 @@ export async function registerRoutes(
     }
   });
 
+  // --- Parser Self-Test (admin-only) ---
+  app.post("/api/parser/test", async (req, res) => {
+    const admin = await requireAdminSession(req, res);
+    if (!admin) return;
+    try {
+      const { runParserSelfTest } = await import("./parser-client");
+      const result = await runParserSelfTest();
+      res.json({ success: result.passed, ...result });
+    } catch (error: any) {
+      console.error("[ParserTest] Self-test error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // --- Bill Parsing ---
   app.post("/api/bills/upload", upload.single("file"), async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
