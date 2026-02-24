@@ -250,11 +250,19 @@ export async function registerRoutes(
   const SESSION_DURATION_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
   try {
+    const DEFAULT_ADMIN_PASS = "Admin123!";
     const existing = await storage.getUserByUsername("admin");
     if (!existing) {
-      const hashedPassword = await bcrypt.hash("Admin123!", SALT_ROUNDS);
+      const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASS, SALT_ROUNDS);
       await storage.createUser({ username: "admin", password: hashedPassword, role: "admin" });
       console.log("[auth] Default admin user created");
+    } else {
+      const passwordValid = await bcrypt.compare(DEFAULT_ADMIN_PASS, existing.password);
+      if (!passwordValid) {
+        const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASS, SALT_ROUNDS);
+        await storage.updateUserPassword(existing.id, hashedPassword);
+        console.log("[auth] Admin password reset to default");
+      }
     }
   } catch (e) {
     console.error("[auth] Failed to ensure admin user:", e);
