@@ -1896,7 +1896,7 @@ export const dealDocuments = pgTable("deal_documents", {
   dealId: varchar("deal_id", { length: 255 }).references(() => deals.id).notNull(),
   
   // Document type
-  documentType: text("document_type").notNull(), // 'CONTRACT', 'QUOTE', 'AMENDMENT', 'EMAIL', 'WHATSAPP', 'EVIDENCE'
+  documentType: text("document_type").notNull(), // 'CONTRACT', 'QUOTE', 'AMENDMENT', 'EMAIL', 'WHATSAPP', 'EVIDENCE', 'BILL'
   documentSubtype: text("document_subtype"), // 'signed', 'draft', 'counter-proposal', etc.
   
   // File info
@@ -4100,9 +4100,11 @@ export type CanonicalPricingRow = typeof canonicalPricingRows.$inferSelect;
 export const billsExtracted = pgTable("bills_extracted", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id),
+  dealId: varchar("deal_id", { length: 255 }).references(() => deals.id),
   fileStorageKey: text("file_storage_key").notNull(),
   originalFilename: text("original_filename").notNull(),
   fileSizeBytes: integer("file_size_bytes"),
+  fileSha256: text("file_sha256"),
   parseStatus: text("parse_status").default("UPLOADED").notNull(),
   parseConfidence: integer("parse_confidence"),
   distributor: text("distributor"),
@@ -4115,6 +4117,8 @@ export const billsExtracted = pgTable("bills_extracted", {
   tariffGroup: text("tariff_group"),
   invoiceKey: text("invoice_key"),
   validated: boolean("validated").default(false),
+  extractionMethod: text("extraction_method"),
+  parserVersion: text("parser_version"),
   parseErrors: jsonb("parse_errors"),
   parseWarnings: jsonb("parse_warnings"),
   parseDebugJson: jsonb("parse_debug_json"),
@@ -4139,6 +4143,9 @@ export const insertBillExtractedSchema = createInsertSchema(billsExtracted).omit
   textSource: true,
   validated: true,
   parsedAt: true,
+  extractionMethod: true,
+  parserVersion: true,
+  fileSha256: true,
 });
 
 export type InsertBillExtracted = z.infer<typeof insertBillExtractedSchema>;

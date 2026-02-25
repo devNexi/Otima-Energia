@@ -3929,13 +3929,82 @@ export async function registerRoutes(
     if (!await validateDealOsSession(req, res)) return;
     try {
       const clientId = parseInt(req.params.id);
-      const dossier = await storage.getClientDossier(clientId);
+      let dossier = await storage.getClientDossier(clientId);
       
       if (!dossier) {
-        return res.json({ success: true, dossier: null });
+        const client = await storage.getClient(clientId);
+        if (!client) {
+          return res.status(404).json({ success: false, error: "Client not found" });
+        }
+
+        const { billsExtracted, dealEcosSnapshots } = await import("@shared/schema");
+        const { db: dbConn } = await import("./db");
+        const { eq, desc } = await import("drizzle-orm");
+
+        const bills = await dbConn.select().from(billsExtracted)
+          .where(eq(billsExtracted.clientId, clientId))
+          .orderBy(desc(billsExtracted.createdAt));
+        const parsedBills = bills.filter(b => b.parseStatus === 'PARSED');
+
+        const distributorSubmarketMap: Record<string, string> = {
+          'CEMIG': 'SE/CO', 'LIGHT': 'SE/CO', 'ENEL SP': 'SE/CO', 'ENEL RJ': 'SE/CO',
+          'CPFL': 'SE/CO', 'ELEKTRO': 'SE/CO', 'EDP': 'SE/CO', 'NEOENERGIA': 'SE/CO',
+          'COPEL': 'S', 'CELESC': 'S', 'RGE': 'S', 'CEEE': 'S',
+          'COELBA': 'NE', 'CELPE': 'NE', 'COSERN': 'NE', 'ENEL CE': 'NE', 'ENERGISA': 'NE',
+          'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
+        };
+
+        let prepopData: any = {
+          legalName: client.companyName || client.contactPerson || '',
+          cnpj: client.cnpj || '',
+          distributor: null,
+          submarket: null,
+          eligibilityType: null,
+          annualConsumptionMWh: null,
+          tariffClass: null,
+          confidenceScore: 'LOW',
+          dataSources: ['MANUAL'],
+        };
+
+        if (parsedBills.length > 0) {
+          const dist = parsedBills.find(b => b.distributor)?.distributor || null;
+          const tariff = parsedBills.find(b => b.tariffGroup)?.tariffGroup || null;
+          const cnpj = parsedBills.find(b => b.customerId)?.customerId || client.cnpj || '';
+          const energyVals = parsedBills.map(b => parseFloat(String(b.totalEnergyKwh || '0'))).filter(v => v > 0);
+          const avgMonthlyKwh = energyVals.length > 0 ? energyVals.reduce((a, c) => a + c, 0) / energyVals.length : 0;
+          const annualMwh = avgMonthlyKwh * 12 / 1000;
+
+          let eligibility = null;
+          if (annualMwh >= 500) eligibility = 'ACL_DIRECT';
+          else if (annualMwh >= 50) eligibility = 'ACL_VAREJISTA';
+          else if (annualMwh > 0) eligibility = 'NOT_ELIGIBLE_YET';
+
+          const submarket = dist
+            ? Object.entries(distributorSubmarketMap).find(([k]) => dist.toUpperCase().includes(k))?.[1] || null
+            : null;
+
+          prepopData = {
+            ...prepopData,
+            cnpj: cnpj || prepopData.cnpj,
+            distributor: dist,
+            submarket,
+            tariffClass: tariff,
+            eligibilityType: eligibility,
+            annualConsumptionMWh: annualMwh > 0 ? Math.round(annualMwh * 100) / 100 : null,
+            confidenceScore: parsedBills.length >= 6 ? 'HIGH' : parsedBills.length >= 3 ? 'MEDIUM' : 'LOW',
+            dataSources: ['OCR'],
+          };
+        }
+
+        dossier = await storage.createClientDossier({
+          clientId,
+          ...prepopData,
+          status: 'DRAFT',
+          createdBy: 'system',
+          updatedBy: 'system',
+        });
       }
       
-      // Get snapshots if any
       const snapshots = await storage.getDossierSnapshots(dossier.id);
       
       res.json({ success: true, dossier, snapshots });
@@ -9528,6 +9597,407 @@ export async function registerRoutes(
       res.json({ success: true, message: "Re-parse job enqueued" });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Failed to re-parse bill" });
+    }
+  });
+
+  // --- Deal Bill Upload (Bill-First Architecture) ---
+  app.post("/api/deals/:dealId/bills/upload", upload.single("file"), async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ success: false, error: "No file uploaded" });
+
+      const lowerName = file.originalname.toLowerCase();
+      const hasPdfExt = lowerName.endsWith('.pdf');
+      const hasPdfMagic = file.buffer.length >= 5 && file.buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+      if (!hasPdfExt && !hasPdfMagic) {
+        return res.status(400).json({ success: false, error: "Only PDF files are accepted" });
+      }
+
+      const userId = await getSessionUserId(req) || 'system';
+      const crypto = await import("crypto");
+      const fileSha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
+
+      const objectStorage = new (await import("./objectStorage")).ObjectStorageService();
+      const storageKey = `deals/${dealId}/bills/${Date.now()}_${file.originalname}`;
+      await objectStorage.uploadBuffer(storageKey, file.buffer, file.mimetype);
+
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const inserted = await db.insert(billsExtracted).values({
+        clientId: deal.clientId,
+        dealId,
+        fileStorageKey: storageKey,
+        originalFilename: file.originalname,
+        fileSizeBytes: file.size,
+        uploadedByUserId: userId,
+      }).returning();
+
+      const bill = inserted[0];
+
+      await db.update(billsExtracted)
+        .set({ fileSha256 })
+        .where((await import("drizzle-orm")).eq(billsExtracted.id, bill.id));
+
+      await enqueueJob('BILL_PARSE', {
+        billId: bill.id,
+        fileStorageKey: storageKey,
+        dealId,
+      }, undefined, 3);
+
+      await storage.createDealDocument({
+        dealId,
+        documentType: 'BILL',
+        fileName: file.originalname,
+        fileUrl: storageKey,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        description: `Energy bill uploaded for deal`,
+        uploadedBy: userId,
+      });
+
+      res.json({ success: true, bill: { ...bill, fileSha256 } });
+    } catch (error: any) {
+      console.error("[DealBillUpload] Error:", error);
+      res.status(500).json({ success: false, error: "Failed to upload bill" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/bills", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+      const bills = await db.select().from(billsExtracted)
+        .where(eq(billsExtracted.dealId, dealId))
+        .orderBy(desc(billsExtracted.createdAt));
+      res.json({ success: true, bills });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: "Failed to fetch deal bills" });
+    }
+  });
+
+  // --- Deal ECOS Generation (Bill-First Architecture) ---
+  app.post("/api/deals/:dealId/ecos/generate", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+
+      const { billsExtracted, dealEcosSnapshots } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, desc } = await import("drizzle-orm");
+
+      const bills = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.parseStatus, 'PARSED')));
+
+      if (bills.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No parsed bills found for this deal. Upload and parse a bill first.",
+          blockers: [{ code: "NO_PARSED_BILL", message: "Upload at least one BILL PDF and wait for parsing to complete." }]
+        });
+      }
+
+      const totalEnergyKwhArr = bills.map(b => parseFloat(String(b.totalEnergyKwh || '0'))).filter(v => v > 0);
+      const totalAmountArr = bills.map(b => parseFloat(String(b.totalAmount || '0'))).filter(v => v > 0);
+      const avgMonthlyKwh = totalEnergyKwhArr.length > 0
+        ? totalEnergyKwhArr.reduce((a, c) => a + c, 0) / totalEnergyKwhArr.length
+        : 0;
+      const annualConsumptionKwh = avgMonthlyKwh * 12;
+      const annualConsumptionMwh = annualConsumptionKwh / 1000;
+
+      const avgMonthlyAmount = totalAmountArr.length > 0
+        ? totalAmountArr.reduce((a, c) => a + c, 0) / totalAmountArr.length
+        : 0;
+      const estimatedPriceRmwh = avgMonthlyKwh > 0 ? (avgMonthlyAmount / (avgMonthlyKwh / 1000)) : 0;
+
+      const peakDemandKw = 0;
+      const loadFactor = peakDemandKw > 0 ? (avgMonthlyKwh / (peakDemandKw * 730)) : null;
+
+      let eligibility: string;
+      if (annualConsumptionMwh >= 500) eligibility = 'ACL_DIRECT';
+      else if (annualConsumptionMwh >= 50) eligibility = 'ACL_VAREJISTA';
+      else eligibility = 'NOT_ELIGIBLE_YET';
+
+      const distributor = bills.find(b => b.distributor)?.distributor || null;
+      const tariffGroup = bills.find(b => b.tariffGroup)?.tariffGroup || null;
+      const customerId = bills.find(b => b.customerId)?.customerId || null;
+
+      const distributorSubmarketMap: Record<string, string> = {
+        'CEMIG': 'SE/CO', 'LIGHT': 'SE/CO', 'ENEL SP': 'SE/CO', 'ENEL RJ': 'SE/CO',
+        'CPFL': 'SE/CO', 'ELEKTRO': 'SE/CO', 'EDP': 'SE/CO', 'NEOENERGIA': 'SE/CO',
+        'COPEL': 'S', 'CELESC': 'S', 'RGE': 'S', 'CEEE': 'S',
+        'COELBA': 'NE', 'CELPE': 'NE', 'COSERN': 'NE', 'ENEL CE': 'NE', 'ENERGISA': 'NE',
+        'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
+      };
+      const submarket = distributor
+        ? Object.entries(distributorSubmarketMap).find(([k]) =>
+            distributor.toUpperCase().includes(k)
+          )?.[1] || 'SE/CO'
+        : null;
+
+      const inputData = {
+        annualConsumptionMwh,
+        avgMonthlyKwh,
+        estimatedPriceRmwh: Math.round(estimatedPriceRmwh * 100) / 100,
+        loadFactor,
+        eligibility,
+        distributor,
+        submarket,
+        tariffGroup,
+        customerId,
+        billCount: bills.length,
+        billMonthsUsed: bills.map(b => b.referenceMonth).filter(Boolean),
+        capturedAt: new Date().toISOString(),
+      };
+
+      const crypto = await import("crypto");
+      const inputHash = crypto.createHash('sha256').update(JSON.stringify(inputData)).digest('hex');
+
+      const existing = await db.select().from(dealEcosSnapshots)
+        .where(eq(dealEcosSnapshots.dealId, dealId))
+        .orderBy(desc(dealEcosSnapshots.version));
+      const nextVersion = existing.length > 0 ? (existing[0].version + 1) : 1;
+
+      let benchmarkMatch = null;
+      try {
+        const benchmarks = await storage.getMarketPriceBenchmarks();
+        const match = benchmarks.find(b =>
+          b.status === 'PUBLISHED' &&
+          (submarket ? b.submarket === submarket || b.region === submarket : true)
+        );
+        if (match) {
+          benchmarkMatch = {
+            benchmarkId: match.id,
+            segment: match.segment,
+            region: match.region || match.submarket,
+            contractLength: match.contractLengthMonths,
+            lowerBoundRmwh: parseFloat(String(match.lowerBoundRmwh || '0')),
+            upperBoundRmwh: parseFloat(String(match.upperBoundRmwh || '0')),
+            lastUpdated: match.lastReviewedAt?.toISOString() || null,
+            confidence: match.confidence,
+          };
+        }
+      } catch { /* no benchmarks available */ }
+
+      let status: string = 'NO_DATA';
+      let potentialSavingsAnnual: number | null = null;
+      if (benchmarkMatch && estimatedPriceRmwh > 0) {
+        if (estimatedPriceRmwh <= benchmarkMatch.lowerBoundRmwh) status = 'BELOW_BAND';
+        else if (estimatedPriceRmwh > benchmarkMatch.upperBoundRmwh) status = 'ABOVE_BAND';
+        else status = 'WITHIN_BAND';
+        potentialSavingsAnnual = Math.max(0, (estimatedPriceRmwh - benchmarkMatch.lowerBoundRmwh) * annualConsumptionMwh);
+      }
+
+      const confidenceReasons: string[] = [];
+      let confidenceLevel = 'LOW';
+      if (bills.length >= 3) { confidenceLevel = 'MEDIUM'; confidenceReasons.push('3+ bill months analyzed'); }
+      if (bills.length >= 6) { confidenceLevel = 'HIGH'; confidenceReasons.push('6+ bill months analyzed'); }
+      if (bills.length === 1) confidenceReasons.push('Only 1 bill month — annualized estimate');
+      if (!benchmarkMatch) confidenceReasons.push('No matching benchmark found');
+
+      const recommendedNextStep = status === 'ABOVE_BAND' ? 'REQUEST_RFQ'
+        : status === 'WITHIN_BAND' ? 'WAIT'
+        : 'NEED_MORE_DATA';
+
+      const results = {
+        annualConsumptionMwh: Math.round(annualConsumptionMwh * 100) / 100,
+        avgMonthlyKwh: Math.round(avgMonthlyKwh * 100) / 100,
+        estimatedPriceRmwh: Math.round(estimatedPriceRmwh * 100) / 100,
+        loadFactor,
+        eligibility,
+        potentialSavingsAnnual: potentialSavingsAnnual ? Math.round(potentialSavingsAnnual) : null,
+      };
+
+      const userId = await getSessionUserId(req);
+      const snapshot = await db.insert(dealEcosSnapshots).values({
+        dealId,
+        version: nextVersion,
+        createdByUserId: userId,
+        triggerType: 'BILL_UPLOAD',
+        inputData,
+        benchmarkMatch,
+        results,
+        status,
+        confidenceLevel,
+        confidenceReasons,
+        recommendedNextStep,
+        talkTrack: `Based on ${bills.length} bill(s), annual consumption estimated at ${Math.round(annualConsumptionMwh)} MWh. Eligibility: ${eligibility}. ${status === 'ABOVE_BAND' ? 'Client is paying above market — strong RFQ candidate.' : status === 'WITHIN_BAND' ? 'Client pricing is within market range.' : 'Need more data for definitive assessment.'}`,
+        talkTrackPt: `Com base em ${bills.length} fatura(s), consumo anual estimado em ${Math.round(annualConsumptionMwh)} MWh. Elegibilidade: ${eligibility}. ${status === 'ABOVE_BAND' ? 'Cliente paga acima do mercado — forte candidato a RFQ.' : status === 'WITHIN_BAND' ? 'Preço do cliente está dentro da faixa de mercado.' : 'Precisa de mais dados para avaliação definitiva.'}`,
+      }).returning();
+
+      res.json({ success: true, snapshot: snapshot[0], inputHash });
+    } catch (error: any) {
+      console.error("[DealECOS] Generation error:", error);
+      res.status(500).json({ success: false, error: "Failed to generate ECOS" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/ecos/snapshots", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { dealEcosSnapshots } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+      const snapshots = await db.select().from(dealEcosSnapshots)
+        .where(eq(dealEcosSnapshots.dealId, dealId))
+        .orderBy(desc(dealEcosSnapshots.version));
+      res.json({ success: true, snapshots });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: "Failed to fetch ECOS snapshots" });
+    }
+  });
+
+  app.get("/api/deals/:dealId/ecos/snapshot.pdf", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { dealEcosSnapshots } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+
+      const snapshots = await db.select().from(dealEcosSnapshots)
+        .where(eq(dealEcosSnapshots.dealId, dealId))
+        .orderBy(desc(dealEcosSnapshots.version));
+
+      if (snapshots.length === 0) {
+        return res.status(404).json({ success: false, error: "No ECOS snapshot found. Generate ECOS first." });
+      }
+
+      const snapshot = snapshots[0];
+      const deal = await storage.getDeal(dealId);
+      const client = deal ? await storage.getClient(deal.clientId) : null;
+      const input = snapshot.inputData as any;
+      const results = snapshot.results as any;
+      const benchmark = snapshot.benchmarkMatch as any;
+
+      const generatedAt = snapshot.createdAt ? new Date(snapshot.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : new Date().toLocaleString('pt-BR');
+
+      const eligLabel: Record<string, string> = {
+        'ACL_DIRECT': 'ACL Direto (≥500 MWh/ano)',
+        'ACL_VAREJISTA': 'ACL Varejista (50-500 MWh/ano)',
+        'NOT_ELIGIBLE_YET': 'Não Elegível (abaixo de 50 MWh/ano)',
+      };
+
+      const statusLabel: Record<string, string> = {
+        'ABOVE_BAND': 'Acima da Faixa de Mercado ⬆',
+        'WITHIN_BAND': 'Dentro da Faixa de Mercado ↔',
+        'BELOW_BAND': 'Abaixo da Faixa de Mercado ⬇',
+        'NO_DATA': 'Sem Dados de Benchmark',
+      };
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>ECOS Report</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; color: #1a1a2e; background: white; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+  .header h1 { font-size: 28px; color: #2563eb; margin: 0; }
+  .header .brand { font-size: 14px; color: #64748b; }
+  .header .version { font-size: 12px; color: #94a3b8; }
+  .section { margin-bottom: 24px; }
+  .section h2 { font-size: 18px; color: #1e40af; border-bottom: 1px solid #dbeafe; padding-bottom: 8px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .metric { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+  .metric .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric .value { font-size: 24px; font-weight: 700; color: #1a1a2e; margin-top: 4px; }
+  .metric .unit { font-size: 14px; color: #94a3b8; }
+  .eligibility { padding: 16px; border-radius: 8px; font-weight: 600; font-size: 16px; text-align: center; }
+  .elig-acl-direct { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .elig-acl-varejista { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .elig-not-eligible { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .status-card { padding: 16px; border-radius: 8px; margin-top: 8px; }
+  .status-above { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .status-within { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .status-below { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+  .status-nodata { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; text-align: center; }
+  .talk-track { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; }
+  @media print { body { padding: 20px; } }
+</style></head><body>
+<div class="header">
+  <div>
+    <h1>ECOS™ — Perfil Energético</h1>
+    <div class="brand">Ótima Energia Consultoria</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="version">v${snapshot.version} • ${generatedAt}</div>
+    <div class="version">Deal: ${dealId.slice(0, 8)}...</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Cliente</h2>
+  <div class="grid">
+    <div class="metric"><div class="label">Nome / Razão Social</div><div class="value" style="font-size:16px;">${client?.companyName || client?.contactPerson || 'N/A'}</div></div>
+    <div class="metric"><div class="label">CNPJ</div><div class="value" style="font-size:16px;">${input?.customerId || 'N/A'}</div></div>
+    <div class="metric"><div class="label">Distribuidora</div><div class="value" style="font-size:16px;">${input?.distributor || 'N/A'}</div></div>
+    <div class="metric"><div class="label">Submercado</div><div class="value" style="font-size:16px;">${input?.submarket || 'N/A'}</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Consumo & Custo</h2>
+  <div class="grid">
+    <div class="metric"><div class="label">Consumo Anual Estimado</div><div class="value">${results?.annualConsumptionMwh?.toLocaleString('pt-BR') || '0'} <span class="unit">MWh</span></div></div>
+    <div class="metric"><div class="label">Consumo Médio Mensal</div><div class="value">${results?.avgMonthlyKwh?.toLocaleString('pt-BR') || '0'} <span class="unit">kWh</span></div></div>
+    <div class="metric"><div class="label">Preço Estimado</div><div class="value">R$ ${results?.estimatedPriceRmwh?.toLocaleString('pt-BR') || '0'} <span class="unit">/MWh</span></div></div>
+    <div class="metric"><div class="label">Faturas Analisadas</div><div class="value">${input?.billCount || 0}</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Elegibilidade ACL</h2>
+  <div class="eligibility ${results?.eligibility === 'ACL_DIRECT' ? 'elig-acl-direct' : results?.eligibility === 'ACL_VAREJISTA' ? 'elig-acl-varejista' : 'elig-not-eligible'}">
+    ${eligLabel[results?.eligibility] || results?.eligibility || 'N/A'}
+  </div>
+</div>
+
+${benchmark ? `
+<div class="section">
+  <h2>Análise de Mercado</h2>
+  <div class="grid">
+    <div class="metric"><div class="label">Faixa de Mercado</div><div class="value" style="font-size:16px;">R$ ${benchmark.lowerBoundRmwh} - R$ ${benchmark.upperBoundRmwh} /MWh</div></div>
+    <div class="metric"><div class="label">Economia Potencial Anual</div><div class="value" style="font-size:16px;">R$ ${results?.potentialSavingsAnnual?.toLocaleString('pt-BR') || '0'}</div></div>
+  </div>
+  <div class="status-card ${snapshot.status === 'ABOVE_BAND' ? 'status-above' : snapshot.status === 'WITHIN_BAND' ? 'status-within' : snapshot.status === 'BELOW_BAND' ? 'status-below' : 'status-nodata'}">
+    ${statusLabel[snapshot.status as string] || snapshot.status}
+  </div>
+</div>` : ''}
+
+<div class="section">
+  <h2>Resumo Executivo</h2>
+  <div class="talk-track">${snapshot.talkTrackPt || snapshot.talkTrack || 'N/A'}</div>
+</div>
+
+<div class="section">
+  <h2>Confiança da Análise</h2>
+  <div class="grid">
+    <div class="metric"><div class="label">Nível</div><div class="value" style="font-size:16px;">${snapshot.confidenceLevel || 'LOW'}</div></div>
+    <div class="metric"><div class="label">Motivos</div><div class="value" style="font-size:12px;">${(snapshot.confidenceReasons as string[] || []).join('; ')}</div></div>
+  </div>
+</div>
+
+<div class="footer">
+  ECOS™ — Sistema de Otimização de Contratos de Energia | Ótima Energia Consultoria | Gerado em ${generatedAt} | v${snapshot.version}
+</div>
+</body></html>`;
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `inline; filename="ECOS_${dealId.slice(0,8)}_v${snapshot.version}.html"`);
+      res.send(htmlContent);
+    } catch (error: any) {
+      console.error("[ECOS PDF] Error generating report:", error);
+      res.status(500).json({ success: false, error: "Failed to generate ECOS report" });
     }
   });
 

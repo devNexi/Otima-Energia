@@ -1,0 +1,358 @@
+PRODUCTION FIX SPEC — BILL-FIRST ARCHITECTURE
+
+We are keeping client intake exactly as-is.
+
+However:
+
+There is no Dossier without a Bill.
+There is no RFQ without a READY Dossier.
+There is no READY Dossier without ECOS + parsed bill data.
+
+We must restructure the journey accordingly.
+
+1️⃣ BILL IS THE ROOT OBJECT (Deal Kickoff)
+New Rule
+
+A Deal can exist in DRAFT.
+But nothing meaningful happens until a BILL is attached.
+
+Add a required Assembly stage:
+
+✅ Upload Bill (PDF) — Required to begin analysis
+
+Visible immediately on deal creation.
+
+Manual Bill Upload (Sales + Ops)
+
+Location:
+
+Deal → Assembly
+
+Deal → Documents tab
+
+Behavior:
+
+Upload single PDF
+
+Persist as deal_document(type=BILL)
+
+Immediately call parser
+
+Persist normalized structured data
+
+Show extracted fields in UI
+
+No 404s.
+No silent failure.
+No "button does nothing".
+
+Parsed Fields That MUST Persist to Deal
+
+Minimum:
+
+customerId (CNPJ 14 digits only)
+
+invoiceKey (44 digits)
+
+referenceMonth (YYYY-MM)
+
+totalEnergyKwh
+
+totalAmount
+
+distributor
+
+tariffGroup if detected
+
+Also store:
+
+extractionConfidence
+
+extractionMethod
+
+parserWarnings
+
+parserVersion
+
+sha256 of original file
+
+2️⃣ ECOS IS GENERATED FROM BILL (NOT FROM DOSSIER)
+
+ECOS must be derived from:
+
+Parsed bill values
+
+Aggregated consumption (if multiple bills later)
+
+Pricing assumptions (if applicable)
+
+Trigger:
+
+After successful BILL parse:
+
+Auto-enable “Generate ECOS”
+
+ECOS is not manually typed.
+It is computational.
+
+ECOS Requirements
+
+Endpoint:
+POST /api/deals/:dealId/ecos/generate
+
+Idempotent.
+
+Must compute:
+
+Annualized consumption
+
+Load factor estimate
+
+Estimated savings
+
+Market eligibility signal (ACL qualification)
+
+Snapshot version hash
+
+Persist:
+
+snapshots table with:
+
+dealId
+
+inputHash
+
+generatedAt
+
+computedValues JSON
+
+version
+
+ECOS Snapshot PDF
+
+Endpoint:
+GET /api/deals/:dealId/ecos/snapshot.pdf
+
+Must:
+
+Be branded
+
+Deterministic
+
+Include timestamp + version
+
+Pull from persisted ECOS snapshot (not live recompute)
+
+No blank PDFs.
+No 500 errors.
+No broken download links.
+
+3️⃣ DOSSIER COMES AFTER BILL + ECOS
+
+This is critical.
+
+Dossier Definition (Canonical Energy Profile)
+
+The Dossier is a structured representation of:
+
+Energy Structure
+
+Submarket (SE/CO, S, NE, N)
+
+Connection type
+
+ACL eligibility
+
+Consumption Profile
+
+Annual consumption (kWh)
+
+Demand (kW)
+
+Tariff class/group
+
+Data Integrity
+
+Confidence score (LOW/MEDIUM/HIGH)
+
+Data sources:
+
+OCR
+
+MANUAL
+
+CLIENT_CONFIRMATION
+
+Internal
+
+OPS notes
+
+Correct Flow
+
+Bill uploaded
+
+Parser extracts raw data
+
+ECOS generates structured metrics
+
+Ops opens Dossier
+
+Dossier auto-prepopulates from:
+
+Parsed bill fields
+
+ECOS outputs
+
+Ops reviews
+
+Ops edits if needed
+
+Ops marks READY
+
+Dossier Status Machine
+
+DRAFT
+
+READY
+
+LOCKED
+
+Rules:
+
+Cannot mark READY unless required fields exist.
+
+On first RFQ send → auto transition to LOCKED.
+
+LOCKED is immutable.
+
+Any edit attempt requires version bump + admin override.
+
+Fix Current 404
+
+The Dossier route must:
+
+Never 404
+
+Auto-create dossier on first open (idempotent)
+
+Redirect properly
+
+Broken route = production blocker.
+
+4️⃣ RFQ MUST DEPEND ON LOCKED DOSSIER SNAPSHOT
+
+When sending first RFQ:
+
+Validate Dossier READY
+
+Auto-lock Dossier
+
+Create immutable snapshot
+
+Embed snapshot hash into RFQ record
+
+Suppliers must always quote against frozen data.
+
+5️⃣ BLOCKER ENGINE MUST BE LOUD AND DETERMINISTIC
+
+Current issue:
+“Advance to RFQ Sent” does nothing.
+
+That is unacceptable.
+
+Transition endpoint must return:
+
+{
+  ok: false,
+  blockers: [
+    { code: "NO_BILL", message: "Upload at least one BILL PDF." },
+    { code: "DOSSIER_NOT_READY", message: "Dossier must be READY." }
+  ]
+}
+
+UI must display blockers clearly.
+
+No silent failure.
+No spinning button.
+No nothing-happens behavior.
+
+6️⃣ Revised Journey (Correct Order)
+
+Lead → Client → Deal (DRAFT)
+
+Deal Assembly:
+
+Upload Bill (Required)
+
+Generate ECOS
+
+Build Dossier
+
+Mark READY
+
+Send RFQ
+
+Receive Quotes
+
+Select Winner
+
+Proposal
+
+Contract
+
+Supply Live
+
+7️⃣ Absolute Production Acceptance Tests
+Test A — Bill Kickoff
+
+Create deal
+
+Upload BILL.pdf
+
+Parsed fields appear
+
+No console errors
+
+No 404
+
+Document count increments
+
+Test B — ECOS
+
+Generate ECOS
+
+Snapshot persists
+
+Download PDF works
+
+Test C — Dossier
+
+Open Dossier → never 404
+
+Fields prepopulated
+
+Mark READY works
+
+Status changes
+
+Test D — Transition
+
+Click Advance
+
+Either transitions OR shows blockers
+
+Never silent
+
+8️⃣ What This Fix Achieves
+
+Sales can drop one bill immediately
+
+ECOS is generated instantly
+
+Dossier is auto-prepopulated
+
+Ops validates instead of building from scratch
+
+RFQs are based on immutable structured data
+
+No more broken journey

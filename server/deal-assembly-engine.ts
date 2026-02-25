@@ -3,6 +3,8 @@ import { BlockerEngine } from './blockerEngine';
 
 export const ASSEMBLY_STAGES = [
   'ORIGIN_QUALIFICATION',
+  'BILL_UPLOADED',
+  'ECOS_GENERATED',
   'DOSSIER_DRAFT',
   'DOSSIER_LOCKED',
   'RFQ_SENT',
@@ -57,6 +59,8 @@ export interface AssemblyStatus {
 
 const STAGE_LABELS = {
   ORIGIN_QUALIFICATION: { pt: 'Origem & Qualificação', en: 'Origin & Qualification' },
+  BILL_UPLOADED: { pt: 'Fatura Carregada', en: 'Bill Uploaded' },
+  ECOS_GENERATED: { pt: 'ECOS Gerado', en: 'ECOS Generated' },
   DOSSIER_DRAFT: { pt: 'Dossiê do Cliente', en: 'Client Dossier' },
   DOSSIER_LOCKED: { pt: 'Dossiê Travado', en: 'Dossier Locked' },
   RFQ_SENT: { pt: 'RFQ Enviado', en: 'RFQ Sent' },
@@ -83,6 +87,9 @@ export class DealAssemblyEngine {
     const quotes = await this.storage.getDealQuotes(dealId);
     const proposals = await this.storage.getDealProposals(dealId);
     const rfqDispatches = await this.storage.getRfqDispatchesForDeal(dealId);
+
+    const billCheck = await this.blockerEngine.checkDealHasBill(dealId);
+    const hasEcos = await this.blockerEngine.checkDealHasEcos(dealId);
     
     const today = new Date();
     const lastActivityAt = deal.updatedAt?.toISOString() || deal.createdAt?.toISOString() || null;
@@ -96,6 +103,8 @@ export class DealAssemblyEngine {
     let blockerCount = 0;
 
     stages.push(this.buildOriginStage(deal));
+    stages.push(this.buildBillUploadedStage(deal, billCheck));
+    stages.push(this.buildEcosGeneratedStage(deal, billCheck.hasBill, hasEcos));
     stages.push(await this.buildDossierDraftStage(deal, dossier));
     stages.push(await this.buildDossierLockedStage(deal, dossier));
     stages.push(await this.buildRfqSentStage(deal, dossier, rfqDispatches));
@@ -147,6 +156,72 @@ export class DealAssemblyEngine {
         ? [{ label: 'Lead Zoho', url: `#zoho-lead-${deal.zohoLeadId}` }]
         : [],
       completedAt: deal.createdAt?.toISOString() || null
+    };
+  }
+
+  private buildBillUploadedStage(deal: any, billCheck: { hasBill: boolean; parsedCount: number }): AssemblyStageStatus {
+    const blockers: AssemblyBlocker[] = [];
+
+    if (!billCheck.hasBill) {
+      blockers.push({
+        code: 'NO_BILL',
+        titlePt: 'Nenhuma fatura carregada',
+        titleEn: 'No bill uploaded',
+        descriptionPt: 'Carregue pelo menos uma fatura de energia (PDF) para iniciar a análise.',
+        descriptionEn: 'Upload at least one energy bill (PDF) to start analysis.',
+        deepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+        severity: 'error'
+      });
+    }
+
+    return {
+      stage: 'BILL_UPLOADED',
+      status: billCheck.hasBill ? 'complete' : blockers.length > 0 ? 'blocked' : 'in_progress',
+      blockers,
+      actionButtonPt: !billCheck.hasBill ? 'Carregar Fatura' : null,
+      actionButtonEn: !billCheck.hasBill ? 'Upload Bill' : null,
+      actionDeepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+      evidenceLinks: billCheck.hasBill ? [{ label: `${billCheck.parsedCount} fatura(s)`, url: `/admin/ops/deals/${deal.id}?tab=assembly` }] : [],
+      completedAt: null
+    };
+  }
+
+  private buildEcosGeneratedStage(deal: any, hasBill: boolean, hasEcos: boolean): AssemblyStageStatus {
+    const blockers: AssemblyBlocker[] = [];
+
+    if (!hasBill) {
+      blockers.push({
+        code: 'BILL_REQUIRED_FOR_ECOS',
+        titlePt: 'Fatura necessária',
+        titleEn: 'Bill required',
+        descriptionPt: 'Carregue uma fatura antes de gerar o ECOS.',
+        descriptionEn: 'Upload a bill before generating ECOS.',
+        deepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+        severity: 'error'
+      });
+    } else if (!hasEcos) {
+      blockers.push({
+        code: 'ECOS_NOT_GENERATED',
+        titlePt: 'ECOS não gerado',
+        titleEn: 'ECOS not generated',
+        descriptionPt: 'Gere o perfil ECOS a partir dos dados da fatura.',
+        descriptionEn: 'Generate the ECOS profile from bill data.',
+        deepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+        severity: 'error'
+      });
+    }
+
+    const status = hasEcos ? 'complete' : !hasBill ? 'not_started' : 'blocked';
+
+    return {
+      stage: 'ECOS_GENERATED',
+      status,
+      blockers,
+      actionButtonPt: hasBill && !hasEcos ? 'Gerar ECOS' : null,
+      actionButtonEn: hasBill && !hasEcos ? 'Generate ECOS' : null,
+      actionDeepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+      evidenceLinks: hasEcos ? [{ label: 'ECOS Snapshot', url: `/admin/ops/deals/${deal.id}?tab=ecos` }] : [],
+      completedAt: null
     };
   }
 

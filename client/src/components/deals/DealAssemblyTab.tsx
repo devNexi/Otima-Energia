@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useI18n } from "@/lib/i18n";
+import { useState, useRef } from "react";
 import { 
   CheckCircle2, 
   Circle, 
@@ -19,7 +20,9 @@ import {
   ShieldCheck,
   Zap,
   Target,
-  FileCheck
+  FileCheck,
+  Upload,
+  Cpu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +67,8 @@ interface AssemblyStatus {
 
 const STAGE_ICONS: Record<string, React.ElementType> = {
   ORIGIN_QUALIFICATION: Target,
+  BILL_UPLOADED: Upload,
+  ECOS_GENERATED: Cpu,
   DOSSIER_DRAFT: FileText,
   DOSSIER_LOCKED: Lock,
   RFQ_SENT: Send,
@@ -78,6 +83,8 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
 
 const STAGE_LABELS: Record<string, { pt: string; en: string }> = {
   ORIGIN_QUALIFICATION: { pt: 'Origem & Qualificação', en: 'Origin & Qualification' },
+  BILL_UPLOADED: { pt: 'Fatura Carregada', en: 'Bill Uploaded' },
+  ECOS_GENERATED: { pt: 'ECOS Gerado', en: 'ECOS Generated' },
   DOSSIER_DRAFT: { pt: 'Dossiê do Cliente', en: 'Client Dossier' },
   DOSSIER_LOCKED: { pt: 'Dossiê Travado', en: 'Dossier Locked' },
   RFQ_SENT: { pt: 'RFQ Enviado', en: 'RFQ Sent' },
@@ -98,6 +105,10 @@ interface DealAssemblyTabProps {
 export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const { language } = useI18n();
   const isPt = language === "pt";
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
 
   const { data: assemblyData, isLoading, error } = useQuery<{ success: boolean } & AssemblyStatus>({
     queryKey: [`/api/deals/${dealId}/assembly-status`],
@@ -107,6 +118,57 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     },
     refetchInterval: 30000
   });
+
+  const { data: billsData } = useQuery({
+    queryKey: [`/api/deals/${dealId}/bills`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/deals/${dealId}/bills`);
+      return res.json();
+    }
+  });
+
+  const uploadBillMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/deals/${dealId}/bills/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setUploadResult(data);
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+    }
+  });
+
+  const generateEcosMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/deals/${dealId}/ecos/generate`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (!data.success && data.blockers) {
+        setTransitionBlockers(data.blockers);
+      } else {
+        setTransitionBlockers([]);
+      }
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos/snapshots`] });
+    }
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadResult(null);
+      uploadBillMutation.mutate(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   if (isLoading) {
     return (
@@ -127,6 +189,8 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   }
 
   const { stages, nextStep, isBlocked, blockerCount, idleSinceDays, currentStage } = assemblyData;
+  const bills = billsData?.bills || [];
+  const parsedBills = bills.filter((b: any) => b.parseStatus === 'PARSED');
 
   const handleNavigate = (path: string) => {
     if (onNavigate) {
@@ -216,6 +280,122 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                   : `Deal idle for ${idleSinceDays} days`}
               </span>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(currentStage === 'BILL_UPLOADED' || currentStage === 'ORIGIN_QUALIFICATION' || currentStage === 'ECOS_GENERATED' || parsedBills.length === 0) && (
+        <Card className="border-2 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Upload className="w-5 h-5 text-blue-600" />
+              {isPt ? "Carregar Fatura de Energia" : "Upload Energy Bill"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+              data-testid="input-bill-upload"
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadBillMutation.isPending}
+                data-testid="button-upload-bill"
+              >
+                {uploadBillMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Processando..." : "Processing..."}</>
+                ) : (
+                  <><Upload className="w-4 h-4 mr-2" />{isPt ? "Selecionar PDF" : "Select PDF"}</>
+                )}
+              </Button>
+              {parsedBills.length > 0 && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700" data-testid="badge-bill-count">
+                  {parsedBills.length} {isPt ? "fatura(s) processada(s)" : "bill(s) parsed"}
+                </Badge>
+              )}
+            </div>
+
+            {uploadBillMutation.isError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-upload-error">
+                {isPt ? "Erro ao carregar fatura. Tente novamente." : "Error uploading bill. Try again."}
+              </div>
+            )}
+
+            {uploadResult && uploadResult.success && uploadResult.extracted && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md space-y-1" data-testid="card-extracted-fields">
+                <p className="text-sm font-medium text-emerald-800">{isPt ? "Dados Extraídos:" : "Extracted Data:"}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-emerald-700">
+                  {uploadResult.extracted.distributor && <div><span className="font-medium">{isPt ? "Distribuidora:" : "Distributor:"}</span> {uploadResult.extracted.distributor}</div>}
+                  {uploadResult.extracted.referenceMonth && <div><span className="font-medium">{isPt ? "Mês Ref:" : "Ref Month:"}</span> {uploadResult.extracted.referenceMonth}</div>}
+                  {uploadResult.extracted.totalEnergyKwh && <div><span className="font-medium">{isPt ? "Energia (kWh):" : "Energy (kWh):"}</span> {uploadResult.extracted.totalEnergyKwh}</div>}
+                  {uploadResult.extracted.totalAmount && <div><span className="font-medium">{isPt ? "Valor Total:" : "Total Amount:"}</span> R$ {uploadResult.extracted.totalAmount}</div>}
+                  {uploadResult.extracted.customerId && <div><span className="font-medium">CNPJ:</span> {uploadResult.extracted.customerId}</div>}
+                  {uploadResult.extracted.tariffGroup && <div><span className="font-medium">{isPt ? "Grupo Tarifário:" : "Tariff Group:"}</span> {uploadResult.extracted.tariffGroup}</div>}
+                </div>
+                {uploadResult.extracted.confidence && (
+                  <Badge variant="outline" className={cn(
+                    "mt-1 text-xs",
+                    parseFloat(uploadResult.extracted.confidence) >= 0.8 ? "bg-emerald-100 text-emerald-800" :
+                    parseFloat(uploadResult.extracted.confidence) >= 0.5 ? "bg-amber-100 text-amber-800" :
+                    "bg-red-100 text-red-800"
+                  )}>
+                    {isPt ? "Confiança:" : "Confidence:"} {Math.round(parseFloat(uploadResult.extracted.confidence || '0') * 100)}%
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {uploadResult && !uploadResult.success && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-parse-error">
+                {uploadResult.error || (isPt ? "Falha ao processar fatura" : "Failed to process bill")}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {parsedBills.length > 0 && !stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete') && (
+        <Card className="border-2 border-purple-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-purple-600" />
+              {isPt ? "Gerar Perfil ECOS" : "Generate ECOS Profile"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {isPt 
+                ? `${parsedBills.length} fatura(s) disponível(is) para análise. Gere o perfil ECOS para calcular consumo anual, elegibilidade ACL e economia potencial.`
+                : `${parsedBills.length} bill(s) available for analysis. Generate the ECOS profile to compute annual consumption, ACL eligibility, and potential savings.`
+              }
+            </p>
+            <Button
+              onClick={() => generateEcosMutation.mutate()}
+              disabled={generateEcosMutation.isPending}
+              className="bg-purple-600 hover:bg-purple-700"
+              data-testid="button-generate-ecos"
+            >
+              {generateEcosMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Gerando..." : "Generating..."}</>
+              ) : (
+                <><Cpu className="w-4 h-4 mr-2" />{isPt ? "Gerar ECOS" : "Generate ECOS"}</>
+              )}
+            </Button>
+            {transitionBlockers.length > 0 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-1" data-testid="alert-ecos-blockers">
+                {transitionBlockers.map((b: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm text-red-700">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{b.message || b.code}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 
 const ASSEMBLY_STAGES = [
   'ORIGIN_QUALIFICATION',
+  'BILL_UPLOADED',
+  'ECOS_GENERATED',
   'DOSSIER_DRAFT',
   'DOSSIER_LOCKED',
   'RFQ_SENT',
@@ -34,6 +36,8 @@ const ASSEMBLY_STAGES = [
 
 const STAGE_LABELS: Record<string, { pt: string; en: string }> = {
   ORIGIN_QUALIFICATION: { pt: 'Origem & Qualificação', en: 'Origin & Qualification' },
+  BILL_UPLOADED: { pt: 'Fatura Carregada', en: 'Bill Uploaded' },
+  ECOS_GENERATED: { pt: 'ECOS Gerado', en: 'ECOS Generated' },
   DOSSIER_DRAFT: { pt: 'Dossiê do Cliente', en: 'Client Dossier' },
   DOSSIER_LOCKED: { pt: 'Dossiê Travado', en: 'Dossier Locked' },
   RFQ_SENT: { pt: 'RFQ Enviado', en: 'RFQ Sent' },

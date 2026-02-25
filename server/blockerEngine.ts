@@ -1,4 +1,7 @@
 import { IStorage } from './storage';
+import { billsExtracted, dealEcosSnapshots } from '@shared/schema';
+import { db } from './db';
+import { eq, and } from 'drizzle-orm';
 
 export interface Blocker {
   code: string;
@@ -31,32 +34,26 @@ export class BlockerEngine {
       return { isBlocked: true, blockers };
     }
 
-    const dossier = await this.storage.getClientDossier(clientId);
-    if (!dossier) {
-      blockers.push({
-        code: 'DOSSIER_REQUIRED',
-        title: 'Dossiê não criado',
-        description: 'Crie o dossiê energético do cliente antes de criar um negócio.',
-        deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-        severity: 'error'
-      });
-    } else if (dossier.status === 'DRAFT') {
-      blockers.push({
-        code: 'DOSSIER_NOT_READY',
-        title: 'Dossiê incompleto',
-        description: 'O dossiê deve estar marcado como PRONTO antes de criar um negócio.',
-        deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-        severity: 'error'
-      });
-    }
-
     return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+  }
+
+  async checkDealHasBill(dealId: string): Promise<{ hasBill: boolean; parsedCount: number }> {
+    const bills = await db.select().from(billsExtracted)
+      .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.parseStatus, 'PARSED')));
+    return { hasBill: bills.length > 0, parsedCount: bills.length };
+  }
+
+  async checkDealHasEcos(dealId: string): Promise<boolean> {
+    const snapshots = await db.select().from(dealEcosSnapshots)
+      .where(eq(dealEcosSnapshots.dealId, dealId));
+    return snapshots.length > 0;
   }
 
   async checkSendRfq(dealId: number | string): Promise<BlockerResult> {
     const blockers: Blocker[] = [];
+    const did = String(dealId);
 
-    const deal = await this.storage.getDeal(String(dealId));
+    const deal = await this.storage.getDeal(did);
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
@@ -74,6 +71,28 @@ export class BlockerEngine {
         title: 'Estado inválido',
         description: `O negócio deve estar em DRAFT para enviar RFQ. Estado atual: ${deal.status}`,
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
+        severity: 'error'
+      });
+    }
+
+    const { hasBill } = await this.checkDealHasBill(did);
+    if (!hasBill) {
+      blockers.push({
+        code: 'NO_BILL',
+        title: 'Nenhuma fatura carregada',
+        description: 'Carregue pelo menos uma fatura (PDF) antes de enviar RFQ.',
+        deepLink: `/admin/ops/deals/${did}?tab=assembly`,
+        severity: 'error'
+      });
+    }
+
+    const hasEcos = await this.checkDealHasEcos(did);
+    if (!hasEcos) {
+      blockers.push({
+        code: 'NO_ECOS',
+        title: 'ECOS não gerado',
+        description: 'Gere o ECOS a partir da fatura antes de enviar RFQ.',
+        deepLink: `/admin/ops/deals/${did}?tab=assembly`,
         severity: 'error'
       });
     }
