@@ -35,7 +35,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Portal Integration**: `PARSER_SERVICE_URL` and `PARSER_API_KEY` env vars; fallback to local parser if VPS unavailable
 - **Portal Client**: `server/parser-client.ts` - HTTP client for VPS parser
 - **Job Types**: `PRC_PARSE` (enhanced with VPS support + fallback), `BILL_PARSE` (new, VPS-only)
-- **Bill Storage**: `bills_extracted` table for parsed bill data
+- **Bill Storage**: `bills_extracted` table with unique index `idx_bills_extracted_deal_sha256` on (deal_id, file_sha256)
 - **Tests**: `parser-service/run_tests.py` - classifier, PRC extractor, bill extractor tests with golden JSON snapshots
 
 ### SEO & Prerendering

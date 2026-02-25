@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { useState, useRef } from "react";
 import { 
   CheckCircle2, 
@@ -112,6 +113,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const isPt = language === "pt";
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { sessionId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
@@ -163,9 +165,14 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       formData.append('file', file);
       const res = await fetch(`/api/deals/${dealId}/bills/upload`, {
         method: 'POST',
+        headers: { 'x-session-id': sessionId || '' },
         body: formData,
         credentials: 'include'
       });
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`${res.status}: ${errBody.slice(0, 500)}`);
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -196,9 +203,16 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       const res = await fetch(`/api/deals/${dealId}/ecos/generate`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
       });
-      return res.json();
+      const data = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok && data.blockers) {
+        return data;
+      }
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${data.error || JSON.stringify(data).slice(0, 500)}`);
+      }
+      return data;
     },
     onSuccess: (data) => {
       if (data.blockers && data.blockers.length > 0) {
@@ -224,9 +238,12 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       const checkRes = await fetch(`/api/deals/${dealId}/check-advance-rfq`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
       });
-      const checkData = await checkRes.json();
+      const checkData = await checkRes.json().catch(() => ({ ok: false, error: `HTTP ${checkRes.status}` }));
+      if (!checkRes.ok && !checkData.blockers) {
+        throw new Error(`${checkRes.status}: ${checkData.error || 'Request failed'}`);
+      }
       
       if (!checkData.ok && checkData.blockers && checkData.blockers.length > 0) {
         setRfqBlockers(checkData.blockers);
@@ -243,7 +260,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
         const transRes = await fetch(`/api/deals/${dealId}/transition`, {
           method: 'POST',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
           body: JSON.stringify({
             toState: 'RFQ_SENT',
             triggeredBy: 'user',
@@ -251,6 +268,10 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             reason: 'Advanced from Assembly tab'
           })
         });
+        if (!transRes.ok) {
+          const errBody = await transRes.text();
+          throw new Error(`${transRes.status}: ${errBody.slice(0, 500)}`);
+        }
         const transData = await transRes.json();
         
         if (transData.success) {
@@ -629,8 +650,25 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 )}
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    window.open(`/api/deals/${dealId}/ecos/latest/pdf`, '_blank');
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/deals/${dealId}/ecos/latest/pdf`, {
+                        headers: { 'x-session-id': sessionId || '' },
+                        credentials: 'include'
+                      });
+                      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+                      const blob = await res.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `ecos_insight_pack_${dealId}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                    } catch (err: any) {
+                      toast({ title: isPt ? "Erro ao baixar PDF" : "PDF download failed", description: err.message, variant: "destructive" });
+                    }
                   }}
                   data-testid="button-download-ecos-pdf"
                 >

@@ -9084,23 +9084,28 @@ export async function registerRoutes(
           return res.status(400).json({ success: false, error: "Supplier not found" });
         }
       } else {
-        // Use supplierName if provided, otherwise extract from filename
         const filename = file.originalname;
         const extractedName = extractSupplierNameFromFilename(filename);
         const stubName = supplierName || extractedName || `Unknown PRC ${Date.now()}`;
-        const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         
-        // Create prc_only supplier stub
-        supplier = await storage.createSupplier({
-          name: stubName,
-          shortCode: stubShortCode,
-          isActive: false,
-          status: 'prc_only',
-          source: 'prc_import'
-        });
-        parsedSupplierId = supplier.id;
+        const allSuppliers = await storage.getSuppliers();
+        const existingSupplier = allSuppliers.find(s => s.name.toLowerCase() === stubName.toLowerCase());
         
-        console.log(`Created prc_only supplier stub: ${stubName} (ID: ${supplier.id})`);
+        if (existingSupplier) {
+          supplier = existingSupplier;
+          parsedSupplierId = existingSupplier.id;
+        } else {
+          const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+          supplier = await storage.createSupplier({
+            name: stubName,
+            shortCode: stubShortCode,
+            isActive: false,
+            status: 'prc_only',
+            source: 'prc_import'
+          });
+          parsedSupplierId = supplier.id;
+          console.log(`Created prc_only supplier stub: ${stubName} (ID: ${supplier.id})`);
+        }
       }
       
       // Upload to object storage
@@ -9161,7 +9166,8 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("Error uploading PRC document:", error);
-      res.status(500).json({ success: false, error: "Failed to upload PRC document" });
+      const detail = error.code === '23505' ? `Duplicate: ${error.detail}` : (error.message || "Failed to upload PRC document");
+      res.status(500).json({ success: false, error: detail });
     }
   });
   

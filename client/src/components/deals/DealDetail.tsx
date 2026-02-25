@@ -103,7 +103,14 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const { language } = useI18n();
   const queryClient = useQueryClient();
   
-  const [activeTab, setActiveTab] = useState("overview");
+  const initialTab = (() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'assembly';
+    }
+    return 'assembly';
+  })();
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
   const [clientPriceQuote, setClientPriceQuote] = useState<any>(null);
   const [clientPriceModalOpen, setClientPriceModalOpen] = useState(false);
@@ -562,7 +569,12 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             const checklistBtn = document.querySelector('[data-testid="checklist-drawer-trigger"]');
             if (checklistBtn) (checklistBtn as HTMLButtonElement).click();
           } else if (action === "open_dossier") {
-            setActiveTab("overview");
+            const cId = deal?.clientId;
+            if (cId) {
+              window.location.href = `/admin/dossier/${cId}`;
+            } else {
+              setActiveTab("overview");
+            }
           } else if (action === "select_suppliers") {
             setActiveTab("rfq");
           } else if (action === "open_rfq" || action === "track_responses" || action === "send_followup") {

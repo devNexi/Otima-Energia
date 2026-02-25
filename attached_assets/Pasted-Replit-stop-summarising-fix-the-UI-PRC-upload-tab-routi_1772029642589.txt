@@ -1,0 +1,195 @@
+Replit: stop summarising, fix the UI + PRC upload + tab routing. Acceptance criteria below.
+What I’m seeing (evidence)
+
+Deal page has NO Bill Upload widget anywhere (screenshots show Deal view with tabs “Assembly / Overview / RFQ…” but the bill-first Assembly changes are not visible).
+
+Links/buttons don’t work:
+
+Clicking Assembly tab doesn’t show bill-first flow (or does nothing).
+
+Open Dossier / “Go to Action” / “Advance to RFQ Sent” appear to do nothing or lead to bad routes.
+
+PRC upload is failing: modal shows PRC.pdf selected → toast “Upload failed – Failed to upload PRC document”.
+
+✅ Non-negotiable outcomes (must be true when you’re done)
+A) Deal → Assembly tab MUST show Bill-first controls
+
+On /admin/deals/:dealId:
+
+Clicking Assembly tab must render a prominent “Upload Bill (PDF)” widget (deal-level, not client-level).
+
+After uploading a bill:
+
+show parsed fields (CNPJ/customerId, invoiceKey, referenceMonth, distributor, tariffGroup, totalEnergyKwh, totalAmount, confidence)
+
+show status badges (UPLOADED / PARSED / FAILED)
+
+Generate ECOS button becomes enabled once a bill is parsed
+
+Download ECOS PDF works after ECOS exists
+
+If any blocker exists, user sees a red blocker card with a CTA button that actually navigates (NO silent fails).
+
+B) All Deal page buttons must either navigate or show blockers
+
+Open Dossier must never 404. If dossier missing, auto-create and open it.
+
+Advance to RFQ Sent must:
+
+either transition and visibly change state
+
+or show structured blockers returned by API (NO_BILL / NO_ECOS / NO_PRC / DOSSIER_NOT_READY etc) with CTA.
+
+C) PRC upload MUST work
+
+On /admin/prc:
+
+Upload PRC Document modal must upload successfully (no toast error).
+
+After upload, PRC doc appears in list with status and can be parsed/reparsed.
+
+If parser VPS is down, UI must show “Parser unavailable” after upload succeeds, not “upload failed”.
+
+🔧 What to fix (do this in order)
+1) Deal tabs / routing is broken (why bill widget isn’t visible)
+
+Root cause likely: the bill widget lives in DealAssemblyTab.tsx but the deal page is still rendering the old Overview-only component, or the tab click isn’t switching content.
+
+Fix:
+
+Verify /admin/deals/:dealId actually renders the tab router and mounts:
+
+DealAssemblyTab when tab=assembly
+
+DealOverviewTab when tab=overview
+
+etc.
+
+Ensure the tab click updates either:
+
+URL query (?tab=assembly) or nested route (/admin/deals/:id/assembly)
+
+and the component respects it.
+
+Add a simple temporary debug marker in DealAssemblyTab like data-testid="deal-assembly" so we can confirm it’s mounting.
+
+Acceptance test:
+
+Click “Assembly” → you can visibly see bill upload widget immediately.
+
+2) PRC upload failing = backend upload route still using wrong object storage method
+
+You fixed objectStorage.uploadBuffer → objectStorage.upload for bills.
+PRC upload route is still failing, so the same mismatch likely exists there.
+
+Fix:
+
+Find PRC upload endpoint (POST /api/prc/documents or similar).
+
+Ensure it uses the same working upload path as bill upload:
+
+objectStorage.upload(...) with correct args (buffer + contentType + key)
+
+not uploadBuffer, not a browser-only dependency.
+
+Return real error details in API response: { ok:false, errorCode, message }
+
+Update frontend toast to include server message (not generic “upload failed”).
+
+Acceptance test:
+
+Upload PRC.pdf → success toast → PRC document appears in list.
+
+3) Buttons doing “nothing” = missing awaits / swallowed errors / no toast
+
+For these actions: advance stage, open dossier, generate ECOS, upload PRC:
+
+Wrap every click handler in try/catch
+
+On catch, show toast with:
+
+HTTP status
+
+error.message
+
+first 500 chars of response body if non-JSON
+
+Acceptance test:
+
+No click in the app results in silent failure. Ever.
+
+4) Dossier flow must match bill-first (and never 404)
+
+Even if dossier is “later”, the Open Dossier link must always work.
+
+Fix:
+
+Deal “Open Dossier” should:
+
+call GET /api/deals/:dealId/dossier (or client dossier)
+
+backend: if none exists, auto-create (createdBy = current user ID, fallback admin) and return it
+
+then navigate to /admin/dossiers/:id (or the correct page you already use)
+
+Remove any UI links pointing at old/removed routes that 404.
+
+Acceptance test:
+
+Clicking Open Dossier never 404s, even on a brand new deal with no intake.
+
+5) “Advance to RFQ Sent” must call API and display blockers
+
+Fix:
+
+Ensure button calls transition endpoint and you render response:
+
+If { ok:true } refresh deal state + UI
+
+If { ok:false, blockers:[...] } show blocker card(s) with CTA deep links
+
+CTA must be clickable and correct:
+
+NO_BILL → scroll/open bill upload widget
+
+NO_ECOS → “Generate ECOS”
+
+NO_PRC → navigate to /admin/prc
+
+Acceptance test:
+
+Clicking Advance either advances or shows why + how to fix.
+
+🧪 Repro script you must follow before claiming “done”
+
+Go to /admin/prc → upload PRC.pdf
+✅ must succeed
+
+Go to /admin/deals/:dealId → click Assembly
+✅ bill widget visible
+
+Upload BILL.pdf
+✅ parsed fields appear
+
+Click Generate ECOS
+✅ if PRC exists → success
+✅ if PRC missing → shows NO_PRC blocker with button to PRC page
+
+Download ECOS PDF
+✅ downloads a real PDF
+
+Click Open Dossier
+✅ opens dossier, never 404
+
+Click Advance to RFQ Sent
+✅ advances or shows blockers (never silent)
+
+Extra: stop guessing — instrument it
+
+If anything fails, I want:
+
+server log line with a unique request ID
+
+frontend toast showing that request ID
+
+response body printed (first 500 chars) when JSON parse fails

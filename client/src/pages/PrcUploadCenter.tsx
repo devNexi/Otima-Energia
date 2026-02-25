@@ -321,6 +321,7 @@ export default function PrcUploadCenter() {
         status: "error",
         error: error.message || "Upload failed"
       });
+      toast.error(`Upload failed: ${error.message || "Unknown error"}`);
     }
   };
 
