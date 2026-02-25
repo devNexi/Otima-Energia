@@ -5642,7 +5642,8 @@ export async function registerRoutes(
       y = 770;
       drawSection('Identifica\u00e7\u00e3o');
       drawRow('Empresa:', client?.companyName || 'N\u00e3o informado');
-      if (client?.cnpj) drawRow('CNPJ:', client.cnpj);
+      const cnpjValue = (snapshot.inputData as any)?.customerId || client?.cnpj || 'N/A';
+      drawRow('CNPJ:', cnpjValue);
       drawRow('Deal ID:', dealId);
       drawRow('Snapshot:', `v${snapshot.version} \u2014 ID #${snapshot.id}`);
 
@@ -5651,10 +5652,16 @@ export async function registerRoutes(
       drawRow('Distribuidora:', inputData.distributor || 'N/A');
       drawRow('Submercado:', inputData.submarket || 'N/A');
       drawRow('Classe Tarif\u00e1ria:', inputData.tariffGroup || 'N/A');
+      if (inputData.billMonthsUsed && inputData.billMonthsUsed.length > 0) {
+        drawRow('M\u00eas(es) Refer\u00eancia:', inputData.billMonthsUsed.join(', '));
+      }
       drawRow('Consumo M\u00e9dio (kWh/m\u00eas):', inputData.avgMonthlyKwh != null ? Number(inputData.avgMonthlyKwh).toLocaleString('pt-BR') : 'N/A');
       drawRow('Consumo Anual (MWh):', inputData.annualConsumptionMwh != null ? Number(inputData.annualConsumptionMwh).toLocaleString('pt-BR') : 'N/A');
+      const billCount = inputData.billCount || 0;
+      const methodNote = billCount === 1 ? 'M\u00e9dia mensal x 12 (1 fatura)' : billCount < 12 ? `M\u00e9dia de ${billCount} faturas x 12` : `Soma de ${billCount} faturas`;
+      drawRow('M\u00e9todo de C\u00e1lculo:', methodNote);
       drawRow('Elegibilidade:', inputData.eligibility || 'N/A');
-      drawRow('Faturas Analisadas:', String(inputData.billCount || 0));
+      drawRow('Faturas Analisadas:', String(billCount));
 
       drawSection('Benchmark PRC');
       drawRow('Submerc. PRC:', benchmarkMatch.submarket || 'N/A');
@@ -5708,7 +5715,8 @@ export async function registerRoutes(
       drawLine(y);
       y -= 12;
       const now = new Date();
-      drawText(`Gerado em ${now.toLocaleDateString('pt-BR')} \u00e0s ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, leftMargin, y, { size: 7, color: grayColor });
+      const snapshotCreatedAt = snapshot.createdAt ? new Date(snapshot.createdAt).toLocaleDateString('pt-BR') : now.toLocaleDateString('pt-BR');
+      drawText(`Snapshot #${snapshot.id} \u2014 Criado em ${snapshotCreatedAt} \u2014 Gerado em ${now.toLocaleDateString('pt-BR')} \u00e0s ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, leftMargin, y, { size: 7, color: grayColor });
       y -= 10;
       drawText(`${brandName} \u00a9 ${now.getFullYear()} \u2014 Todos os direitos reservados`, leftMargin, y, { size: 7, color: grayColor });
       y -= 10;
@@ -9487,7 +9495,34 @@ export async function registerRoutes(
     }
   });
 
-  // --- Parser Service Health ---
+  // --- Parser Service Status (lightweight, for UI banner) ---
+  app.get("/api/parser/status", async (req, res) => {
+    try {
+      const { isParserServiceConfigured } = await import("./parser-client");
+      if (!isParserServiceConfigured()) {
+        return res.json({ online: false, reason: 'not_configured' });
+      }
+      const parserUrl = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL || '';
+      const parserKey = process.env.PARSER_API_KEY || '';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        const resp = await fetch(`${parserUrl}/health`, { 
+          headers: { 'X-Parser-Key': parserKey }, 
+          signal: controller.signal 
+        });
+        clearTimeout(timeout);
+        res.json({ online: resp.ok, status: resp.status });
+      } catch {
+        clearTimeout(timeout);
+        res.json({ online: false, reason: 'unreachable' });
+      }
+    } catch {
+      res.json({ online: false, reason: 'error' });
+    }
+  });
+
+  // --- Parser Service Health (authenticated, full details) ---
   app.get("/api/parser/health", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
@@ -9665,6 +9700,25 @@ export async function registerRoutes(
 
       const bill = inserted[0];
 
+      let parserOffline = false;
+      try {
+        const { isParserServiceConfigured } = await import("./parser-client");
+        if (isParserServiceConfigured()) {
+          const parserUrl = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL || '';
+          const parserKey = process.env.PARSER_API_KEY || '';
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
+          try {
+            const resp = await fetch(`${parserUrl}/health`, { headers: { 'X-Parser-Key': parserKey }, signal: controller.signal });
+            clearTimeout(timeout);
+            parserOffline = !resp.ok;
+          } catch {
+            clearTimeout(timeout);
+            parserOffline = true;
+          }
+        }
+      } catch { /* ignore */ }
+
       await enqueueJob('BILL_PARSE', {
         billId: bill.id,
         fileStorageKey: storageKey,
@@ -9682,7 +9736,7 @@ export async function registerRoutes(
         uploadedBy: userId,
       });
 
-      res.json({ success: true, bill, extracted: null, message: "Bill uploaded, parsing started" });
+      res.json({ success: true, bill, extracted: null, parserOffline, message: parserOffline ? "Bill uploaded, parser offline — parsing will be retried" : "Bill uploaded, parsing started" });
     } catch (error: any) {
       console.error("[DealBillUpload] Error:", error);
       res.status(500).json({ success: false, error: "Failed to upload bill" });
@@ -9702,6 +9756,20 @@ export async function registerRoutes(
       res.json({ success: true, bills });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Failed to fetch deal bills" });
+    }
+  });
+
+  // --- Check Advance to RFQ (returns blockers) ---
+  app.post("/api/deals/:dealId/check-advance-rfq", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const blockerEngine = new (await import("./blockerEngine")).BlockerEngine(storage);
+      const result = await blockerEngine.checkSendRfq(dealId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[CheckAdvanceRFQ] Error:", error);
+      res.status(500).json({ ok: false, blockers: [{ code: 'SERVER_ERROR', message: error.message, cta: 'Retry', severity: 'error' }] });
     }
   });
 

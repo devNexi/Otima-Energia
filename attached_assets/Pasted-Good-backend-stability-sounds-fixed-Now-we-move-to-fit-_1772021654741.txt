@@ -1,0 +1,126 @@
+Good — backend stability sounds fixed. Now we move to fit-for-purpose UI + zero dead-ends.
+
+A) Sales must be able to upload a bill at the start of ANY deal journey
+
+Requirement (non-negotiable):
+
+On /admin/deals/:dealId (Assembly tab), there must be a prominent “Upload Bill (PDF)” widget that works even when:
+
+dossier does not exist yet
+
+ECOS does not exist yet
+
+track exists or not
+
+Acceptance test:
+
+Create deal → open Assembly
+
+Upload BILL.pdf → extracted fields display
+
+Generate ECOS → produces snapshot
+
+Click “Download ECOS PDF” → downloads PDF
+
+Click “Open Dossier” → dossier opens (auto-created) and is prefilled
+
+B) Fix the broken workflow buttons and 404s (these are current production blockers)
+
+You must fix these two issues end-to-end:
+
+1) “See dossier” currently hits a 404
+
+Any dossier view route must never 404.
+
+If dossier missing → auto-create draft and redirect/display.
+
+Acceptance test:
+
+From any deal screen: click “See Dossier” → always loads.
+
+2) “Advance to RFQ” does nothing in some drafts
+
+No silent failures. If blocked, show blocker cards with CTA (deep links) and log a clear console error.
+
+If allowed, it must transition state and update UI immediately.
+
+Acceptance test:
+
+Click “Advance to RFQ”:
+
+either transitions, OR
+
+shows blockers with code + message + CTA button
+
+C) Parser VPS expected fail must be handled gracefully
+
+You said “1 expected fail (parser VPS)”.
+That must never look like a broken portal.
+
+Requirement:
+
+If parser unreachable:
+
+show “Parser offline” banner
+
+bill upload should either queue for retry OR fail with a clear message
+
+never 500 with stack trace to user
+
+D) ECOS PDF content minimums (since you replaced Puppeteer)
+
+pdf-lib is fine, but the PDF must include these fields from persisted snapshot:
+
+client/deal identifiers
+
+CNPJ (14 digits)
+
+distributor
+
+reference month
+
+annualized consumption estimate + method
+
+PRC submarket + term used + price + reference month
+
+snapshotId + createdAt in footer
+
+Acceptance test:
+
+Download PDF and visually confirm these fields exist.
+
+E) Provide me the exact UI locations
+
+Reply with:
+
+The exact page + component where bill upload lives (file path)
+
+The exact page + component where “Advance to RFQ” is wired (file path)
+
+The exact routes used for:
+
+bill upload
+
+bills list
+
+ecos generate
+
+ecos pdf (by snapshotId)
+
+dossier get/create
+
+F) I want a short Loom / gif OR screenshots
+
+Show:
+
+deal assembly page with bill upload
+
+successful upload with extracted fields
+
+blocker card example (NO_PRC) with CTA to /admin/prc
+
+“Advance to RFQ” working or showing blockers
+
+dossier opening without 404
+
+Once A + B are proven, we move to pre-populating RFQs from bill/ECOS.

@@ -45,6 +45,7 @@ import EnergiaAssinatura from "@/pages/EnergiaAssinatura";
 import DiagnosticoForm from "@/pages/DiagnosticoForm";
 import TracksQueue from "@/pages/TracksQueue";
 import VerificationPage from "@/pages/VerificationPage";
+import DossierPage from "@/pages/DossierPage";
 
 function Router() {
   return (
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/admin/tracks" component={TracksQueue} />
       <Route path="/admin/quote-inbox" component={QuoteInbox} />
       <Route path="/admin/verify" component={VerificationPage} />
+      <Route path="/admin/dossier/:clientId" component={DossierPage} />
       <Route component={NotFound} />
     </Switch>
   );

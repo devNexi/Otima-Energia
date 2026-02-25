@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique, type AnyPgColumn, pgEnum, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, decimal, jsonb, integer, date, unique, uniqueIndex, type AnyPgColumn, pgEnum, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -4135,7 +4135,10 @@ export const billsExtracted = pgTable("bills_extracted", {
   parsedAt: timestamp("parsed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("idx_bills_extracted_deal_sha256")
+    .on(table.dealId, table.fileSha256),
+]);
 
 export const insertBillExtractedSchema = createInsertSchema(billsExtracted).omit({
   id: true,

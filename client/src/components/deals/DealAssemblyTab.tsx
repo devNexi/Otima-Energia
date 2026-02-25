@@ -25,7 +25,9 @@ import {
   Upload,
   Cpu,
   FolderOpen,
-  Download
+  Download,
+  AlertTriangle,
+  WifiOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +115,8 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
+  const [rfqBlockers, setRfqBlockers] = useState<any[]>([]);
+  const [isAdvancingRfq, setIsAdvancingRfq] = useState(false);
 
   const { data: assemblyData, isLoading, error } = useQuery<{ success: boolean } & AssemblyStatus>({
     queryKey: [`/api/deals/${dealId}/assembly-status`],
@@ -139,6 +143,20 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   });
 
+  const { data: parserStatus } = useQuery({
+    queryKey: ['parser-status'],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/parser/status`);
+        return res.json();
+      } catch {
+        return { online: false };
+      }
+    },
+    refetchInterval: 60000,
+    retry: false
+  });
+
   const uploadBillMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -155,7 +173,13 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       if (data.success && data.idempotent) {
         toast({ title: isPt ? "Fatura duplicada" : "Duplicate bill", description: isPt ? "Esta fatura já foi carregada (mesmo conteúdo)." : "This bill was already uploaded (same content).", variant: "default" });
       } else if (data.success) {
-        toast({ title: isPt ? "Fatura carregada" : "Bill uploaded", description: isPt ? "Análise iniciada. Dados aparecerão em breve." : "Parsing started. Data will appear shortly." });
+        const parserOffline = data.parserOffline;
+        toast({ 
+          title: isPt ? "Fatura carregada" : "Bill uploaded", 
+          description: parserOffline 
+            ? (isPt ? "Arquivo salvo. Parser offline — análise será tentada automaticamente." : "File saved. Parser offline — parsing will be retried automatically.")
+            : (isPt ? "Análise iniciada. Dados aparecerão em breve." : "Parsing started. Data will appear shortly.")
+        });
       } else {
         toast({ title: isPt ? "Erro no upload" : "Upload failed", description: data.error || "Unknown error", variant: "destructive" });
       }
@@ -193,6 +217,61 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   });
 
+  const handleAdvanceToRfq = async () => {
+    setIsAdvancingRfq(true);
+    setRfqBlockers([]);
+    try {
+      const checkRes = await fetch(`/api/deals/${dealId}/check-advance-rfq`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const checkData = await checkRes.json();
+      
+      if (!checkData.ok && checkData.blockers && checkData.blockers.length > 0) {
+        setRfqBlockers(checkData.blockers);
+        console.error('[AdvanceToRFQ] Blocked:', checkData.blockers);
+        toast({ 
+          title: isPt ? "Avanço bloqueado" : "Advance blocked", 
+          description: checkData.blockers.map((b: any) => b.message || b.code).join('; '), 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      if (checkData.ok) {
+        const transRes = await fetch(`/api/deals/${dealId}/transition`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toState: 'RFQ_SENT',
+            triggeredBy: 'user',
+            triggeredByType: 'user',
+            reason: 'Advanced from Assembly tab'
+          })
+        });
+        const transData = await transRes.json();
+        
+        if (transData.success) {
+          toast({ title: isPt ? "Avançado para RFQ" : "Advanced to RFQ", description: isPt ? "Negócio avançou para fase de cotação." : "Deal advanced to quotation phase." });
+          queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+        } else {
+          const errorBlockers = transData.blockers || [{ code: 'TRANSITION_FAILED', message: transData.error || 'Transition failed' }];
+          setRfqBlockers(errorBlockers);
+          console.error('[AdvanceToRFQ] Transition failed:', transData);
+          toast({ title: isPt ? "Falha na transição" : "Transition failed", description: transData.error || 'Unknown error', variant: "destructive" });
+        }
+      }
+    } catch (err: any) {
+      console.error('[AdvanceToRFQ] Error:', err);
+      toast({ title: isPt ? "Erro" : "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsAdvancingRfq(false);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -223,6 +302,9 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const { stages, nextStep, isBlocked, blockerCount, idleSinceDays, currentStage } = assemblyData;
   const bills = billsData?.bills || [];
   const parsedBills = bills.filter((b: any) => b.parseStatus === 'PARSED');
+  const clientId = dealData?.deal?.clientId;
+  const isParserOffline = parserStatus && !parserStatus.online;
+  const hasEcosComplete = !!stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete');
 
   const handleNavigate = (path: string) => {
     if (onNavigate) {
@@ -254,8 +336,67 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   };
 
+  const renderBlockerCards = (blockers: any[], title: string) => {
+    if (blockers.length === 0) return null;
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3" data-testid="alert-rfq-blockers">
+        <p className="text-sm font-semibold text-red-800 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          {title}
+        </p>
+        {blockers.map((b: any, i: number) => (
+          <div key={i} className="p-3 bg-white border border-red-100 rounded-md">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive" className="text-[10px] h-5">{b.code}</Badge>
+                  <span className="text-sm font-medium text-red-800">{b.message}</span>
+                </div>
+                {b.deepLink && (
+                  <p className="text-xs text-red-600 mt-1">{b.deepLink}</p>
+                )}
+              </div>
+              {b.cta && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs border-red-300 text-red-700 hover:bg-red-100 flex-shrink-0"
+                  onClick={() => {
+                    if (b.code === 'NO_PRC') handleNavigate('/admin/prc');
+                    else if (b.code === 'NO_BILL') fileInputRef.current?.click();
+                    else if (b.code === 'NO_ECOS') generateEcosMutation.mutate();
+                    else if (b.code === 'DOSSIER_NOT_READY' && clientId) handleNavigate(`/admin/dossier/${clientId}`);
+                    else if (b.deepLink) handleNavigate(b.deepLink);
+                  }}
+                  data-testid={`cta-${b.code.toLowerCase()}`}
+                >
+                  {b.cta}
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {isParserOffline && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 text-amber-800">
+              <WifiOff className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {isPt 
+                  ? "Parser offline — faturas serão processadas automaticamente quando o serviço retornar."
+                  : "Parser offline — bills will be processed automatically when service returns."}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {nextStep && (
         <Card className={cn(
           "border-2",
@@ -316,116 +457,124 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
         </Card>
       )}
 
-      {(currentStage === 'BILL_UPLOADED' || currentStage === 'ORIGIN_QUALIFICATION' || currentStage === 'ECOS_GENERATED' || parsedBills.length === 0) && (
-        <Card className="border-2 border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Upload className="w-5 h-5 text-blue-600" />
-              {isPt ? "Carregar Fatura de Energia" : "Upload Energy Bill"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              onChange={handleFileSelect}
-              className="hidden"
-              data-testid="input-bill-upload"
-            />
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadBillMutation.isPending}
-                data-testid="button-upload-bill"
-              >
-                {uploadBillMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Processando..." : "Processing..."}</>
-                ) : (
-                  <><Upload className="w-4 h-4 mr-2" />{isPt ? "Selecionar PDF" : "Select PDF"}</>
-                )}
-              </Button>
-              {parsedBills.length > 0 && (
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700" data-testid="badge-bill-count">
-                  {parsedBills.length} {isPt ? "fatura(s) processada(s)" : "bill(s) parsed"}
+      <Card className="border-2 border-blue-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Upload className="w-5 h-5 text-blue-600" />
+            {isPt ? "Carregar Fatura de Energia (PDF)" : "Upload Energy Bill (PDF)"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileSelect}
+            className="hidden"
+            data-testid="input-bill-upload"
+          />
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadBillMutation.isPending}
+              data-testid="button-upload-bill"
+              size="lg"
+            >
+              {uploadBillMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Processando..." : "Processing..."}</>
+              ) : (
+                <><Upload className="w-4 h-4 mr-2" />{isPt ? "Selecionar PDF da Fatura" : "Select Bill PDF"}</>
+              )}
+            </Button>
+            {parsedBills.length > 0 && (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700" data-testid="badge-bill-count">
+                {parsedBills.length} {isPt ? "fatura(s) processada(s)" : "bill(s) parsed"}
+              </Badge>
+            )}
+          </div>
+
+          {uploadBillMutation.isError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-upload-error">
+              {isPt ? "Erro ao carregar fatura. Tente novamente." : "Error uploading bill. Try again."}
+            </div>
+          )}
+
+          {uploadResult && uploadResult.success && uploadResult.extracted && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md space-y-1" data-testid="card-extracted-fields">
+              <p className="text-sm font-medium text-emerald-800">{isPt ? "Dados Extraídos:" : "Extracted Data:"}</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-emerald-700">
+                {uploadResult.extracted.distributor && <div><span className="font-medium">{isPt ? "Distribuidora:" : "Distributor:"}</span> {uploadResult.extracted.distributor}</div>}
+                {uploadResult.extracted.referenceMonth && <div><span className="font-medium">{isPt ? "Mês Ref:" : "Ref Month:"}</span> {uploadResult.extracted.referenceMonth}</div>}
+                {uploadResult.extracted.totalEnergyKwh && <div><span className="font-medium">{isPt ? "Energia (kWh):" : "Energy (kWh):"}</span> {uploadResult.extracted.totalEnergyKwh}</div>}
+                {uploadResult.extracted.totalAmount && <div><span className="font-medium">{isPt ? "Valor Total:" : "Total Amount:"}</span> R$ {uploadResult.extracted.totalAmount}</div>}
+                {uploadResult.extracted.customerId && <div><span className="font-medium">CNPJ:</span> {uploadResult.extracted.customerId}</div>}
+                {uploadResult.extracted.tariffGroup && <div><span className="font-medium">{isPt ? "Grupo Tarifário:" : "Tariff Group:"}</span> {uploadResult.extracted.tariffGroup}</div>}
+              </div>
+              {uploadResult.extracted.confidence && (
+                <Badge variant="outline" className={cn(
+                  "mt-1 text-xs",
+                  parseFloat(uploadResult.extracted.confidence) >= 0.8 ? "bg-emerald-100 text-emerald-800" :
+                  parseFloat(uploadResult.extracted.confidence) >= 0.5 ? "bg-amber-100 text-amber-800" :
+                  "bg-red-100 text-red-800"
+                )}>
+                  {isPt ? "Confiança:" : "Confidence:"} {Math.round(parseFloat(uploadResult.extracted.confidence || '0') * 100)}%
                 </Badge>
               )}
             </div>
+          )}
 
-            {uploadBillMutation.isError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-upload-error">
-                {isPt ? "Erro ao carregar fatura. Tente novamente." : "Error uploading bill. Try again."}
+          {uploadResult && uploadResult.success && uploadResult.parserOffline && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-parser-offline">
+              <div className="flex items-center gap-2">
+                <WifiOff className="w-4 h-4" />
+                {isPt ? "Arquivo salvo com sucesso. Parser offline — análise será tentada automaticamente." : "File saved successfully. Parser offline — parsing will be retried automatically."}
               </div>
-            )}
+            </div>
+          )}
 
-            {uploadResult && uploadResult.success && uploadResult.extracted && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md space-y-1" data-testid="card-extracted-fields">
-                <p className="text-sm font-medium text-emerald-800">{isPt ? "Dados Extraídos:" : "Extracted Data:"}</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-emerald-700">
-                  {uploadResult.extracted.distributor && <div><span className="font-medium">{isPt ? "Distribuidora:" : "Distributor:"}</span> {uploadResult.extracted.distributor}</div>}
-                  {uploadResult.extracted.referenceMonth && <div><span className="font-medium">{isPt ? "Mês Ref:" : "Ref Month:"}</span> {uploadResult.extracted.referenceMonth}</div>}
-                  {uploadResult.extracted.totalEnergyKwh && <div><span className="font-medium">{isPt ? "Energia (kWh):" : "Energy (kWh):"}</span> {uploadResult.extracted.totalEnergyKwh}</div>}
-                  {uploadResult.extracted.totalAmount && <div><span className="font-medium">{isPt ? "Valor Total:" : "Total Amount:"}</span> R$ {uploadResult.extracted.totalAmount}</div>}
-                  {uploadResult.extracted.customerId && <div><span className="font-medium">CNPJ:</span> {uploadResult.extracted.customerId}</div>}
-                  {uploadResult.extracted.tariffGroup && <div><span className="font-medium">{isPt ? "Grupo Tarifário:" : "Tariff Group:"}</span> {uploadResult.extracted.tariffGroup}</div>}
-                </div>
-                {uploadResult.extracted.confidence && (
-                  <Badge variant="outline" className={cn(
-                    "mt-1 text-xs",
-                    parseFloat(uploadResult.extracted.confidence) >= 0.8 ? "bg-emerald-100 text-emerald-800" :
-                    parseFloat(uploadResult.extracted.confidence) >= 0.5 ? "bg-amber-100 text-amber-800" :
-                    "bg-red-100 text-red-800"
-                  )}>
-                    {isPt ? "Confiança:" : "Confidence:"} {Math.round(parseFloat(uploadResult.extracted.confidence || '0') * 100)}%
-                  </Badge>
-                )}
-              </div>
-            )}
+          {uploadResult && !uploadResult.success && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-parse-error">
+              {uploadResult.error || (isPt ? "Falha ao processar fatura" : "Failed to process bill")}
+            </div>
+          )}
 
-            {uploadResult && !uploadResult.success && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-parse-error">
-                {uploadResult.error || (isPt ? "Falha ao processar fatura" : "Failed to process bill")}
-              </div>
-            )}
+          {uploadResult?.idempotent && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-duplicate-bill">
+              {isPt ? "Esta fatura já foi carregada anteriormente (mesmo conteúdo)." : "This bill was already uploaded (same content)."}
+            </div>
+          )}
 
-            {uploadResult?.idempotent && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-duplicate-bill">
-                {isPt ? "Esta fatura já foi carregada anteriormente (mesmo conteúdo)." : "This bill was already uploaded (same content)."}
-              </div>
-            )}
-
-            {bills.length > 0 && (
-              <div className="space-y-2 mt-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {isPt ? "Faturas Carregadas" : "Uploaded Bills"}
-                </p>
-                {bills.map((bill: any) => (
-                  <div key={bill.id} className="flex items-center justify-between p-2 bg-slate-50 border rounded-md text-xs" data-testid={`bill-row-${bill.id}`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
-                      <span className="truncate">{bill.originalFilename}</span>
-                      <Badge variant="outline" className={cn("text-[10px] h-5",
-                        bill.parseStatus === 'PARSED' ? "bg-emerald-50 text-emerald-700" :
-                        bill.parseStatus === 'FAILED' ? "bg-red-50 text-red-700" :
-                        "bg-amber-50 text-amber-700"
-                      )}>
-                        {bill.parseStatus}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {bill.parseStatus === 'PARSED' && bill.distributor && (
-                        <span className="text-[10px] text-muted-foreground">{bill.distributor} • {bill.referenceMonth}</span>
-                      )}
-                    </div>
+          {bills.length > 0 && (
+            <div className="space-y-2 mt-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {isPt ? "Faturas Carregadas" : "Uploaded Bills"}
+              </p>
+              {bills.map((bill: any) => (
+                <div key={bill.id} className="flex items-center justify-between p-2 bg-slate-50 border rounded-md text-xs" data-testid={`bill-row-${bill.id}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
+                    <span className="truncate">{bill.originalFilename}</span>
+                    <Badge variant="outline" className={cn("text-[10px] h-5",
+                      bill.parseStatus === 'PARSED' ? "bg-emerald-50 text-emerald-700" :
+                      bill.parseStatus === 'FAILED' ? "bg-red-50 text-red-700" :
+                      "bg-amber-50 text-amber-700"
+                    )}>
+                      {bill.parseStatus}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  <div className="flex items-center gap-1">
+                    {bill.parseStatus === 'PARSED' && bill.distributor && (
+                      <span className="text-[10px] text-muted-foreground">{bill.distributor} • {bill.referenceMonth}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {parsedBills.length > 0 && !stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete') && (
+      {parsedBills.length > 0 && !hasEcosComplete && (
         <Card className="border-2 border-purple-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -452,65 +601,77 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 <><Cpu className="w-4 h-4 mr-2" />{isPt ? "Gerar ECOS" : "Generate ECOS"}</>
               )}
             </Button>
-            {transitionBlockers.length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2" data-testid="alert-ecos-blockers">
-                <p className="text-sm font-medium text-red-800">{isPt ? "Bloqueadores:" : "Blockers:"}</p>
-                {transitionBlockers.map((b: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-sm text-red-700">
-                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>{b.message || b.code}</span>
-                    </div>
-                    {b.cta && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-100"
-                        onClick={() => {
-                          if (b.code === 'NO_PRC') {
-                            window.location.href = '/admin/prc';
-                          } else if (b.code === 'NO_BILL') {
-                            fileInputRef.current?.click();
-                          } else if (b.deepLink) {
-                            handleNavigate(b.deepLink);
-                          }
-                        }}
-                        data-testid={`cta-${b.code.toLowerCase()}`}
-                      >
-                        {b.cta}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            {transitionBlockers.length > 0 && renderBlockerCards(transitionBlockers, isPt ? "Bloqueadores ECOS:" : "ECOS Blockers:")}
           </CardContent>
         </Card>
       )}
 
-      {stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete') && (
-        <div className="flex gap-2">
-          {dealData?.deal?.clientId && (
+      {hasEcosComplete && (
+        <Card className="border-2 border-emerald-200 bg-emerald-50/50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span className="font-medium text-emerald-800">
+                  {isPt ? "ECOS gerado com sucesso" : "ECOS generated successfully"}
+                </span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {clientId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleNavigate(`/admin/dossier/${clientId}`)}
+                    data-testid="button-view-dossier"
+                  >
+                    <FolderOpen className="w-4 h-4 mr-2" />
+                    {isPt ? "Ver Dossiê" : "View Dossier"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    window.open(`/api/deals/${dealId}/ecos/latest/pdf`, '_blank');
+                  }}
+                  data-testid="button-download-ecos-pdf"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {isPt ? "ECOS PDF" : "ECOS PDF"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasEcosComplete && (
+        <Card className="border-2 border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Send className="w-5 h-5 text-indigo-600" />
+              {isPt ? "Avançar para RFQ" : "Advance to RFQ"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {isPt 
+                ? "Verifique pré-requisitos e avance o negócio para a fase de cotação com fornecedores."
+                : "Check prerequisites and advance the deal to the supplier quotation phase."}
+            </p>
             <Button
-              variant="outline"
-              onClick={() => handleNavigate(`/admin/clients`)}
-              data-testid="button-view-dossier"
+              onClick={handleAdvanceToRfq}
+              disabled={isAdvancingRfq}
+              className="bg-indigo-600 hover:bg-indigo-700"
+              data-testid="button-advance-rfq"
             >
-              <FolderOpen className="w-4 h-4 mr-2" />
-              {isPt ? "Ver Dossiê" : "View Dossier"}
+              {isAdvancingRfq ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Verificando..." : "Checking..."}</>
+              ) : (
+                <><Send className="w-4 h-4 mr-2" />{isPt ? "Avançar para RFQ" : "Advance to RFQ"}</>
+              )}
             </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              window.open(`/api/deals/${dealId}/ecos/latest/pdf`, '_blank');
-            }}
-            data-testid="button-download-ecos-pdf"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {isPt ? "ECOS PDF" : "ECOS PDF"}
-          </Button>
-        </div>
+            {rfqBlockers.length > 0 && renderBlockerCards(rfqBlockers, isPt ? "Pré-requisitos pendentes:" : "Pending prerequisites:")}
+          </CardContent>
+        </Card>
       )}
 
       <Card>
