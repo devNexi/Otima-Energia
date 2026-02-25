@@ -5,14 +5,14 @@ import { eq, and } from 'drizzle-orm';
 
 export interface Blocker {
   code: string;
-  title: string;
-  description: string;
+  message: string;
+  cta: string;
   deepLink: string;
   severity: 'error' | 'warning';
 }
 
 export interface BlockerResult {
-  isBlocked: boolean;
+  ok: boolean;
   blockers: Blocker[];
 }
 
@@ -26,15 +26,15 @@ export class BlockerEngine {
     if (!client) {
       blockers.push({
         code: 'CLIENT_NOT_FOUND',
-        title: 'Cliente não encontrado',
-        description: 'O cliente não existe no sistema.',
+        message: 'Client not found in system.',
+        cta: 'Find Client',
         deepLink: '/admin/sales/clients',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkDealHasBill(dealId: string): Promise<{ hasBill: boolean; parsedCount: number }> {
@@ -57,30 +57,20 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
-    }
-
-    if (deal.status !== 'DRAFT') {
-      blockers.push({
-        code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `O negócio deve estar em DRAFT para enviar RFQ. Estado atual: ${deal.status}`,
-        deepLink: `/admin/ops/deals?dealId=${dealId}`,
-        severity: 'error'
-      });
+      return { ok: false, blockers };
     }
 
     const { hasBill } = await this.checkDealHasBill(did);
     if (!hasBill) {
       blockers.push({
         code: 'NO_BILL',
-        title: 'Nenhuma fatura carregada',
-        description: 'Carregue pelo menos uma fatura (PDF) antes de enviar RFQ.',
+        message: 'No parsed bill uploaded for this deal. Upload at least one energy bill (PDF).',
+        cta: 'Upload Bill',
         deepLink: `/admin/ops/deals/${did}?tab=assembly`,
         severity: 'error'
       });
@@ -90,8 +80,8 @@ export class BlockerEngine {
     if (!hasEcos) {
       blockers.push({
         code: 'NO_ECOS',
-        title: 'ECOS não gerado',
-        description: 'Gere o ECOS a partir da fatura antes de enviar RFQ.',
+        message: 'ECOS profile not generated. Generate ECOS from bill data + PRC pricing.',
+        cta: 'Generate ECOS',
         deepLink: `/admin/ops/deals/${did}?tab=assembly`,
         severity: 'error'
       });
@@ -101,14 +91,14 @@ export class BlockerEngine {
     if (!dossier || dossier.status === 'DRAFT') {
       blockers.push({
         code: 'DOSSIER_NOT_READY',
-        title: 'Dossiê incompleto',
-        description: 'O dossiê do cliente deve estar PRONTO antes de enviar RFQ.',
+        message: 'Client dossier is not ready. Complete and mark as READY before sending RFQ.',
+        cta: 'Complete Dossier',
         deepLink: `/admin/sales/clients?action=dossier&clientId=${deal.clientId}`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkRecordQuotes(dealId: number | string): Promise<BlockerResult> {
@@ -118,25 +108,25 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'RFQ_SENT') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `RFQ deve ser enviado antes de registrar cotações. Estado atual: ${deal.status}`,
+        message: `RFQ must be sent before recording quotes. Current state: ${deal.status}`,
+        cta: 'Send RFQ First',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkGenerateProposal(dealId: number | string): Promise<BlockerResult> {
@@ -146,25 +136,25 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'QUOTES_RECEIVED') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `Cotações devem ser recebidas antes de gerar proposta. Estado atual: ${deal.status}`,
+        message: `Quotes must be received before generating proposal. Current state: ${deal.status}`,
+        cta: 'Wait for Quotes',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkAdvanceToOfferSelected(dealId: number | string): Promise<BlockerResult> {
@@ -174,19 +164,19 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'QUOTES_RECEIVED') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `Estado atual não permite seleção de oferta. Estado: ${deal.status}`,
+        message: `Current state does not allow offer selection. State: ${deal.status}`,
+        cta: 'Wait for Quotes',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
@@ -195,14 +185,14 @@ export class BlockerEngine {
     if (!deal.selectedQuoteId) {
       blockers.push({
         code: 'NO_QUOTE_SELECTED',
-        title: 'Nenhuma cotação selecionada',
-        description: 'Selecione uma cotação antes de avançar.',
+        message: 'Select a quote before advancing.',
+        cta: 'Select Quote',
         deepLink: `/admin/ops/deals?dealId=${dealId}&tab=quotes`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkAdvanceToOnboarding(dealId: number | string): Promise<BlockerResult> {
@@ -212,25 +202,25 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'OFFER_SELECTED') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `Estado atual não permite onboarding. Estado: ${deal.status}`,
+        message: `Current state does not allow onboarding. State: ${deal.status}`,
+        cta: 'Select Offer First',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkAdvanceToContractSigned(dealId: number | string): Promise<BlockerResult> {
@@ -240,19 +230,19 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'ONBOARDING_PENDING') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `Estado atual não permite assinatura de contrato. Estado: ${deal.status}`,
+        message: `Current state does not allow contract signing. State: ${deal.status}`,
+        cta: 'Complete Onboarding',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
@@ -263,14 +253,14 @@ export class BlockerEngine {
     if (incompleteItems.length > 0) {
       blockers.push({
         code: 'CHECKLIST_INCOMPLETE',
-        title: 'Checklist incompleto',
-        description: `${incompleteItems.length} item(s) do checklist precisam ser concluídos.`,
+        message: `${incompleteItems.length} checklist item(s) need completion.`,
+        cta: 'Complete Checklist',
         deepLink: `/admin/ops/deals?dealId=${dealId}&tab=compliance`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async checkAdvanceToSupplyLive(dealId: number | string): Promise<BlockerResult> {
@@ -280,25 +270,25 @@ export class BlockerEngine {
     if (!deal) {
       blockers.push({
         code: 'DEAL_NOT_FOUND',
-        title: 'Negócio não encontrado',
-        description: 'O negócio não existe no sistema.',
+        message: 'Deal not found.',
+        cta: 'Find Deal',
         deepLink: '/admin/ops/deals',
         severity: 'error'
       });
-      return { isBlocked: true, blockers };
+      return { ok: false, blockers };
     }
 
     if (deal.status !== 'CONTRACT_SIGNED') {
       blockers.push({
         code: 'INVALID_DEAL_STATE',
-        title: 'Estado inválido',
-        description: `Estado atual não permite ativar fornecimento. Estado: ${deal.status}`,
+        message: `Current state does not allow supply activation. State: ${deal.status}`,
+        cta: 'Sign Contract First',
         deepLink: `/admin/ops/deals?dealId=${dealId}`,
         severity: 'error'
       });
     }
 
-    return { isBlocked: blockers.some(b => b.severity === 'error'), blockers };
+    return { ok: blockers.length === 0, blockers };
   }
 
   async getClientNextAction(clientId: number): Promise<{ action: string; actionLabel: string; deepLink: string; blockers: Blocker[] }> {
@@ -306,41 +296,9 @@ export class BlockerEngine {
     if (!client) {
       return {
         action: 'not_found',
-        actionLabel: 'Cliente não encontrado',
+        actionLabel: 'Client not found',
         deepLink: '/admin/sales/clients',
         blockers: []
-      };
-    }
-
-    const dossier = await this.storage.getClientDossier(clientId);
-    
-    if (!dossier) {
-      return {
-        action: 'create_dossier',
-        actionLabel: 'Criar Dossiê',
-        deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-        blockers: [{
-          code: 'DOSSIER_REQUIRED',
-          title: 'Dossiê não criado',
-          description: 'Crie o dossiê energético para prosseguir.',
-          deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-          severity: 'warning'
-        }]
-      };
-    }
-
-    if (dossier.status === 'DRAFT') {
-      return {
-        action: 'complete_dossier',
-        actionLabel: 'Completar Dossiê',
-        deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-        blockers: [{
-          code: 'DOSSIER_NOT_READY',
-          title: 'Dossiê incompleto',
-          description: 'Complete o dossiê e marque como PRONTO.',
-          deepLink: `/admin/sales/clients?action=dossier&clientId=${clientId}`,
-          severity: 'warning'
-        }]
       };
     }
 
@@ -350,7 +308,7 @@ export class BlockerEngine {
     if (activeDeals.length === 0) {
       return {
         action: 'create_deal',
-        actionLabel: 'Criar Negócio',
+        actionLabel: 'Create Deal',
         deepLink: `/admin/ops/deals?action=create&clientId=${clientId}`,
         blockers: []
       };
@@ -358,7 +316,7 @@ export class BlockerEngine {
 
     return {
       action: 'view_deals',
-      actionLabel: 'Ver Negócios',
+      actionLabel: 'View Deals',
       deepLink: `/admin/ops/deals?clientId=${clientId}`,
       blockers: []
     };
@@ -369,28 +327,28 @@ export class BlockerEngine {
     if (!deal) {
       return {
         action: 'not_found',
-        actionLabel: 'Negócio não encontrado',
+        actionLabel: 'Deal not found',
         deepLink: '/admin/ops/deals',
         blockers: []
       };
     }
 
     const stateActions: Record<string, { action: string; actionLabel: string }> = {
-      'DRAFT': { action: 'send_rfq', actionLabel: 'Enviar RFQ' },
-      'RFQ_SENT': { action: 'record_quotes', actionLabel: 'Registrar Cotações' },
-      'QUOTES_RECEIVED': { action: 'generate_proposal', actionLabel: 'Gerar Proposta' },
-      'OFFER_SELECTED': { action: 'start_onboarding', actionLabel: 'Iniciar Onboarding' },
-      'ONBOARDING_PENDING': { action: 'sign_contract', actionLabel: 'Assinar Contrato' },
-      'CONTRACT_SIGNED': { action: 'activate_supply', actionLabel: 'Ativar Fornecimento' },
-      'SUPPLY_LIVE': { action: 'track_revenue', actionLabel: 'Acompanhar Receita' },
-      'CONTRACT_ENDED': { action: 'renew_or_close', actionLabel: 'Renovar ou Encerrar' },
-      'CLOSED': { action: 'view_history', actionLabel: 'Ver Histórico' },
-      'LOST': { action: 'view_history', actionLabel: 'Ver Histórico' }
+      'DRAFT': { action: 'send_rfq', actionLabel: 'Send RFQ' },
+      'RFQ_SENT': { action: 'record_quotes', actionLabel: 'Record Quotes' },
+      'QUOTES_RECEIVED': { action: 'generate_proposal', actionLabel: 'Generate Proposal' },
+      'OFFER_SELECTED': { action: 'start_onboarding', actionLabel: 'Start Onboarding' },
+      'ONBOARDING_PENDING': { action: 'sign_contract', actionLabel: 'Sign Contract' },
+      'CONTRACT_SIGNED': { action: 'activate_supply', actionLabel: 'Activate Supply' },
+      'SUPPLY_LIVE': { action: 'track_revenue', actionLabel: 'Track Revenue' },
+      'CONTRACT_ENDED': { action: 'renew_or_close', actionLabel: 'Renew or Close' },
+      'CLOSED': { action: 'view_history', actionLabel: 'View History' },
+      'LOST': { action: 'view_history', actionLabel: 'View History' }
     };
 
-    const nextAction = stateActions[deal.status] || { action: 'unknown', actionLabel: 'Ação desconhecida' };
+    const nextAction = stateActions[deal.status] || { action: 'unknown', actionLabel: 'Unknown Action' };
     
-    let blockerResult: BlockerResult = { isBlocked: false, blockers: [] };
+    let blockerResult: BlockerResult = { ok: true, blockers: [] };
     
     switch (deal.status) {
       case 'DRAFT':

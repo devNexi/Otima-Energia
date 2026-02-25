@@ -147,17 +147,22 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
 
   const generateEcosMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/deals/${dealId}/ecos/generate`);
+      const res = await fetch(`/api/deals/${dealId}/ecos/generate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
       return res.json();
     },
     onSuccess: (data) => {
-      if (!data.success && data.blockers) {
+      if (data.blockers && data.blockers.length > 0) {
         setTransitionBlockers(data.blockers);
       } else {
         setTransitionBlockers([]);
       }
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos/snapshots`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
     }
   });
 
@@ -355,6 +360,40 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 {uploadResult.error || (isPt ? "Falha ao processar fatura" : "Failed to process bill")}
               </div>
             )}
+
+            {uploadResult?.idempotent && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-duplicate-bill">
+                {isPt ? "Esta fatura já foi carregada anteriormente (mesmo conteúdo)." : "This bill was already uploaded (same content)."}
+              </div>
+            )}
+
+            {bills.length > 0 && (
+              <div className="space-y-2 mt-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {isPt ? "Faturas Carregadas" : "Uploaded Bills"}
+                </p>
+                {bills.map((bill: any) => (
+                  <div key={bill.id} className="flex items-center justify-between p-2 bg-slate-50 border rounded-md text-xs" data-testid={`bill-row-${bill.id}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
+                      <span className="truncate">{bill.originalFilename}</span>
+                      <Badge variant="outline" className={cn("text-[10px] h-5",
+                        bill.parseStatus === 'PARSED' ? "bg-emerald-50 text-emerald-700" :
+                        bill.parseStatus === 'FAILED' ? "bg-red-50 text-red-700" :
+                        "bg-amber-50 text-amber-700"
+                      )}>
+                        {bill.parseStatus}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {bill.parseStatus === 'PARSED' && bill.distributor && (
+                        <span className="text-[10px] text-muted-foreground">{bill.distributor} • {bill.referenceMonth}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -387,11 +426,33 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
               )}
             </Button>
             {transitionBlockers.length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-1" data-testid="alert-ecos-blockers">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2" data-testid="alert-ecos-blockers">
+                <p className="text-sm font-medium text-red-800">{isPt ? "Bloqueadores:" : "Blockers:"}</p>
                 {transitionBlockers.map((b: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-red-700">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>{b.message || b.code}</span>
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm text-red-700">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{b.message || b.code}</span>
+                    </div>
+                    {b.cta && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-100"
+                        onClick={() => {
+                          if (b.code === 'NO_PRC') {
+                            window.location.href = '/admin/prc';
+                          } else if (b.code === 'NO_BILL') {
+                            fileInputRef.current?.click();
+                          } else if (b.deepLink) {
+                            handleNavigate(b.deepLink);
+                          }
+                        }}
+                        data-testid={`cta-${b.code.toLowerCase()}`}
+                      >
+                        {b.cta}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

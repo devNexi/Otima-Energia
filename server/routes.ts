@@ -7304,7 +7304,7 @@ export async function registerRoutes(
           result = await blockerEngine.checkAdvanceToSupplyLive(dealId);
           break;
         default:
-          result = { isBlocked: false, blockers: [] };
+          result = { ok: true, blockers: [] };
       }
       
       res.json({ success: true, ...result });
@@ -9609,11 +9609,10 @@ export async function registerRoutes(
       if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
 
       const file = req.file;
-      if (!file) return res.status(400).json({ success: false, error: "No file uploaded" });
+      if (!file || file.buffer.length === 0) return res.status(400).json({ success: false, error: "No file uploaded or file is empty" });
 
-      const lowerName = file.originalname.toLowerCase();
-      const hasPdfExt = lowerName.endsWith('.pdf');
       const hasPdfMagic = file.buffer.length >= 5 && file.buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+      const hasPdfExt = file.originalname.toLowerCase().endsWith('.pdf');
       if (!hasPdfExt && !hasPdfMagic) {
         return res.status(400).json({ success: false, error: "Only PDF files are accepted" });
       }
@@ -9622,26 +9621,39 @@ export async function registerRoutes(
       const crypto = await import("crypto");
       const fileSha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      const existing = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.fileSha256, fileSha256)));
+      if (existing.length > 0) {
+        const bill = existing[0];
+        const extracted = bill.parseStatus === 'PARSED' ? {
+          distributor: bill.distributor, referenceMonth: bill.referenceMonth,
+          totalEnergyKwh: bill.totalEnergyKwh, totalAmount: bill.totalAmount,
+          customerId: bill.customerId, tariffGroup: bill.tariffGroup,
+          invoiceKey: bill.invoiceKey, confidence: bill.parseConfidence,
+          warnings: bill.parseWarnings,
+        } : null;
+        return res.json({ success: true, bill, extracted, idempotent: true, message: "Bill with same content already uploaded for this deal" });
+      }
+
       const objectStorage = new (await import("./objectStorage")).ObjectStorageService();
       const storageKey = `deals/${dealId}/bills/${Date.now()}_${file.originalname}`;
       await objectStorage.uploadBuffer(storageKey, file.buffer, file.mimetype);
 
-      const { billsExtracted } = await import("@shared/schema");
-      const { db } = await import("./db");
       const inserted = await db.insert(billsExtracted).values({
         clientId: deal.clientId,
         dealId,
         fileStorageKey: storageKey,
         originalFilename: file.originalname,
         fileSizeBytes: file.size,
+        fileSha256,
         uploadedByUserId: userId,
       }).returning();
 
       const bill = inserted[0];
-
-      await db.update(billsExtracted)
-        .set({ fileSha256 })
-        .where((await import("drizzle-orm")).eq(billsExtracted.id, bill.id));
 
       await enqueueJob('BILL_PARSE', {
         billId: bill.id,
@@ -9660,7 +9672,7 @@ export async function registerRoutes(
         uploadedBy: userId,
       });
 
-      res.json({ success: true, bill: { ...bill, fileSha256 } });
+      res.json({ success: true, bill, extracted: null, message: "Bill uploaded, parsing started" });
     } catch (error: any) {
       console.error("[DealBillUpload] Error:", error);
       res.status(500).json({ success: false, error: "Failed to upload bill" });
@@ -9683,40 +9695,38 @@ export async function registerRoutes(
     }
   });
 
-  // --- Deal ECOS Generation (Bill-First Architecture) ---
+  // --- Deal ECOS Generation (Bill-First Architecture — PRC-backed) ---
   app.post("/api/deals/:dealId/ecos/generate", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
       const { dealId } = req.params;
       const deal = await storage.getDeal(dealId);
-      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+      if (!deal) return res.status(404).json({ ok: false, error: "Deal not found" });
 
-      const { billsExtracted, dealEcosSnapshots } = await import("@shared/schema");
+      const { billsExtracted, dealEcosSnapshots, prcRows, prcDocuments } = await import("@shared/schema");
       const { db } = await import("./db");
-      const { eq, and, desc } = await import("drizzle-orm");
+      const { eq, and, desc, inArray } = await import("drizzle-orm");
+      const crypto = await import("crypto");
+      const ALGO_VERSION = '1.0';
 
       const bills = await db.select().from(billsExtracted)
         .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.parseStatus, 'PARSED')));
 
       if (bills.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: "No parsed bills found for this deal. Upload and parse a bill first.",
-          blockers: [{ code: "NO_PARSED_BILL", message: "Upload at least one BILL PDF and wait for parsing to complete." }]
+        return res.status(409).json({
+          ok: false,
+          blockers: [{ code: "NO_BILL", message: "No parsed bills found for this deal. Upload and parse a bill first.", cta: "Upload Bill" }]
         });
       }
 
       const totalEnergyKwhArr = bills.map(b => parseFloat(String(b.totalEnergyKwh || '0'))).filter(v => v > 0);
       const totalAmountArr = bills.map(b => parseFloat(String(b.totalAmount || '0'))).filter(v => v > 0);
       const avgMonthlyKwh = totalEnergyKwhArr.length > 0
-        ? totalEnergyKwhArr.reduce((a, c) => a + c, 0) / totalEnergyKwhArr.length
-        : 0;
+        ? totalEnergyKwhArr.reduce((a, c) => a + c, 0) / totalEnergyKwhArr.length : 0;
       const annualConsumptionKwh = avgMonthlyKwh * 12;
       const annualConsumptionMwh = annualConsumptionKwh / 1000;
-
       const avgMonthlyAmount = totalAmountArr.length > 0
-        ? totalAmountArr.reduce((a, c) => a + c, 0) / totalAmountArr.length
-        : 0;
+        ? totalAmountArr.reduce((a, c) => a + c, 0) / totalAmountArr.length : 0;
       const estimatedPriceRmwh = avgMonthlyKwh > 0 ? (avgMonthlyAmount / (avgMonthlyKwh / 1000)) : 0;
 
       const peakDemandKw = 0;
@@ -9739,105 +9749,152 @@ export async function registerRoutes(
         'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
       };
       const submarket = distributor
-        ? Object.entries(distributorSubmarketMap).find(([k]) =>
-            distributor.toUpperCase().includes(k)
-          )?.[1] || 'SE/CO'
-        : null;
+        ? Object.entries(distributorSubmarketMap).find(([k]) => distributor.toUpperCase().includes(k))?.[1] || 'SE/CO'
+        : 'SE/CO';
 
-      const inputData = {
-        annualConsumptionMwh,
-        avgMonthlyKwh,
-        estimatedPriceRmwh: Math.round(estimatedPriceRmwh * 100) / 100,
-        loadFactor,
-        eligibility,
-        distributor,
+      const billRefMonth = bills.find(b => b.referenceMonth)?.referenceMonth || null;
+
+      const publishedDocs = await db.select().from(prcDocuments)
+        .where(eq(prcDocuments.parseStatus, 'PUBLISHED'))
+        .orderBy(desc(prcDocuments.referenceMonth));
+
+      let resolvedPrcRows: any[] = [];
+      let resolvedPrcDoc: any = null;
+
+      if (billRefMonth) {
+        const matchingDoc = publishedDocs.find(d => d.referenceMonth === billRefMonth);
+        if (matchingDoc) {
+          resolvedPrcRows = await db.select().from(prcRows)
+            .where(and(eq(prcRows.prcDocumentId, matchingDoc.id), eq(prcRows.submarket, submarket)));
+          resolvedPrcDoc = matchingDoc;
+        }
+      }
+      if (resolvedPrcRows.length === 0 && publishedDocs.length > 0) {
+        for (const doc of publishedDocs) {
+          const rows = await db.select().from(prcRows)
+            .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
+          if (rows.length > 0) {
+            resolvedPrcRows = rows;
+            resolvedPrcDoc = doc;
+            break;
+          }
+        }
+      }
+      if (resolvedPrcRows.length === 0 && publishedDocs.length > 0) {
+        for (const doc of publishedDocs) {
+          const rows = await db.select().from(prcRows)
+            .where(eq(prcRows.prcDocumentId, doc.id));
+          if (rows.length > 0) {
+            resolvedPrcRows = rows;
+            resolvedPrcDoc = doc;
+            break;
+          }
+        }
+      }
+
+      if (resolvedPrcRows.length === 0) {
+        return res.status(409).json({
+          ok: false,
+          blockers: [{
+            code: "NO_PRC",
+            message: `No published PRC pricing rows found for submarket ${submarket}. Upload and publish a PRC first.`,
+            cta: "Upload PRC"
+          }]
+        });
+      }
+
+      const pricingRowsSorted = [...resolvedPrcRows].sort((a, b) => a.id - b.id);
+      const pricingRowsHash = crypto.createHash('sha256')
+        .update(JSON.stringify(pricingRowsSorted.map(r => ({ id: r.id, price: r.priceRPerMWh, sub: r.submarket, term: r.termMonths, product: r.productType }))))
+        .digest('hex');
+
+      const billSha256s = bills.map(b => b.fileSha256).filter(Boolean).sort().join(',');
+      const inputHash = crypto.createHash('sha256')
+        .update(`${billSha256s}|${pricingRowsHash}|${ALGO_VERSION}`)
+        .digest('hex');
+
+      const existingSnapshot = await db.select().from(dealEcosSnapshots)
+        .where(and(eq(dealEcosSnapshots.dealId, dealId), eq(dealEcosSnapshots.inputHash, inputHash)));
+      if (existingSnapshot.length > 0) {
+        return res.json({ ok: true, success: true, snapshot: existingSnapshot[0], idempotent: true, inputHash });
+      }
+
+      const prcPrices = resolvedPrcRows.map(r => parseFloat(String(r.priceRPerMWh))).filter(v => v > 0);
+      const prcMinPrice = prcPrices.length > 0 ? Math.min(...prcPrices) : 0;
+      const prcMaxPrice = prcPrices.length > 0 ? Math.max(...prcPrices) : 0;
+      const prcAvgPrice = prcPrices.length > 0 ? prcPrices.reduce((a, c) => a + c, 0) / prcPrices.length : 0;
+
+      const prcBenchmark = {
+        prcDocumentId: resolvedPrcDoc?.id,
+        prcReferenceMonth: resolvedPrcDoc?.referenceMonth,
         submarket,
-        tariffGroup,
-        customerId,
-        billCount: bills.length,
-        billMonthsUsed: bills.map(b => b.referenceMonth).filter(Boolean),
-        capturedAt: new Date().toISOString(),
+        rowCount: resolvedPrcRows.length,
+        minPriceRmwh: Math.round(prcMinPrice * 100) / 100,
+        maxPriceRmwh: Math.round(prcMaxPrice * 100) / 100,
+        avgPriceRmwh: Math.round(prcAvgPrice * 100) / 100,
+        termBreakdown: resolvedPrcRows.map(r => ({ term: r.termLabel || `${r.termMonths}m`, product: r.productType, price: parseFloat(String(r.priceRPerMWh)) })),
       };
 
-      const crypto = await import("crypto");
-      const inputHash = crypto.createHash('sha256').update(JSON.stringify(inputData)).digest('hex');
+      let status: string = 'NO_DATA';
+      let potentialSavingsAnnual: number | null = null;
+      if (prcPrices.length > 0 && estimatedPriceRmwh > 0) {
+        if (estimatedPriceRmwh <= prcMinPrice) status = 'BELOW_BAND';
+        else if (estimatedPriceRmwh > prcMaxPrice) status = 'ABOVE_BAND';
+        else status = 'WITHIN_BAND';
+        potentialSavingsAnnual = Math.max(0, (estimatedPriceRmwh - prcMinPrice) * annualConsumptionMwh);
+      }
 
       const existing = await db.select().from(dealEcosSnapshots)
         .where(eq(dealEcosSnapshots.dealId, dealId))
         .orderBy(desc(dealEcosSnapshots.version));
       const nextVersion = existing.length > 0 ? (existing[0].version + 1) : 1;
 
-      let benchmarkMatch = null;
-      try {
-        const benchmarks = await storage.getMarketPriceBenchmarks();
-        const match = benchmarks.find(b =>
-          b.status === 'PUBLISHED' &&
-          (submarket ? b.submarket === submarket || b.region === submarket : true)
-        );
-        if (match) {
-          benchmarkMatch = {
-            benchmarkId: match.id,
-            segment: match.segment,
-            region: match.region || match.submarket,
-            contractLength: match.contractLengthMonths,
-            lowerBoundRmwh: parseFloat(String(match.lowerBoundRmwh || '0')),
-            upperBoundRmwh: parseFloat(String(match.upperBoundRmwh || '0')),
-            lastUpdated: match.lastReviewedAt?.toISOString() || null,
-            confidence: match.confidence,
-          };
-        }
-      } catch { /* no benchmarks available */ }
-
-      let status: string = 'NO_DATA';
-      let potentialSavingsAnnual: number | null = null;
-      if (benchmarkMatch && estimatedPriceRmwh > 0) {
-        if (estimatedPriceRmwh <= benchmarkMatch.lowerBoundRmwh) status = 'BELOW_BAND';
-        else if (estimatedPriceRmwh > benchmarkMatch.upperBoundRmwh) status = 'ABOVE_BAND';
-        else status = 'WITHIN_BAND';
-        potentialSavingsAnnual = Math.max(0, (estimatedPriceRmwh - benchmarkMatch.lowerBoundRmwh) * annualConsumptionMwh);
-      }
-
       const confidenceReasons: string[] = [];
       let confidenceLevel = 'LOW';
       if (bills.length >= 3) { confidenceLevel = 'MEDIUM'; confidenceReasons.push('3+ bill months analyzed'); }
       if (bills.length >= 6) { confidenceLevel = 'HIGH'; confidenceReasons.push('6+ bill months analyzed'); }
       if (bills.length === 1) confidenceReasons.push('Only 1 bill month — annualized estimate');
-      if (!benchmarkMatch) confidenceReasons.push('No matching benchmark found');
+      if (resolvedPrcRows.length < 3) confidenceReasons.push('Limited PRC pricing rows');
 
       const recommendedNextStep = status === 'ABOVE_BAND' ? 'REQUEST_RFQ'
-        : status === 'WITHIN_BAND' ? 'WAIT'
-        : 'NEED_MORE_DATA';
+        : status === 'WITHIN_BAND' ? 'WAIT' : 'NEED_MORE_DATA';
+
+      const inputData = {
+        annualConsumptionMwh: Math.round(annualConsumptionMwh * 100) / 100,
+        avgMonthlyKwh: Math.round(avgMonthlyKwh * 100) / 100,
+        estimatedPriceRmwh: Math.round(estimatedPriceRmwh * 100) / 100,
+        loadFactor, eligibility, distributor, submarket, tariffGroup, customerId,
+        billCount: bills.length,
+        billMonthsUsed: bills.map(b => b.referenceMonth).filter(Boolean),
+        capturedAt: new Date().toISOString(),
+      };
 
       const results = {
         annualConsumptionMwh: Math.round(annualConsumptionMwh * 100) / 100,
         avgMonthlyKwh: Math.round(avgMonthlyKwh * 100) / 100,
         estimatedPriceRmwh: Math.round(estimatedPriceRmwh * 100) / 100,
-        loadFactor,
-        eligibility,
+        loadFactor, eligibility,
         potentialSavingsAnnual: potentialSavingsAnnual ? Math.round(potentialSavingsAnnual) : null,
+        prcMinPriceRmwh: prcMinPrice, prcMaxPriceRmwh: prcMaxPrice, prcAvgPriceRmwh: prcAvgPrice,
       };
 
       const userId = await getSessionUserId(req);
       const snapshot = await db.insert(dealEcosSnapshots).values({
-        dealId,
-        version: nextVersion,
-        createdByUserId: userId,
+        dealId, version: nextVersion, createdByUserId: userId,
         triggerType: 'BILL_UPLOAD',
-        inputData,
-        benchmarkMatch,
-        results,
-        status,
-        confidenceLevel,
-        confidenceReasons,
-        recommendedNextStep,
-        talkTrack: `Based on ${bills.length} bill(s), annual consumption estimated at ${Math.round(annualConsumptionMwh)} MWh. Eligibility: ${eligibility}. ${status === 'ABOVE_BAND' ? 'Client is paying above market — strong RFQ candidate.' : status === 'WITHIN_BAND' ? 'Client pricing is within market range.' : 'Need more data for definitive assessment.'}`,
-        talkTrackPt: `Com base em ${bills.length} fatura(s), consumo anual estimado em ${Math.round(annualConsumptionMwh)} MWh. Elegibilidade: ${eligibility}. ${status === 'ABOVE_BAND' ? 'Cliente paga acima do mercado — forte candidato a RFQ.' : status === 'WITHIN_BAND' ? 'Preço do cliente está dentro da faixa de mercado.' : 'Precisa de mais dados para avaliação definitiva.'}`,
+        inputData, benchmarkMatch: prcBenchmark, results, status,
+        confidenceLevel, confidenceReasons, recommendedNextStep,
+        pricingRowsHash, algoVersion: ALGO_VERSION,
+        prcDocumentId: resolvedPrcDoc?.id, prcReferenceMonth: resolvedPrcDoc?.referenceMonth,
+        inputHash,
+        talkTrack: `Based on ${bills.length} bill(s), annual consumption estimated at ${Math.round(annualConsumptionMwh)} MWh. Eligibility: ${eligibility}. PRC pricing range: R$ ${prcMinPrice.toFixed(2)} – R$ ${prcMaxPrice.toFixed(2)}/MWh (${resolvedPrcDoc?.referenceMonth || 'latest'}). ${status === 'ABOVE_BAND' ? 'Client is paying above market — strong RFQ candidate.' : status === 'WITHIN_BAND' ? 'Client pricing is within market range.' : 'Need more data for definitive assessment.'}`,
+        talkTrackPt: `Com base em ${bills.length} fatura(s), consumo anual estimado em ${Math.round(annualConsumptionMwh)} MWh. Elegibilidade: ${eligibility}. Faixa PRC: R$ ${prcMinPrice.toFixed(2)} – R$ ${prcMaxPrice.toFixed(2)}/MWh (${resolvedPrcDoc?.referenceMonth || 'última'}). ${status === 'ABOVE_BAND' ? 'Cliente paga acima do mercado — forte candidato a RFQ.' : status === 'WITHIN_BAND' ? 'Preço do cliente está dentro da faixa de mercado.' : 'Precisa de mais dados para avaliação definitiva.'}`,
       }).returning();
 
-      res.json({ success: true, snapshot: snapshot[0], inputHash });
+      res.json({ ok: true, success: true, snapshot: snapshot[0], inputHash, pricingRowsHash });
     } catch (error: any) {
       console.error("[DealECOS] Generation error:", error);
-      res.status(500).json({ success: false, error: "Failed to generate ECOS" });
+      res.status(500).json({ ok: false, error: "Failed to generate ECOS" });
     }
   });
 
@@ -9863,14 +9920,14 @@ export async function registerRoutes(
       const { dealId } = req.params;
       const { dealEcosSnapshots } = await import("@shared/schema");
       const { db } = await import("./db");
-      const { eq, desc } = await import("drizzle-orm");
+      const { eq, desc, and } = await import("drizzle-orm");
 
       const snapshots = await db.select().from(dealEcosSnapshots)
         .where(eq(dealEcosSnapshots.dealId, dealId))
         .orderBy(desc(dealEcosSnapshots.version));
 
       if (snapshots.length === 0) {
-        return res.status(404).json({ success: false, error: "No ECOS snapshot found. Generate ECOS first." });
+        return res.status(404).json({ ok: false, error: "No ECOS snapshot found. Generate ECOS first.", blockers: [{ code: "NO_ECOS", message: "Generate ECOS first", cta: "Generate ECOS" }] });
       }
 
       const snapshot = snapshots[0];
@@ -9964,10 +10021,12 @@ export async function registerRoutes(
 
 ${benchmark ? `
 <div class="section">
-  <h2>Análise de Mercado</h2>
+  <h2>Análise de Mercado (PRC)</h2>
   <div class="grid">
-    <div class="metric"><div class="label">Faixa de Mercado</div><div class="value" style="font-size:16px;">R$ ${benchmark.lowerBoundRmwh} - R$ ${benchmark.upperBoundRmwh} /MWh</div></div>
+    <div class="metric"><div class="label">Faixa PRC</div><div class="value" style="font-size:16px;">R$ ${benchmark.minPriceRmwh || benchmark.lowerBoundRmwh || '?'} – R$ ${benchmark.maxPriceRmwh || benchmark.upperBoundRmwh || '?'} /MWh</div></div>
     <div class="metric"><div class="label">Economia Potencial Anual</div><div class="value" style="font-size:16px;">R$ ${results?.potentialSavingsAnnual?.toLocaleString('pt-BR') || '0'}</div></div>
+    <div class="metric"><div class="label">Mês Referência PRC</div><div class="value" style="font-size:16px;">${benchmark.prcReferenceMonth || 'N/A'}</div></div>
+    <div class="metric"><div class="label">Submercado</div><div class="value" style="font-size:16px;">${benchmark.submarket || 'N/A'}</div></div>
   </div>
   <div class="status-card ${snapshot.status === 'ABOVE_BAND' ? 'status-above' : snapshot.status === 'WITHIN_BAND' ? 'status-within' : snapshot.status === 'BELOW_BAND' ? 'status-below' : 'status-nodata'}">
     ${statusLabel[snapshot.status as string] || snapshot.status}

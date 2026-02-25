@@ -1997,6 +1997,13 @@ export const dealEcosSnapshots = pgTable("deal_ecos_snapshots", {
   
   // PDF generation
   pdfDocumentId: integer("pdf_document_id").references(() => dealDocuments.id),
+  
+  // PRC pricing integration
+  pricingRowsHash: text("pricing_rows_hash"),
+  algoVersion: text("algo_version").default("1.0"),
+  prcDocumentId: integer("prc_document_id"),
+  prcReferenceMonth: text("prc_reference_month"),
+  inputHash: text("input_hash"),
 });
 
 export const insertDealEcosSnapshotSchema = createInsertSchema(dealEcosSnapshots).omit({

@@ -1,0 +1,273 @@
+You’re on the right track with the 9-task Bill-First plan. Proceed — but the implementation must be production-grade and unbreakable. I’m going to define the required behavior, invariants, blockers, and acceptance tests so this ships without “it works on my machine” issues.
+
+Non-negotiable outcomes
+
+Bill upload must exist at the start of the Deal journey (admin/sales side) and must be the primary entry point when a client sends “just one bill”.
+
+No silent failures. No “Advance does nothing”. No “spinning forever”. Every blocked action shows explicit blockers.
+
+No 404s for Dossier/Assembly routes — “open dossier” must auto-create if missing.
+
+ECOS depends on PRC pricing rows (for now). If PRC pricing is missing, ECOS generation must not pretend to work — it must block loudly.
+
+Everything must be idempotent (uploading same bill again doesn’t create garbage duplicates; generating ECOS twice returns same snapshot if inputs unchanged).
+
+Must work for Sales role (restricted access) and Ops role (full access), without breaking permissions.
+
+Architecture requirements (aligning with your T001–T009)
+
+Your T001–T009 list is correct. Implement it, but with the following clarifications:
+
+T001 — BILL as root object (Deal-level)
+
+Add BILL as a DealDocument type and make bill upload possible from the Deal Assembly tab.
+
+Persist:
+
+dealId, clientId (if applicable), trackId (optional), sha256, parserVersion, extractionMethod (ocr/pdf_text/manual)
+
+parsed fields: customerId (CNPJ 14 digits only), invoiceKey (44), referenceMonth, totalEnergyKwh, totalAmount, distributor, tariffGroup, confidence + warnings
+
+The upload endpoint must:
+
+Validate PDF (non-empty, magic bytes)
+
+Use the hardened parser client
+
+Store raw file pointer + sha256
+
+Store parse result normalized JSON
+
+Return extracted fields immediately for UI display
+
+Idempotency rule: If sha256 already exists for the same dealId, return the existing parsed result instead of inserting duplicates.
+
+T002 — ECOS generation from bill + PRC
+
+You proposed ECOS from bill data only — not enough. ECOS must use PRC as the pricing engine for now.
+
+Create:
+
+POST /api/deals/:dealId/ecos/generate
+
+Idempotent: if (billSha256 + pricingRowsHash + algoVersion) unchanged → return existing snapshot.
+
+ECOS inputs MUST include:
+
+Parsed BILL data (consumption/demand/tariff/etc)
+
+Resolved PRC pricing set for the submarket/term/product
+
+PRC resolution rules (must be explicit):
+
+Prefer PRC rows matching bill referenceMonth; else choose latest published PRC rows for that submarket
+
+Must return the actual rows used + a stable hash pricingRowsHash
+
+Persist:
+
+prcDocumentId (or “latest”), prcReferenceMonth, pricingRowsHash, algoVersion
+
+Hard blocker: If PRC rows missing for the required submarket/term combos → return 409 with BLOCKER_NO_PRC and a human message like:
+
+“Upload PRC for SE/CO: missing annual/trianual/quinquenal rows”
+
+T003 — Dossier auto-prepopulate (never 404)
+
+Dossier must be AFTER bill + ECOS.
+
+GET /api/dossiers/:clientId (or dealId) must auto-create if missing.
+
+Dossier prepopulate sources:
+
+Parsed bill fields
+
+ECOS outputs (annualized consumption, eligibility, savings model basis)
+
+Mark READY validates required fields:
+
+submarket, eligibility, connection type, annual consumption, demand, tariff group, confidence/source
+
+T004 — Loud blocker engine (structured, everywhere)
+
+Replace silent behavior with a single blocker standard across the system.
+
+Every blocked operation returns:
+
+{
+  "ok": false,
+  "blockers": [
+    { "code": "NO_BILL", "message": "...", "cta": "Upload a bill" },
+    { "code": "NO_ECOS", "message": "...", "cta": "Generate ECOS" },
+    { "code": "NO_PRC", "message": "...", "cta": "Upload PRC" }
+  ]
+}
+
+Critical logic:
+
+Remove dossier requirement from deal creation.
+
+Sending RFQ requires: BILL_UPLOADED + ECOS_GENERATED + DOSSIER_READY/LOCKED
+
+ECOS generation requires: BILL + PRC rows
+
+T005 — Updated assembly stages
+
+Pipeline order must be:
+
+ORIGIN_QUALIFICATION (existing)
+
+BILL_UPLOADED
+
+ECOS_GENERATED
+
+DOSSIER_DRAFT
+
+DOSSIER_READY/LOCKED
+
+RFQ_SENT
+
+QUOTES_RECEIVED
+
+OFFER_SELECTED
+
+PROPOSAL_GENERATED
+
+CONTRACT_SENT
+
+CONTRACT_SIGNED
+
+SUPPLY_LIVE
+
+Stage status must be derived from persisted state — no “fake UI”.
+
+T006 — Bill upload UI (Deal Assembly tab)
+
+On /admin/deals/:id → Assembly:
+
+Add a prominent bill upload widget at the top
+
+After upload:
+
+show extracted fields immediately
+
+show confidence/warnings
+
+show “Generate ECOS” button enabled
+
+Add “Reparse” + “Upload new bill” options
+
+No hidden flows. This is the primary entry for Sales when they receive “just one bill”.
+
+T007 — ECOS PDF generation
+
+ECOS snapshot PDF must be deterministic and branded:
+
+uses persisted snapshot JSON
+
+includes PRC pricing reference month + source
+
+timestamped
+
+Endpoint:
+
+GET /api/deals/:dealId/ecos/:snapshotId/pdf
+
+Store the output file and return a stable URL.
+
+T008 — UI blockers everywhere
+
+Any “Advance stage” / “Go to Action” / “Complete Dossier” must:
+
+Navigate correctly (no 404)
+
+If blocked: show blockers with CTA buttons that deep-link to the relevant UI section
+
+Example CTAs:
+
+NO_BILL → scroll/open Bill Upload widget
+
+NO_PRC → open /admin/prc
+
+NO_ECOS → open ECOS card
+
+DOSSIER_NOT_READY → open dossier form
+
+T009 — DB migration constraints
+
+You already found billsExtracted and are adding dealId etc. Good.
+
+Also ensure:
+
+Unique index on (dealId, fileSha256)
+
+parserVersion, algoVersion fields exist for reproducibility
+
+snapshots store pricingRowsHash
+
+Acceptance tests (must pass before you call it “done”)
+A) Bill-first happy path
+
+Create deal (no dossier needed)
+
+Upload BILL on deal page
+
+Bill parsed → extracted fields appear (CNPJ 14 digits, invoiceKey present)
+
+Click Generate ECOS → succeeds only if PRC exists
+
+Dossier auto-created, prefilled from bill+ecos
+
+Mark dossier READY → passes validation
+
+RFQ send becomes unblocked
+
+B) Bill-first with missing PRC
+
+Upload bill
+
+Click Generate ECOS → returns blockers NO_PRC, UI shows red warning and links to PRC upload page
+
+After PRC upload+publish → ECOS generation works
+
+C) Zero-404 guarantee
+
+Clicking “Complete Dossier” never 404s — it creates dossier if missing
+
+Any stage CTA link must navigate to an existing route
+
+D) No silent transitions
+
+If a button does nothing today (Advance to RFQ etc), it must either:
+
+execute transition and show success, or
+
+display blockers JSON in a visible UI alert
+
+PRC is part of the engine (important)
+
+Until we have enough supplier quote history, ECOS pricing must be backed by:
+
+published PRC rows from parser ingestion
+
+explicit resolver logic for “latest applicable PRC”
+
+persisted pricing hash for reproducibility
+
+Final deliverables I need from you
+
+Updated Deal Assembly UI with bill upload + ecos generate + blockers display
+
+Deal bill upload endpoint + idempotency
+
+ECOS generate endpoint using PRC rows with blocker on missing PRC
+
+Dossier auto-create + prefill + READY validation
+
+Blocker engine structured JSON used everywhere
+
+A short “How Sales uses it” doc (3 bullet steps)
+
+A short “How Ops uses it” doc (PRC upload → publish → ECOS unblocks)
+
+Proceed in your task order. Don’t ask me “does it show the new stages?” — ship it with these acceptance tests passing.
