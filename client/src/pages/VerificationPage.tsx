@@ -1,11 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Shield, ExternalLink, Activity, Cpu } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Shield, Cpu, Loader2, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface VerifyCheck {
   id: string;
@@ -28,32 +29,33 @@ interface VerifyResult {
   timestamp: string;
 }
 
-interface ParserDiagnostics {
+interface DiagnosticsResult {
+  success: boolean;
   parserBaseUrl: string;
-  configured: boolean;
-  apiKeySet: boolean;
-  lastHealthStatus: string;
-  lastError: string | null;
-  lastLatencyMs: number | null;
+  attemptedUrl: string;
+  reachable: boolean;
+  healthy: boolean;
+  degraded: boolean;
+  latencyMs: number | null;
+  httpStatus: number | null;
+  error: string | null;
+  bodySnippet: string | null;
+  json: Record<string, any> | null;
   parserVersion: string | null;
   ocrAvailable: boolean | null;
-  healthResponseBody: Record<string, any> | null;
-  httpStatus: number | null;
+  state: 'HEALTHY' | 'DEGRADED' | 'ERROR' | 'UNREACHABLE';
   checkedAt: string;
 }
 
-interface DiagnosticsResult {
-  success: boolean;
-  diagnostics: ParserDiagnostics | null;
-  freshHealth: {
-    healthy: boolean;
-    details?: Record<string, any>;
-    error?: string;
-    latencyMs?: number;
-  };
+interface TestParseResult {
+  passed: boolean;
+  steps: Array<{ name: string; passed: boolean; detail: string }>;
+  rawResponse?: any;
 }
 
 export default function VerificationPage() {
+  const [testParseResult, setTestParseResult] = useState<TestParseResult | null>(null);
+
   const { data, isLoading, refetch, isFetching } = useQuery<VerifyResult>({
     queryKey: ['/api/admin/verify'],
     queryFn: async () => {
@@ -70,6 +72,14 @@ export default function VerificationPage() {
       return res.json();
     },
     refetchOnWindowFocus: false,
+  });
+
+  const testParseMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/parser/test");
+      return res.json();
+    },
+    onSuccess: (data) => setTestParseResult(data),
   });
 
   const statusIcon = (status: string) => {
@@ -187,77 +197,143 @@ export default function VerificationPage() {
                     <Cpu className="w-5 h-5 text-purple-600" />
                     Parser Diagnostics
                   </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetchDiag()}
-                    disabled={isDiagFetching}
-                    data-testid="button-refresh-diagnostics"
-                  >
-                    <RefreshCw className={cn("w-3 h-3 mr-1", isDiagFetching && "animate-spin")} />
-                    Refresh
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testParseMutation.mutate()}
+                      disabled={testParseMutation.isPending || !diagData?.healthy}
+                      data-testid="button-test-parse"
+                    >
+                      {testParseMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <FlaskConical className="w-3 h-3 mr-1" />}
+                      Test Parse
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refetchDiag()}
+                      disabled={isDiagFetching}
+                      data-testid="button-refresh-diagnostics"
+                    >
+                      <RefreshCw className={cn("w-3 h-3 mr-1", isDiagFetching && "animate-spin")} />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {diagData?.diagnostics ? (
+                {diagData ? (
                   <div className="space-y-3">
+                    <div className={cn("flex items-center gap-2 p-3 rounded-lg border",
+                      diagData.state === 'HEALTHY' ? 'bg-emerald-50 border-emerald-200' :
+                      diagData.state === 'DEGRADED' ? 'bg-amber-50 border-amber-200' :
+                      'bg-red-50 border-red-200'
+                    )}>
+                      {diagData.state === 'HEALTHY' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                      {diagData.state === 'DEGRADED' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                      {(diagData.state === 'UNREACHABLE' || diagData.state === 'ERROR') && <XCircle className="w-5 h-5 text-red-600" />}
+                      <span className={cn("text-sm font-bold",
+                        diagData.state === 'HEALTHY' ? 'text-emerald-800' :
+                        diagData.state === 'DEGRADED' ? 'text-amber-800' :
+                        'text-red-800'
+                      )} data-testid="text-parser-state">
+                        {diagData.state}
+                      </span>
+                      {diagData.parserVersion && (
+                        <Badge variant="outline" className="ml-auto text-[10px]" data-testid="text-parser-version">v{diagData.parserVersion}</Badge>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Parser URL</span>
-                        <code className="text-xs font-mono break-all" data-testid="text-parser-url">{diagData.diagnostics.parserBaseUrl}</code>
+                        <span className="text-xs text-muted-foreground block">Parser Base URL</span>
+                        <code className="text-xs font-mono break-all" data-testid="text-parser-url">{diagData.parserBaseUrl}</code>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Health Status</span>
-                        <div className="flex items-center gap-2" data-testid="text-parser-health-status">
-                          {diagData.diagnostics.lastHealthStatus === 'ok' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                          {diagData.diagnostics.lastHealthStatus === 'degraded' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
-                          {(diagData.diagnostics.lastHealthStatus === 'error' || diagData.diagnostics.lastHealthStatus === 'unreachable') && <XCircle className="w-4 h-4 text-red-600" />}
-                          <span className={cn("text-sm font-medium",
-                            diagData.diagnostics.lastHealthStatus === 'ok' ? 'text-emerald-700' :
-                            diagData.diagnostics.lastHealthStatus === 'degraded' ? 'text-amber-700' :
-                            'text-red-700'
-                          )}>
-                            {diagData.diagnostics.lastHealthStatus.toUpperCase()}
-                          </span>
-                        </div>
+                        <span className="text-xs text-muted-foreground block">Attempted URL</span>
+                        <code className="text-xs font-mono break-all" data-testid="text-parser-attempted-url">{diagData.attemptedUrl}</code>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Version</span>
-                        <span className="text-sm font-mono" data-testid="text-parser-version">{diagData.diagnostics.parserVersion || 'N/A'}</span>
+                        <span className="text-xs text-muted-foreground block">Reachable</span>
+                        <span className="text-sm" data-testid="text-parser-reachable">{diagData.reachable ? 'Yes' : 'No'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
                         <span className="text-xs text-muted-foreground block">Latency</span>
-                        <span className="text-sm font-mono" data-testid="text-parser-latency">{diagData.diagnostics.lastLatencyMs != null ? `${diagData.diagnostics.lastLatencyMs}ms` : 'N/A'}</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-latency">{diagData.latencyMs != null ? `${diagData.latencyMs}ms` : 'N/A'}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">HTTP Status</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-http">{diagData.httpStatus ?? 'N/A'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
                         <span className="text-xs text-muted-foreground block">OCR Available</span>
                         <span className="text-sm" data-testid="text-parser-ocr">
-                          {diagData.diagnostics.ocrAvailable === true ? '✓ Yes' : diagData.diagnostics.ocrAvailable === false ? '✗ No (degraded)' : 'Unknown'}
+                          {diagData.ocrAvailable === true ? 'Yes' : diagData.ocrAvailable === false ? 'No (degraded)' : 'Unknown'}
                         </span>
                       </div>
-                      <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">HTTP Status</span>
-                        <span className="text-sm font-mono" data-testid="text-parser-http">{diagData.diagnostics.httpStatus ?? 'N/A'}</span>
-                      </div>
                     </div>
-                    {diagData.diagnostics.lastError && (
+
+                    {diagData.error && (
                       <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700" data-testid="text-parser-error">
-                        <span className="font-medium">Error: </span>{diagData.diagnostics.lastError}
+                        <span className="font-medium">Error: </span>{diagData.error}
                       </div>
                     )}
-                    {diagData.diagnostics.healthResponseBody && (
-                      <details className="text-xs">
-                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw health response</summary>
+                    {diagData.bodySnippet && (
+                      <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700" data-testid="text-parser-body-snippet">
+                        <span className="font-medium">Body snippet: </span>{diagData.bodySnippet}
+                      </div>
+                    )}
+                    {diagData.json && (
+                      <details className="text-xs" open>
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium">Raw health JSON</summary>
                         <pre className="mt-1 p-2 bg-slate-100 rounded border text-[10px] overflow-x-auto" data-testid="text-parser-raw-health">
-                          {JSON.stringify(diagData.diagnostics.healthResponseBody, null, 2)}
+                          {JSON.stringify(diagData.json, null, 2)}
                         </pre>
                       </details>
                     )}
-                    <p className="text-[10px] text-muted-foreground">Checked: {new Date(diagData.diagnostics.checkedAt).toLocaleString('pt-BR')}</p>
+                    <p className="text-[10px] text-muted-foreground">Checked: {new Date(diagData.checkedAt).toLocaleString('pt-BR')}</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Loading diagnostics...</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading diagnostics...
+                  </div>
+                )}
+
+                {testParseResult && (
+                  <div className="mt-4 border-t pt-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FlaskConical className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium">Test Parse Result</span>
+                      <Badge variant="outline" className={cn("text-[10px]",
+                        testParseResult.passed ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'
+                      )} data-testid="text-test-parse-result">
+                        {testParseResult.passed ? 'PASSED' : 'FAILED'}
+                      </Badge>
+                    </div>
+                    {testParseResult.steps.map((step, i) => (
+                      <div key={i} className={cn("flex items-center gap-2 text-xs p-2 rounded border",
+                        step.passed ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+                      )} data-testid={`test-step-${step.name}`}>
+                        {step.passed ? <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> : <XCircle className="w-3 h-3 text-red-600 shrink-0" />}
+                        <span className="font-mono font-medium">{step.name}</span>
+                        <span className="text-muted-foreground truncate">{step.detail}</span>
+                      </div>
+                    ))}
+                    {testParseResult.rawResponse && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw parse response</summary>
+                        <pre className="mt-1 p-2 bg-slate-100 rounded border text-[10px] overflow-x-auto">
+                          {JSON.stringify(testParseResult.rawResponse, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+                {testParseMutation.error && (
+                  <div className="mt-4 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                    <span className="font-medium">Test parse error: </span>{(testParseMutation.error as Error).message}
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -9504,22 +9504,28 @@ export async function registerRoutes(
   // --- Parser Service Status (lightweight, for UI banner) ---
   app.get("/api/parser/status", async (req, res) => {
     try {
-      const { isParserServiceConfigured, checkParserHealth } = await import("./parser-client");
+      const { isParserServiceConfigured, checkParserHealth, getLastDiagnostics } = await import("./parser-client");
       if (!isParserServiceConfigured()) {
-        return res.json({ online: false, reason: 'not_configured' });
+        return res.json({ online: false, state: 'NOT_CONFIGURED', reason: 'not_configured' });
       }
       const health = await checkParserHealth();
+      const diag = getLastDiagnostics();
+      const reachable = !!diag && diag.httpStatus !== null;
+      const healthy = reachable && health.healthy;
+      const degraded = healthy && (diag?.ocrAvailable === false);
+      const state = healthy ? (degraded ? 'DEGRADED' : 'HEALTHY') : (reachable ? 'ERROR' : 'UNREACHABLE');
+
       res.json({
-        online: health.healthy,
-        status: health.details?.status || null,
-        ocrAvailable: health.details?.ocr_available ?? null,
-        ocrDegraded: health.healthy && health.details?.ocr_available === false,
-        latencyMs: health.latencyMs || null,
-        version: health.details?.version || null,
-        reason: health.healthy ? undefined : (health.error || 'unknown'),
+        online: healthy,
+        state,
+        ocrAvailable: diag?.ocrAvailable ?? null,
+        ocrDegraded: degraded,
+        latencyMs: diag?.lastLatencyMs ?? null,
+        version: diag?.parserVersion ?? null,
+        reason: healthy ? undefined : (diag?.lastError || health.error || 'unknown'),
       });
     } catch (error: any) {
-      res.json({ online: false, reason: 'error', error: error.message });
+      res.json({ online: false, state: 'ERROR', reason: error.message });
     }
   });
 
@@ -9542,10 +9548,26 @@ export async function registerRoutes(
       const { checkParserHealth, getLastDiagnostics } = await import("./parser-client");
       const health = await checkParserHealth();
       const diag = getLastDiagnostics();
+      const reachable = !!diag && diag.httpStatus !== null;
+      const healthy = reachable && health.healthy;
+      const degraded = healthy && diag?.ocrAvailable === false;
+
       res.json({
         success: true,
-        diagnostics: diag,
-        freshHealth: health,
+        parserBaseUrl: diag?.parserBaseUrl || '(not set)',
+        attemptedUrl: diag?.parserBaseUrl ? `${diag.parserBaseUrl}/health` : '(not set)',
+        reachable,
+        healthy,
+        degraded,
+        latencyMs: diag?.lastLatencyMs ?? null,
+        httpStatus: diag?.httpStatus ?? null,
+        error: diag?.lastError ?? null,
+        bodySnippet: !diag?.healthResponseBody && diag?.lastError ? diag.lastError.substring(0, 500) : null,
+        json: diag?.healthResponseBody ?? null,
+        parserVersion: diag?.parserVersion ?? null,
+        ocrAvailable: diag?.ocrAvailable ?? null,
+        state: healthy ? (degraded ? 'DEGRADED' : 'HEALTHY') : (reachable ? 'ERROR' : 'UNREACHABLE'),
+        checkedAt: diag?.checkedAt ?? new Date().toISOString(),
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });

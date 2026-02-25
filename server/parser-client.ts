@@ -1,4 +1,4 @@
-const PARSER_SERVICE_URL = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL || '';
+const PARSER_SERVICE_URL = process.env.PARSER_BASE_URL || process.env.PARSER_SERVICE_URL || '';
 const PARSER_API_KEY = process.env.PARSER_API_KEY || '';
 const PARSER_TIMEOUT_MS = parseInt(process.env.PARSER_TIMEOUT_MS || '120000', 10);
 

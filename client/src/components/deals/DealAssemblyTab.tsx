@@ -28,7 +28,8 @@ import {
   FolderOpen,
   Download,
   AlertTriangle,
-  WifiOff
+  WifiOff,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -327,8 +328,9 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const bills = billsData?.bills || [];
   const parsedBills = bills.filter((b: any) => b.parseStatus === 'PARSED');
   const clientId = dealData?.deal?.clientId;
-  const isParserOffline = parserStatus && parserStatus.online === false && parserStatus.reason !== 'not_configured';
-  const isOcrDegraded = parserStatus && parserStatus.online && parserStatus.ocrDegraded;
+  const parserState = parserStatus?.state as string | undefined;
+  const isParserUnreachable = parserState === 'UNREACHABLE' || parserState === 'ERROR';
+  const isOcrDegraded = parserState === 'DEGRADED';
   const hasEcosComplete = !!stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete');
 
   const handleNavigate = (path: string) => {
@@ -407,21 +409,33 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
 
   return (
     <div className="space-y-6">
-      {isParserOffline && (
+      {isParserUnreachable && (
         <Card className="border-red-300 bg-red-50">
           <CardContent className="py-3">
-            <div className="flex items-center gap-2 text-red-800">
-              <WifiOff className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {isPt 
-                  ? `Parser indisponível${parserStatus?.reason ? ` (${parserStatus.reason})` : ''} — faturas serão processadas automaticamente quando retornar.`
-                  : `Parser unreachable${parserStatus?.reason ? ` (${parserStatus.reason})` : ''} — bills will be processed automatically when service returns.`}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-red-800">
+                <WifiOff className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {isPt 
+                    ? `Parser indisponível${parserStatus?.reason ? `: ${parserStatus.reason}` : ''}`
+                    : `Parser unreachable${parserStatus?.reason ? `: ${parserStatus.reason}` : ''}`}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-700 hover:text-red-900 h-7 px-2"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['parser-status'] })}
+                data-testid="button-retry-parser"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                {isPt ? 'Tentar novamente' : 'Retry'}
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
-      {isOcrDegraded && !isParserOffline && (
+      {isOcrDegraded && (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="py-3">
             <div className="flex items-center gap-2 text-amber-800">
