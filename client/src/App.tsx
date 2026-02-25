@@ -44,6 +44,7 @@ import QuoteInbox from "@/pages/QuoteInbox";
 import EnergiaAssinatura from "@/pages/EnergiaAssinatura";
 import DiagnosticoForm from "@/pages/DiagnosticoForm";
 import TracksQueue from "@/pages/TracksQueue";
+import VerificationPage from "@/pages/VerificationPage";
 
 function Router() {
   return (
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/admin/walkthrough" component={RenanWalkthrough} />
       <Route path="/admin/tracks" component={TracksQueue} />
       <Route path="/admin/quote-inbox" component={QuoteInbox} />
+      <Route path="/admin/verify" component={VerificationPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -55,6 +55,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const adminNavItems: NavItem[] = [
     { label: "Visão Geral", href: "/admin/overview", icon: <LayoutDashboard className="w-4 h-4" />, roles: ['admin'] },
+    { label: "Verificação", href: "/admin/verify", icon: <Shield className="w-4 h-4" />, roles: ['admin', 'ops'] },
     { label: "Auditoria", href: "/admin/audit", icon: <FileText className="w-4 h-4" />, roles: ['admin'] },
     { label: "Integrações", href: "/admin/integrations", icon: <Link2 className="w-4 h-4" />, roles: ['admin'] },
     { label: "Configurações", href: "/admin/settings", icon: <Settings className="w-4 h-4" />, roles: ['admin'] },

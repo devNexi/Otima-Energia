@@ -1,0 +1,159 @@
+Stop asking me “does it look right?” — you must verify end-to-end with objective checks. Here’s what you must do to ship Stage 1 without a single issue.
+
+0) Confirm the 3 core user journeys (must work with real UI clicks)
+
+Sales bill-first flow (no client intake):
+
+Sales opens /admin/deals/:dealId → Assembly tab
+
+Upload BILL PDF → see extracted fields immediately
+
+Click Generate ECOS
+
+Click View Dossier (must not 404, must auto-create)
+
+Any blocked action must show red blocker cards with CTA links that work.
+
+Ops PRC dependency flow:
+
+If no PRC rows published → Generate ECOS must hard fail with NO_PRC blocker
+
+Upload PRC → publish → Generate ECOS succeeds
+
+RFQ gating flow:
+
+“Advance to RFQ / Send RFQ” must either:
+
+succeed, OR
+
+show blockers JSON (no silent no-op)
+
+1) Provide a “Verification Checklist” page inside the admin (so we can test fast)
+
+Add /admin/verify (ops-only) that runs these and renders pass/fail:
+
+A) Health
+
+GET /api/parser/health (or existing) returns ok
+
+DB reachable
+
+B) Deal bill upload + idempotency
+
+Upload BILL.pdf twice to the same deal:
+
+1st returns created=true
+
+2nd returns duplicate=true and returns same record id / same sha256
+
+DB confirms unique index on (deal_id, file_sha256) exists
+
+C) Parse correctness assertions
+
+After upload, extracted bill must satisfy:
+
+docType === "BILL"
+
+invoiceKey is 44 digits
+
+customerId is 14 digits CNPJ only (derived from invoiceKey if needed)
+
+totalAmount not null and > 0
+
+referenceMonth not null
+
+D) PRC dependency enforced
+
+With PRC rows missing:
+
+/api/deals/:dealId/ecos/generate returns ok:false with blocker:
+
+code: "NO_PRC" and a working CTA deep link to /admin/prc
+
+After PRC rows exist:
+
+ECOS generation succeeds and stores:
+
+pricingRowsHash, algoVersion, inputHash
+
+E) ECOS idempotency
+
+Call ECOS generate twice without changes:
+
+returns same snapshot id (or same inputHash)
+Changing the bill (new sha256) or PRC rows (pricingRowsHash changes) must generate a new snapshot.
+
+F) Snapshot PDF route
+
+GET /api/deals/:dealId/ecos/:snapshotId/pdf works
+
+PDF is generated from persisted snapshot (not recalculated)
+
+Includes PRC reference month / source used
+
+G) Zero-404 guarantee
+
+Dossier route cannot 404:
+
+visiting dossier for a deal/client auto-creates draft if missing
+
+H) No silent UI failures
+
+Every button that mutates state must:
+
+show toast success OR red blocker cards
+
+never “do nothing”
+
+2) Fix your routes immediately (you claimed two different PDF routes)
+
+Your summary says:
+
+GET /api/deals/:dealId/ecos/snapshot.pdf
+
+POST /api/deals/:dealId/ecos-snapshots/:snapshotId/pdf
+
+That’s inconsistent and confusing.
+
+Required final API:
+
+POST /api/deals/:dealId/ecos/generate
+
+GET /api/deals/:dealId/ecos/:snapshotId/pdf
+
+(Optional) GET /api/deals/:dealId/ecos/latest/pdf
+
+Pick one canonical scheme. Update frontend to match. No duplicates.
+
+3) Fix auth testing properly (don’t hand-wave “curl cookie is tricky”)
+
+You must provide one of these:
+
+a) A server-side admin-only verify endpoint that runs tests internally (recommended), OR
+
+b) A CLI script that logs in programmatically and stores cookies, OR
+
+c) A bearer-token admin test mode for /api/deals/:id/... verification only
+
+Do not claim “implemented” without a runnable verification method.
+
+4) Deliverables I want in one message
+
+Reply with:
+
+The exact route list (method + path) for bill upload, bill list, ecos generate, ecos pdf, dossier get/create
+
+DB migration snippet proving unique index exists
+
+Screenshot of deal assembly tab showing bill upload widget + ecos card + stage timeline
+
+Screenshot of NO_PRC blocker card with a working CTA to PRC upload
+
+/admin/verify page link and the checks it runs
+
+If any of the above fails, fix it before asking me questions.
+
+Also: confirm the biggest point
+
+Sales can now upload a bill at the start of a deal journey without client intake.
+That is the primary use case. If this isn’t true in the UI, nothing else matters.

@@ -160,7 +160,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const handleDownloadPdf = async (snapshotId: number) => {
     setDownloadingPdf(true);
     try {
-      const res = await apiRequest("POST", `/api/deals/${dealId}/ecos-snapshots/${snapshotId}/pdf`);
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/pdf`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

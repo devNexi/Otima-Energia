@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useState, useRef } from "react";
 import { 
@@ -22,7 +23,9 @@ import {
   Target,
   FileCheck,
   Upload,
-  Cpu
+  Cpu,
+  FolderOpen,
+  Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +109,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const { language } = useI18n();
   const isPt = language === "pt";
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
@@ -127,6 +131,14 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   });
 
+  const { data: dealData } = useQuery({
+    queryKey: [`/api/deals/${dealId}`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/deals/${dealId}`);
+      return res.json();
+    }
+  });
+
   const uploadBillMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -140,8 +152,18 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     },
     onSuccess: (data) => {
       setUploadResult(data);
+      if (data.success && data.idempotent) {
+        toast({ title: isPt ? "Fatura duplicada" : "Duplicate bill", description: isPt ? "Esta fatura já foi carregada (mesmo conteúdo)." : "This bill was already uploaded (same content).", variant: "default" });
+      } else if (data.success) {
+        toast({ title: isPt ? "Fatura carregada" : "Bill uploaded", description: isPt ? "Análise iniciada. Dados aparecerão em breve." : "Parsing started. Data will appear shortly." });
+      } else {
+        toast({ title: isPt ? "Erro no upload" : "Upload failed", description: data.error || "Unknown error", variant: "destructive" });
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+    },
+    onError: (err: any) => {
+      toast({ title: isPt ? "Erro no upload" : "Upload failed", description: err.message, variant: "destructive" });
     }
   });
 
@@ -157,12 +179,17 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     onSuccess: (data) => {
       if (data.blockers && data.blockers.length > 0) {
         setTransitionBlockers(data.blockers);
-      } else {
+        toast({ title: isPt ? "ECOS bloqueado" : "ECOS blocked", description: data.blockers.map((b: any) => b.message || b.code).join('; '), variant: "destructive" });
+      } else if (data.ok || data.success) {
         setTransitionBlockers([]);
+        toast({ title: isPt ? "ECOS gerado" : "ECOS generated", description: data.idempotent ? (isPt ? "Snapshot existente retornado (dados iguais)." : "Existing snapshot returned (same data).") : (isPt ? "Novo snapshot criado com sucesso." : "New snapshot created successfully.") });
       }
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos/snapshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+    },
+    onError: (err: any) => {
+      toast({ title: isPt ? "Erro ao gerar ECOS" : "ECOS generation failed", description: err.message, variant: "destructive" });
     }
   });
 
@@ -459,6 +486,31 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete') && (
+        <div className="flex gap-2">
+          {dealData?.deal?.clientId && (
+            <Button
+              variant="outline"
+              onClick={() => handleNavigate(`/admin/clients`)}
+              data-testid="button-view-dossier"
+            >
+              <FolderOpen className="w-4 h-4 mr-2" />
+              {isPt ? "Ver Dossiê" : "View Dossier"}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.open(`/api/deals/${dealId}/ecos/latest/pdf`, '_blank');
+            }}
+            data-testid="button-download-ecos-pdf"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {isPt ? "ECOS PDF" : "ECOS PDF"}
+          </Button>
+        </div>
       )}
 
       <Card>
