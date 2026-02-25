@@ -222,8 +222,15 @@ export default function PrcUploadCenter() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(errorData.error || "Upload failed");
+        const errorText = await res.text();
+        let errorMessage: string;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || `HTTP ${res.status}`;
+        } catch {
+          errorMessage = `HTTP ${res.status}: ${errorText.substring(0, 500)}`;
+        }
+        throw new Error(errorMessage);
       }
 
       return res.json();

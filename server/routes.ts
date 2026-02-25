@@ -9504,27 +9504,22 @@ export async function registerRoutes(
   // --- Parser Service Status (lightweight, for UI banner) ---
   app.get("/api/parser/status", async (req, res) => {
     try {
-      const { isParserServiceConfigured } = await import("./parser-client");
+      const { isParserServiceConfigured, checkParserHealth } = await import("./parser-client");
       if (!isParserServiceConfigured()) {
         return res.json({ online: false, reason: 'not_configured' });
       }
-      const parserUrl = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL || '';
-      const parserKey = process.env.PARSER_API_KEY || '';
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      try {
-        const resp = await fetch(`${parserUrl}/health`, { 
-          headers: { 'X-Parser-Key': parserKey }, 
-          signal: controller.signal 
-        });
-        clearTimeout(timeout);
-        res.json({ online: resp.ok, status: resp.status });
-      } catch {
-        clearTimeout(timeout);
-        res.json({ online: false, reason: 'unreachable' });
-      }
-    } catch {
-      res.json({ online: false, reason: 'error' });
+      const health = await checkParserHealth();
+      res.json({
+        online: health.healthy,
+        status: health.details?.status || null,
+        ocrAvailable: health.details?.ocr_available ?? null,
+        ocrDegraded: health.healthy && health.details?.ocr_available === false,
+        latencyMs: health.latencyMs || null,
+        version: health.details?.version || null,
+        reason: health.healthy ? undefined : (health.error || 'unknown'),
+      });
+    } catch (error: any) {
+      res.json({ online: false, reason: 'error', error: error.message });
     }
   });
 
@@ -9535,6 +9530,23 @@ export async function registerRoutes(
       const { checkParserHealth } = await import("./parser-client");
       const health = await checkParserHealth();
       res.json({ success: true, ...health });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // --- Parser Diagnostics (admin-only, full debug info) ---
+  app.get("/api/parser/diagnostics", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { checkParserHealth, getLastDiagnostics } = await import("./parser-client");
+      const health = await checkParserHealth();
+      const diag = getLastDiagnostics();
+      res.json({
+        success: true,
+        diagnostics: diag,
+        freshHealth: health,
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -9706,24 +9718,18 @@ export async function registerRoutes(
 
       const bill = inserted[0];
 
-      let parserOffline = false;
+      let parserHealthy = false;
+      let ocrDegraded = false;
       try {
-        const { isParserServiceConfigured } = await import("./parser-client");
+        const { isParserServiceConfigured, checkParserHealth } = await import("./parser-client");
         if (isParserServiceConfigured()) {
-          const parserUrl = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL || '';
-          const parserKey = process.env.PARSER_API_KEY || '';
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
-          try {
-            const resp = await fetch(`${parserUrl}/health`, { headers: { 'X-Parser-Key': parserKey }, signal: controller.signal });
-            clearTimeout(timeout);
-            parserOffline = !resp.ok;
-          } catch {
-            clearTimeout(timeout);
-            parserOffline = true;
-          }
+          const health = await checkParserHealth();
+          parserHealthy = health.healthy;
+          ocrDegraded = health.healthy && health.details?.ocr_available === false;
         }
-      } catch { /* ignore */ }
+      } catch (healthErr: any) {
+        console.warn(`[DealBillUpload] Parser health check error: ${healthErr.message}`);
+      }
 
       await enqueueJob('BILL_PARSE', {
         billId: bill.id,
@@ -9742,7 +9748,16 @@ export async function registerRoutes(
         uploadedBy: userId,
       });
 
-      res.json({ success: true, bill, extracted: null, parserOffline, message: parserOffline ? "Bill uploaded, parser offline — parsing will be retried" : "Bill uploaded, parsing started" });
+      res.json({
+        success: true,
+        bill,
+        extracted: null,
+        parserHealthy,
+        ocrDegraded,
+        message: parserHealthy
+          ? (ocrDegraded ? "Bill uploaded, parsing started (OCR degraded — text extraction may be limited)" : "Bill uploaded, parsing started")
+          : "Bill uploaded, parser unreachable — parsing will be retried automatically",
+      });
     } catch (error: any) {
       console.error("[DealBillUpload] Error:", error);
       res.status(500).json({ success: false, error: "Failed to upload bill" });
@@ -14730,19 +14745,23 @@ export async function registerRoutes(
         results.push({ id: 'A1', name: 'Database reachable', status: 'fail', detail: e.message });
       }
 
-      // A2) Parser health
+      // A2) Parser health (uses proper health check with diagnostics)
       try {
-        const parserUrl = process.env.PARSER_SERVICE_URL || process.env.PARSER_BASE_URL;
-        if (parserUrl) {
-          const parserKey = process.env.PARSER_API_KEY || '';
-          const resp = await fetch(`${parserUrl}/health`, { headers: { 'X-Parser-Key': parserKey }, signal: AbortSignal.timeout(5000) });
-          const data = await resp.json().catch(() => ({}));
-          results.push({ id: 'A2', name: 'Parser service health', status: resp.ok ? 'pass' : 'fail', detail: resp.ok ? `Parser OK (${parserUrl})` : `Parser returned ${resp.status}` });
+        const { isParserServiceConfigured, checkParserHealth, getLastDiagnostics } = await import("./parser-client");
+        if (isParserServiceConfigured()) {
+          const health = await checkParserHealth();
+          const diag = getLastDiagnostics();
+          if (health.healthy) {
+            const ocrNote = diag?.ocrAvailable === false ? ' (OCR degraded)' : '';
+            results.push({ id: 'A2', name: 'Parser service health', status: diag?.ocrAvailable === false ? 'warn' : 'pass', detail: `Parser OK — v${diag?.parserVersion || '?'}, ${diag?.lastLatencyMs}ms${ocrNote} (${diag?.parserBaseUrl})` });
+          } else {
+            results.push({ id: 'A2', name: 'Parser service health', status: 'fail', detail: `Parser error: ${health.error} (${diag?.parserBaseUrl})` });
+          }
         } else {
           results.push({ id: 'A2', name: 'Parser service health', status: 'warn', detail: 'PARSER_SERVICE_URL / PARSER_BASE_URL not configured' });
         }
       } catch (e: any) {
-        results.push({ id: 'A2', name: 'Parser service health', status: 'fail', detail: `Parser unreachable: ${e.message}` });
+        results.push({ id: 'A2', name: 'Parser service health', status: 'fail', detail: `Parser check error: ${e.message}` });
       }
 
       // B) Unique index on (deal_id, file_sha256)
@@ -14842,6 +14861,9 @@ export async function registerRoutes(
         { method: 'GET', path: '/api/deals/:dealId/ecos/:snapshotId/pdf', desc: 'Download ECOS PDF (branded, supports "latest")' },
         { method: 'GET', path: '/api/clients/:id/dossier', desc: 'Get/auto-create dossier (zero-404)' },
         { method: 'GET', path: '/api/deals/:dealId/assembly-status', desc: 'Assembly pipeline stages' },
+        { method: 'GET', path: '/api/parser/status', desc: 'Parser status for UI banner (online, ocrDegraded, version, latencyMs)' },
+        { method: 'GET', path: '/api/parser/diagnostics', desc: 'Full parser diagnostics (admin-only, URL, health body, latency, version)' },
+        { method: 'GET', path: '/api/parser/health', desc: 'Parser health check (admin-only)' },
       ];
 
       const passCount = results.filter(r => r.status === 'pass').length;

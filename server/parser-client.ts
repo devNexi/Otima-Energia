@@ -186,42 +186,120 @@ function isNetworkError(error: any): boolean {
   );
 }
 
+export interface ParserDiagnostics {
+  parserBaseUrl: string;
+  configured: boolean;
+  apiKeySet: boolean;
+  lastHealthStatus: 'ok' | 'degraded' | 'error' | 'unreachable' | 'not_configured';
+  lastError: string | null;
+  lastLatencyMs: number | null;
+  parserVersion: string | null;
+  ocrAvailable: boolean | null;
+  healthResponseBody: Record<string, any> | null;
+  httpStatus: number | null;
+  checkedAt: string;
+}
+
+let _lastDiagnostics: ParserDiagnostics | null = null;
+
+export function getLastDiagnostics(): ParserDiagnostics | null {
+  return _lastDiagnostics;
+}
+
 export async function checkParserHealth(): Promise<{
   healthy: boolean;
   details?: Record<string, any>;
   error?: string;
+  latencyMs?: number;
 }> {
+  const diag: ParserDiagnostics = {
+    parserBaseUrl: PARSER_SERVICE_URL || '(not set)',
+    configured: !!PARSER_SERVICE_URL,
+    apiKeySet: !!PARSER_API_KEY,
+    lastHealthStatus: 'not_configured',
+    lastError: null,
+    lastLatencyMs: null,
+    parserVersion: null,
+    ocrAvailable: null,
+    healthResponseBody: null,
+    httpStatus: null,
+    checkedAt: new Date().toISOString(),
+  };
+
   if (!PARSER_SERVICE_URL) {
-    return { healthy: false, error: 'PARSER_SERVICE_URL not configured' };
+    diag.lastError = 'PARSER_SERVICE_URL not configured';
+    _lastDiagnostics = diag;
+    return { healthy: false, error: diag.lastError };
   }
   if (!PARSER_API_KEY) {
-    return { healthy: false, error: 'PARSER_API_KEY not configured' };
+    diag.lastError = 'PARSER_API_KEY not configured';
+    _lastDiagnostics = diag;
+    return { healthy: false, error: diag.lastError };
   }
 
-  try {
-    const headers: Record<string, string> = {
-      'X-Parser-Key': PARSER_API_KEY,
-    };
+  const url = `${PARSER_SERVICE_URL}/health`;
+  const startMs = Date.now();
 
-    const response = await fetch(`${PARSER_SERVICE_URL}/health`, {
-      headers,
-      signal: AbortSignal.timeout(10000),
+  try {
+    console.log(`[ParserClient] Health check: GET ${url}`);
+
+    const response = await fetch(url, {
+      headers: { 'X-Parser-Key': PARSER_API_KEY },
+      signal: AbortSignal.timeout(15000),
     });
 
-    if (!response.ok) {
-      return { healthy: false, error: `Health check returned ${response.status}` };
-    }
+    const latencyMs = Date.now() - startMs;
+    diag.lastLatencyMs = latencyMs;
+    diag.httpStatus = response.status;
 
     const rawBody = await response.text();
+    console.log(`[ParserClient] Health response: status=${response.status}, latency=${latencyMs}ms, body=${rawBody.substring(0, 500)}`);
+
     let data: Record<string, any>;
     try {
       data = JSON.parse(rawBody);
     } catch {
-      return { healthy: false, error: `Health endpoint returned non-JSON: ${rawBody.substring(0, 200)}` };
+      diag.lastHealthStatus = 'error';
+      diag.lastError = `Health endpoint returned non-JSON (HTTP ${response.status}): ${rawBody.substring(0, 500)}`;
+      _lastDiagnostics = diag;
+      return { healthy: false, error: diag.lastError, latencyMs };
     }
-    return { healthy: data.status === 'ok', details: data };
+
+    diag.healthResponseBody = data;
+    diag.parserVersion = data.version || null;
+    diag.ocrAvailable = data.ocr_available ?? null;
+
+    if (!response.ok) {
+      diag.lastHealthStatus = 'error';
+      diag.lastError = `Health check returned HTTP ${response.status}`;
+      _lastDiagnostics = diag;
+      return { healthy: false, error: diag.lastError, latencyMs };
+    }
+
+    if (data.status === 'ok') {
+      if (data.ocr_available === false) {
+        diag.lastHealthStatus = 'degraded';
+        console.warn(`[ParserClient] Parser ONLINE but OCR degraded (ocr_available=false)`);
+      } else {
+        diag.lastHealthStatus = 'ok';
+        console.log(`[ParserClient] Parser ONLINE: version=${data.version}, ocr=${data.ocr_available}, latency=${latencyMs}ms`);
+      }
+      _lastDiagnostics = diag;
+      return { healthy: true, details: data, latencyMs };
+    } else {
+      diag.lastHealthStatus = 'error';
+      diag.lastError = `Health returned status="${data.status}" (expected "ok")`;
+      _lastDiagnostics = diag;
+      return { healthy: false, error: diag.lastError, details: data, latencyMs };
+    }
   } catch (error: any) {
-    return { healthy: false, error: error.message };
+    const latencyMs = Date.now() - startMs;
+    diag.lastLatencyMs = latencyMs;
+    diag.lastHealthStatus = 'unreachable';
+    diag.lastError = error.message;
+    console.error(`[ParserClient] Health check FAILED: ${error.message} (${latencyMs}ms)`);
+    _lastDiagnostics = diag;
+    return { healthy: false, error: error.message, latencyMs };
   }
 }
 

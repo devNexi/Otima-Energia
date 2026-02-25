@@ -1,7 +1,7 @@
 # Ótima Energia
 
 ## Overview
-Ótima Energia is a technology-driven energy brokerage platform for the Brazilian free electricity market. It combines a marketing website with a CRM-lite system, managing client leads, bill uploads, and quote requests. The platform facilitates client acquisition through a unique portal for document uploads and features the ECOS™ system for AI-driven contract analysis and optimization. Deal OS, a revenue control and deal execution system, ensures transparent deal progression and commission tracking.
+Ótima Energia is a technology-driven energy brokerage platform designed for the Brazilian free electricity market. It integrates a marketing website with a CRM-lite system to manage client leads, facilitate bill uploads, and process quote requests. The platform's core capabilities include a client portal for document submission, the ECOS™ system for AI-driven contract analysis, and Deal OS for revenue control and transparent deal progression with commission tracking.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -21,148 +21,52 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Language**: TypeScript with ESM modules
 - **API Pattern**: RESTful endpoints (`/api/*`)
 
-### Parser Service (VPS)
-- **Framework**: Python FastAPI
-- **Location**: `parser-service/` directory (deploy to VPS separately)
-- **Purpose**: Heavy PDF/OCR parsing offloaded from portal
-- **Endpoints**: `/parse` (multipart file upload), `/health`, `/debug/{docId}`
-- **Auth**: `X-Parser-Key` header
-- **Extraction**: pdfplumber text extraction + Tesseract OCR fallback (pdftoppm 300dpi)
-- **Document Types**: PRC (tariff benchmarks), BILL (electricity invoices), OTHER
-- **PRC Extraction**: Deterministic submarket/term/price detection, >=12 rows expected, 50-1500 R$/MWh range
-- **Bill Extraction**: distributor, referenceMonth, totalAmount, totalEnergyKwh, customerName, customerId, tariffGroup
-- **Validation**: Two-pass with confidence scoring (0.0-1.0)
-- **Portal Integration**: `PARSER_SERVICE_URL` and `PARSER_API_KEY` env vars; fallback to local parser if VPS unavailable
-- **Portal Client**: `server/parser-client.ts` - HTTP client for VPS parser
-- **Job Types**: `PRC_PARSE` (enhanced with VPS support + fallback), `BILL_PARSE` (new, VPS-only)
-- **Bill Storage**: `bills_extracted` table with unique index `idx_bills_extracted_deal_sha256` on (deal_id, file_sha256)
-- **Tests**: `parser-service/run_tests.py` - classifier, PRC extractor, bill extractor tests with golden JSON snapshots
-
-### SEO & Prerendering
-- **Static HTML Generation**: Puppeteer-based prerendering for marketing pages.
+### Parser Service
+- **Purpose**: Offloads heavy PDF/OCR parsing using Python FastAPI.
+- **Functionality**: Extracts data from various document types (PRC, BILL) using `pdfplumber` and Tesseract OCR. Features two-pass validation with confidence scoring.
+- **Integration**: Supports both VPS and local parsing with fallback mechanisms and detailed diagnostics.
 
 ### Database
 - **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Location**: `shared/schema.ts`
-- **Migrations**: Drizzle Kit
+- **Schema Management**: Drizzle Kit for migrations
 
 ### Key Features
-- **Portal System**: Token-based access for client document uploads. Enhanced with Client Intake App.
-- **Client Intake App**: Mobile-first PWA stepper at `/portal/upload/:token` and `/client/intake/:token`. Steps: Upload Bills → LGPD Consent → LOA Signing → Review & Submit. Track-aware with dealId/trackId linking. LOA PDF generation with pdf-lib. Consent records with full audit trail (IP, user agent, signer details). Backwards compatible with legacy upload sessions. Admin "Generate Intake Link" in Deal Tracks UI with configurable expectedBillsCount/requireLGPD/requireLOA/requireCode. Enhanced link sharing modal with copy link, WhatsApp message template, email send, access code display, and regenerate functionality. "Intake Complete" badge on TrackCard header. Intake readiness indicators (bills X/Y, LGPD ✓, LOA ✓) in track detail. Daily chase job for incomplete intakes >48h. Tables: `consent_records`. Extended: `upload_sessions` (dealId, trackId, intakeType, expectedBillsCount, requireLOA, requireLGPD, usedAt, verifiedAt), `deal_track_documents` (uploadedByClient, uploadSessionId, source). Job types: `INTAKE_COMPLETED_NOTIFICATION`, `INTAKE_REMINDER`.
-- **Data Models**: Comprehensive models for leads, clients, upload sessions, consumption profiles, and various quote/RFO processes.
-- **Bill-First Architecture**: Enforced deal journey: Bill → ECOS → Dossier → RFQ. Bills are the root object uploaded via `POST /api/deals/:dealId/bills/upload`. ECOS is computational, generated from parsed bill data via `POST /api/deals/:dealId/ecos/generate`. Dossiers auto-create on first access (`GET /api/clients/:id/dossier`) prepopulated from bill+ECOS data. Assembly stages: ORIGIN_QUALIFICATION → BILL_UPLOADED → ECOS_GENERATED → DOSSIER_DRAFT → DOSSIER_LOCKED → RFQ_SENT → ... Blocker engine enforces NO_BILL and NO_ECOS gates before RFQ. ECOS report available at `GET /api/deals/:dealId/ecos/snapshot.pdf` (branded HTML). ACL eligibility: ≥500 MWh = ACL_DIRECT, ≥50 MWh = ACL_VAREJISTA. Distributor→submarket mapping hardcoded (SE/CO default).
-  - **ECOS PRC Integration**: ECOS generation requires published PRC pricing rows. Resolver logic: 1) match bill referenceMonth + submarket, 2) fallback to latest published PRC for submarket, 3) fallback to latest published PRC any submarket. Hard blocker `NO_PRC` if no published PRC rows exist. Snapshot stores `pricingRowsHash`, `algoVersion`, `inputHash` for idempotency/reproducibility.
-  - **Bill Idempotency**: Unique index on `(deal_id, file_sha256)`. Re-uploading same PDF returns existing record without duplication.
-  - **ECOS Idempotency**: If `inputHash` (billSha256s + pricingRowsHash + algoVersion) matches existing snapshot, returns it without re-creating.
-  - **Structured Blockers**: All blocker results use `{ ok: false, blockers: [{ code, message, cta, deepLink, severity }] }` format. CTA buttons deep-link to fix actions.
+- **Portal System**: Token-based access for client document uploads, enhanced by a mobile-first PWA Client Intake App for guided workflows (Upload Bills, LGPD Consent, LOA Signing).
+- **Bill-First Architecture**: Enforces a structured deal journey: Bill → ECOS → Dossier → RFQ. Bills are the foundational input for all subsequent processes.
+  - **ECOS PRC Integration**: ECOS generation requires published PRC pricing rows, with robust resolver logic and idempotency.
+  - **Structured Blockers**: Standardized error handling with actionable CTAs and deep links.
 - **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.
-- **Deal OS**: Revenue-control and deal-execution system with an explicit state machine, auditability, commission tracking, and immutable records.
-- **Deal Tracks**: Multi-track deal management (GDL, ACL, ACR, OTHER) allowing parallel sales motions per deal with independent status workflows, event audit trail, document linking, and GDL eligibility checklist. Tables: `deal_tracks`, `deal_track_events`, `deal_track_documents`.
-- **Human-Controlled Document Chase System**: Manual-trigger-only intake link delivery with chase state tracking. SEND INTAKE LINK button validates contact info (name, email, WhatsApp E.164), sends branded HTML email via SMTP, creates chase state, fires outbound `chase.start` webhook. Stop conditions: intake completion (automatic) and manual override button fire `chase.stop` webhook. State stored in `track_chase_state` table (trackId unique, active, level 0-7, contact fields, webhook flags). Env: `CHASE_WEBHOOK_URL` for outbound webhook base URL. UI: contact verification block + chase status display in intake modal. Idempotency: prevents duplicate sends when chase already active.
-- **Client Dossier**: Canonical energy profile for each client, serving as the foundational data for RFQ workflows, with status gates and immutability after RFQ.
-- **RFQ Adapter Layer**: Multi-channel RFQ automation with templated messages and token replacement for various communication channels.
-- **Commission OS**: Milestone-based commission tracking with 50/50 payment model:
-  - **Milestone 1 (50%)**: Triggered at CONTRACT_SIGNED
-  - **Milestone 2 (50%)**: Triggered at SUPPLY_LIVE (CCEE Activation)
-  - **Adjustments-only reconciliation**: No monthly/quarterly recurring events
-  - **One-click invoice generation**: POST /api/commission-events/:id/generate-invoice
-  - Supplier Playbooks define milestone terms per supplier
-- **Notification System**: Email notification infrastructure for operational alerts (e.g., `DEAL_BLOCKED`, `SLA_BREACH`), utilizing a queue-based approach.
-- **Lost Deal Intelligence**: Structured taxonomy for tracking reasons for lost deals, including client, supplier, competitive, and process categories, with analytics API.
-- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs), with multi-file drag-drop, metadata fields (supplier, reference month, submarket hint, source, notes), and document status tracking through the parse/verify/publish workflow. Job-based parsing via PRC_PARSE job type with retry logic and stuck-job recovery (10min timeout). Re-parse endpoint (POST /api/prc/documents/:id/reparse). Debug endpoint (GET /api/prc/documents/:id/debug) with raw text, debug JSON, extracted rows. UI: re-parse button, debug modal with raw text/errors/rows view. Canonical pricing layer via `canonical_pricing_rows` table for unified pricing from PRC/quotes/API feeds.
-- **Supplier Intelligence Module**: Analytics layer over existing tables (rfq_dispatches, deal_quotes, deals). KPIs derived via SQL joins — no separate interaction log table. Supplier detail page at `/admin/suppliers/:id` with 3 tabs (Overview+KPIs, Interaction History, Performance). Main supplier list enhanced with KPI badges and Ações Pendentes dashboard. Win rate formula: `wins / totalRfqs` per supplier. Response time: `AVG(dealQuotes.received_at - rfqDispatches.sent_at)`. QA test: `suppliers.intelligence_kpis`.
+- **Deal OS**: Revenue-control and deal-execution system with a state machine, auditability, and commission tracking.
+- **Deal Tracks**: Multi-track deal management for parallel sales motions with independent workflows and audit trails.
+- **Human-Controlled Document Chase System**: Manual trigger for intake link delivery with chase state tracking and automated reminders.
+- **Client Dossier**: Canonical energy profile for each client, central to RFQ workflows.
+- **RFQ Adapter Layer**: Multi-channel RFQ automation with templated messages.
+- **Commission OS**: Milestone-based commission tracking (50/50 payment model) with invoice generation.
+- **Notification System**: Queue-based email notifications for operational alerts.
+- **Lost Deal Intelligence**: Structured taxonomy for analyzing reasons for lost deals.
+- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs) with status tracking and debug tools.
+- **Supplier Intelligence Module**: Analytics layer providing KPIs (win rate, response time) for supplier performance.
 
 ### Authentication & Authorization
 - **Role-Based Access Control**: `admin`, `ops`, `sales` roles.
 - **Auth Flow**: Session-based authentication.
 
-### Zoho CRM Integration Architecture
-**System of Record Rules:**
-- **Zoho CRM**: System of record for **Leads only**
-- **Ótima Portal**: System of record for **Deals, Dossiers, RFQs, Quotes, Compliance, and Commission**
-- After Lead → Deal conversion, Zoho is treated as read-only context; all operational state changes happen only in Portal
-
-**Zoho → Portal (Intake):**
-- Zoho may create a Deal via `POST /api/intake/zoho/deal` endpoint
-- Passes canonical Brazil fields: `BR_Market`, `BR_Group`, `BR_Outcome`, DM info, callback, quick notes
-- Zoho must NOT update deal stage after creation or overwrite dossier/RFQ/quote/compliance data
-- Authentication via `x-zoho-intake-key` header
-- Idempotency: Duplicate `zohoLeadId` returns existing deal (HTTP 200, status: EXISTING)
-- On new deal creation, non-blocking jobs are enqueued: `ZOHO_SYNC_SNAPSHOT` and `ZOHO_CREATE_CALLBACK_TASK`
-
-**Sales Activity Mirror:**
-- Read-only mirror of Zoho CRM activity (calls, tasks, notes) displayed in Deal detail "Sales" tab
-- Cached snapshot stored in `deal_sales_snapshots` for fast rendering and resilience
-- Activity items stored in `deal_sales_activity_items` with unique constraint on (provider, externalId)
-- CRM link mapping in `deal_crm_links` (dealId → zohoDealId, zohoContactId, zohoOwnerId)
-- Refresh button triggers server-side Zoho sync via job queue
-- No-activity warning shown when lastContactAt > 10 days
-- Zoho deep links for "Open in Zoho" button
-- Internal notes (portal-only, no Zoho sync) via `deal_internal_notes` table
-
-**Auto-Callback Task Creation:**
-- On new Zoho intake deal, automatically creates a Zoho Task via job queue
-- Business hours scheduling: Mon-Fri 09:00-18:00 America/Sao_Paulo
-- 30-minute delay during business hours; rolls to next business day outside hours/weekends
-- Idempotent: uses `idempotencyKey` in job payload to prevent duplicate tasks
-- Zoho API client stubbed (`server/zohoClient.ts`) - awaiting ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN
-
-**Job Runner:**
-- Lightweight polling job runner (`server/jobs.ts`) with exponential backoff + jitter (±20%)
-- Jobs table: type, payload, status (PENDING/RUNNING/SUCCESS/FAILED), attempts, maxAttempts
-- Polls every 30s, processes up to 3 concurrent jobs
-- Concurrency lock: `SELECT FOR UPDATE SKIP LOCKED` prevents duplicate processing across server instances
-- Stuck job recovery: jobs RUNNING > 10 minutes auto-reset to PENDING each poll cycle
-- Task-level idempotency: `deal_zoho_task_links` table (dealId + purpose unique) prevents duplicate Zoho tasks even on job retry after network timeout
-- Health endpoint: `GET /api/integrations/zoho/status` → `{connected, missing[], region}`
-- Sync status endpoint: `GET /api/deals/:dealId/sales-snapshot/sync-status` → last job status
-- Manual Zoho task creation: `POST /api/deals/:dealId/zoho-tasks` (subject, dueDate, description)
-- Fail-open: if Zoho unavailable, deal creation still succeeds
-
-**Portal → Zoho (Future - Not Implemented):**
-- Light sync only: Deal Created timestamp + Portal Deal ID, Final Outcome (Closed Won/Lost)
-- No mid-pipeline syncing required
-- Sync logic kept modular for future: RFQ_SENT, CONTRACT_SIGNED status pushback
-
-**Data Model Safeguards:**
-- `zohoLeadId` stored on Portal deals (unique constraint)
-- All Zoho-originated events logged in audit trail with `source = zoho_intake`
-- UI displays read-only banner: "Originated from Zoho • Operational control lives in Ótima"
-
-**Deal Ownership Assignment:**
-- Default: Callum
-- Group B: Always Callum
-- Hotkey outcome (non-Group B): Renan
-
-**Zoho Config Environment Variables:**
-- `ENABLE_ZOHO_SNAPSHOT_SYNC` (true/false)
-- `ENABLE_ZOHO_AUTO_CALLBACK_TASK` (true/false)
-- `DEFAULT_CALLBACK_DELAY_MINUTES` (default 30)
-- `BUSINESS_HOURS_START` / `BUSINESS_HOURS_END` (09:00 / 18:00)
-- `NO_ACTIVITY_WARNING_DAYS` (default 10)
-- `TIMEZONE` (America/Sao_Paulo)
-- `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, `ZOHO_REFRESH_TOKEN` (not yet configured)
-- `ZOHO_REGION` (default: com)
-
-**Google Calendar:**
-- NOT directly integrated by portal
-- Achieved via Zoho's native Google Calendar sync
-- Portal ensures Zoho Task exists with correct schedule
+### Zoho CRM Integration
+- **System of Record**: Zoho CRM for Leads only; Ótima Portal for Deals, Dossiers, RFQs, Quotes, Compliance, and Commission.
+- **Zoho → Portal Intake**: Zoho creates Deals in the Portal via a dedicated API endpoint.
+- **Sales Activity Mirror**: Read-only mirror of Zoho CRM activity (calls, tasks, notes) displayed in the Deal detail.
+- **Auto-Callback Task Creation**: Automatic creation of Zoho tasks for new intake deals, scheduled within business hours.
+- **Job Runner**: Lightweight polling job runner for background tasks with idempotency and stuck job recovery.
 
 ## External Dependencies
 
 ### Cloud Services
 - **Google Cloud Storage**: For file uploads.
-- **Replit Object Storage**: Alternative storage.
 
 ### Database
 - **PostgreSQL**: Primary database.
-- **connect-pg-simple**: For session storage.
 
 ### Key npm Packages
 - **UI Components**: Radix UI.
 - **Email**: Nodemailer.
-- **Authentication**: Passport.js with passport-local strategy.
-- **Payments**: Stripe (future use).
-- **Data Processing**: xlsx.
-```
+- **Authentication**: Passport.js.

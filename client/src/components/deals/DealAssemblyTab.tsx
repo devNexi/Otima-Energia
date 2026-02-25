@@ -180,11 +180,14 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       if (data.success && data.idempotent) {
         toast({ title: isPt ? "Fatura duplicada" : "Duplicate bill", description: isPt ? "Esta fatura já foi carregada (mesmo conteúdo)." : "This bill was already uploaded (same content).", variant: "default" });
       } else if (data.success) {
-        const parserOffline = data.parserOffline;
+        const healthy = data.parserHealthy;
+        const ocrWarn = data.ocrDegraded;
         toast({ 
           title: isPt ? "Fatura carregada" : "Bill uploaded", 
-          description: parserOffline 
-            ? (isPt ? "Arquivo salvo. Parser offline — análise será tentada automaticamente." : "File saved. Parser offline — parsing will be retried automatically.")
+          description: !healthy
+            ? (isPt ? "Arquivo salvo. Parser indisponível — análise será tentada automaticamente." : "File saved. Parser unreachable — parsing will be retried automatically.")
+            : ocrWarn
+            ? (isPt ? "Análise iniciada. OCR degradado — extração pode ser limitada." : "Parsing started. OCR degraded — extraction may be limited.")
             : (isPt ? "Análise iniciada. Dados aparecerão em breve." : "Parsing started. Data will appear shortly.")
         });
       } else {
@@ -324,7 +327,8 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const bills = billsData?.bills || [];
   const parsedBills = bills.filter((b: any) => b.parseStatus === 'PARSED');
   const clientId = dealData?.deal?.clientId;
-  const isParserOffline = parserStatus && !parserStatus.online;
+  const isParserOffline = parserStatus && parserStatus.online === false && parserStatus.reason !== 'not_configured';
+  const isOcrDegraded = parserStatus && parserStatus.online && parserStatus.ocrDegraded;
   const hasEcosComplete = !!stages.find(s => s.stage === 'ECOS_GENERATED' && s.status === 'complete');
 
   const handleNavigate = (path: string) => {
@@ -404,14 +408,28 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   return (
     <div className="space-y-6">
       {isParserOffline && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-red-300 bg-red-50">
           <CardContent className="py-3">
-            <div className="flex items-center gap-2 text-amber-800">
+            <div className="flex items-center gap-2 text-red-800">
               <WifiOff className="w-4 h-4" />
               <span className="text-sm font-medium">
                 {isPt 
-                  ? "Parser offline — faturas serão processadas automaticamente quando o serviço retornar."
-                  : "Parser offline — bills will be processed automatically when service returns."}
+                  ? `Parser indisponível${parserStatus?.reason ? ` (${parserStatus.reason})` : ''} — faturas serão processadas automaticamente quando retornar.`
+                  : `Parser unreachable${parserStatus?.reason ? ` (${parserStatus.reason})` : ''} — bills will be processed automatically when service returns.`}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {isOcrDegraded && !isParserOffline && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {isPt 
+                  ? "Parser online, mas OCR indisponível — extração de texto pode ser limitada."
+                  : "Parser online, but OCR unavailable — text extraction may be limited."}
               </span>
             </div>
           </CardContent>
@@ -544,11 +562,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             </div>
           )}
 
-          {uploadResult && uploadResult.success && uploadResult.parserOffline && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-parser-offline">
+          {uploadResult && uploadResult.success && !uploadResult.parserHealthy && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700" data-testid="alert-parser-unreachable">
               <div className="flex items-center gap-2">
                 <WifiOff className="w-4 h-4" />
-                {isPt ? "Arquivo salvo com sucesso. Parser offline — análise será tentada automaticamente." : "File saved successfully. Parser offline — parsing will be retried automatically."}
+                {isPt ? "Arquivo salvo com sucesso. Parser indisponível — análise será tentada automaticamente." : "File saved successfully. Parser unreachable — parsing will be retried automatically."}
               </div>
             </div>
           )}

@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Shield, ExternalLink } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Shield, ExternalLink, Activity, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VerifyCheck {
@@ -28,11 +28,45 @@ interface VerifyResult {
   timestamp: string;
 }
 
+interface ParserDiagnostics {
+  parserBaseUrl: string;
+  configured: boolean;
+  apiKeySet: boolean;
+  lastHealthStatus: string;
+  lastError: string | null;
+  lastLatencyMs: number | null;
+  parserVersion: string | null;
+  ocrAvailable: boolean | null;
+  healthResponseBody: Record<string, any> | null;
+  httpStatus: number | null;
+  checkedAt: string;
+}
+
+interface DiagnosticsResult {
+  success: boolean;
+  diagnostics: ParserDiagnostics | null;
+  freshHealth: {
+    healthy: boolean;
+    details?: Record<string, any>;
+    error?: string;
+    latencyMs?: number;
+  };
+}
+
 export default function VerificationPage() {
   const { data, isLoading, refetch, isFetching } = useQuery<VerifyResult>({
     queryKey: ['/api/admin/verify'],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/verify");
+      return res.json();
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: diagData, refetch: refetchDiag, isFetching: isDiagFetching } = useQuery<DiagnosticsResult>({
+    queryKey: ['/api/parser/diagnostics'],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/parser/diagnostics");
       return res.json();
     },
     refetchOnWindowFocus: false,
@@ -143,6 +177,88 @@ export default function VerificationPage() {
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-parser-diagnostics">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Cpu className="w-5 h-5 text-purple-600" />
+                    Parser Diagnostics
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchDiag()}
+                    disabled={isDiagFetching}
+                    data-testid="button-refresh-diagnostics"
+                  >
+                    <RefreshCw className={cn("w-3 h-3 mr-1", isDiagFetching && "animate-spin")} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {diagData?.diagnostics ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">Parser URL</span>
+                        <code className="text-xs font-mono break-all" data-testid="text-parser-url">{diagData.diagnostics.parserBaseUrl}</code>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">Health Status</span>
+                        <div className="flex items-center gap-2" data-testid="text-parser-health-status">
+                          {diagData.diagnostics.lastHealthStatus === 'ok' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                          {diagData.diagnostics.lastHealthStatus === 'degraded' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                          {(diagData.diagnostics.lastHealthStatus === 'error' || diagData.diagnostics.lastHealthStatus === 'unreachable') && <XCircle className="w-4 h-4 text-red-600" />}
+                          <span className={cn("text-sm font-medium",
+                            diagData.diagnostics.lastHealthStatus === 'ok' ? 'text-emerald-700' :
+                            diagData.diagnostics.lastHealthStatus === 'degraded' ? 'text-amber-700' :
+                            'text-red-700'
+                          )}>
+                            {diagData.diagnostics.lastHealthStatus.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">Version</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-version">{diagData.diagnostics.parserVersion || 'N/A'}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">Latency</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-latency">{diagData.diagnostics.lastLatencyMs != null ? `${diagData.diagnostics.lastLatencyMs}ms` : 'N/A'}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">OCR Available</span>
+                        <span className="text-sm" data-testid="text-parser-ocr">
+                          {diagData.diagnostics.ocrAvailable === true ? '✓ Yes' : diagData.diagnostics.ocrAvailable === false ? '✗ No (degraded)' : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">HTTP Status</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-http">{diagData.diagnostics.httpStatus ?? 'N/A'}</span>
+                      </div>
+                    </div>
+                    {diagData.diagnostics.lastError && (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700" data-testid="text-parser-error">
+                        <span className="font-medium">Error: </span>{diagData.diagnostics.lastError}
+                      </div>
+                    )}
+                    {diagData.diagnostics.healthResponseBody && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Raw health response</summary>
+                        <pre className="mt-1 p-2 bg-slate-100 rounded border text-[10px] overflow-x-auto" data-testid="text-parser-raw-health">
+                          {JSON.stringify(diagData.diagnostics.healthResponseBody, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">Checked: {new Date(diagData.diagnostics.checkedAt).toLocaleString('pt-BR')}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Loading diagnostics...</p>
+                )}
               </CardContent>
             </Card>
 
