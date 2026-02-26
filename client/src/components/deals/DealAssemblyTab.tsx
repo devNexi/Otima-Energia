@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { 
   CheckCircle2, 
   Circle, 
@@ -115,6 +116,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { sessionId } = useAuth();
+  const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
@@ -337,7 +339,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     if (onNavigate) {
       onNavigate(path);
     } else {
-      window.location.href = path;
+      setLocation(path);
     }
   };
 

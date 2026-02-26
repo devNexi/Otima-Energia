@@ -9095,16 +9095,32 @@ export async function registerRoutes(
           supplier = existingSupplier;
           parsedSupplierId = existingSupplier.id;
         } else {
-          const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-          supplier = await storage.createSupplier({
-            name: stubName,
-            shortCode: stubShortCode,
-            isActive: false,
-            status: 'prc_only',
-            source: 'prc_import'
-          });
-          parsedSupplierId = supplier.id;
-          console.log(`Created prc_only supplier stub: ${stubName} (ID: ${supplier.id})`);
+          try {
+            const stubShortCode = `PRC_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+            supplier = await storage.createSupplier({
+              name: stubName,
+              shortCode: stubShortCode,
+              isActive: false,
+              status: 'prc_only',
+              source: 'prc_import'
+            });
+            parsedSupplierId = supplier.id;
+            console.log(`Created prc_only supplier stub: ${stubName} (ID: ${supplier.id})`);
+          } catch (createErr: any) {
+            if (createErr.code === '23505') {
+              const retrySuppliers = await storage.getSuppliers();
+              const retryMatch = retrySuppliers.find(s => s.name.toLowerCase() === stubName.toLowerCase());
+              if (retryMatch) {
+                supplier = retryMatch;
+                parsedSupplierId = retryMatch.id;
+                console.log(`Race condition resolved: reused supplier ${stubName} (ID: ${retryMatch.id})`);
+              } else {
+                throw createErr;
+              }
+            } else {
+              throw createErr;
+            }
+          }
         }
       }
       
@@ -9518,6 +9534,7 @@ export async function registerRoutes(
       res.json({
         online: healthy,
         state,
+        parserBaseUrl: diag?.parserBaseUrl ?? null,
         ocrAvailable: diag?.ocrAvailable ?? null,
         ocrDegraded: degraded,
         latencyMs: diag?.lastLatencyMs ?? null,

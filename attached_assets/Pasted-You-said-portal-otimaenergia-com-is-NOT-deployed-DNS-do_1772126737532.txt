@@ -1,0 +1,82 @@
+You said portal.otimaenergia.com is NOT deployed / DNS doesn’t resolve. Fine. Then stop referencing it. We are validating EVERYTHING against the actual running portal URL:
+
+https://746f2190-85f0-4c95-8cc5-9ea6ecc6576b-00-qbrulaj0goj4.worf.replit.dev
+
+1) Prove the backend is HEALTHY against the real parser
+
+Run and paste raw JSON outputs:
+
+curl -sS https://746f2190-85f0-4c95-8cc5-9ea6ecc6576b-00-qbrulaj0goj4.worf.replit.dev/api/parser/status | python3 -m json.tool
+
+This must show:
+
+online: true
+
+state: "HEALTHY"
+
+parserBaseUrl: "https://parser.otimaenergia.com"
+
+latencyMs present
+
+2) Fix the UI so Sales can actually use the system (NO silent clicks)
+
+I have screenshots showing:
+
+No Bill Upload widget in Deal Assembly
+
+Buttons/links doing nothing
+
+PRC upload failing
+
+So do this:
+
+A) Add a visible Bill Upload widget at the top of Deal Assembly tab
+
+Must call POST /api/deals/:dealId/bills/upload
+
+Must send x-session-id
+
+Must show progress + success/fail toast
+
+Must render parsed fields immediately after upload
+
+B) Fix every “does nothing” click
+Every button must:
+
+either navigate (confirm correct URL)
+
+or call API and show toast success/error (NO silent failure)
+
+C) PRC Upload must work from UI
+
+Ensure PRC upload uses session header (x-session-id)
+
+If supplier unique constraint error happens, resolve by “find existing supplier by name first, else create”
+
+3) Add a hard “Verification Panel” inside the portal UI (admin-only)
+
+Add a page or card that shows:
+
+parserBaseUrl currently in use
+
+status (HEALTHY/DEGRADED/UNREACHABLE)
+
+latency
+
+error text if unreachable
+
+and a “Test parse with fixture bill” button
+
+4) Deployment plan for portal.otimaenergia.com (do NOT handwave)
+
+Since portal.otimaenergia.com doesn’t resolve:
+
+publish Replit deployment
+
+give me the .replit.app production URL
+
+tell me EXACT DNS record(s) I must create (CNAME target + any verification)
+
+tell me EXACT env vars I must set in Replit production deployment
+
+Do not say “it’s already implemented” unless you show it in the UI on the dev URL and clicks actually work.
