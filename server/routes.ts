@@ -3947,8 +3947,8 @@ export async function registerRoutes(
         const parsedBills = bills.filter(b => b.parseStatus === 'PARSED');
 
         const distributorSubmarketMap: Record<string, string> = {
-          'CEMIG': 'SE/CO', 'LIGHT': 'SE/CO', 'ENEL SP': 'SE/CO', 'ENEL RJ': 'SE/CO',
-          'CPFL': 'SE/CO', 'ELEKTRO': 'SE/CO', 'EDP': 'SE/CO', 'NEOENERGIA': 'SE/CO',
+          'CEMIG': 'SE_CO', 'LIGHT': 'SE_CO', 'ENEL SP': 'SE_CO', 'ENEL RJ': 'SE_CO',
+          'CPFL': 'SE_CO', 'ELEKTRO': 'SE_CO', 'EDP': 'SE_CO', 'NEOENERGIA': 'SE_CO',
           'COPEL': 'S', 'CELESC': 'S', 'RGE': 'S', 'CEEE': 'S',
           'COELBA': 'NE', 'CELPE': 'NE', 'COSERN': 'NE', 'ENEL CE': 'NE', 'ENERGISA': 'NE',
           'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
@@ -4186,7 +4186,7 @@ export async function registerRoutes(
       if (distributor) {
         const distLower = distributor.toLowerCase();
         if (distLower.includes('cemig') || distLower.includes('light') || distLower.includes('enel') || distLower.includes('cpfl')) {
-          submarket = 'SE/CO';
+          submarket = 'SE_CO';
         } else if (distLower.includes('copel') || distLower.includes('celesc') || distLower.includes('rge')) {
           submarket = 'S';
         } else if (distLower.includes('coelba') || distLower.includes('celpe') || distLower.includes('cosern')) {
@@ -4389,6 +4389,7 @@ export async function registerRoutes(
       };
       
       const submarketLabels: Record<string, string> = {
+        'SE_CO': 'Sudeste/Centro-Oeste',
         'SE/CO': 'Sudeste/Centro-Oeste',
         'S': 'Sul',
         'NE': 'Nordeste',

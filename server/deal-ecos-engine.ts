@@ -247,7 +247,7 @@ export async function evaluateDealEcos(
   const dossier = deal.clientId ? await storage.getClientDossier(deal.clientId) : null;
 
   const segment = dossier?.tariffClass || "A4";
-  const region = dossier?.submarket || "SE/CO";
+  const region = dossier?.submarket || "SE_CO";
   const contractLengthMonths = 12;
 
   const roundedContractLength = contractLengthMonths <= 18 ? 12 : contractLengthMonths <= 30 ? 24 : 36;

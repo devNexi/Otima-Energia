@@ -33,7 +33,7 @@ export interface PrcParseResult {
 
 const SUBMARKETS = ['SE_CO', 'S', 'NE', 'N', 'SE/CO', 'SECO', 'SUL', 'NNE', 'NORTE'];
 const VALID_SUBMARKETS = ['SE_CO', 'S', 'NE', 'N'];
-const PRODUCT_TYPES = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100', 'I0', 'I50', 'I100', 'CONV'];
+const PRODUCT_TYPES = ['CONVENCIONAL', 'INC_I0', 'INC_I50', 'INC_I100'];
 const PRICE_MIN_R_MWH = 10;
 const PRICE_MAX_R_MWH = 2000;
 const PRICE_OUTLIER_Z_THRESHOLD = 2.5;
@@ -116,6 +116,8 @@ function normalizeSubmarket(raw: string): string {
     'CO': 'SE_CO',
     'SUDESTE': 'SE_CO',
     'SUDESTE/CENTRO-OESTE': 'SE_CO',
+    'CENTRO-OESTE': 'SE_CO',
+    'CENTRO OESTE': 'SE_CO',
     'SE_CO': 'SE_CO',
     'S': 'S',
     'SUL': 'S',
@@ -133,6 +135,7 @@ function normalizeProductType(raw: string): string {
   const mappings: Record<string, string> = {
     'CONV': 'CONVENCIONAL',
     'CONVENTIONAL': 'CONVENCIONAL',
+    'CONVENCIONAL': 'CONVENCIONAL',
     'I0': 'INC_I0',
     'I50': 'INC_I50',
     'I100': 'INC_I100',
@@ -146,7 +149,7 @@ function normalizeProductType(raw: string): string {
     'INCENTIVADA 50': 'INC_I50',
     'INCENTIVADA 100%': 'INC_I100',
     'INCENTIVADA 100': 'INC_I100',
-    'INCENTIVADA ESPECIAL': 'INCENTIVADA',
+    'INCENTIVADA ESPECIAL': 'INC_I50',
     'INC I0': 'INC_I0',
     'INC I50': 'INC_I50',
     'INC I100': 'INC_I100',
@@ -156,6 +159,7 @@ function normalizeProductType(raw: string): string {
     'INC_0': 'INC_I0',
     'INC_50': 'INC_I50',
     'INC_100': 'INC_I100',
+    'INCENTIVADA': 'INC_I50',
   };
   return mappings[cleaned] || cleaned;
 }
@@ -348,19 +352,27 @@ function detectHeaderColumns(headerLine: string): { field: string; startPos: num
   return columns;
 }
 
+function detectSubmarketFromLine(line: string): string | null {
+  const upper = line.toUpperCase().trim();
+  for (const sm of SUBMARKETS) {
+    if (upper.includes(sm)) {
+      return normalizeSubmarket(sm);
+    }
+  }
+  if (/SUDESTE|CENTRO[\s-]*OESTE/i.test(upper)) return 'SE_CO';
+  if (/\bSUL\b/i.test(upper)) return 'S';
+  if (/NORDESTE/i.test(upper)) return 'NE';
+  if (/\bNORTE\b/i.test(upper) && !/NORDESTE/i.test(upper)) return 'N';
+  return null;
+}
+
 function detectSubmarketFromContext(lines: string[], lineIndex: number): string | null {
   const searchRange = 5;
   const start = Math.max(0, lineIndex - searchRange);
   const end = Math.min(lines.length, lineIndex + searchRange + 1);
   for (let i = start; i < end; i++) {
-    const upper = lines[i].toUpperCase();
-    for (const sm of SUBMARKETS) {
-      if (upper.includes(sm)) {
-        return normalizeSubmarket(sm);
-      }
-    }
-    if (/SUDESTE|CENTRO[\s-]*OESTE/i.test(lines[i])) return 'SECO';
-    if (/NORDESTE/i.test(lines[i])) return 'NNE';
+    const detected = detectSubmarketFromLine(lines[i]);
+    if (detected) return detected;
   }
   return null;
 }
@@ -368,22 +380,30 @@ function detectSubmarketFromContext(lines: string[], lineIndex: number): string 
 function detectProductTypeFromText(text: string): string | null {
   const upper = text.toUpperCase();
   const multiWordMappings: [RegExp, string][] = [
-    [/INCENTIVADA\s+ESPECIAL/i, 'INCENTIVADA'],
-    [/INCENTIVADA\s+100\s*%?/i, 'INC_I100'],
-    [/INCENTIVADA\s+50\s*%?/i, 'INC_I50'],
-    [/INCENTIVADA\s+I?0\s*%?/i, 'INC_I0'],
-    [/INC[\s_-]*I?100/i, 'INC_I100'],
-    [/INC[\s_-]*I?50/i, 'INC_I50'],
-    [/INC[\s_-]*I?0/i, 'INC_I0'],
+    [/INCENTIVADA\s+100\s*%/i, 'INC_I100'],
+    [/INCENTIVADA\s+50\s*%/i, 'INC_I50'],
+    [/INCENTIVADA\s+0\s*%/i, 'INC_I0'],
+    [/INCENTIVADA\s+ESPECIAL/i, 'INC_I50'],
+    [/INCENTIVADA\s+100/i, 'INC_I100'],
+    [/INCENTIVADA\s+50/i, 'INC_I50'],
+    [/INCENTIVADA\s+I100/i, 'INC_I100'],
+    [/INCENTIVADA\s+I50/i, 'INC_I50'],
+    [/INCENTIVADA\s+I0/i, 'INC_I0'],
+    [/INC[\s_-]+I?100/i, 'INC_I100'],
+    [/INC[\s_-]+I?50/i, 'INC_I50'],
+    [/INC[\s_-]+I?0/i, 'INC_I0'],
+    [/I[\s_-]?100\s*%?/i, 'INC_I100'],
+    [/I[\s_-]?50\s*%?/i, 'INC_I50'],
+    [/\b100\s*%\s*(?:desc|desconto|discount)/i, 'INC_I100'],
+    [/\b50\s*%\s*(?:desc|desconto|discount)/i, 'INC_I50'],
+    [/(?:desc|desconto|discount)\s*(?:de\s+)?100\s*%/i, 'INC_I100'],
+    [/(?:desc|desconto|discount)\s*(?:de\s+)?50\s*%/i, 'INC_I50'],
   ];
   for (const [regex, result] of multiWordMappings) {
     if (regex.test(upper)) return result;
   }
-  for (const pt of PRODUCT_TYPES) {
-    if (upper.includes(pt)) {
-      return normalizeProductType(pt);
-    }
-  }
+  if (/\bCONVENCIONAL\b/i.test(upper) || /\bCONV\b/i.test(upper)) return 'CONVENCIONAL';
+  if (/\bINCENTIVADA\b/i.test(upper)) return 'INC_I50';
   return null;
 }
 
@@ -404,16 +424,7 @@ function parseTableRow(line: string, contextSubmarket?: string | null): ParsedPr
   let submarket: string | null = null;
   let productType: string | null = null;
 
-  const upper = line.toUpperCase();
-
-  for (const sm of SUBMARKETS) {
-    if (upper.includes(sm)) {
-      submarket = normalizeSubmarket(sm);
-      break;
-    }
-  }
-  if (!submarket && /SUDESTE|CENTRO[\s-]*OESTE/i.test(line)) submarket = 'SECO';
-  if (!submarket && /NORDESTE/i.test(line)) submarket = 'NNE';
+  submarket = detectSubmarketFromLine(line);
 
   if (!submarket && contextSubmarket) {
     submarket = contextSubmarket;
@@ -465,17 +476,9 @@ function extractRowsFromTableBlock(block: TextBlock, allLines?: string[]): Parse
   const dataStartIdx = headerIdx >= 0 ? headerIdx + 1 : 0;
 
   let blockSubmarket: string | null = null;
-  const contextLines = allLines || block.lines;
   for (const line of block.lines.slice(0, Math.min(5, block.lines.length))) {
-    for (const sm of SUBMARKETS) {
-      if (line.toUpperCase().includes(sm)) {
-        blockSubmarket = normalizeSubmarket(sm);
-        break;
-      }
-    }
+    blockSubmarket = detectSubmarketFromLine(line);
     if (blockSubmarket) break;
-    if (/SUDESTE|CENTRO[\s-]*OESTE/i.test(line)) { blockSubmarket = 'SECO'; break; }
-    if (/NORDESTE/i.test(line)) { blockSubmarket = 'NNE'; break; }
   }
 
   for (let i = dataStartIdx; i < block.lines.length; i++) {
@@ -703,15 +706,8 @@ function runPassB(text: string): PassResult {
 
     let contextSubmarket: string | null = null;
     for (const line of allLines) {
-      const upper = line.toUpperCase();
-      for (const sm of SUBMARKETS) {
-        if (upper.includes(sm)) {
-          contextSubmarket = normalizeSubmarket(sm);
-          break;
-        }
-      }
-      if (/SUDESTE|CENTRO[\s-]*OESTE/i.test(line)) contextSubmarket = 'SECO';
-      if (/NORDESTE/i.test(line)) contextSubmarket = 'NNE';
+      const detected = detectSubmarketFromLine(line);
+      if (detected) { contextSubmarket = detected; break; }
     }
 
     for (let i = 0; i < allLines.length - 1; i++) {
@@ -734,12 +730,8 @@ function runPassB(text: string): PassResult {
 
     let contextSubmarket: string | null = null;
     for (const line of allLines) {
-      for (const sm of SUBMARKETS) {
-        if (line.toUpperCase().includes(sm)) {
-          contextSubmarket = normalizeSubmarket(sm);
-          break;
-        }
-      }
+      const detected = detectSubmarketFromLine(line);
+      if (detected) { contextSubmarket = detected; break; }
     }
 
     for (let i = 0; i < allLines.length; i++) {
@@ -1047,7 +1039,7 @@ export async function processPrcDocumentWithBuffer(
 
     console.log(`${tag} validation_passed | cleanRows=${validation.cleanRows.length}`);
 
-    const validProducts = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100'];
+    const validProducts = ['CONVENCIONAL', 'INC_I0', 'INC_I50', 'INC_I100'];
     const validRows = validation.cleanRows.filter(row =>
       VALID_SUBMARKETS.includes(row.submarket) && validProducts.includes(row.productType)
     );

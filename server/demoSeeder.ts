@@ -75,7 +75,7 @@ const supplierNames = [
   "DEMO - CPFL Soluções"
 ];
 
-const submarkets = ["SE/CO", "S", "NE", "N"];
+const submarkets = ["SE_CO", "S", "NE", "N"];
 const distributors = ["CPFL", "Cemig", "Light", "Energisa", "CELPE", "COPEL", "Eletropaulo", "RGE"];
 const tariffClasses = ["A4", "A3", "A2", "AS"];
 const eligibilityTypes = ["ACL_DIRECT", "ACL_VAREJISTA", "NOT_ELIGIBLE_YET"];
@@ -158,7 +158,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     tradeName: "Happy Path",
     cnpj: client.cnpj!,
     distributor: "CPFL",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     connectionType: "GROUP_A",
     eligibilityType: "ACL_DIRECT",
     annualConsumptionMWh: 1200,
@@ -182,7 +182,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     contractTermMonths: 36,
     contractStartDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     energyType: "convencional",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     internalOwner: "Renan",
     isDemo: true,
   }).returning();
@@ -440,7 +440,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     version: 1,
     triggerType: "MANUAL",
     inputData: {
-      submarket: "SE/CO",
+      submarket: "SE_CO",
       distributor: "CPFL",
       segment: "Industrial",
       volumeMwh12m: 1200,
@@ -450,7 +450,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     benchmarkMatch: {
       benchmarkId: 1,
       segment: "Industrial",
-      region: "SE/CO",
+      region: "SE_CO",
       lowerBoundRmwh: 175.00,
       upperBoundRmwh: 210.00,
       confidence: 0.92
@@ -480,7 +480,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     version: 2,
     triggerType: "BILL_UPLOAD",
     inputData: {
-      submarket: "SE/CO",
+      submarket: "SE_CO",
       distributor: "CPFL",
       segment: "Industrial",
       volumeMwh12m: 1200,
@@ -490,7 +490,7 @@ async function seedHappyPath(): Promise<Record<string, number>> {
     benchmarkMatch: {
       benchmarkId: 1,
       segment: "Industrial",
-      region: "SE/CO",
+      region: "SE_CO",
       lowerBoundRmwh: 175.00,
       upperBoundRmwh: 210.00,
       confidence: 0.78
@@ -576,7 +576,7 @@ async function seedSlaBreach(): Promise<Record<string, number>> {
     tradeName: "SLA Test",
     cnpj: client.cnpj!,
     distributor: "Cemig",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     connectionType: "GROUP_A",
     eligibilityType: "ACL_DIRECT",
     annualConsumptionMWh: 800,
@@ -600,7 +600,7 @@ async function seedSlaBreach(): Promise<Record<string, number>> {
     contractTermMonths: 24,
     contractStartDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     energyType: "incentivada_50",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     internalOwner: "Renan",
     isDemo: true,
   }).returning();
@@ -660,7 +660,7 @@ async function seedCreditRejected(): Promise<Record<string, number>> {
     tradeName: "Credit Test",
     cnpj: client.cnpj!,
     distributor: "Light",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     connectionType: "GROUP_A",
     eligibilityType: "ACL_DIRECT",
     annualConsumptionMWh: 600,
@@ -684,7 +684,7 @@ async function seedCreditRejected(): Promise<Record<string, number>> {
     contractTermMonths: 12,
     contractStartDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     energyType: "convencional",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     internalOwner: "Renan",
     isDemo: true,
   }).returning();
@@ -1480,7 +1480,7 @@ async function seedAssemblyStuck(): Promise<Record<string, number>> {
     status: "DRAFT",
     distributorName: "CPFL",
     tariffClass: "A4",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     eligibilityType: "ACL_DIRECT",
     contractedDemandKw: 200,
     avgMonthlyConsumptionKwh: 85000,
@@ -1508,7 +1508,7 @@ async function seedAssemblyStuck(): Promise<Record<string, number>> {
     status: "LOCKED",
     distributorName: "Cemig",
     tariffClass: "A4",
-    submarket: "SE/CO",
+    submarket: "SE_CO",
     eligibilityType: "ACL_DIRECT",
     contractedDemandKw: 350,
     avgMonthlyConsumptionKwh: 150000,

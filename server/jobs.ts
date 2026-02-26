@@ -325,6 +325,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
           const SUBMARKET_MAP: Record<string, string> = {
             'SE/CO': 'SE_CO', 'SECO': 'SE_CO', 'SE': 'SE_CO', 'CO': 'SE_CO',
             'SUDESTE': 'SE_CO', 'SUDESTE/CENTRO-OESTE': 'SE_CO', 'SE_CO': 'SE_CO',
+            'CENTRO-OESTE': 'SE_CO', 'CENTRO OESTE': 'SE_CO',
             'S': 'S', 'SUL': 'S',
             'NE': 'NE', 'NNE': 'NE', 'NORDESTE': 'NE',
             'N': 'N', 'NORTE': 'N',
@@ -344,6 +345,18 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             if (val < PRICE_MIN || val > PRICE_MAX) return { price: val, rawText, rejectReason: 'OUT_OF_RANGE' };
             return { price: val, rawText, rejectReason: null };
           }
+
+          const PRODUCT_MAP: Record<string, string> = {
+            'CONVENCIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL', 'CONVENTIONAL': 'CONVENCIONAL',
+            'INCENTIVADA 50%': 'INC_I50', 'INCENTIVADA 50': 'INC_I50', 'INC_I50': 'INC_I50',
+            'I50': 'INC_I50', '50%': 'INC_I50', 'INC 50': 'INC_I50',
+            'INCENTIVADA 100%': 'INC_I100', 'INCENTIVADA 100': 'INC_I100', 'INC_I100': 'INC_I100',
+            'I100': 'INC_I100', '100%': 'INC_I100', 'INC 100': 'INC_I100',
+            'INCENTIVADA 0%': 'INC_I0', 'INCENTIVADA 0': 'INC_I0', 'INC_I0': 'INC_I0',
+            'I0': 'INC_I0', '0%': 'INC_I0', 'INC 0': 'INC_I0',
+            'INCENTIVADA': 'INC_I50', 'INCENTIVADA ESPECIAL': 'INC_I50',
+          };
+          const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100', 'INC_I0'];
 
           const insertedPrcRows = [];
           const rejectReasons: Record<string, number> = {};
@@ -368,13 +381,22 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
               continue;
             }
 
+            const rawProduct = String(row.product || '').toUpperCase().trim();
+            const productType = PRODUCT_MAP[rawProduct] || rawProduct || 'CONVENCIONAL';
+            if (!validProducts.includes(productType)) {
+              rejectReasons['INVALID_PRODUCT'] = (rejectReasons['INVALID_PRODUCT'] || 0) + 1;
+              rowsRejected++;
+              console.log(`[PRC_PARSE] Rejected row: product=${rawProduct} (unmapped)`);
+              continue;
+            }
+
             const isOutlier = price! > 800;
             const inserted = await db.insert(prcRows).values({
               prcDocumentId: documentId,
               supplierId: doc[0].supplierId,
               referenceMonth: result.data?.referenceMonth || doc[0].referenceMonth,
               submarket,
-              productType: row.product || 'CONVENCIONAL',
+              productType,
               termMonths: row.termMonths || null,
               priceRPerMWh: String(price),
               confidence: Math.round((row.confidence || result.confidence) * 100),

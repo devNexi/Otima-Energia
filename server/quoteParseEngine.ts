@@ -36,9 +36,12 @@ const ENERGY_TYPES: Record<string, string> = {
 };
 
 const SUBMARKETS: Record<string, string> = {
-  'sudeste': 'SE/CO',
-  'se/co': 'SE/CO',
-  'seco': 'SE/CO',
+  'sudeste': 'SE_CO',
+  'se/co': 'SE_CO',
+  'seco': 'SE_CO',
+  'se_co': 'SE_CO',
+  'centro-oeste': 'SE_CO',
+  'centro oeste': 'SE_CO',
   'sul': 'S',
   'nordeste': 'NE',
   'norte': 'N',
