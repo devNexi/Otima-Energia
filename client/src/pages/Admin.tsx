@@ -75,9 +75,10 @@ const statusColors: Record<string, string> = {
 
 interface AdminProps {
   defaultTab?: string;
+  initialDealId?: string;
 }
 
-export default function Admin({ defaultTab }: AdminProps) {
+export default function Admin({ defaultTab, initialDealId }: AdminProps) {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
   const { user, isAuthenticated, isLoading: authLoading, login, logout, canAccess } = useAuth();
@@ -98,7 +99,7 @@ export default function Admin({ defaultTab }: AdminProps) {
     contactPerson: "",
     ucCode: ""
   });
-  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(initialDealId || null);
   const [selectedRfo, setSelectedRfo] = useState<{
     id: number;
     rfoNumber: string;
@@ -109,13 +110,13 @@ export default function Admin({ defaultTab }: AdminProps) {
     responseCount: number;
   } | null>(null);
   
-  const [activeTab, setActiveTab] = useState(defaultTab || "deals");
+  const [activeTab, setActiveTab] = useState(initialDealId ? "deals" : (defaultTab || "deals"));
   
   useEffect(() => {
-    if (defaultTab) {
+    if (defaultTab && !initialDealId) {
       setActiveTab(defaultTab);
     }
-  }, [defaultTab]);
+  }, [defaultTab, initialDealId]);
   
   const statusLabels: Record<string, string> = {
     prospect: t("status.prospect"),

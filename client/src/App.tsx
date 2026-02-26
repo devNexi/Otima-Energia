@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useParams } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -47,6 +47,11 @@ import TracksQueue from "@/pages/TracksQueue";
 import VerificationPage from "@/pages/VerificationPage";
 import DossierPage from "@/pages/DossierPage";
 
+function AdminDealRoute() {
+  const { dealId } = useParams<{ dealId: string }>();
+  return <Admin defaultTab="deals" initialDealId={dealId} />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -78,6 +83,8 @@ function Router() {
       <Route path="/admin">{() => <Redirect to="/admin/deals" />}</Route>
       <Route path="/admin/suppliers/:id" component={SupplierDetail} />
       <Route path="/admin/suppliers" component={SupplierManager} />
+      <Route path="/admin/deals/:dealId" component={AdminDealRoute} />
+      <Route path="/admin/ops/deals/:dealId" component={AdminDealRoute} />
       <Route path="/admin/deals" component={() => <Admin defaultTab="deals" />} />
       <Route path="/admin/ecos" component={() => <Admin defaultTab="ecos-dashboard" />} />
       <Route path="/admin/rfqs" component={() => <Admin defaultTab="rfqs" />} />
