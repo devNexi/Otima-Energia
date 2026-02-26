@@ -352,11 +352,9 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             'I50': 'INC_I50', '50%': 'INC_I50', 'INC 50': 'INC_I50',
             'INCENTIVADA 100%': 'INC_I100', 'INCENTIVADA 100': 'INC_I100', 'INC_I100': 'INC_I100',
             'I100': 'INC_I100', '100%': 'INC_I100', 'INC 100': 'INC_I100',
-            'INCENTIVADA 0%': 'INC_I0', 'INCENTIVADA 0': 'INC_I0', 'INC_I0': 'INC_I0',
-            'I0': 'INC_I0', '0%': 'INC_I0', 'INC 0': 'INC_I0',
-            'INCENTIVADA': 'INC_I50', 'INCENTIVADA ESPECIAL': 'INC_I50',
+            'INCENTIVADA ESPECIAL': 'INC_I50',
           };
-          const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100', 'INC_I0'];
+          const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
 
           const insertedPrcRows = [];
           const rejectReasons: Record<string, number> = {};
@@ -382,6 +380,12 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             }
 
             const rawProduct = String(row.product || '').toUpperCase().trim();
+            if (rawProduct === 'INCENTIVADA') {
+              rejectReasons['AMBIGUOUS_PRODUCT'] = (rejectReasons['AMBIGUOUS_PRODUCT'] || 0) + 1;
+              rowsRejected++;
+              console.log(`[PRC_PARSE] Rejected row: product=${rawProduct} (bare Incentivada without 50/100)`);
+              continue;
+            }
             const productType = PRODUCT_MAP[rawProduct] || rawProduct || 'CONVENCIONAL';
             if (!validProducts.includes(productType)) {
               rejectReasons['INVALID_PRODUCT'] = (rejectReasons['INVALID_PRODUCT'] || 0) + 1;
@@ -432,13 +436,18 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             countsBySubmarket[r.submarket] = (countsBySubmarket[r.submarket] || 0) + 1;
           }
 
+          const countsByProduct: Record<string, number> = {};
+          for (const r of insertedPrcRows) {
+            countsByProduct[r.productType] = (countsByProduct[r.productType] || 0) + 1;
+          }
+
           const parseStats = {
             rawRowsFromParser: result.rows.length,
             rowsAccepted: insertedPrcRows.length,
             rowsRejected,
             rejectReasons,
             countsBySubmarket,
-            missingSubmarketRows: insertedPrcRows.filter(r => !validSubmarkets.includes(r.submarket)).length,
+            countsByProduct,
             exampleParsedRows: insertedPrcRows.slice(0, 5).map(r => ({
               submarket: r.submarket, product: r.productType, termMonths: r.termMonths,
               price: r.priceRPerMWh, confidence: r.confidence, outlier: r.isOutlierFlag,

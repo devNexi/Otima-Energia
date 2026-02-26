@@ -1,0 +1,124 @@
+We need PRC parsing to be robust to non-uniform product coverage and region naming variants, and to NEVER output garbage like 9800%.
+
+Hard requirements
+1) Canonical product types (3)
+
+Store exactly one of:
+
+CONVENCIONAL
+
+INC_I50 (Incentivada 50%)
+
+INC_I100 (Incentivada 100%)
+
+PRCs may include only 1, 2, or all 3 products. Do not assume uniformity.
+
+Product detection rules:
+
+If text contains “convencional” → CONVENCIONAL
+
+If text contains “incentivada” with “50” or “50%” or “i50” → INC_I50
+
+If text contains “incentivada” with “100” or “100%” or “i100” → INC_I100
+
+If it says only “incentivada” with no %:
+
+do not guess silently
+
+either infer from column header/context OR mark product=NULL and reject the row with reason AMBIGUOUS_PRODUCT
+
+Output must include: countsByProduct and rejectedRowsByReason in PRC debug response.
+
+2) Canonical submarkets (4)
+
+Store exactly one of:
+
+SE_CO
+
+S
+
+NE
+
+N
+
+Input variants to support:
+
+Full Portuguese: Sudeste, Centro-Oeste, Sul, Nordeste, Norte
+
+Abbrev variants: SE/CO, SECO, SE CO, CO+SE, etc.
+
+Ensure “Norte” doesn’t get confused with “Nordeste”.
+
+If a PRC provides only the 4 region names (Sudeste/Sul/Nordeste/Norte), it must still map cleanly to the 4 canonical submarkets.
+
+3) Fix the “9800%” / wrong-number issue (mandatory guardrails)
+
+Add a normalization+validation pipeline before inserting PRC rows:
+
+Normalization:
+
+Accept 1.234,56 and 1234.56
+
+Strip thousand separators
+
+Convert comma decimal to dot decimal
+
+Strip currency symbols and whitespace
+
+If value contains %, treat as NOT_A_PRICE unless explicitly mapped to discount columns (reject otherwise)
+
+Validation guardrails:
+
+Price must be plausible (e.g. 10 <= price <= 2000 R$/MWh)
+
+If outside range:
+
+reject row with OUT_OF_RANGE
+
+surface in debug summary
+
+do not store it as a valid pricing row
+
+This must apply to BOTH:
+
+VPS parser ingest path (jobs.ts insert path)
+
+Any local/parser-side PRC logic
+
+4) Table completeness
+
+PRCs often span multiple pages and formats. Implement extraction that:
+
+processes all pages
+
+supports both “zones-as-columns” and “zones-as-rows”
+
+dedupes repeated header/footer lines
+
+produces at least >= 12 rows minimum when a PRC contains the standard grid (4 zones × 3 terms)
+
+If fewer than expected, mark parse as degraded and return debug info (don’t silently publish broken data).
+
+5) ECOS compatibility
+
+ECOS must query PRC rows using the same canonical values:
+
+If ECOS uses a distributorSubmarketMap, output must be SE_CO not SE/CO
+
+Ensure PRC rows and ECOS resolver match on the same enum
+
+Deliverables / proof (must provide in your reply)
+
+Example PRC debug JSON showing:
+
+countsBySubmarket includes SE_CO/S/NE/N
+
+countsByProduct includes the 3 product types (only those present)
+
+rowsRejectedByReason includes OUT_OF_RANGE / AMBIGUOUS_PRODUCT etc.
+
+Show that a value like “9800%” is rejected (not inserted)
+
+Show a successful PRC upload that produces correct rows for all detected zones/products
+
+Confirm ECOS now consumes those PRC rows without NO_PRC when rows exist

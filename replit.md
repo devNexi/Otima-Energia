@@ -44,7 +44,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Commission OS**: Milestone-based commission tracking (50/50 payment model) with invoice generation.
 - **Notification System**: Queue-based email notifications for operational alerts.
 - **Lost Deal Intelligence**: Structured taxonomy for analyzing reasons for lost deals.
-- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs) with status tracking and debug tools. Canonical submarkets: `SE_CO`, `S`, `NE`, `N`. Canonical product types: `CONVENCIONAL`, `INC_I50`, `INC_I100` (and `INC_I0`). Smart region detection handles Portuguese names (Sudeste, Sul, Nordeste, Norte). Product normalization maps bare "Incentivada" to `INC_I50`.
+- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs) with status tracking and debug tools. Canonical submarkets: `SE_CO`, `S`, `NE`, `N`. Canonical product types: `CONVENCIONAL`, `INC_I50`, `INC_I100` (and `INC_I0`). Smart region detection handles Portuguese names (Sudeste, Sul, Nordeste, Norte). Product normalization maps bare "Incentivada" to `AMBIGUOUS_PRODUCT` (rejected). Parse status: PARSED (>=12 rows), NEEDS_REVIEW (1-11 rows or outliers), FAILED (0 rows). Debug JSON includes `countsByProduct`, `countsBySubmarket`, `rowsRejectedByReason`.
 - **Supplier Intelligence Module**: Analytics layer providing KPIs (win rate, response time) for supplier performance.
 
 ### Authentication & Authorization

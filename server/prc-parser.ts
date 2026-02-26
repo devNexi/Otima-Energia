@@ -19,6 +19,7 @@ export interface ParsedPrcRow {
   confidence: number;
   isOutlierFlag: boolean;
   outlierReason: string | null;
+  rejectReason?: string | null;
 }
 
 export interface PrcParseResult {
@@ -33,7 +34,8 @@ export interface PrcParseResult {
 
 const SUBMARKETS = ['SE_CO', 'S', 'NE', 'N', 'SE/CO', 'SECO', 'SUL', 'NNE', 'NORTE'];
 const VALID_SUBMARKETS = ['SE_CO', 'S', 'NE', 'N'];
-const PRODUCT_TYPES = ['CONVENCIONAL', 'INC_I0', 'INC_I50', 'INC_I100'];
+const PRODUCT_TYPES = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
+const VALID_PRODUCTS = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
 const PRICE_MIN_R_MWH = 10;
 const PRICE_MAX_R_MWH = 2000;
 const PRICE_OUTLIER_Z_THRESHOLD = 2.5;
@@ -136,36 +138,30 @@ function normalizeProductType(raw: string): string {
     'CONV': 'CONVENCIONAL',
     'CONVENTIONAL': 'CONVENCIONAL',
     'CONVENCIONAL': 'CONVENCIONAL',
-    'I0': 'INC_I0',
     'I50': 'INC_I50',
     'I100': 'INC_I100',
-    '0%': 'INC_I0',
-    '50%': 'INC_I50',
-    '100%': 'INC_I100',
-    'INCENTIVADA I0': 'INC_I0',
-    'INCENTIVADA 0': 'INC_I0',
-    'INCENTIVADA 0%': 'INC_I0',
     'INCENTIVADA 50%': 'INC_I50',
     'INCENTIVADA 50': 'INC_I50',
     'INCENTIVADA 100%': 'INC_I100',
     'INCENTIVADA 100': 'INC_I100',
     'INCENTIVADA ESPECIAL': 'INC_I50',
-    'INC I0': 'INC_I0',
     'INC I50': 'INC_I50',
     'INC I100': 'INC_I100',
-    'INC-I0': 'INC_I0',
     'INC-I50': 'INC_I50',
     'INC-I100': 'INC_I100',
-    'INC_0': 'INC_I0',
     'INC_50': 'INC_I50',
     'INC_100': 'INC_I100',
-    'INCENTIVADA': 'INC_I50',
+    'INC_I50': 'INC_I50',
+    'INC_I100': 'INC_I100',
   };
-  return mappings[cleaned] || cleaned;
+  if (mappings[cleaned]) return mappings[cleaned];
+  if (cleaned === 'INCENTIVADA') return 'AMBIGUOUS_PRODUCT';
+  return cleaned;
 }
 
 function parseBrazilianNumber(text: string): number | null {
   let cleaned = text.replace(/\s/g, '').replace(/R\$/gi, '');
+  if (/%/.test(cleaned)) return null;
   if (/^\-?\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(cleaned)) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (/^\-?\d+(,\d{1,2})$/.test(cleaned)) {
@@ -175,7 +171,20 @@ function parseBrazilianNumber(text: string): number | null {
   return isNaN(val) ? null : val;
 }
 
-function extractPrice(text: string): number | null {
+interface PriceExtractionResult {
+  price: number | null;
+  rejectReason: string | null;
+  rawMatch: string | null;
+}
+
+function extractPriceWithReason(text: string): PriceExtractionResult {
+  if (/%/.test(text) && !/MWh/i.test(text) && !/R\$/i.test(text)) {
+    const pctMatch = text.match(/([\d.,]+)\s*%/);
+    if (pctMatch) {
+      return { price: null, rejectReason: 'NOT_A_PRICE', rawMatch: pctMatch[0] };
+    }
+  }
+
   const patterns = [
     /R\$\s*([\-]?[\d.,]+)/i,
     /([\-]?[\d.,]+)\s*R\$/i,
@@ -188,9 +197,14 @@ function extractPrice(text: string): number | null {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      const price = parseBrazilianNumber(match[1]);
-      if (price !== null && price >= PRICE_MIN_R_MWH && price <= PRICE_MAX_R_MWH) {
-        return price;
+      const raw = match[1];
+      if (/%/.test(raw)) continue;
+      const price = parseBrazilianNumber(raw);
+      if (price !== null) {
+        if (price < PRICE_MIN_R_MWH || price > PRICE_MAX_R_MWH) {
+          return { price: null, rejectReason: 'OUT_OF_RANGE', rawMatch: raw };
+        }
+        return { price, rejectReason: null, rawMatch: raw };
       }
     }
   }
@@ -198,14 +212,22 @@ function extractPrice(text: string): number | null {
   const allNumbers = text.match(/[\-]?\d[\d.,]*/g);
   if (allNumbers) {
     for (const numStr of allNumbers) {
+      if (/%/.test(text.slice(text.indexOf(numStr) + numStr.length, text.indexOf(numStr) + numStr.length + 2))) continue;
       const price = parseBrazilianNumber(numStr);
-      if (price !== null && price >= PRICE_MIN_R_MWH && price <= PRICE_MAX_R_MWH) {
-        return price;
+      if (price !== null) {
+        if (price < PRICE_MIN_R_MWH || price > PRICE_MAX_R_MWH) {
+          return { price: null, rejectReason: 'OUT_OF_RANGE', rawMatch: numStr };
+        }
+        return { price, rejectReason: null, rawMatch: numStr };
       }
     }
   }
 
-  return null;
+  return { price: null, rejectReason: null, rawMatch: null };
+}
+
+function extractPrice(text: string): number | null {
+  return extractPriceWithReason(text).price;
 }
 
 function extractNegativePrice(text: string): boolean {
@@ -379,31 +401,28 @@ function detectSubmarketFromContext(lines: string[], lineIndex: number): string 
 
 function detectProductTypeFromText(text: string): string | null {
   const upper = text.toUpperCase();
-  const multiWordMappings: [RegExp, string][] = [
+  const specificMappings: [RegExp, string][] = [
     [/INCENTIVADA\s+100\s*%/i, 'INC_I100'],
     [/INCENTIVADA\s+50\s*%/i, 'INC_I50'],
-    [/INCENTIVADA\s+0\s*%/i, 'INC_I0'],
     [/INCENTIVADA\s+ESPECIAL/i, 'INC_I50'],
     [/INCENTIVADA\s+100/i, 'INC_I100'],
     [/INCENTIVADA\s+50/i, 'INC_I50'],
     [/INCENTIVADA\s+I100/i, 'INC_I100'],
     [/INCENTIVADA\s+I50/i, 'INC_I50'],
-    [/INCENTIVADA\s+I0/i, 'INC_I0'],
     [/INC[\s_-]+I?100/i, 'INC_I100'],
     [/INC[\s_-]+I?50/i, 'INC_I50'],
-    [/INC[\s_-]+I?0/i, 'INC_I0'],
-    [/I[\s_-]?100\s*%?/i, 'INC_I100'],
-    [/I[\s_-]?50\s*%?/i, 'INC_I50'],
+    [/\bI[\s_-]?100\s*%?\b/i, 'INC_I100'],
+    [/\bI[\s_-]?50\s*%?\b/i, 'INC_I50'],
     [/\b100\s*%\s*(?:desc|desconto|discount)/i, 'INC_I100'],
     [/\b50\s*%\s*(?:desc|desconto|discount)/i, 'INC_I50'],
     [/(?:desc|desconto|discount)\s*(?:de\s+)?100\s*%/i, 'INC_I100'],
     [/(?:desc|desconto|discount)\s*(?:de\s+)?50\s*%/i, 'INC_I50'],
   ];
-  for (const [regex, result] of multiWordMappings) {
+  for (const [regex, result] of specificMappings) {
     if (regex.test(upper)) return result;
   }
   if (/\bCONVENCIONAL\b/i.test(upper) || /\bCONV\b/i.test(upper)) return 'CONVENCIONAL';
-  if (/\bINCENTIVADA\b/i.test(upper)) return 'INC_I50';
+  if (/\bINCENTIVADA\b/i.test(upper)) return 'AMBIGUOUS_PRODUCT';
   return null;
 }
 
@@ -420,7 +439,7 @@ function scoreRow(row: ParsedPrcRow): number {
   return Math.min(score, 1.0);
 }
 
-function parseTableRow(line: string, contextSubmarket?: string | null): ParsedPrcRow | null {
+function parseTableRow(line: string, contextSubmarket?: string | null, contextProduct?: string | null): ParsedPrcRow | null {
   let submarket: string | null = null;
   let productType: string | null = null;
 
@@ -432,11 +451,23 @@ function parseTableRow(line: string, contextSubmarket?: string | null): ParsedPr
 
   productType = detectProductTypeFromText(line);
 
-  const price = extractPrice(line);
+  if (!productType && contextProduct) {
+    productType = contextProduct;
+  }
+
+  const priceResult = extractPriceWithReason(line);
   const hasNegative = extractNegativePrice(line);
 
-  if (!submarket && !productType && !price) {
+  if (!submarket && !productType && !priceResult.price && !priceResult.rejectReason) {
     return null;
+  }
+
+  let rejectReason: string | null = null;
+  if (priceResult.rejectReason) {
+    rejectReason = priceResult.rejectReason;
+  }
+  if (productType === 'AMBIGUOUS_PRODUCT') {
+    rejectReason = 'AMBIGUOUS_PRODUCT';
   }
 
   const term = extractTerm(line);
@@ -444,16 +475,17 @@ function parseTableRow(line: string, contextSubmarket?: string | null): ParsedPr
 
   const row: ParsedPrcRow = {
     submarket: submarket || 'UNKNOWN',
-    productType: productType || 'CONVENCIONAL',
+    productType: productType === 'AMBIGUOUS_PRODUCT' ? 'AMBIGUOUS_PRODUCT' : (productType || 'CONVENCIONAL'),
     termMonths: term,
-    priceRPerMWh: price?.toFixed(2) || '0.00',
+    priceRPerMWh: priceResult.price?.toFixed(2) || '0.00',
     volumeMwm: volume,
     validFrom: extractDate(line),
     validUntil: null,
     rawText: line.substring(0, 500),
     confidence: 0,
     isOutlierFlag: false,
-    outlierReason: hasNegative && !price ? 'Negative price detected in source' : null,
+    outlierReason: hasNegative && !priceResult.price ? 'Negative price detected in source' : null,
+    rejectReason,
   };
 
   row.confidence = scoreRow(row);
@@ -476,16 +508,28 @@ function extractRowsFromTableBlock(block: TextBlock, allLines?: string[]): Parse
   const dataStartIdx = headerIdx >= 0 ? headerIdx + 1 : 0;
 
   let blockSubmarket: string | null = null;
+  let blockProduct: string | null = null;
+  let blockAmbiguousProduct = false;
   for (const line of block.lines.slice(0, Math.min(5, block.lines.length))) {
-    blockSubmarket = detectSubmarketFromLine(line);
-    if (blockSubmarket) break;
+    if (!blockSubmarket) blockSubmarket = detectSubmarketFromLine(line);
+    if (!blockProduct && !blockAmbiguousProduct) {
+      const detected = detectProductTypeFromText(line);
+      if (detected === 'AMBIGUOUS_PRODUCT') {
+        blockAmbiguousProduct = true;
+      } else if (detected) {
+        blockProduct = detected;
+      }
+    }
+    if (blockSubmarket && (blockProduct || blockAmbiguousProduct)) break;
   }
+
+  const effectiveProduct = blockAmbiguousProduct ? 'AMBIGUOUS_PRODUCT' : blockProduct;
 
   for (let i = dataStartIdx; i < block.lines.length; i++) {
     const line = block.lines[i];
     if (countNumericValues(line) >= 1) {
-      const row = parseTableRow(line, blockSubmarket);
-      if (row && parseFloat(row.priceRPerMWh) > 0) {
+      const row = parseTableRow(line, blockSubmarket, effectiveProduct);
+      if (row) {
         rows.push(row);
       }
     }
@@ -542,55 +586,84 @@ interface ValidationResult {
   validationErrors: string[];
 }
 
-function validateRows(rows: ParsedPrcRow[]): ValidationResult {
+function validateRows(rows: ParsedPrcRow[]): ValidationResult & { rejectedByReason: Record<string, number>; countsByProduct: Record<string, number>; countsBySubmarket: Record<string, number> } {
   const errors: string[] = [];
   const validationErrors: string[] = [];
   const cleanRows: ParsedPrcRow[] = [];
+  const rejectedByReason: Record<string, number> = {};
   let failedCount = 0;
 
   const seen = new Set<string>();
 
+  function rejectRow(reason: string, detail: string) {
+    rejectedByReason[reason] = (rejectedByReason[reason] || 0) + 1;
+    failedCount++;
+    errors.push(detail);
+    validationErrors.push(detail);
+  }
+
   for (const row of rows) {
-    const rowErrors: string[] = [];
     const price = parseFloat(row.priceRPerMWh);
 
+    if (row.rejectReason === 'AMBIGUOUS_PRODUCT') {
+      rejectRow('AMBIGUOUS_PRODUCT', `Row [${row.submarket}]: bare "Incentivada" without 50/100 — rejected`);
+      continue;
+    }
+
+    if (row.rejectReason === 'NOT_A_PRICE') {
+      rejectRow('NOT_A_PRICE', `Row [${row.submarket}/${row.productType}]: percentage value not a price — rejected (raw: ${row.rawText?.substring(0, 100)})`);
+      continue;
+    }
+
+    if (row.rejectReason === 'OUT_OF_RANGE') {
+      rejectRow('OUT_OF_RANGE', `Row [${row.submarket}/${row.productType}]: price outside ${PRICE_MIN_R_MWH}-${PRICE_MAX_R_MWH} R$/MWh — rejected`);
+      continue;
+    }
+
     if (price < 0) {
-      rowErrors.push(`Negative tariff value: ${price}`);
+      rejectRow('NEGATIVE_PRICE', `Row [${row.submarket}/${row.productType}]: negative tariff ${price}`);
+      continue;
     }
 
     if (price > 0 && (price < PRICE_MIN_R_MWH || price > PRICE_MAX_R_MWH)) {
-      rowErrors.push(`Price ${price} outside reasonable range (${PRICE_MIN_R_MWH}-${PRICE_MAX_R_MWH} R$/MWh)`);
+      rejectRow('OUT_OF_RANGE', `Row [${row.submarket}/${row.productType}]: price ${price} outside range (${PRICE_MIN_R_MWH}-${PRICE_MAX_R_MWH})`);
+      continue;
     }
 
     if (row.submarket === 'UNKNOWN' || price <= 0) {
-      rowErrors.push(`Missing required fields: need submarket+price at minimum`);
+      rejectRow('MISSING_FIELDS', `Row [${row.submarket}/${row.productType}]: need submarket+price at minimum`);
+      continue;
     }
 
-    if (row.submarket !== 'UNKNOWN' && !VALID_SUBMARKETS.includes(row.submarket)) {
-      rowErrors.push(`Invalid submarket '${row.submarket}' - must be one of ${VALID_SUBMARKETS.join('/')}`);
+    if (!VALID_SUBMARKETS.includes(row.submarket)) {
+      rejectRow('INVALID_SUBMARKET', `Row: invalid submarket '${row.submarket}' — must be ${VALID_SUBMARKETS.join('/')}`);
+      continue;
+    }
+
+    if (!VALID_PRODUCTS.includes(row.productType)) {
+      rejectRow('INVALID_PRODUCT', `Row [${row.submarket}]: invalid product '${row.productType}'`);
+      continue;
     }
 
     const dedupeKey = `${row.submarket}|${row.productType}|${row.termMonths}|${row.priceRPerMWh}`;
     if (seen.has(dedupeKey)) {
-      rowErrors.push(`Duplicate row: ${dedupeKey}`);
-      failedCount++;
-      validationErrors.push(`Row [${row.submarket}/${row.productType}]: Duplicate row`);
+      rejectRow('DUPLICATE', `Row [${row.submarket}/${row.productType}]: duplicate (${dedupeKey})`);
       continue;
     }
     seen.add(dedupeKey);
 
-    if (rowErrors.length > 0) {
-      failedCount++;
-      const mapped = rowErrors.map(e => `Row [${row.submarket}/${row.productType}]: ${e}`);
-      errors.push(...mapped);
-      validationErrors.push(...mapped);
-    } else {
-      cleanRows.push(row);
-    }
+    cleanRows.push(row);
   }
 
   if (cleanRows.length < 2) {
-    validationErrors.push(`Insufficient valid rows: ${cleanRows.length} (minimum 2 required for PARSED status)`);
+    validationErrors.push(`Insufficient valid rows: ${cleanRows.length} (minimum 2 required)`);
+  }
+
+  const countsByProduct: Record<string, number> = {};
+  const countsBySubmarket: Record<string, number> = {};
+  for (const r of cleanRows) {
+    countsByProduct[r.productType] = (countsByProduct[r.productType] || 0) + 1;
+    countsBySubmarket[r.submarket] = (countsBySubmarket[r.submarket] || 0) + 1;
   }
 
   const totalRows = rows.length;
@@ -601,6 +674,9 @@ function validateRows(rows: ParsedPrcRow[]): ValidationResult {
     errors,
     cleanRows,
     validationErrors,
+    rejectedByReason,
+    countsByProduct,
+    countsBySubmarket,
   };
 }
 
@@ -992,6 +1068,9 @@ export async function processPrcDocumentWithBuffer(
       rowsBeforeFilter: result.rows.length,
       rowsAfterFilter: 0,
       outlierCount: 0,
+      countsBySubmarket: {} as Record<string, number>,
+      countsByProduct: {} as Record<string, number>,
+      rowsRejectedByReason: {} as Record<string, number>,
       extractionStats,
       ...extra,
     });
@@ -1015,7 +1094,7 @@ export async function processPrcDocumentWithBuffer(
     const validation = validateRows(result.rows);
 
     if (!validation.valid) {
-      console.log(`${tag} validation_failed | errorCount=${validation.errors.length}`);
+      console.log(`${tag} validation_failed | errorCount=${validation.errors.length} rejectedByReason=${JSON.stringify(validation.rejectedByReason)}`);
       await storage.updatePrcDocumentParseStatus(
         documentId,
         'NEEDS_REVIEW',
@@ -1026,6 +1105,9 @@ export async function processPrcDocumentWithBuffer(
           parseDebugJson: buildDebugJson({
             validationErrors: validation.validationErrors,
             rowsAfterFilter: validation.cleanRows.length,
+            countsBySubmarket: validation.countsBySubmarket,
+            countsByProduct: validation.countsByProduct,
+            rowsRejectedByReason: validation.rejectedByReason,
           }),
         }
       );
@@ -1037,12 +1119,8 @@ export async function processPrcDocumentWithBuffer(
       result.warnings.push(...validation.errors);
     }
 
-    console.log(`${tag} validation_passed | cleanRows=${validation.cleanRows.length}`);
-
-    const validProducts = ['CONVENCIONAL', 'INC_I0', 'INC_I50', 'INC_I100'];
-    const validRows = validation.cleanRows.filter(row =>
-      VALID_SUBMARKETS.includes(row.submarket) && validProducts.includes(row.productType)
-    );
+    const validRows = validation.cleanRows;
+    console.log(`${tag} validation_passed | cleanRows=${validRows.length} countsByProduct=${JSON.stringify(validation.countsByProduct)} countsBySubmarket=${JSON.stringify(validation.countsBySubmarket)} rejectedByReason=${JSON.stringify(validation.rejectedByReason)}`);
 
     if (validRows.length === 0) {
       console.log(`${tag} validation_failed | reason=no_valid_submarket_product_combos`);
@@ -1056,6 +1134,7 @@ export async function processPrcDocumentWithBuffer(
           parseDebugJson: buildDebugJson({
             validationErrors: ['No valid submarket/product combinations found'],
             rowsAfterFilter: 0,
+            rowsRejectedByReason: validation.rejectedByReason,
           }),
         }
       );
@@ -1102,15 +1181,15 @@ export async function processPrcDocumentWithBuffer(
     }
 
     const outlierCount = validRows.filter(r => r.isOutlierFlag).length;
-    const bestConfidence = result.confidence;
 
     let newStatus: string;
-    if (bestConfidence < PASS_CONFIDENCE_THRESHOLD) {
+    if (validRows.length >= 12) {
+      newStatus = outlierCount > 0 ? 'NEEDS_REVIEW' : 'PARSED';
+    } else if (validRows.length >= 1) {
       newStatus = 'NEEDS_REVIEW';
-    } else if (outlierCount > 0) {
-      newStatus = 'NEEDS_REVIEW';
+      result.warnings.push(`Only ${validRows.length} valid rows extracted (standard grid expects >=12). Parse marked as degraded.`);
     } else {
-      newStatus = 'PARSED';
+      newStatus = 'FAILED';
     }
 
     await storage.updatePrcDocumentParseStatus(
@@ -1124,6 +1203,13 @@ export async function processPrcDocumentWithBuffer(
           validationErrors: validation.validationErrors,
           rowsAfterFilter: validRows.length,
           outlierCount,
+          countsBySubmarket: validation.countsBySubmarket,
+          countsByProduct: validation.countsByProduct,
+          rowsRejectedByReason: validation.rejectedByReason,
+          exampleParsedRows: validRows.slice(0, 5).map(r => ({
+            submarket: r.submarket, product: r.productType, termMonths: r.termMonths,
+            price: r.priceRPerMWh, confidence: r.confidence,
+          })),
         }),
         rowsExtracted: validRows.length,
         rowsFlagged: outlierCount,
