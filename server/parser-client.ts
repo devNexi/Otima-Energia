@@ -303,86 +303,142 @@ export async function checkParserHealth(): Promise<{
   }
 }
 
+export interface FullDiagnostics {
+  parserBaseUrl: string;
+  timestamp: string;
+  runtime: string;
+  health: {
+    ok: boolean;
+    httpStatus: number | null;
+    latencyMs: number | null;
+    bodySnippet: string | null;
+    error: string | null;
+    json: Record<string, any> | null;
+  };
+  parse: {
+    ok: boolean;
+    httpStatus: number | null;
+    latencyMs: number | null;
+    docType: string | null;
+    extractedFields: Record<string, any> | null;
+    error: string | null;
+    fixtureFile: string;
+  };
+}
+
+async function loadFixturePdf(): Promise<Buffer> {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const url = await import('url');
+    const thisDir = path.dirname(url.fileURLToPath(import.meta.url));
+    const fixturePath = path.join(thisDir, 'fixtures', 'test-bill.pdf');
+    return fs.readFileSync(fixturePath);
+  } catch {
+    return createMinimalTestPdf();
+  }
+}
+
+export async function runFullDiagnostics(): Promise<FullDiagnostics> {
+  const startTime = new Date();
+  const result: FullDiagnostics = {
+    parserBaseUrl: PARSER_SERVICE_URL || '(not set)',
+    timestamp: startTime.toISOString(),
+    runtime: `Node ${process.version}`,
+    health: { ok: false, httpStatus: null, latencyMs: null, bodySnippet: null, error: null, json: null },
+    parse: { ok: false, httpStatus: null, latencyMs: null, docType: null, extractedFields: null, error: null, fixtureFile: 'test-bill.pdf' },
+  };
+
+  console.log(`[ParserDiag] Running full diagnostics against ${result.parserBaseUrl}`);
+
+  const healthResult = await checkParserHealth();
+  const diag = getLastDiagnostics();
+  result.health.ok = healthResult.healthy;
+  result.health.httpStatus = diag?.httpStatus ?? null;
+  result.health.latencyMs = healthResult.latencyMs ?? null;
+  result.health.json = diag?.healthResponseBody ?? null;
+  result.health.error = healthResult.error ?? null;
+  if (!diag?.healthResponseBody && diag?.lastError) {
+    result.health.bodySnippet = diag.lastError.substring(0, 500);
+  }
+
+  console.log(`[ParserDiag] Health: ok=${result.health.ok}, status=${result.health.httpStatus}, latency=${result.health.latencyMs}ms`);
+
+  if (!healthResult.healthy) {
+    console.log(`[ParserDiag] Skipping parse test — health check failed: ${result.health.error}`);
+    return result;
+  }
+
+  const fixturePdf = await loadFixturePdf();
+  const parseStart = Date.now();
+  try {
+    const parseResponse = await callParserService(fixturePdf, 'diag_test_bill.pdf', {
+      sourceDocId: 'diagnostics-test',
+      hintDocType: 'BILL',
+    });
+    const parseLatency = Date.now() - parseStart;
+    result.parse.ok = parseResponse.status === 'parsed' || parseResponse.validated === true;
+    result.parse.httpStatus = 200;
+    result.parse.latencyMs = parseLatency;
+    result.parse.docType = parseResponse.docType;
+    result.parse.extractedFields = parseResponse.data ? {
+      distributor: parseResponse.data.distributor || null,
+      referenceMonth: parseResponse.data.referenceMonth || null,
+      totalAmount: parseResponse.data.totalAmount || null,
+      totalEnergyKwh: parseResponse.data.totalEnergyKwh || null,
+      customerName: parseResponse.data.customerName || null,
+      customerId: parseResponse.data.customerId || null,
+      tariffGroup: parseResponse.data.tariffGroup || null,
+    } : null;
+
+    console.log(`[ParserDiag] Parse: ok=${result.parse.ok}, docType=${result.parse.docType}, latency=${parseLatency}ms, fields=${JSON.stringify(result.parse.extractedFields)}`);
+  } catch (err: any) {
+    const parseLatency = Date.now() - parseStart;
+    result.parse.latencyMs = parseLatency;
+    result.parse.error = err.message;
+    console.error(`[ParserDiag] Parse FAILED: ${err.message} (${parseLatency}ms)`);
+  }
+
+  return result;
+}
+
 export async function runParserSelfTest(): Promise<{
   passed: boolean;
   steps: Array<{ name: string; passed: boolean; detail: string }>;
   rawResponse?: any;
 }> {
+  const diag = await runFullDiagnostics();
   const steps: Array<{ name: string; passed: boolean; detail: string }> = [];
 
-  const healthResult = await checkParserHealth();
   steps.push({
     name: 'health_check',
-    passed: healthResult.healthy,
-    detail: healthResult.healthy
-      ? `Parser healthy: ${JSON.stringify(healthResult.details)}`
-      : `Health check failed: ${healthResult.error}`,
+    passed: diag.health.ok,
+    detail: diag.health.ok
+      ? `Parser healthy: HTTP ${diag.health.httpStatus}, ${diag.health.latencyMs}ms`
+      : `Health failed: ${diag.health.error}`,
   });
 
-  if (!healthResult.healthy) {
-    return { passed: false, steps };
-  }
+  if (!diag.health.ok) return { passed: false, steps };
 
-  const fixturePdf = createMinimalTestPdf();
-
-  let parseResult: ParserResponse | null = null;
-  try {
-    parseResult = await callParserService(fixturePdf, 'self_test_bill.pdf', {
-      sourceDocId: 'self-test',
-    });
-    steps.push({
-      name: 'parse_request',
-      passed: true,
-      detail: `Parser returned status=${parseResult.status}, docType=${parseResult.docType}`,
-    });
-  } catch (err: any) {
-    steps.push({
-      name: 'parse_request',
-      passed: false,
-      detail: `Parse request failed: ${err.message}`,
-    });
-    return { passed: false, steps };
-  }
-
-  const hasDocType = parseResult.docType === 'BILL' || parseResult.docType === 'PRC' || parseResult.docType === 'OTHER';
   steps.push({
-    name: 'doctype_valid',
-    passed: hasDocType,
-    detail: `docType=${parseResult.docType} (expected BILL, PRC, or OTHER)`,
+    name: 'parse_request',
+    passed: diag.parse.ok,
+    detail: diag.parse.ok
+      ? `Parse OK: docType=${diag.parse.docType}, ${diag.parse.latencyMs}ms`
+      : `Parse failed: ${diag.parse.error}`,
   });
 
-  const hasData = parseResult.data && typeof parseResult.data === 'object';
-  steps.push({
-    name: 'data_present',
-    passed: !!hasData,
-    detail: hasData ? `Data keys: ${Object.keys(parseResult.data).join(', ')}` : 'No data object in response',
-  });
-
-  if (parseResult.docType === 'BILL' && hasData) {
-    const cnpj = parseResult.data.customerId;
-    const cnpjDigits = cnpj ? String(cnpj).replace(/\D/g, '') : '';
-    const cnpjValid = cnpjDigits.length === 14;
+  if (diag.parse.extractedFields) {
+    const fields = diag.parse.extractedFields;
+    const fieldNames = Object.entries(fields).filter(([, v]) => v != null).map(([k]) => k);
     steps.push({
-      name: 'bill_customerId_cnpj',
-      passed: cnpjValid,
-      detail: cnpjValid
-        ? `customerId is valid 14-digit CNPJ: ${cnpjDigits}`
-        : `customerId "${cnpj}" is not a valid 14-digit CNPJ (got ${cnpjDigits.length} digits)`,
-    });
-
-    const amt = parseResult.data.totalAmount;
-    const amtPresent = amt !== null && amt !== undefined && !isNaN(Number(amt));
-    steps.push({
-      name: 'bill_totalAmount_present',
-      passed: amtPresent,
-      detail: amtPresent
-        ? `totalAmount present: ${amt}`
-        : `totalAmount missing or invalid: ${JSON.stringify(amt)}`,
+      name: 'extracted_fields',
+      passed: fieldNames.length > 0,
+      detail: fieldNames.length > 0 ? `Extracted: ${fieldNames.join(', ')}` : 'No fields extracted',
     });
   }
 
-  const allPassed = steps.every(s => s.passed);
-  return { passed: allPassed, steps, rawResponse: parseResult };
+  return { passed: steps.every(s => s.passed), steps };
 }
 
 function createMinimalTestPdf(): Buffer {

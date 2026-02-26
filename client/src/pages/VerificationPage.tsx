@@ -32,19 +32,25 @@ interface VerifyResult {
 interface DiagnosticsResult {
   success: boolean;
   parserBaseUrl: string;
-  attemptedUrl: string;
-  reachable: boolean;
-  healthy: boolean;
-  degraded: boolean;
-  latencyMs: number | null;
-  httpStatus: number | null;
-  error: string | null;
-  bodySnippet: string | null;
-  json: Record<string, any> | null;
-  parserVersion: string | null;
-  ocrAvailable: boolean | null;
-  state: 'HEALTHY' | 'DEGRADED' | 'ERROR' | 'UNREACHABLE';
-  checkedAt: string;
+  timestamp: string;
+  runtime: string;
+  health: {
+    ok: boolean;
+    httpStatus: number | null;
+    latencyMs: number | null;
+    bodySnippet: string | null;
+    error: string | null;
+    json: Record<string, any> | null;
+  };
+  parse: {
+    ok: boolean;
+    httpStatus: number | null;
+    latencyMs: number | null;
+    docType: string | null;
+    extractedFields: Record<string, any> | null;
+    error: string | null;
+    fixtureFile: string | null;
+  };
 }
 
 interface TestParseResult {
@@ -202,7 +208,7 @@ export default function VerificationPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => testParseMutation.mutate()}
-                      disabled={testParseMutation.isPending || !diagData?.healthy}
+                      disabled={testParseMutation.isPending || !diagData?.health?.ok}
                       data-testid="button-test-parse"
                     >
                       {testParseMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <FlaskConical className="w-3 h-3 mr-1" />}
@@ -222,25 +228,32 @@ export default function VerificationPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {diagData ? (
+                {diagData ? (() => {
+                  const h = diagData.health;
+                  const p = diagData.parse;
+                  const state = !h.ok ? (h.httpStatus ? 'ERROR' : 'UNREACHABLE') : 
+                    (h.json?.ocr_available === false ? 'DEGRADED' : 'HEALTHY');
+                  const version = h.json?.version;
+                  const ocrAvailable = h.json?.ocr_available;
+                  return (
                   <div className="space-y-3">
                     <div className={cn("flex items-center gap-2 p-3 rounded-lg border",
-                      diagData.state === 'HEALTHY' ? 'bg-emerald-50 border-emerald-200' :
-                      diagData.state === 'DEGRADED' ? 'bg-amber-50 border-amber-200' :
+                      state === 'HEALTHY' ? 'bg-emerald-50 border-emerald-200' :
+                      state === 'DEGRADED' ? 'bg-amber-50 border-amber-200' :
                       'bg-red-50 border-red-200'
                     )}>
-                      {diagData.state === 'HEALTHY' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-                      {diagData.state === 'DEGRADED' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
-                      {(diagData.state === 'UNREACHABLE' || diagData.state === 'ERROR') && <XCircle className="w-5 h-5 text-red-600" />}
+                      {state === 'HEALTHY' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                      {state === 'DEGRADED' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                      {(state === 'UNREACHABLE' || state === 'ERROR') && <XCircle className="w-5 h-5 text-red-600" />}
                       <span className={cn("text-sm font-bold",
-                        diagData.state === 'HEALTHY' ? 'text-emerald-800' :
-                        diagData.state === 'DEGRADED' ? 'text-amber-800' :
+                        state === 'HEALTHY' ? 'text-emerald-800' :
+                        state === 'DEGRADED' ? 'text-amber-800' :
                         'text-red-800'
                       )} data-testid="text-parser-state">
-                        {diagData.state}
+                        {state}
                       </span>
-                      {diagData.parserVersion && (
-                        <Badge variant="outline" className="ml-auto text-[10px]" data-testid="text-parser-version">v{diagData.parserVersion}</Badge>
+                      {version && (
+                        <Badge variant="outline" className="ml-auto text-[10px]" data-testid="text-parser-version">v{version}</Badge>
                       )}
                     </div>
 
@@ -250,50 +263,67 @@ export default function VerificationPage() {
                         <code className="text-xs font-mono break-all" data-testid="text-parser-url">{diagData.parserBaseUrl}</code>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Attempted URL</span>
-                        <code className="text-xs font-mono break-all" data-testid="text-parser-attempted-url">{diagData.attemptedUrl}</code>
+                        <span className="text-xs text-muted-foreground block">Runtime</span>
+                        <code className="text-xs font-mono break-all" data-testid="text-parser-runtime">{diagData.runtime}</code>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Reachable</span>
-                        <span className="text-sm" data-testid="text-parser-reachable">{diagData.reachable ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 rounded border">
-                        <span className="text-xs text-muted-foreground block">Latency</span>
-                        <span className="text-sm font-mono" data-testid="text-parser-latency">{diagData.latencyMs != null ? `${diagData.latencyMs}ms` : 'N/A'}</span>
+                        <span className="text-xs text-muted-foreground block">Health Latency</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-latency">{h.latencyMs != null ? `${h.latencyMs}ms` : 'N/A'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
                         <span className="text-xs text-muted-foreground block">HTTP Status</span>
-                        <span className="text-sm font-mono" data-testid="text-parser-http">{diagData.httpStatus ?? 'N/A'}</span>
+                        <span className="text-sm font-mono" data-testid="text-parser-http">{h.httpStatus ?? 'N/A'}</span>
                       </div>
                       <div className="p-2 bg-slate-50 rounded border">
                         <span className="text-xs text-muted-foreground block">OCR Available</span>
                         <span className="text-sm" data-testid="text-parser-ocr">
-                          {diagData.ocrAvailable === true ? 'Yes' : diagData.ocrAvailable === false ? 'No (degraded)' : 'Unknown'}
+                          {ocrAvailable === true ? 'Yes' : ocrAvailable === false ? 'No (degraded)' : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded border">
+                        <span className="text-xs text-muted-foreground block">Parse Test</span>
+                        <span className={cn("text-sm font-medium", p.ok ? 'text-emerald-700' : 'text-red-700')} data-testid="text-parse-test-status">
+                          {p.ok ? `OK — ${p.docType}, ${p.latencyMs}ms` : (p.error || (p.latencyMs ? `Failed (${p.latencyMs}ms)` : 'Not run'))}
                         </span>
                       </div>
                     </div>
 
-                    {diagData.error && (
+                    {p.ok && p.extractedFields && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <p className="text-xs font-medium text-emerald-800 mb-1">Extracted Fields (from {p.fixtureFile})</p>
+                        <div className="grid grid-cols-3 gap-2 text-[10px]">
+                          {Object.entries(p.extractedFields).map(([k, v]) => (
+                            <div key={k}>
+                              <span className="text-emerald-600">{k}: </span>
+                              <span className="font-mono text-emerald-900">{v != null ? String(v) : '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {h.error && (
                       <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700" data-testid="text-parser-error">
-                        <span className="font-medium">Error: </span>{diagData.error}
+                        <span className="font-medium">Error: </span>{h.error}
                       </div>
                     )}
-                    {diagData.bodySnippet && (
+                    {h.bodySnippet && (
                       <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700" data-testid="text-parser-body-snippet">
-                        <span className="font-medium">Body snippet: </span>{diagData.bodySnippet}
+                        <span className="font-medium">Body snippet: </span>{h.bodySnippet}
                       </div>
                     )}
-                    {diagData.json && (
-                      <details className="text-xs" open>
+                    {h.json && (
+                      <details className="text-xs">
                         <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium">Raw health JSON</summary>
                         <pre className="mt-1 p-2 bg-slate-100 rounded border text-[10px] overflow-x-auto" data-testid="text-parser-raw-health">
-                          {JSON.stringify(diagData.json, null, 2)}
+                          {JSON.stringify(h.json, null, 2)}
                         </pre>
                       </details>
                     )}
-                    <p className="text-[10px] text-muted-foreground">Checked: {new Date(diagData.checkedAt).toLocaleString('pt-BR')}</p>
+                    <p className="text-[10px] text-muted-foreground">Checked: {new Date(diagData.timestamp).toLocaleString('pt-BR')}</p>
                   </div>
-                ) : (
+                  );
+                })() : (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading diagnostics...

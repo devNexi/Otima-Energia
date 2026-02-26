@@ -9541,35 +9541,15 @@ export async function registerRoutes(
     }
   });
 
-  // --- Parser Diagnostics (admin-only, full debug info) ---
+  // --- Parser Diagnostics (admin-only, full debug info with real parse test) ---
   app.get("/api/parser/diagnostics", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
-      const { checkParserHealth, getLastDiagnostics } = await import("./parser-client");
-      const health = await checkParserHealth();
-      const diag = getLastDiagnostics();
-      const reachable = !!diag && diag.httpStatus !== null;
-      const healthy = reachable && health.healthy;
-      const degraded = healthy && diag?.ocrAvailable === false;
-
-      res.json({
-        success: true,
-        parserBaseUrl: diag?.parserBaseUrl || '(not set)',
-        attemptedUrl: diag?.parserBaseUrl ? `${diag.parserBaseUrl}/health` : '(not set)',
-        reachable,
-        healthy,
-        degraded,
-        latencyMs: diag?.lastLatencyMs ?? null,
-        httpStatus: diag?.httpStatus ?? null,
-        error: diag?.lastError ?? null,
-        bodySnippet: !diag?.healthResponseBody && diag?.lastError ? diag.lastError.substring(0, 500) : null,
-        json: diag?.healthResponseBody ?? null,
-        parserVersion: diag?.parserVersion ?? null,
-        ocrAvailable: diag?.ocrAvailable ?? null,
-        state: healthy ? (degraded ? 'DEGRADED' : 'HEALTHY') : (reachable ? 'ERROR' : 'UNREACHABLE'),
-        checkedAt: diag?.checkedAt ?? new Date().toISOString(),
-      });
+      const { runFullDiagnostics } = await import("./parser-client");
+      const diag = await runFullDiagnostics();
+      res.json({ success: true, ...diag });
     } catch (error: any) {
+      console.error("[ParserDiagnostics] Error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

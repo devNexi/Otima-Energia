@@ -602,26 +602,65 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 {isPt ? "Faturas Carregadas" : "Uploaded Bills"}
               </p>
-              {bills.map((bill: any) => (
-                <div key={bill.id} className="flex items-center justify-between p-2 bg-slate-50 border rounded-md text-xs" data-testid={`bill-row-${bill.id}`}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
-                    <span className="truncate">{bill.originalFilename}</span>
-                    <Badge variant="outline" className={cn("text-[10px] h-5",
-                      bill.parseStatus === 'PARSED' ? "bg-emerald-50 text-emerald-700" :
-                      bill.parseStatus === 'FAILED' ? "bg-red-50 text-red-700" :
-                      "bg-amber-50 text-amber-700"
-                    )}>
-                      {bill.parseStatus}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {bill.parseStatus === 'PARSED' && bill.distributor && (
-                      <span className="text-[10px] text-muted-foreground">{bill.distributor} • {bill.referenceMonth}</span>
+              {bills.map((bill: any) => {
+                const status = bill.parseStatus as string;
+                const statusLabel = status === 'UPLOADED' ? (isPt ? 'Na Fila' : 'Queued')
+                  : status === 'PARSING' ? (isPt ? 'Enviado' : 'Sent')
+                  : status === 'PARSED' ? (isPt ? 'Analisado' : 'Parsed')
+                  : status === 'FAILED' ? (isPt ? 'Falhou' : 'Failed')
+                  : status;
+                const statusIcon = status === 'PARSED' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  : status === 'FAILED' ? <AlertCircle className="w-3 h-3 text-red-600" />
+                  : status === 'PARSING' ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
+                  : <Clock className="w-3 h-3 text-amber-600" />;
+
+                return (
+                  <div key={bill.id} className={cn("p-2 border rounded-md text-xs", 
+                    status === 'FAILED' ? "bg-red-50 border-red-200" : "bg-slate-50"
+                  )} data-testid={`bill-row-${bill.id}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
+                        <span className="truncate">{bill.originalFilename}</span>
+                        <div className="flex items-center gap-1">
+                          {statusIcon}
+                          <Badge variant="outline" className={cn("text-[10px] h-5",
+                            status === 'PARSED' ? "bg-emerald-50 text-emerald-700" :
+                            status === 'FAILED' ? "bg-red-50 text-red-700" :
+                            status === 'PARSING' ? "bg-blue-50 text-blue-700" :
+                            "bg-amber-50 text-amber-700"
+                          )}>
+                            {statusLabel}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {status === 'PARSED' && bill.distributor && (
+                          <span className="text-[10px] text-muted-foreground">{bill.distributor} {bill.referenceMonth ? `• ${bill.referenceMonth}` : ''}</span>
+                        )}
+                        {status === 'PARSED' && bill.totalAmount && (
+                          <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 ml-1">
+                            R$ {Number(bill.totalAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {status === 'FAILED' && (
+                      <div className="mt-1.5 text-[10px] text-red-700 bg-red-100 rounded px-2 py-1" data-testid={`bill-error-${bill.id}`}>
+                        <span className="font-medium">{isPt ? 'Erro: ' : 'Error: '}</span>
+                        {bill.parseErrors ? (Array.isArray(bill.parseErrors) ? bill.parseErrors.join('; ') : String(bill.parseErrors)) : (isPt ? 'Falha na análise do documento' : 'Document parsing failed')}
+                      </div>
+                    )}
+                    {status === 'PARSED' && bill.tariffGroup && (
+                      <div className="mt-1 flex gap-2 text-[10px] text-muted-foreground">
+                        {bill.tariffGroup && <span>{isPt ? 'Grupo: ' : 'Tariff: '}{bill.tariffGroup}</span>}
+                        {bill.totalEnergyKwh && <span>• {Number(bill.totalEnergyKwh).toLocaleString('pt-BR')} kWh</span>}
+                        {bill.customerId && <span>• CNPJ: {bill.customerId}</span>}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
