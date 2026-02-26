@@ -100,9 +100,9 @@ export async function callParserService(
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PARSER_TIMEOUT_MS);
+    const url = `${PARSER_SERVICE_URL}/parse`;
 
     try {
-      const url = `${PARSER_SERVICE_URL}/parse`;
       console.log(`[ParserClient] POST ${url} (file=${filename}, size=${fileBuffer.length}b, timeout=${PARSER_TIMEOUT_MS}ms, attempt=${attempt + 1})`);
 
       const response = await fetch(url, {
@@ -151,8 +151,11 @@ export async function callParserService(
 
     } catch (error: any) {
       clearTimeout(timeout);
+      const detailedMsg = buildDetailedErrorMessage(error, url);
+      console.error(`[ParserClient] Request failed (attempt ${attempt + 1}): ${detailedMsg}`);
+
       if (error.name === 'AbortError') {
-        lastError = new Error(`Parser service timed out after ${PARSER_TIMEOUT_MS}ms`);
+        lastError = new Error(`PARSER_TIMEOUT: timed out after ${PARSER_TIMEOUT_MS}ms calling ${url}`);
         if (attempt < MAX_RETRIES) {
           console.warn(`[ParserClient] Timeout, will retry`);
           continue;
@@ -160,17 +163,53 @@ export async function callParserService(
         throw lastError;
       }
       if (attempt < MAX_RETRIES && isNetworkError(error)) {
-        console.warn(`[ParserClient] Network error: ${error.message}, will retry`);
-        lastError = error;
+        console.warn(`[ParserClient] Network error, will retry: ${detailedMsg}`);
+        lastError = new Error(detailedMsg);
         continue;
       }
-      throw error;
+      throw new Error(detailedMsg);
     } finally {
       clearTimeout(timeout);
     }
   }
 
   throw lastError || new Error('Parser request failed after retries');
+}
+
+function buildDetailedErrorMessage(error: any, url: string): string {
+  const parts: string[] = [];
+  
+  if (error.code) {
+    const codeMap: Record<string, string> = {
+      'ECONNREFUSED': 'CONNECTION_REFUSED',
+      'ECONNRESET': 'CONNECTION_RESET',
+      'ETIMEDOUT': 'CONNECT_TIMEOUT',
+      'ENOTFOUND': 'DNS_RESOLUTION_FAILED',
+      'DEPTH_ZERO_SELF_SIGNED_CERT': 'TLS_SELF_SIGNED_CERT',
+      'UNABLE_TO_VERIFY_LEAF_SIGNATURE': 'TLS_CERT_INVALID',
+      'CERT_HAS_EXPIRED': 'TLS_CERT_EXPIRED',
+      'ERR_TLS_CERT_ALTNAME_INVALID': 'TLS_HOSTNAME_MISMATCH',
+    };
+    parts.push(codeMap[error.code] || error.code);
+  }
+
+  parts.push(error.message || 'Unknown error');
+  parts.push(`url=${url}`);
+
+  if (error.cause) {
+    const cause = error.cause;
+    if (cause.code) parts.push(`cause.code=${cause.code}`);
+    if (cause.message && cause.message !== error.message) parts.push(`cause=${cause.message}`);
+    if (cause.cause) {
+      const innerCause = cause.cause;
+      if (innerCause.code) parts.push(`inner.code=${innerCause.code}`);
+      if (innerCause.message) parts.push(`inner=${innerCause.message}`);
+    }
+  }
+
+  if (error.errno) parts.push(`errno=${error.errno}`);
+
+  return parts.join(' | ');
 }
 
 function isNetworkError(error: any): boolean {
@@ -296,10 +335,11 @@ export async function checkParserHealth(): Promise<{
     const latencyMs = Date.now() - startMs;
     diag.lastLatencyMs = latencyMs;
     diag.lastHealthStatus = 'unreachable';
-    diag.lastError = error.message;
-    console.error(`[ParserClient] Health check FAILED: ${error.message} (${latencyMs}ms)`);
+    const detailedError = buildDetailedErrorMessage(error, url);
+    diag.lastError = detailedError;
+    console.error(`[ParserClient] Health check FAILED: ${detailedError} (${latencyMs}ms)`);
     _lastDiagnostics = diag;
-    return { healthy: false, error: error.message, latencyMs };
+    return { healthy: false, error: detailedError, latencyMs };
   }
 }
 

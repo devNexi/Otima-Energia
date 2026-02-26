@@ -206,6 +206,27 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   });
 
+  const retryBillParseMutation = useMutation({
+    mutationFn: async (billId: number) => {
+      const res = await fetch(`/api/deals/${dealId}/bills/${billId}/retry-parse`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: isPt ? "Re-análise iniciada" : "Re-parse started", description: isPt ? "A fatura será analisada novamente em breve." : "The bill will be re-parsed shortly." });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+    },
+    onError: (err: any) => {
+      toast({ title: isPt ? "Erro ao reprocessar" : "Retry failed", description: err.message, variant: "destructive" });
+    }
+  });
+
   const generateEcosMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/deals/${dealId}/ecos/generate`, {
@@ -651,8 +672,20 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                     </div>
                     {status === 'FAILED' && (
                       <div className="mt-1.5 text-[10px] text-red-700 bg-red-100 rounded px-2 py-1" data-testid={`bill-error-${bill.id}`}>
-                        <span className="font-medium">{isPt ? 'Erro: ' : 'Error: '}</span>
-                        {bill.parseErrors ? (Array.isArray(bill.parseErrors) ? bill.parseErrors.join('; ') : String(bill.parseErrors)) : (isPt ? 'Falha na análise do documento' : 'Document parsing failed')}
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className="font-medium">{isPt ? 'Erro: ' : 'Error: '}</span>
+                            {bill.parseErrors ? (Array.isArray(bill.parseErrors) ? bill.parseErrors.join('; ') : String(bill.parseErrors)) : (isPt ? 'Falha na análise do documento' : 'Document parsing failed')}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); retryBillParseMutation.mutate(bill.id); }}
+                            disabled={retryBillParseMutation.isPending}
+                            className="shrink-0 px-2 py-0.5 text-[10px] font-medium bg-red-200 hover:bg-red-300 rounded transition-colors disabled:opacity-50"
+                            data-testid={`button-retry-parse-${bill.id}`}
+                          >
+                            {retryBillParseMutation.isPending ? (isPt ? 'Reenviando...' : 'Retrying...') : (isPt ? 'Reprocessar' : 'Retry')}
+                          </button>
+                        </div>
                       </div>
                     )}
                     {status === 'PARSED' && bill.tariffGroup && (

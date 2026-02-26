@@ -571,10 +571,14 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
         console.log(`[JobRunner] BILL_PARSE: bill ${billId} parsed, validated=${result.validated}`);
       } catch (parserErr: any) {
+        const errorDetail = parserErr.message || 'Unknown error';
+        const causeDetail = parserErr.cause ? ` | cause: ${parserErr.cause.code || parserErr.cause.message || JSON.stringify(parserErr.cause)}` : '';
+        const fullError = `PARSER_ERROR: ${errorDetail}${causeDetail}`;
+        console.error(`[JobRunner] BILL_PARSE: parse failed for bill ${billId}: ${fullError}`);
         await db.update(billsExtracted)
           .set({
             parseStatus: 'FAILED',
-            parseErrors: [`PARSER_ERROR: ${parserErr.message}`],
+            parseErrors: [fullError],
             updatedAt: new Date(),
           })
           .where(eq(billsExtracted.id, billId));

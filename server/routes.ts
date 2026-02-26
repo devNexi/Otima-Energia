@@ -9749,6 +9749,21 @@ export async function registerRoutes(
         .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.fileSha256, fileSha256)));
       if (existing.length > 0) {
         const bill = existing[0];
+        if (bill.parseStatus === 'FAILED') {
+          await db.update(billsExtracted)
+            .set({ parseStatus: 'PENDING', parseErrors: null, updatedAt: new Date() })
+            .where(eq(billsExtracted.id, bill.id));
+          await enqueueJob('BILL_PARSE', {
+            billId: bill.id,
+            fileStorageKey: bill.fileStorageKey,
+            dealId,
+          }, undefined, 3);
+          const updatedBill = { ...bill, parseStatus: 'PENDING', parseErrors: null };
+          return res.json({ success: true, bill: updatedBill, extracted: null, idempotent: true, retryQueued: true, message: "Previous parse failed — re-parse queued automatically" });
+        }
+        if (bill.parseStatus === 'PENDING' || bill.parseStatus === 'PARSING') {
+          return res.json({ success: true, bill, extracted: null, idempotent: true, message: "Bill is already being parsed" });
+        }
         const extracted = bill.parseStatus === 'PARSED' ? {
           distributor: bill.distributor, referenceMonth: bill.referenceMonth,
           totalEnergyKwh: bill.totalEnergyKwh, totalAmount: bill.totalAmount,
@@ -9834,6 +9849,43 @@ export async function registerRoutes(
       res.json({ success: true, bills });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Failed to fetch deal bills" });
+    }
+  });
+
+  app.post("/api/deals/:dealId/bills/:billId/retry-parse", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, billId } = req.params;
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      const bills = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.id, parseInt(billId)), eq(billsExtracted.dealId, dealId)));
+      if (bills.length === 0) return res.status(404).json({ success: false, error: "Bill not found" });
+
+      const bill = bills[0];
+      if (bill.parseStatus === 'PENDING' || bill.parseStatus === 'PARSING') {
+        return res.json({ success: true, message: `Bill is already ${bill.parseStatus} — parse in progress`, billId: bill.id, alreadyPending: true });
+      }
+      if (bill.parseStatus !== 'FAILED') {
+        return res.status(400).json({ success: false, error: `Bill parse status is '${bill.parseStatus}', not FAILED — retry not needed` });
+      }
+
+      await db.update(billsExtracted)
+        .set({ parseStatus: 'PENDING', parseErrors: null, updatedAt: new Date() })
+        .where(eq(billsExtracted.id, bill.id));
+
+      await enqueueJob('BILL_PARSE', {
+        billId: bill.id,
+        fileStorageKey: bill.fileStorageKey,
+        dealId,
+      }, undefined, 3);
+
+      res.json({ success: true, message: "Re-parse queued", billId: bill.id });
+    } catch (error: any) {
+      console.error("[RetryBillParse] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
