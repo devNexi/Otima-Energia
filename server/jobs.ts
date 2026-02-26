@@ -320,23 +320,72 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             hintDocType: 'PRC',
           });
 
+          const PRICE_MIN = 10;
+          const PRICE_MAX = 2000;
+          const SUBMARKET_MAP: Record<string, string> = {
+            'SE/CO': 'SE_CO', 'SECO': 'SE_CO', 'SE': 'SE_CO', 'CO': 'SE_CO',
+            'SUDESTE': 'SE_CO', 'SUDESTE/CENTRO-OESTE': 'SE_CO', 'SE_CO': 'SE_CO',
+            'S': 'S', 'SUL': 'S',
+            'NE': 'NE', 'NNE': 'NE', 'NORDESTE': 'NE',
+            'N': 'N', 'NORTE': 'N',
+          };
+          const validSubmarkets = ['SE_CO', 'S', 'NE', 'N'];
+
+          function normalizeVpsPrice(raw: any): { price: number | null; rawText: string; rejectReason: string | null } {
+            const rawText = String(raw ?? '');
+            let cleaned = rawText.replace(/\s/g, '').replace(/%/g, '').replace(/R\$/gi, '');
+            if (/^\-?\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(cleaned)) {
+              cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (/^\-?\d+(,\d{1,2})$/.test(cleaned)) {
+              cleaned = cleaned.replace(',', '.');
+            }
+            const val = parseFloat(cleaned);
+            if (isNaN(val) || val <= 0) return { price: null, rawText, rejectReason: 'BAD_NUMBER' };
+            if (val < PRICE_MIN || val > PRICE_MAX) return { price: val, rawText, rejectReason: 'OUT_OF_RANGE' };
+            return { price: val, rawText, rejectReason: null };
+          }
+
           const insertedPrcRows = [];
+          const rejectReasons: Record<string, number> = {};
+          let rowsRejected = 0;
+
           for (const row of result.rows) {
+            const { price, rawText, rejectReason: priceReject } = normalizeVpsPrice(row.price);
+            const rawSm = String(row.submarket || '').toUpperCase().trim();
+            const submarket = SUBMARKET_MAP[rawSm] || rawSm;
+            const smValid = validSubmarkets.includes(submarket);
+
+            if (priceReject) {
+              rejectReasons[priceReject] = (rejectReasons[priceReject] || 0) + 1;
+              rowsRejected++;
+              console.log(`[PRC_PARSE] Rejected row: price=${rawText} reason=${priceReject} submarket=${rawSm}`);
+              continue;
+            }
+            if (!smValid) {
+              rejectReasons['MISSING_ZONE'] = (rejectReasons['MISSING_ZONE'] || 0) + 1;
+              rowsRejected++;
+              console.log(`[PRC_PARSE] Rejected row: submarket=${rawSm} (unmapped)`);
+              continue;
+            }
+
+            const isOutlier = price! > 800;
             const inserted = await db.insert(prcRows).values({
               prcDocumentId: documentId,
               supplierId: doc[0].supplierId,
               referenceMonth: result.data?.referenceMonth || doc[0].referenceMonth,
-              submarket: row.submarket || 'UNKNOWN',
+              submarket,
               productType: row.product || 'CONVENCIONAL',
               termMonths: row.termMonths || null,
-              priceRPerMWh: String(row.price || '0'),
+              priceRPerMWh: String(price),
               confidence: Math.round((row.confidence || result.confidence) * 100),
-              isOutlierFlag: row.isOutlier || false,
-              outlierReason: row.outlierReason || null,
-              rawSnippet: row.submarket ? `${row.submarket} ${row.product} ${row.termMonths}m: ${row.price}` : null,
+              isOutlierFlag: isOutlier,
+              outlierReason: isOutlier ? `Price ${price} R$/MWh flagged as high` : null,
+              rawSnippet: `${rawSm} ${row.product} ${row.termMonths}m: ${rawText}`,
             }).returning();
             insertedPrcRows.push(inserted[0]);
           }
+
+          console.log(`[PRC_PARSE] VPS results: ${result.rows.length} raw, ${insertedPrcRows.length} accepted, ${rowsRejected} rejected, reasons=${JSON.stringify(rejectReasons)}`);
 
           if (doc[0]?.supplierId && result.data?.referenceMonth) {
             for (const prcRow of insertedPrcRows) {
@@ -356,13 +405,36 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             }
           }
 
+          const countsBySubmarket: Record<string, number> = {};
+          for (const r of insertedPrcRows) {
+            countsBySubmarket[r.submarket] = (countsBySubmarket[r.submarket] || 0) + 1;
+          }
+
+          const parseStats = {
+            rawRowsFromParser: result.rows.length,
+            rowsAccepted: insertedPrcRows.length,
+            rowsRejected,
+            rejectReasons,
+            countsBySubmarket,
+            missingSubmarketRows: insertedPrcRows.filter(r => !validSubmarkets.includes(r.submarket)).length,
+            exampleParsedRows: insertedPrcRows.slice(0, 5).map(r => ({
+              submarket: r.submarket, product: r.productType, termMonths: r.termMonths,
+              price: r.priceRPerMWh, confidence: r.confidence, outlier: r.isOutlierFlag,
+            })),
+            ...(result.debug || {}),
+          };
+
+          const finalStatus = insertedPrcRows.length > 0
+            ? (insertedPrcRows.length >= 12 ? 'PARSED' : 'NEEDS_REVIEW')
+            : 'FAILED';
+
           await db.update(prcDocuments)
             .set({
-              parseStatus: result.validated ? 'PARSED' : 'FAILED',
+              parseStatus: finalStatus,
               parseConfidence: Math.round(result.confidence * 100),
-              parseErrors: result.status === 'failed' ? result.warnings : null,
+              parseErrors: rowsRejected > 0 ? [`${rowsRejected} rows rejected: ${JSON.stringify(rejectReasons)}`] : null,
               rawExtractedText: result.debug?.chosenText?.substring(0, 5000) || null,
-              parseDebugJson: result.debug as any,
+              parseDebugJson: parseStats as any,
               rowsExtracted: insertedPrcRows.length,
               rowsFlagged: insertedPrcRows.filter(r => r.isOutlierFlag).length,
               parseCompletedAt: new Date(),

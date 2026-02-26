@@ -1,0 +1,219 @@
+You said everything is “implemented and verified”, but in production UI reality it’s not working:
+
+Bill upload from the portal UI returns 404
+
+PRC parsing gave nonsense like “9800%”
+
+PRC extraction missed half the table
+
+PRC zone mapping is wrong / incomplete (we require exactly 4 zones: SE/CO, S, NE, N per product/term)
+
+Stop summarizing and fix the actual failures. This is now a strict checklist with proof required.
+
+1) BILL UPLOAD 404 — FIX THE ROUTE MISMATCH (ROOT CAUSE)
+
+Requirement: Deal Assembly “Upload Bill” must call a real endpoint that exists in backend, with correct auth headers.
+
+You must do ALL of this:
+A) Identify exactly what URL the frontend is calling
+
+Add a console log (frontend) before the request showing:
+
+method, url, headers keys, dealId
+
+Paste it.
+
+B) Confirm the backend route exists and matches exactly
+
+Backend must have one canonical route (choose one and stick to it):
+
+POST /api/deals/:dealId/bills/upload (preferred)
+
+If frontend is calling anything else (e.g. /api/deal/... or /api/bills/...), fix it.
+
+C) Add a hard integration test to prevent regressions
+
+Add a test that fails CI if bill upload endpoint is missing:
+
+start server
+
+hit route (expect 401 if unauthenticated, not 404)
+
+authenticated call should return 200/201.
+
+D) Proof required
+
+Paste:
+
+The route definition line from routes file
+
+A curl that returns 401 (unauth) NOT 404:
+
+curl -i -X POST "$BASE/api/deals/1/bills/upload"
+
+A successful authenticated request (use your normal session header scheme)
+
+2) PRC “9800%” BUG — FIX NUMBER PARSING + UNITS (CRITICAL)
+
+This is non-negotiable: PRC prices must be realistic and correctly normalized.
+
+You must enforce:
+A) Numeric normalization rules (Brazilian formats)
+
+Accept both 1.234,56 and 1234.56
+
+Strip thousand separators
+
+Convert comma decimals to dot decimals
+
+Reject % values in price fields (they’re not %)
+
+Guardrails: PRC price values must be within plausible range (example):
+
+10 <= price <= 2000 (R$/MWh) unless explicitly flagged “outlier”
+If something parses as 9800, that must be caught and produce:
+
+validation error + debug evidence (not silently accepted)
+
+B) “9800%” specifically
+
+That indicates you’re:
+
+reading a percentage column as a price column, OR
+
+multiplying by 100 incorrectly, OR
+
+OCR is picking up the wrong tokens and your extractor is not table-anchored
+
+You must:
+
+show which column you used as the price
+
+show the raw cell text you parsed
+
+show the numeric transform steps
+
+C) Proof required
+
+For one uploaded PRC document:
+
+Return debug JSON:
+
+{
+  "rawTextSnippet": "...",
+  "tableRowsExtracted": 123,
+  "rowsAccepted": 48,
+  "rowsRejected": 75,
+  "rejectReasons": {"OUT_OF_RANGE": 10, "BAD_NUMBER": 20, "MISSING_ZONE": 45},
+  "exampleParsedRows": [...]
+}
+3) PRC TABLE MISSED HALF THE ROWS — FIX EXTRACTION STRATEGY
+
+We cannot use PRC data unless extraction is complete.
+
+Required changes:
+A) Use deterministic table parsing first
+
+Priority order:
+
+If PDF has embedded text: parse via pdf text and table-like line grouping
+
+If image/scanned: OCR page → reconstruct rows by consistent separators
+
+Only then fallback to regex scanning
+
+B) Multi-page PRCs
+
+Must support PRC tables across multiple pages:
+
+Extract all pages
+
+Combine rows
+
+Deduplicate identical lines
+
+C) Proof required
+
+After upload + parse:
+
+show pagesProcessed
+
+show rowsPerPage
+
+show total rows and the expected minimum:
+
+must produce >= 12 rows bare minimum (4 zones × 3 terms)
+
+realistic PRCs should generate far more depending on products
+
+4) ZONE MAPPING — MUST OUTPUT THE 4 BRAZIL SUBMARKETS CORRECTLY
+
+We require: SE/CO, S, NE, N.
+
+Required behavior:
+
+Each pricing row must have submarket ∈ {SE_CO, S, NE, N}
+
+Never “null”, never missing
+
+If PRC uses synonyms:
+
+“SE/CO”, “SECO”, “Sudeste/Centro-Oeste” → SE_CO
+
+“Sul” → S
+
+“Nordeste” → NE
+
+“Norte” → N
+
+If the PRC table has 4 columns for zones, you must extract all 4 per product/term.
+
+Proof required:
+
+Return aggregation summary after parse:
+
+{
+  "countsBySubmarket": {"SE_CO": 20, "S": 20, "NE": 20, "N": 20},
+  "missingSubmarketRows": 0
+}
+5) PRC MUST FEED ECOS (END-TO-END)
+
+After PRC parse:
+
+pricing rows must be published to the canonical table ECOS uses
+
+ECOS generator must show NO_PRC only when canonical rows count == 0
+
+Add endpoint:
+
+GET /api/prc/active-summary
+returns:
+
+{"countRows":1234,"latestMonth":"2026-01","countsBySubmarket":{...}}
+6) Deliverables checklist (must paste outputs)
+
+You must paste, in your reply:
+
+Screenshot OR code snippet proving the frontend bill upload hits the correct endpoint
+
+The backend route definition for bill upload
+
+Curl that returns 401 not 404 for bill upload (unauth)
+
+Successful bill upload from UI (and server log for that request)
+
+PRC parse debug JSON showing:
+
+rows extracted
+
+rows accepted/rejected
+
+counts by submarket
+
+rejection reasons (including out-of-range)
+
+/api/prc/active-summary output showing non-zero rows
+
+ECOS generation using PRC rows (no NO_PRC)
+
+No more “it’s implemented”. Prove it or fix it.

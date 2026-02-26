@@ -164,9 +164,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
 
   const uploadBillMutation = useMutation({
     mutationFn: async (file: File) => {
+      const url = `/api/deals/${dealId}/bills/upload`;
+      console.log(`[BillUpload] POST ${url} dealId=${dealId} file=${file.name} size=${file.size} sessionId=${sessionId ? 'present' : 'MISSING'}`);
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(`/api/deals/${dealId}/bills/upload`, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'x-session-id': sessionId || '' },
         body: formData,

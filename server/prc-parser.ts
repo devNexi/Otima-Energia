@@ -31,8 +31,8 @@ export interface PrcParseResult {
   rawExtractedText: string;
 }
 
-const SUBMARKETS = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE', 'SE/CO', 'S', 'N'];
-const VALID_SUBMARKETS = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE'];
+const SUBMARKETS = ['SE_CO', 'S', 'NE', 'N', 'SE/CO', 'SECO', 'SUL', 'NNE', 'NORTE'];
+const VALID_SUBMARKETS = ['SE_CO', 'S', 'NE', 'N'];
 const PRODUCT_TYPES = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100', 'I0', 'I50', 'I100', 'CONV'];
 const PRICE_MIN_R_MWH = 10;
 const PRICE_MAX_R_MWH = 2000;
@@ -110,14 +110,20 @@ function matchColumn(header: string): string | null {
 function normalizeSubmarket(raw: string): string {
   const cleaned = raw.toUpperCase().trim();
   const mappings: Record<string, string> = {
-    'SE/CO': 'SECO',
-    'SE': 'SECO',
-    'CO': 'SECO',
-    'SUDESTE': 'SECO',
-    'SUDESTE/CENTRO-OESTE': 'SECO',
-    'S': 'SUL',
-    'N': 'NORTE',
-    'NORDESTE': 'NNE',
+    'SE/CO': 'SE_CO',
+    'SECO': 'SE_CO',
+    'SE': 'SE_CO',
+    'CO': 'SE_CO',
+    'SUDESTE': 'SE_CO',
+    'SUDESTE/CENTRO-OESTE': 'SE_CO',
+    'SE_CO': 'SE_CO',
+    'S': 'S',
+    'SUL': 'S',
+    'NE': 'NE',
+    'NNE': 'NE',
+    'NORDESTE': 'NE',
+    'N': 'N',
+    'NORTE': 'N',
   };
   return mappings[cleaned] || cleaned;
 }

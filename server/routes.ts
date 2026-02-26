@@ -9374,7 +9374,7 @@ export async function registerRoutes(
       }
       
       // Validate submarket and productType against allowed values
-      const validSubmarkets = ['SECO', 'SUL', 'NNE', 'NORTE', 'NE'];
+      const validSubmarkets = ['SE_CO', 'S', 'NE', 'N'];
       const validProducts = ['CONVENCIONAL', 'INCENTIVADA', 'INC_I0', 'INC_I50', 'INC_I100'];
       
       if (!validSubmarkets.includes(submarket)) {
@@ -9514,6 +9514,43 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching PRC debug info:", error);
       res.status(500).json({ success: false, error: "Failed to fetch debug info" });
+    }
+  });
+
+  // --- PRC Active Summary (for ECOS pipeline verification) ---
+  app.get("/api/prc/active-summary", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { prcRows: prcRowsTable, prcDocuments: prcDocsTable } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, inArray } = await import("drizzle-orm");
+      const publishedDocs = await db.select().from(prcDocsTable).where(eq(prcDocsTable.parseStatus, 'PUBLISHED'));
+      const publishedDocIds = publishedDocs.map(d => d.id);
+
+      const publishedRows = publishedDocIds.length > 0
+        ? await db.select().from(prcRowsTable).where(inArray(prcRowsTable.prcDocumentId, publishedDocIds))
+        : [];
+      const allRows = await db.select().from(prcRowsTable);
+
+      const countsBySubmarket: Record<string, number> = {};
+      let latestMonth: string | null = null;
+      for (const r of publishedRows) {
+        countsBySubmarket[r.submarket] = (countsBySubmarket[r.submarket] || 0) + 1;
+        if (!latestMonth || r.referenceMonth > latestMonth) latestMonth = r.referenceMonth;
+      }
+
+      res.json({
+        success: true,
+        totalRows: allRows.length,
+        publishedRows: publishedRows.length,
+        latestPublishedMonth: latestMonth,
+        countsBySubmarket,
+        publishedDocuments: publishedDocs.length,
+        nonCanonicalSubmarketRows: allRows.filter(r => !['SE_CO', 'S', 'NE', 'N'].includes(r.submarket)).length,
+        ecosReady: publishedRows.length > 0,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
@@ -9860,15 +9897,15 @@ export async function registerRoutes(
       const customerId = bills.find(b => b.customerId)?.customerId || null;
 
       const distributorSubmarketMap: Record<string, string> = {
-        'CEMIG': 'SE/CO', 'LIGHT': 'SE/CO', 'ENEL SP': 'SE/CO', 'ENEL RJ': 'SE/CO',
-        'CPFL': 'SE/CO', 'ELEKTRO': 'SE/CO', 'EDP': 'SE/CO', 'NEOENERGIA': 'SE/CO',
+        'CEMIG': 'SE_CO', 'LIGHT': 'SE_CO', 'ENEL SP': 'SE_CO', 'ENEL RJ': 'SE_CO',
+        'CPFL': 'SE_CO', 'ELEKTRO': 'SE_CO', 'EDP': 'SE_CO', 'NEOENERGIA': 'SE_CO',
         'COPEL': 'S', 'CELESC': 'S', 'RGE': 'S', 'CEEE': 'S',
         'COELBA': 'NE', 'CELPE': 'NE', 'COSERN': 'NE', 'ENEL CE': 'NE', 'ENERGISA': 'NE',
         'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
       };
       const submarket = distributor
-        ? Object.entries(distributorSubmarketMap).find(([k]) => distributor.toUpperCase().includes(k))?.[1] || 'SE/CO'
-        : 'SE/CO';
+        ? Object.entries(distributorSubmarketMap).find(([k]) => distributor.toUpperCase().includes(k))?.[1] || 'SE_CO'
+        : 'SE_CO';
 
       const billRefMonth = bills.find(b => b.referenceMonth)?.referenceMonth || null;
 
