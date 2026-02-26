@@ -1,0 +1,262 @@
+You are working on the live production app:
+
+Portal UI: https://otimaenergia.com
+
+Parser service: https://parser.otimaenergia.com
+
+Failing deep link:
+
+text
+https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly
+Bill parsing error shown in UI:
+
+text
+PARSER_ERROR: fetch failed
+This is NOT local dev. This is production.
+
+1️⃣ FIX FRONTEND ROUTING (CRITICAL)
+Current problem:
+The deep link /admin/ops/deals/:dealId?tab=assembly renders the app's own client-side 404:
+
+"Did you forget to add the page to the router?"
+
+That means the frontend router does not define this path.
+
+Required fix:
+
+Add route support for:
+
+/admin/ops/deals/:dealId
+
+/admin/deals/:dealId
+
+When opened:
+
+Admin shell loads
+
+Active section = Deals
+
+selectedDealId is set from URL param
+
+?tab=assembly is preserved and passed to DealDetail
+
+Hard refresh must still work
+
+Do NOT break:
+
+/admin/deals
+
+/admin/assembly
+
+/admin
+
+2️⃣ FIX BILL PARSER "fetch failed"
+Facts:
+
+Parser health works: curl https://parser.otimaenergia.com/health → status: ok
+
+Parser server (31.97.92.76) is running fine
+
+Nginx + SSL are correct
+
+Uvicorn binds to 127.0.0.1:8000 behind nginx
+
+The failure is inside the portal backend fetch to parser.
+
+The UI shows PARSER_ERROR: fetch failed — that is a Node fetch failure, NOT a parser failure.
+
+REQUIRED ACTIONS
+A) Log the exact error
+
+Wrap the parser fetch in try/catch and log:
+
+full error object
+
+error.cause
+
+stack
+
+URL used
+
+timeout duration
+
+Right now you are swallowing the real reason.
+
+B) Add a diagnostics endpoint
+
+Add:
+
+text
+GET /api/parser/diagnostics
+Return:
+
+json
+{
+  "parserBaseUrl": "https://parser.otimaenergia.com",
+  "health": {
+    "ok": true,
+    "httpStatus": 200,
+    "latencyMs": 123,
+    "error": null
+  },
+  "environment": {
+    "NODE_ENV": "production",
+    "PARSER_URL": "https://parser.otimaenergia.com",
+    "hasOutboundInternet": true
+  }
+}
+Then verify from production:
+
+bash
+curl https://otimaenergia.com/api/parser/diagnostics
+This must confirm:
+
+correct base URL = https://parser.otimaenergia.com
+
+request succeeds from production environment
+
+latency is reasonable (<5s)
+
+C) Ensure portal uses correct base URL
+
+Production must use:
+
+text
+https://parser.otimaenergia.com
+NOT:
+
+http
+
+port 8000
+
+31.97.92.76
+
+localhost
+
+If using an environment variable:
+
+text
+PARSER_BASE_URL=https://parser.otimaenergia.com
+Confirm it is set in production environment.
+
+D) Increase timeouts
+
+Health timeout: ≥ 10s
+
+Parse timeout: ≥ 120s
+
+Do NOT use default fetch timeout.
+
+3️⃣ PRC PARSING VALIDATION
+Production must enforce:
+
+Products allowed:
+
+CONVENCIONAL
+
+INCENTIVADA_50 (not INC_I50)
+
+INCENTIVADA_100 (not INC_I100)
+
+Reject:
+
+Bare "Incentivada" without %
+
+Percentage-looking price values (e.g., "10%", "25%")
+
+Prices outside 10–2000 R$/MWh
+
+Submarkets normalized to:
+
+SE_CO (Sudeste/Centro-Oeste)
+
+S (Sul)
+
+NE (Nordeste)
+
+N (Norte)
+
+Region mapping must handle:
+
+Portuguese: "Sudeste", "Centro-Oeste", "Sul", "Nordeste", "Norte"
+
+Abbreviations: "SE/CO", "SE_CO", "S", "NE", "N"
+
+Combined: "SE/CO", "Sudeste/Centro-Oeste"
+
+Ensure ECOS uses same canonical values.
+
+4️⃣ After fixes, verify in production
+Test deep link:
+
+text
+https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly
+→ Must load deal detail with Assembly tab active, not router 404.
+
+Test diagnostics:
+
+bash
+curl https://otimaenergia.com/api/parser/diagnostics
+→ Must show health.ok: true
+
+Test bill upload:
+
+Upload a new bill PDF on that deal's Assembly tab
+
+Must parse successfully
+
+No "fetch failed" error
+
+Bill status becomes "Parsed" or similar
+
+Test PRC upload:
+
+Upload a PRC with mixed regions/products
+
+Verify debug stats show correct counts
+
+Verify ambiguous "Incentivada" is rejected
+
+Verify percentage values are rejected
+
+🚫 DO NOT
+Do not suggest DNS changes
+
+Do not modify parser VPS config
+
+Do not change nginx on parser VPS
+
+Do not touch firewall rules on parser VPS
+
+Do not restart services on parser VPS
+
+The parser is confirmed healthy. The bug is inside the portal code or its production environment config.
+
+📋 CODE LOCATIONS TO MODIFY
+Frontend routing:
+
+client/src/App.tsx - Main router configuration
+
+client/src/pages/admin/Admin.tsx - Admin layout with deal selection
+
+client/src/pages/deals/DealDetail.tsx - Tab handling from URL
+
+Parser client:
+
+server/services/parser-client.ts - All fetch calls to parser
+
+server/routes/bills.ts - Bill upload and parse endpoints
+
+server/queues/billParseQueue.ts - Background job handling
+
+PRC parsing:
+
+server/services/prc-parser.ts - PRC validation logic
+
+server/routes/prc.ts - PRC upload endpoint
+
+New diagnostics endpoint:
+
+server/routes/parserDiagnostics.ts - Create this file
+
+GO FIX IT. The production system is broken for users right now.
