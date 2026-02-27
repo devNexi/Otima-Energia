@@ -9807,6 +9807,7 @@ export async function registerRoutes(
         billId: bill.id,
         fileStorageKey: storageKey,
         dealId,
+        originalFilename: file.originalname,
       }, undefined, 3);
 
       await storage.createDealDocument({
@@ -9886,11 +9887,86 @@ export async function registerRoutes(
         billId: bill.id,
         fileStorageKey: bill.fileStorageKey,
         dealId,
+        originalFilename: bill.originalFilename,
       }, undefined, 3);
 
       res.json({ success: true, message: "Re-parse queued", billId: bill.id });
     } catch (error: any) {
       console.error("[RetryBillParse] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.patch("/api/deals/:dealId/bills/:billId/override", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, billId } = req.params;
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      const bills = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.id, parseInt(billId)), eq(billsExtracted.dealId, dealId)));
+      if (bills.length === 0) return res.status(404).json({ success: false, error: "Bill not found" });
+
+      const bill = bills[0];
+      const body = req.body || {};
+      const allowedFields = [
+        'ucCode', 'customerName', 'customerId', 'endereco', 'grupo', 'subgrupo',
+        'modalidade', 'distributor', 'referenceMonth', 'tariffGroup',
+        'totalAmount', 'totalEnergyKwh', 'consumoPontaKwh', 'consumoForaPontaKwh',
+        'demandaContratadaKw', 'demandaMedidaKw'
+      ];
+
+      const updates: Record<string, any> = {};
+      const reasons: Record<string, string> = (bill.fieldReasons as any) || {};
+
+      for (const field of allowedFields) {
+        if (body[field] !== undefined) {
+          const val = body[field];
+          if (field === 'ucCode' && val && !/^\d+$/.test(String(val).replace(/[.\-\/]/g, ''))) {
+            return res.status(400).json({ success: false, error: `UC must be numeric (got: ${val})` });
+          }
+          if (field === 'customerId' && val && String(val).replace(/[.\-\/]/g, '').length > 0) {
+            const digits = String(val).replace(/\D/g, '');
+            if (digits.length !== 14) {
+              return res.status(400).json({ success: false, error: `CNPJ must be 14 digits (got ${digits.length})` });
+            }
+          }
+          const decimalFields = ['totalAmount', 'totalEnergyKwh', 'consumoPontaKwh', 'consumoForaPontaKwh', 'demandaContratadaKw', 'demandaMedidaKw'];
+          if (decimalFields.includes(field)) {
+            updates[field] = val != null && val !== '' ? String(val) : null;
+          } else {
+            updates[field] = val || null;
+          }
+          reasons[field] = 'MANUAL_OVERRIDE';
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ success: false, error: "No valid fields to override" });
+      }
+
+      if (body.grupo && !body.subgrupo && body.tariffGroup) {
+        updates.subgrupo = body.tariffGroup;
+      }
+      if (body.tariffGroup) {
+        const tg = String(body.tariffGroup).toUpperCase().trim();
+        if (tg.startsWith('A')) { updates.grupo = 'A'; updates.subgrupo = tg; }
+        else if (tg.startsWith('B')) { updates.grupo = 'B'; updates.subgrupo = tg; }
+      }
+
+      updates.fieldReasons = reasons;
+      updates.updatedAt = new Date();
+
+      await db.update(billsExtracted)
+        .set(updates)
+        .where(eq(billsExtracted.id, parseInt(billId)));
+
+      const updated = await db.select().from(billsExtracted).where(eq(billsExtracted.id, parseInt(billId)));
+      res.json({ success: true, bill: updated[0] });
+    } catch (error: any) {
+      console.error("[BillOverride] Error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

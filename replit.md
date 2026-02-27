@@ -32,7 +32,12 @@ Language: English only (the website is in Portuguese, but communicate with user 
 
 ### Key Features
 - **Portal System**: Token-based access for client document uploads, enhanced by a mobile-first PWA Client Intake App for guided workflows (Upload Bills, LGPD Consent, LOA Signing).
-- **Bill-First Architecture**: Enforces a structured deal journey: Bill → ECOS → Dossier → RFQ. Bills are the foundational input for all subsequent processes.
+- **Bill-First Architecture**: Enforces a structured deal journey: Bill → ECOS → Dossier → RFQ. Bills are the foundational input for all subsequent processes. Treats all bill-adjacent documents (consumption history, NF3e, demonstrativos) as RFQ data sources.
+  - **Extended RFQ Fields**: `bills_extracted` stores canonical RFQ fields (ucCode, grupo/subgrupo, modalidade, consumoPonta/ForaPonta, demandaContratada/Medida) with `fieldConfidence` and `fieldReasons` JSON for per-field audit.
+  - **Manual Override**: `PATCH /api/deals/:dealId/bills/:billId/override` allows ops/admin to correct extracted fields with validation (UC numeric, CNPJ 14-digit). Overrides tagged as `source=MANUAL_OVERRIDE` in fieldReasons.
+  - **RFQ Readiness UX**: DealAssemblyTab shows expandable RFQ field tables grouped by Identity/Tariff/Consumption/Demand/Payment. Missing/low-confidence fields highlighted. "Needs Review" banner for missing critical fields.
+  - **Debug Panel**: Ops/admin-only expandable panel showing parser URL, latency, doc kind, pages, text source, fieldReasons, and raw JSON download.
+  - **Doc Kind Detection**: Auto-classifies uploaded docs as STANDARD_BILL, CONSUMPTION_HISTORY, NF3E, or DEMONSTRATIVO based on filename and extracted text.
   - **ECOS PRC Integration**: ECOS generation requires published PRC pricing rows, with robust resolver logic and idempotency.
   - **Structured Blockers**: Standardized error handling with actionable CTAs and deep links.
 - **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.

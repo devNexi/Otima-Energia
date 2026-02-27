@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
+import { Input } from "@/components/ui/input";
 import { 
   CheckCircle2, 
   Circle, 
@@ -30,7 +31,16 @@ import {
   Download,
   AlertTriangle,
   WifiOff,
-  RefreshCw
+  RefreshCw,
+  Edit3,
+  Save,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Bug,
+  Eye,
+  EyeOff,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -169,13 +179,18 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const isPt = language === "pt";
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { sessionId } = useAuth();
+  const { sessionId, user } = useAuth();
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
   const [rfqBlockers, setRfqBlockers] = useState<any[]>([]);
   const [isAdvancingRfq, setIsAdvancingRfq] = useState(false);
+  const [expandedBillId, setExpandedBillId] = useState<number | null>(null);
+  const [editingBillId, setEditingBillId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<Record<string, string>>({});
+  const [debugBillId, setDebugBillId] = useState<number | null>(null);
+  const [savingOverride, setSavingOverride] = useState(false);
 
   const { data: assemblyData, isLoading, error } = useQuery<{ success: boolean } & AssemblyStatus>({
     queryKey: [`/api/deals/${dealId}/assembly-status`],
@@ -724,14 +739,113 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                   : status === 'FAILED' ? <AlertCircle className="w-3 h-3 text-red-600" />
                   : isParsing ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
                   : <Clock className="w-3 h-3 text-amber-600" />;
+                
+                const isExpanded = expandedBillId === bill.id;
+                const isEditing = editingBillId === bill.id;
+                const isDebug = debugBillId === bill.id;
+                const confidence = bill.fieldConfidence as Record<string, number> | null;
+                const reasons = bill.fieldReasons as Record<string, string> | null;
+
+                const criticalFields = [
+                  { key: 'customerId', label: isPt ? 'CNPJ' : 'CNPJ', value: bill.customerId },
+                  { key: 'ucCode', label: 'UC', value: bill.ucCode || bill.customerId },
+                  { key: 'tariffGroup', label: isPt ? 'Grupo/Subgrupo' : 'Group/Subgroup', value: bill.tariffGroup || bill.subgrupo },
+                  { key: 'totalEnergyKwh', label: isPt ? 'Consumo' : 'Consumption', value: bill.totalEnergyKwh },
+                  { key: 'totalAmount', label: isPt ? 'Total a pagar' : 'Total Amount', value: bill.totalAmount },
+                ];
+                const missingCritical = status === 'PARSED' ? criticalFields.filter(f => !f.value) : [];
+                const needsReview = missingCritical.length > 0;
+
+                const rfqFieldGroups = [
+                  { 
+                    title: isPt ? 'Identidade' : 'Identity',
+                    fields: [
+                      { key: 'customerName', label: isPt ? 'Razão Social' : 'Company Name', value: bill.customerName },
+                      { key: 'ucCode', label: 'UC', value: bill.ucCode },
+                      { key: 'customerId', label: 'CNPJ', value: bill.customerId },
+                      { key: 'endereco', label: isPt ? 'Endereço' : 'Address', value: bill.endereco },
+                    ]
+                  },
+                  {
+                    title: isPt ? 'Tarifa' : 'Tariff',
+                    fields: [
+                      { key: 'tariffGroup', label: isPt ? 'Grupo/Subgrupo' : 'Group/Subgroup', value: bill.tariffGroup || bill.subgrupo },
+                      { key: 'modalidade', label: isPt ? 'Modalidade' : 'Modality', value: bill.modalidade },
+                      { key: 'distributor', label: isPt ? 'Distribuidora' : 'Distributor', value: bill.distributor },
+                    ]
+                  },
+                  {
+                    title: isPt ? 'Consumo' : 'Consumption',
+                    fields: [
+                      { key: 'totalEnergyKwh', label: isPt ? 'Total (kWh)' : 'Total (kWh)', value: bill.totalEnergyKwh, fmt: 'kwh' },
+                      { key: 'consumoPontaKwh', label: isPt ? 'Ponta (kWh)' : 'Peak (kWh)', value: bill.consumoPontaKwh, fmt: 'kwh' },
+                      { key: 'consumoForaPontaKwh', label: isPt ? 'Fora Ponta (kWh)' : 'Off-Peak (kWh)', value: bill.consumoForaPontaKwh, fmt: 'kwh' },
+                    ]
+                  },
+                  {
+                    title: isPt ? 'Demanda' : 'Demand',
+                    fields: [
+                      { key: 'demandaContratadaKw', label: isPt ? 'Contratada (kW)' : 'Contracted (kW)', value: bill.demandaContratadaKw, fmt: 'kw' },
+                      { key: 'demandaMedidaKw', label: isPt ? 'Medida (kW)' : 'Measured (kW)', value: bill.demandaMedidaKw, fmt: 'kw' },
+                    ]
+                  },
+                  {
+                    title: isPt ? 'Pagamento' : 'Payment',
+                    fields: [
+                      { key: 'totalAmount', label: isPt ? 'Total a Pagar' : 'Total Amount', value: bill.totalAmount, fmt: 'brl' },
+                      { key: 'referenceMonth', label: isPt ? 'Mês Ref.' : 'Ref Month', value: bill.referenceMonth },
+                      { key: 'dueDate', label: isPt ? 'Vencimento' : 'Due Date', value: bill.dueDate },
+                    ]
+                  },
+                ];
+
+                const fmtVal = (val: any, fmt?: string) => {
+                  if (val == null || val === '') return null;
+                  if (fmt === 'brl') return `R$ ${Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                  if (fmt === 'kwh') return `${Number(val).toLocaleString('pt-BR')} kWh`;
+                  if (fmt === 'kw') return `${Number(val).toLocaleString('pt-BR')} kW`;
+                  return String(val);
+                };
+
+                const handleSaveOverride = async () => {
+                  setSavingOverride(true);
+                  try {
+                    const res = await fetch(`/api/deals/${dealId}/bills/${bill.id}/override`, {
+                      method: 'PATCH',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
+                      body: JSON.stringify(editFormData),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                    toast({ title: isPt ? 'Campos atualizados' : 'Fields updated', description: isPt ? 'Dados salvos com sucesso.' : 'Data saved successfully.' });
+                    setEditingBillId(null);
+                    setEditFormData({});
+                    queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+                  } catch (err: any) {
+                    toast({ title: isPt ? 'Erro ao salvar' : 'Save failed', description: err.message, variant: 'destructive' });
+                  } finally {
+                    setSavingOverride(false);
+                  }
+                };
+
+                const startEditing = () => {
+                  const initial: Record<string, string> = {};
+                  rfqFieldGroups.forEach(g => g.fields.forEach(f => {
+                    if (f.value != null && f.value !== '') initial[f.key] = String(f.value);
+                  }));
+                  setEditFormData(initial);
+                  setEditingBillId(bill.id);
+                };
 
                 return (
-                  <div key={bill.id} className={cn("p-2 border rounded-md text-xs", 
+                  <div key={bill.id} className={cn("border rounded-md text-xs", 
                     status === 'FAILED' ? "bg-red-50 border-red-200" :
                     isStuck ? "bg-amber-50 border-amber-200" :
+                    needsReview ? "bg-amber-50 border-amber-300" :
                     "bg-slate-50"
                   )} data-testid={`bill-row-${bill.id}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="p-2 flex items-center justify-between cursor-pointer" onClick={() => status === 'PARSED' && setExpandedBillId(isExpanded ? null : bill.id)}>
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
                         <span className="truncate">{bill.originalFilename}</span>
@@ -745,6 +859,16 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           )}>
                             {isStuck ? (isPt ? 'Travado' : 'Stuck') : statusLabel}
                           </Badge>
+                          {needsReview && (
+                            <Badge variant="outline" className="text-[10px] h-5 bg-amber-100 text-amber-800 border-amber-300" data-testid={`badge-needs-review-${bill.id}`}>
+                              {isPt ? 'Revisão Necessária' : 'Needs Review'}
+                            </Badge>
+                          )}
+                          {bill.docKind && bill.docKind !== 'STANDARD_BILL' && (
+                            <Badge variant="outline" className="text-[10px] h-5 bg-blue-50 text-blue-700">
+                              {bill.docKind.replace(/_/g, ' ')}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
@@ -755,6 +879,9 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 ml-1">
                             R$ {Number(bill.totalAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </Badge>
+                        )}
+                        {status === 'PARSED' && (
+                          isExpanded ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />
                         )}
                         {isStuck && (
                           <button
@@ -768,8 +895,29 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                         )}
                       </div>
                     </div>
+
+                    {status === 'PARSED' && needsReview && !isExpanded && (
+                      <div className="mx-2 mb-2 text-[10px] text-amber-800 bg-amber-100 rounded px-2 py-1" data-testid={`alert-needs-review-${bill.id}`}>
+                        {isPt ? 'Campos críticos ausentes: ' : 'Missing critical fields: '}{missingCritical.map(f => f.label).join(', ')}
+                        {isPt ? ' — clique para revisar e preencher manualmente' : ' — click to review and fill manually'}
+                      </div>
+                    )}
+
+                    {status === 'PARSED' && (
+                      <div className="mx-2 mb-1 flex gap-1 flex-wrap">
+                        {criticalFields.map(f => (
+                          <span key={f.key} className={cn("inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded",
+                            f.value ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                          )} data-testid={`field-check-${f.key}-${bill.id}`}>
+                            {f.value ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                            {f.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {status === 'FAILED' && (
-                      <div className="mt-1.5 text-[10px] text-red-700 bg-red-100 rounded px-2 py-1" data-testid={`bill-error-${bill.id}`}>
+                      <div className="mx-2 mb-2 text-[10px] text-red-700 bg-red-100 rounded px-2 py-1" data-testid={`bill-error-${bill.id}`}>
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <span className="font-medium">{isPt ? 'Erro: ' : 'Error: '}</span>
@@ -787,18 +935,132 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                       </div>
                     )}
                     {isParsing && !isStuck && (
-                      <BillParseProgress updatedAt={updatedAt} isPt={isPt} />
+                      <div className="px-2 pb-2">
+                        <BillParseProgress updatedAt={updatedAt} isPt={isPt} />
+                      </div>
                     )}
                     {isStuck && status !== 'FAILED' && (
-                      <div className="mt-1.5 text-[10px] text-amber-700 bg-amber-100 rounded px-2 py-1">
+                      <div className="mx-2 mb-2 text-[10px] text-amber-700 bg-amber-100 rounded px-2 py-1">
                         {isPt ? 'Análise parada há mais de 5 minutos. Clique em Reprocessar.' : 'Parse stalled for over 5 minutes. Click Retry.'}
                       </div>
                     )}
-                    {status === 'PARSED' && bill.tariffGroup && (
-                      <div className="mt-1 flex gap-2 text-[10px] text-muted-foreground">
-                        {bill.tariffGroup && <span>{isPt ? 'Grupo: ' : 'Tariff: '}{bill.tariffGroup}</span>}
-                        {bill.totalEnergyKwh && <span>• {Number(bill.totalEnergyKwh).toLocaleString('pt-BR')} kWh</span>}
-                        {bill.customerId && <span>• CNPJ: {bill.customerId}</span>}
+
+                    {status === 'PARSED' && isExpanded && (
+                      <div className="border-t border-slate-200 mx-2 mb-2 pt-2 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+                            {isPt ? 'Campos RFQ' : 'RFQ Fields'}
+                          </span>
+                          <div className="flex gap-1">
+                            {!isEditing ? (
+                              <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={startEditing} data-testid={`button-edit-${bill.id}`}>
+                                <Edit3 className="w-3 h-3 mr-1" />{isPt ? 'Editar' : 'Edit'}
+                              </Button>
+                            ) : (
+                              <>
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 text-emerald-700" onClick={handleSaveOverride} disabled={savingOverride} data-testid={`button-save-override-${bill.id}`}>
+                                  {savingOverride ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                                  {isPt ? 'Salvar' : 'Save'}
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 text-red-600" onClick={() => { setEditingBillId(null); setEditFormData({}); }} data-testid={`button-cancel-edit-${bill.id}`}>
+                                  <X className="w-3 h-3 mr-1" />{isPt ? 'Cancelar' : 'Cancel'}
+                                </Button>
+                              </>
+                            )}
+                            {(user?.role === 'admin' || user?.role === 'ops') && (
+                              <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => setDebugBillId(isDebug ? null : bill.id)} data-testid={`button-debug-${bill.id}`}>
+                                <Bug className="w-3 h-3 mr-1" />{isPt ? 'Debug' : 'Debug'}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {rfqFieldGroups.map(group => (
+                          <div key={group.title}>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{group.title}</p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              {group.fields.map(field => {
+                                const fieldConf = confidence?.[field.key];
+                                const fieldReason = reasons?.[field.key];
+                                const isOverride = fieldReason === 'MANUAL_OVERRIDE';
+                                const isLowConf = fieldConf != null && fieldConf < 0.6;
+                                const hasValue = field.value != null && field.value !== '';
+                                
+                                return (
+                                  <div key={field.key} className={cn("flex items-center gap-1 py-0.5 px-1 rounded text-[11px]",
+                                    !hasValue && "bg-red-50",
+                                    isLowConf && hasValue && "bg-amber-50",
+                                    isOverride && "bg-blue-50"
+                                  )} data-testid={`rfq-field-${field.key}-${bill.id}`}>
+                                    <span className="text-muted-foreground shrink-0">{field.label}:</span>
+                                    {isEditing ? (
+                                      <Input
+                                        className="h-5 text-[11px] py-0 px-1 border-slate-300"
+                                        value={editFormData[field.key] || ''}
+                                        onChange={(e) => setEditFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                                        placeholder={isPt ? 'Não extraído' : 'Not extracted'}
+                                        data-testid={`input-override-${field.key}-${bill.id}`}
+                                      />
+                                    ) : (
+                                      <span className={cn("truncate", !hasValue && "text-red-500 italic")}>
+                                        {hasValue ? (fmtVal(field.value, (field as any).fmt) || field.value) : (isPt ? '—' : '—')}
+                                      </span>
+                                    )}
+                                    {isOverride && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-blue-100 text-blue-700 shrink-0">manual</Badge>}
+                                    {isLowConf && hasValue && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-amber-100 text-amber-700 shrink-0">{Math.round((fieldConf || 0) * 100)}%</Badge>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+
+                        {isDebug && (
+                          <div className="border-t border-slate-200 pt-2 space-y-2" data-testid={`debug-panel-${bill.id}`}>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                              {isPt ? 'Debug (Ops)' : 'Debug (Ops)'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-slate-600">
+                              <div><span className="font-medium">Parser URL:</span> {(bill.parseDebugJson as any)?.parserUrl || 'parser.otimaenergia.com'}</div>
+                              <div><span className="font-medium">{isPt ? 'Latência:' : 'Latency:'}</span> {(bill.parseDebugJson as any)?.timingsMs?.totalMs ? `${Math.round((bill.parseDebugJson as any).timingsMs.totalMs)}ms` : '—'}</div>
+                              <div><span className="font-medium">{isPt ? 'Tipo Doc:' : 'Doc Kind:'}</span> {bill.docKind || 'STANDARD_BILL'}</div>
+                              <div><span className="font-medium">{isPt ? 'Páginas:' : 'Pages:'}</span> {(bill.parseDebugJson as any)?.pages || '—'}</div>
+                              <div><span className="font-medium">{isPt ? 'Fonte Texto:' : 'Text Source:'}</span> {bill.textSource || (bill.parseDebugJson as any)?.textSource || '—'}</div>
+                              <div><span className="font-medium">{isPt ? 'Confiança:' : 'Confidence:'}</span> {bill.parseConfidence != null ? `${bill.parseConfidence}%` : '—'}</div>
+                            </div>
+                            {reasons && Object.keys(reasons).length > 0 && (
+                              <div className="text-[10px]">
+                                <span className="font-medium text-slate-600">Field Reasons: </span>
+                                <span className="text-slate-500">{Object.entries(reasons).map(([k, v]) => `${k}=${v}`).join(', ')}</span>
+                              </div>
+                            )}
+                            {bill.parseWarnings && (bill.parseWarnings as any[]).length > 0 && (
+                              <div className="text-[10px] text-amber-600">
+                                <span className="font-medium">{isPt ? 'Avisos: ' : 'Warnings: '}</span>
+                                {(bill.parseWarnings as any[]).join('; ')}
+                              </div>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-[10px]"
+                              onClick={() => {
+                                const blob = new Blob([JSON.stringify(bill.parseDebugJson, null, 2)], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `parse_debug_bill_${bill.id}.json`;
+                                document.body.appendChild(a);
+                                a.click();
+                                URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                              }}
+                              data-testid={`button-download-debug-${bill.id}`}
+                            >
+                              <Download className="w-3 h-3 mr-1" />{isPt ? 'Baixar JSON Debug' : 'Download Debug JSON'}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

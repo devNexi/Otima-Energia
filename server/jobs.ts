@@ -577,19 +577,61 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
           hintDocType: 'BILL',
         });
 
+        const d = result.data || {};
+        const tariffGroup = d.tariffGroup || null;
+        let grupo: string | null = null;
+        let subgrupo: string | null = null;
+        if (tariffGroup) {
+          const tg = tariffGroup.toUpperCase().trim();
+          if (tg.startsWith('A')) { grupo = 'A'; subgrupo = tg; }
+          else if (tg.startsWith('B')) { grupo = 'B'; subgrupo = tg; }
+        }
+
+        let docKind = d.docKind || null;
+        if (!docKind) {
+          if (result.docType === 'BILL') {
+            const fname = (payload.originalFilename || '').toUpperCase();
+            const chosenText = (result.debug?.chosenText || '').toUpperCase();
+            if (fname.includes('HISTORICO') || fname.includes('CONSUMO') || chosenText.includes('HISTÓRICO DE CONSUMO') || chosenText.includes('HISTORICO DE CONSUMO')) {
+              docKind = 'CONSUMPTION_HISTORY';
+            } else if (fname.includes('NF3E') || fname.includes('NOTA FISCAL')) {
+              docKind = 'NF3E';
+            } else if (fname.includes('DEMONSTRATIVO')) {
+              docKind = 'DEMONSTRATIVO';
+            } else {
+              docKind = 'STANDARD_BILL';
+            }
+          }
+        }
+        const ucCode = d.ucCode || d.uc || d.unidadeConsumidora || null;
+        const fieldConfidence = d.fieldConfidence || null;
+        const fieldReasons = d.fieldReasons || null;
+
         await db.update(billsExtracted)
           .set({
             parseStatus: result.validated ? 'PARSED' : 'FAILED',
             parseConfidence: Math.round(result.confidence * 100),
-            distributor: result.data?.distributor || null,
-            referenceMonth: result.data?.referenceMonth || null,
-            dueDate: result.data?.dueDate || null,
-            totalAmount: result.data?.totalAmount ? String(result.data.totalAmount) : null,
-            totalEnergyKwh: result.data?.totalEnergyKwh ? String(result.data.totalEnergyKwh) : null,
-            customerName: result.data?.customerName || null,
-            customerId: result.data?.customerId || null,
-            tariffGroup: result.data?.tariffGroup || null,
-            invoiceKey: result.data?.invoiceKey || null,
+            distributor: d.distributor || null,
+            referenceMonth: d.referenceMonth || null,
+            dueDate: d.dueDate || null,
+            totalAmount: d.totalAmount ? String(d.totalAmount) : null,
+            totalEnergyKwh: d.totalEnergyKwh ? String(d.totalEnergyKwh) : null,
+            customerName: d.customerName || null,
+            customerId: d.customerId || null,
+            tariffGroup,
+            invoiceKey: d.invoiceKey || null,
+            docKind,
+            ucCode,
+            endereco: d.endereco || d.address || null,
+            grupo,
+            subgrupo,
+            modalidade: d.modalidade || d.tariffModality || null,
+            consumoPontaKwh: d.consumoPonta != null ? String(d.consumoPonta) : (d.consumoPontaKwh != null ? String(d.consumoPontaKwh) : null),
+            consumoForaPontaKwh: d.consumoForaPonta != null ? String(d.consumoForaPonta) : (d.consumoForaPontaKwh != null ? String(d.consumoForaPontaKwh) : null),
+            demandaContratadaKw: d.demandaContratada != null ? String(d.demandaContratada) : (d.demandaContratadaKw != null ? String(d.demandaContratadaKw) : null),
+            demandaMedidaKw: d.demandaMedida != null ? String(d.demandaMedida) : (d.demandaMedidaKw != null ? String(d.demandaMedidaKw) : null),
+            fieldConfidence: fieldConfidence as any,
+            fieldReasons: fieldReasons as any,
             validated: result.validated,
             parseErrors: result.status === 'failed' ? result.warnings : null,
             parseWarnings: result.warnings?.length > 0 ? result.warnings : null,

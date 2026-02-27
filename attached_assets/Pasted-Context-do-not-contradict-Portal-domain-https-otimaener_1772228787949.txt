@@ -1,0 +1,132 @@
+Context (do not contradict):
+
+Portal domain: https://otimaenergia.com
+
+Parser is reachable at https://parser.otimaenergia.com/health and /parse requires X-Parser-Key.
+
+We’re using parsed bill info to build a Client Dossier and then RFQs to suppliers.
+
+Parser output quality varies; portal must support missing fields + manual overrides.
+
+Goal
+
+Make portal treat every uploaded “bill-ish” document as RFQ-data extraction, not “must be a standard bill”.
+
+1) Store canonical RFQ fields in dossier
+
+When parser returns docType=BILL OR docKind=CONSUMPTION_HISTORY:
+
+Persist the canonical RFQ fields (UC, company name, group/subgroup, consumption, demand, total a pagar, etc.)
+
+Persist fieldConfidence, fieldReasons, and parser debug summary for audit.
+
+2) Fix the 404 on deep link to deal assembly
+
+This URL must work:
+https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly
+
+If backend serves SPA fallback correctly, the issue is likely frontend routing:
+
+Add explicit frontend routes for:
+
+/admin/ops/deals/:dealId
+
+/admin/deals/:dealId
+
+Ensure ?tab=assembly is honored and the deal is pre-selected in the Admin UI.
+
+Must not break existing /admin/deals selection flow.
+
+3) RFQ readiness UX (this is key)
+
+On the Deal Assembly page:
+
+Show RFQ fields in a table grouped by:
+
+Identity: Company Name, UC, Unidade/Endereço, CNPJ
+
+Tariff: Grupo/Subgrupo, Modalidade
+
+Consumption: total, ponta/fora ponta
+
+Demand: contratada/medida
+
+Payment: total a pagar, taxes if present
+
+Highlight missing/low-confidence fields.
+
+Provide “Manual Override” editing for missing fields with validation:
+
+UC must be numeric
+
+CNPJ must be 14 digits if provided
+
+Save overrides to dossier and mark them as source=MANUAL_OVERRIDE.
+
+4) Parsing correctness feedback
+
+When user uploads:
+
+Show parse status and key results:
+
+extracted UC? yes/no
+
+extracted group/subgroup? yes/no
+
+extracted consumo? yes/no
+
+extracted total a pagar? yes/no
+
+If critical fields missing (UC, group/subgroup, consumo, total):
+
+show “Needs Review” banner and keep the document, don’t discard.
+
+5) Debug view for ops (must-have for support)
+
+Add an expandable panel (ops/admin only) that displays:
+
+parser base URL used
+
+request latency + timeouts
+
+doc kind + pages used/dropped
+
+fieldReasons summary
+
+a button to download/inspect raw parser JSON for that parse
+
+6) Acceptance test
+
+Upload a “HISTÓRICO DE CONSUMO” doc:
+
+portal must still store a dossier entry
+
+UI must show extracted UC / period / consumo ponta if present
+
+if CNPJ is missing/redacted, portal must not block RFQ creation; it should request manual input
+
+Other “bill types” Brazilian business clients might send you
+
+Yes — businesses often send documents that are “bill-adjacent” but still RFQ-useful:
+
+NF3e / Nota Fiscal de Energia Elétrica (invoice-style energy doc)
+
+Fatura / Conta de Energia (Distribuidora) standard layouts
+
+Demonstrativo de Faturamento / Demonstrativo de Consumo (summary pages)
+
+Histórico de Consumo / Histórico de Medição (like your case)
+
+Demanda / Fatura de Demanda addendums (especially Grupo A)
+
+Boleto-only pages (payment slip separated from technical pages)
+
+CUSD / Uso do Sistema de Distribuição style breakdown pages (TUSD-heavy)
+
+Fatura de Comercializadora (free-market invoices that include supply + network components)
+
+Relatórios de medição / memória de cálculo (not a bill, but contains demand/consumption values)
+
+Extratos CCEE / Liquidação (less common for your clients directly, but can appear)
+
+Your “one parser to rule them all” approach is right: treat them all as RFQ data sources.
