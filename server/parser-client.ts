@@ -1,6 +1,6 @@
 const PARSER_SERVICE_URL = process.env.PARSER_BASE_URL || process.env.PARSER_SERVICE_URL || '';
 const PARSER_API_KEY = process.env.PARSER_API_KEY || '';
-const PARSER_TIMEOUT_MS = parseInt(process.env.PARSER_TIMEOUT_MS || '120000', 10);
+const PARSER_TIMEOUT_MS = parseInt(process.env.PARSER_TIMEOUT_MS || '300000', 10);
 
 const RETRYABLE_STATUS_CODES = [502, 503];
 const MAX_RETRIES = 1;
@@ -103,14 +103,28 @@ export async function callParserService(
     const url = `${PARSER_SERVICE_URL}/parse`;
 
     try {
+      const startMs = Date.now();
       console.log(`[ParserClient] POST ${url} (file=${filename}, size=${fileBuffer.length}b, timeout=${PARSER_TIMEOUT_MS}ms, attempt=${attempt + 1})`);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: formData,
-        signal: controller.signal,
-      });
+      const progressTimer = setInterval(() => {
+        const elapsed = Math.round((Date.now() - startMs) / 1000);
+        console.log(`[ParserClient] ⏳ Parse in progress... ${elapsed}s elapsed (timeout=${Math.round(PARSER_TIMEOUT_MS/1000)}s)`);
+      }, 30000);
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearInterval(progressTimer);
+      }
+
+      const responseMs = Date.now() - startMs;
+      console.log(`[ParserClient] Response received in ${responseMs}ms, status=${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
