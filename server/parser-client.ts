@@ -2,9 +2,9 @@ const PARSER_SERVICE_URL = process.env.PARSER_BASE_URL || process.env.PARSER_SER
 const PARSER_API_KEY = process.env.PARSER_API_KEY || '';
 const PARSER_TIMEOUT_MS = parseInt(process.env.PARSER_TIMEOUT_MS || '300000', 10);
 
-const RETRYABLE_STATUS_CODES = [502, 503];
-const MAX_RETRIES = 1;
-const RETRY_DELAY_MS = 2000;
+const RETRYABLE_STATUS_CODES = [502, 503, 504];
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 3000;
 
 export interface ParserResponse {
   status: 'parsed' | 'failed';
@@ -73,11 +73,13 @@ export async function callParserService(
   validateFileBeforeSend(fileBuffer, filename);
 
   let lastError: Error | null = null;
+  let nextRetryDelayMs = RETRY_DELAY_MS;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
-      console.log(`[ParserClient] Retry attempt ${attempt}/${MAX_RETRIES} after ${RETRY_DELAY_MS}ms`);
-      await sleep(RETRY_DELAY_MS);
+      console.log(`[ParserClient] Retry attempt ${attempt}/${MAX_RETRIES} after ${nextRetryDelayMs}ms`);
+      await sleep(nextRetryDelayMs);
+      nextRetryDelayMs = RETRY_DELAY_MS;
     }
 
     const formData = new FormData();
@@ -131,7 +133,8 @@ export async function callParserService(
         const statusCode = response.status;
 
         if (RETRYABLE_STATUS_CODES.includes(statusCode) && attempt < MAX_RETRIES) {
-          console.warn(`[ParserClient] Retryable status ${statusCode}, will retry. Body: ${errorText.substring(0, 500)}`);
+          nextRetryDelayMs = statusCode === 504 ? 10000 : RETRY_DELAY_MS;
+          console.warn(`[ParserClient] Retryable status ${statusCode}, will retry in ${nextRetryDelayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES}). Body: ${errorText.substring(0, 200)}`);
           lastError = new Error(`Parser service returned ${statusCode}: ${errorText.substring(0, 500)}`);
           continue;
         }
