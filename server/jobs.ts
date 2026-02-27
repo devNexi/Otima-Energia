@@ -334,13 +334,18 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
           function normalizeVpsPrice(raw: any): { price: number | null; rawText: string; rejectReason: string | null } {
             const rawText = String(raw ?? '');
-            let cleaned = rawText.replace(/\s/g, '').replace(/%/g, '').replace(/R\$/gi, '');
-            if (/^\-?\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(cleaned)) {
-              cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-            } else if (/^\-?\d+(,\d{1,2})$/.test(cleaned)) {
-              cleaned = cleaned.replace(',', '.');
+            let val: number;
+            if (typeof raw === 'number' && !isNaN(raw)) {
+              val = raw;
+            } else {
+              let cleaned = rawText.replace(/\s/g, '').replace(/%/g, '').replace(/R\$/gi, '');
+              if (/^\-?\d{1,3}(\.\d{3})+(,\d{1,4})?$/.test(cleaned)) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+              } else if (/^\-?\d+(,\d{1,4})$/.test(cleaned)) {
+                cleaned = cleaned.replace(',', '.');
+              }
+              val = parseFloat(cleaned);
             }
-            const val = parseFloat(cleaned);
             if (isNaN(val) || val <= 0) return { price: null, rawText, rejectReason: 'BAD_NUMBER' };
             if (val < PRICE_MIN || val > PRICE_MAX) return { price: val, rawText, rejectReason: 'OUT_OF_RANGE' };
             return { price: val, rawText, rejectReason: null };
@@ -360,6 +365,8 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
           const rejectReasons: Record<string, number> = {};
           let rowsRejected = 0;
 
+          console.log(`[PRC_PARSE] VPS parser returned ${result.rows.length} rows, first row sample:`, result.rows[0] ? JSON.stringify(result.rows[0]) : 'none');
+
           for (const row of result.rows) {
             const { price, rawText, rejectReason: priceReject } = normalizeVpsPrice(row.price);
             const rawSm = String(row.submarket || '').toUpperCase().trim();
@@ -369,7 +376,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             if (priceReject) {
               rejectReasons[priceReject] = (rejectReasons[priceReject] || 0) + 1;
               rowsRejected++;
-              console.log(`[PRC_PARSE] Rejected row: price=${rawText} reason=${priceReject} submarket=${rawSm}`);
+              console.log(`[PRC_PARSE] Rejected row: rawPrice=${JSON.stringify(row.price)} (type=${typeof row.price}) parsed=${price} reason=${priceReject} submarket=${rawSm}`);
               continue;
             }
             if (!smValid) {
