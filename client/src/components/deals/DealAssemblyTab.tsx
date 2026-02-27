@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { 
   CheckCircle2, 
@@ -33,6 +33,60 @@ import {
   RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+
+interface ParseStage {
+  label: { pt: string; en: string };
+  startPct: number;
+  endPct: number;
+}
+
+const PARSE_STAGES: ParseStage[] = [
+  { label: { pt: 'Na fila...', en: 'Queued...' }, startPct: 0, endPct: 8 },
+  { label: { pt: 'Enviando ao parser...', en: 'Sending to parser...' }, startPct: 8, endPct: 15 },
+  { label: { pt: 'OCR em andamento...', en: 'Running OCR...' }, startPct: 15, endPct: 55 },
+  { label: { pt: 'Extraindo campos...', en: 'Extracting fields...' }, startPct: 55, endPct: 80 },
+  { label: { pt: 'Validando dados...', en: 'Validating data...' }, startPct: 80, endPct: 95 },
+];
+
+const EXPECTED_PARSE_SECONDS = 180;
+
+function getParseProgress(elapsedMs: number): { pct: number; stage: ParseStage } {
+  const elapsed = elapsedMs / 1000;
+  const ratio = Math.min(elapsed / EXPECTED_PARSE_SECONDS, 1);
+  const pct = Math.min(Math.round(ratio * 95), 95);
+  let stage = PARSE_STAGES[0];
+  for (const s of PARSE_STAGES) {
+    if (pct >= s.startPct) stage = s;
+  }
+  return { pct, stage };
+}
+
+function BillParseProgress({ updatedAt, isPt }: { updatedAt: number; isPt: boolean }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const elapsed = updatedAt > 0 ? now - updatedAt : 0;
+  const { pct, stage } = getParseProgress(elapsed);
+  const elapsedSec = Math.round(elapsed / 1000);
+  const minutes = Math.floor(elapsedSec / 60);
+  const seconds = elapsedSec % 60;
+  const timeStr = minutes > 0 ? `${minutes}m${seconds.toString().padStart(2, '0')}s` : `${seconds}s`;
+
+  return (
+    <div className="mt-1.5 space-y-1" data-testid="bill-parse-progress">
+      <div className="flex items-center justify-between text-[10px]">
+        <span className="text-blue-700 font-medium">{isPt ? stage.label.pt : stage.label.en}</span>
+        <span className="text-muted-foreground tabular-nums">{pct}% · {timeStr}</span>
+      </div>
+      <Progress value={pct} className="h-1.5 bg-blue-100" indicatorClassName="bg-blue-500" />
+    </div>
+  );
+}
 
 interface AssemblyBlocker {
   code: string;
@@ -661,15 +715,14 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 const status = bill.parseStatus as string;
                 const updatedAt = bill.updatedAt ? new Date(bill.updatedAt).getTime() : 0;
                 const isStuck = (status === 'PENDING' || status === 'PARSING' || status === 'UPLOADED') && updatedAt > 0 && (Date.now() - updatedAt > 5 * 60 * 1000);
-                const statusLabel = status === 'UPLOADED' ? (isPt ? 'Na Fila' : 'Queued')
-                  : status === 'PENDING' ? (isPt ? 'Na Fila' : 'Queued')
-                  : status === 'PARSING' ? (isPt ? 'Analisando...' : 'Parsing...')
-                  : status === 'PARSED' ? (isPt ? 'Analisado' : 'Parsed')
+                const isParsing = status === 'PARSING' || status === 'PENDING' || status === 'UPLOADED';
+                const statusLabel = status === 'PARSED' ? (isPt ? 'Analisado' : 'Parsed')
                   : status === 'FAILED' ? (isPt ? 'Falhou' : 'Failed')
+                  : isParsing ? (isPt ? 'Analisando...' : 'Parsing...')
                   : status;
                 const statusIcon = status === 'PARSED' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   : status === 'FAILED' ? <AlertCircle className="w-3 h-3 text-red-600" />
-                  : (status === 'PARSING') ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
+                  : isParsing ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
                   : <Clock className="w-3 h-3 text-amber-600" />;
 
                 return (
@@ -732,6 +785,9 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           </button>
                         </div>
                       </div>
+                    )}
+                    {isParsing && !isStuck && (
+                      <BillParseProgress updatedAt={updatedAt} isPt={isPt} />
                     )}
                     {isStuck && status !== 'FAILED' && (
                       <div className="mt-1.5 text-[10px] text-amber-700 bg-amber-100 rounded px-2 py-1">
