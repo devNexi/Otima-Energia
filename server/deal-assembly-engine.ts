@@ -159,10 +159,10 @@ export class DealAssemblyEngine {
     };
   }
 
-  private buildBillUploadedStage(deal: any, billCheck: { hasBill: boolean; parsedCount: number }): AssemblyStageStatus {
+  private buildBillUploadedStage(deal: any, billCheck: { hasBill: boolean; parsedCount: number; totalCount: number; pendingCount: number; failedCount: number }): AssemblyStageStatus {
     const blockers: AssemblyBlocker[] = [];
 
-    if (!billCheck.hasBill) {
+    if (billCheck.totalCount === 0) {
       blockers.push({
         code: 'NO_BILL',
         titlePt: 'Nenhuma fatura carregada',
@@ -172,16 +172,42 @@ export class DealAssemblyEngine {
         deepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
         severity: 'error'
       });
+    } else if (billCheck.failedCount > 0 && billCheck.parsedCount === 0 && billCheck.pendingCount === 0) {
+      blockers.push({
+        code: 'BILL_PARSE_FAILED',
+        titlePt: `${billCheck.failedCount} fatura(s) com falha na análise`,
+        titleEn: `${billCheck.failedCount} bill(s) failed parsing`,
+        descriptionPt: 'A análise da fatura falhou. Clique em Reprocessar na aba de montagem.',
+        descriptionEn: 'Bill parsing failed. Click Retry on the assembly tab.',
+        deepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
+        severity: 'error'
+      });
     }
+
+    const isParsing = billCheck.pendingCount > 0;
+    const status = billCheck.hasBill ? 'complete'
+      : isParsing ? 'in_progress'
+      : blockers.length > 0 ? 'blocked'
+      : 'in_progress';
 
     return {
       stage: 'BILL_UPLOADED',
-      status: billCheck.hasBill ? 'complete' : blockers.length > 0 ? 'blocked' : 'in_progress',
+      status,
       blockers,
-      actionButtonPt: !billCheck.hasBill ? 'Carregar Fatura' : null,
-      actionButtonEn: !billCheck.hasBill ? 'Upload Bill' : null,
+      actionButtonPt: billCheck.hasBill ? null
+        : isParsing ? 'Aguardando Análise'
+        : billCheck.failedCount > 0 ? 'Reprocessar Fatura'
+        : 'Carregar Fatura',
+      actionButtonEn: billCheck.hasBill ? null
+        : isParsing ? 'Awaiting Parse'
+        : billCheck.failedCount > 0 ? 'Retry Parse'
+        : 'Upload Bill',
       actionDeepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
-      evidenceLinks: billCheck.hasBill ? [{ label: `${billCheck.parsedCount} fatura(s)`, url: `/admin/ops/deals/${deal.id}?tab=assembly` }] : [],
+      evidenceLinks: billCheck.hasBill
+        ? [{ label: `${billCheck.parsedCount} fatura(s)`, url: `/admin/ops/deals/${deal.id}?tab=assembly` }]
+        : billCheck.totalCount > 0
+        ? [{ label: `${billCheck.totalCount} enviada(s), ${billCheck.pendingCount} pendente(s), ${billCheck.failedCount} falha(s)`, url: `/admin/ops/deals/${deal.id}?tab=assembly` }]
+        : [],
       completedAt: null
     };
   }

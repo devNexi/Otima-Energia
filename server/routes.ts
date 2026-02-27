@@ -9865,11 +9865,17 @@ export async function registerRoutes(
       if (bills.length === 0) return res.status(404).json({ success: false, error: "Bill not found" });
 
       const bill = bills[0];
-      if (bill.parseStatus === 'PENDING' || bill.parseStatus === 'PARSING') {
-        return res.json({ success: true, message: `Bill is already ${bill.parseStatus} — parse in progress`, billId: bill.id, alreadyPending: true });
+      if (bill.parseStatus === 'PARSED') {
+        return res.status(400).json({ success: false, error: `Bill is already parsed — retry not needed` });
       }
-      if (bill.parseStatus !== 'FAILED') {
-        return res.status(400).json({ success: false, error: `Bill parse status is '${bill.parseStatus}', not FAILED — retry not needed` });
+      if (bill.parseStatus === 'PENDING' || bill.parseStatus === 'PARSING' || bill.parseStatus === 'UPLOADED') {
+        const updatedAt = bill.updatedAt ? new Date(bill.updatedAt).getTime() : 0;
+        const stuckThresholdMs = 5 * 60 * 1000;
+        if (updatedAt > 0 && (Date.now() - updatedAt > stuckThresholdMs)) {
+          console.log(`[RetryBillParse] Bill ${bill.id} stuck in ${bill.parseStatus} since ${bill.updatedAt} — forcing re-queue`);
+        } else {
+          return res.json({ success: true, message: `Bill is already ${bill.parseStatus} — parse in progress`, billId: bill.id, alreadyPending: true });
+        }
       }
 
       await db.update(billsExtracted)

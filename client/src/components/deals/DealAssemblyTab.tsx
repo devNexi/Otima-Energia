@@ -137,6 +137,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/deals/${dealId}/bills`);
       return res.json();
+    },
+    refetchInterval: (query) => {
+      const bills = query.state.data?.bills || [];
+      const hasPending = bills.some((b: any) => b.parseStatus === 'PENDING' || b.parseStatus === 'PARSING' || b.parseStatus === 'UPLOADED');
+      return hasPending ? 5000 : 30000;
     }
   });
 
@@ -416,6 +421,10 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                   onClick={() => {
                     if (b.code === 'NO_PRC') handleNavigate('/admin/prc');
                     else if (b.code === 'NO_BILL') fileInputRef.current?.click();
+                    else if (b.code === 'BILL_PARSE_FAILED') {
+                      const failedBill = bills.find((bl: any) => bl.parseStatus === 'FAILED');
+                      if (failedBill) retryBillParseMutation.mutate(failedBill.id);
+                    }
                     else if (b.code === 'NO_ECOS') generateEcosMutation.mutate();
                     else if (b.code === 'DOSSIER_NOT_READY' && clientId) handleNavigate(`/admin/dossier/${clientId}`);
                     else if (b.deepLink) handleNavigate(b.deepLink);
@@ -501,12 +510,33 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 </p>
               </div>
               <Button
-                onClick={() => handleNavigate(nextStep.deepLink)}
+                onClick={() => {
+                  const isAssemblyLink = nextStep.deepLink.includes('tab=assembly');
+                  const failedBill = bills.find((b: any) => b.parseStatus === 'FAILED');
+                  const stuckBill = bills.find((b: any) => {
+                    const s = b.parseStatus;
+                    if (s !== 'PENDING' && s !== 'PARSING' && s !== 'UPLOADED') return false;
+                    const u = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                    return u > 0 && (Date.now() - u > 5 * 60 * 1000);
+                  });
+
+                  if (isAssemblyLink && (failedBill || stuckBill)) {
+                    const billToRetry = failedBill || stuckBill;
+                    retryBillParseMutation.mutate(billToRetry.id);
+                  } else if (isAssemblyLink && bills.length === 0) {
+                    fileInputRef.current?.click();
+                  } else {
+                    handleNavigate(nextStep.deepLink);
+                  }
+                }}
+                disabled={retryBillParseMutation.isPending}
                 className={isBlocked ? "bg-red-600 hover:bg-red-700" : ""}
                 data-testid="button-next-step"
               >
-                {isPt ? "Ir para Ação" : "Go to Action"}
-                <ChevronRight className="w-4 h-4 ml-1" />
+                {retryBillParseMutation.isPending
+                  ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />{isPt ? "Reprocessando..." : "Retrying..."}</>
+                  : <>{isPt ? "Ir para Ação" : "Go to Action"}<ChevronRight className="w-4 h-4 ml-1" /></>
+                }
               </Button>
             </div>
             {isBlocked && blockerCount > 0 && (
@@ -629,19 +659,24 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
               </p>
               {bills.map((bill: any) => {
                 const status = bill.parseStatus as string;
+                const updatedAt = bill.updatedAt ? new Date(bill.updatedAt).getTime() : 0;
+                const isStuck = (status === 'PENDING' || status === 'PARSING' || status === 'UPLOADED') && updatedAt > 0 && (Date.now() - updatedAt > 5 * 60 * 1000);
                 const statusLabel = status === 'UPLOADED' ? (isPt ? 'Na Fila' : 'Queued')
-                  : status === 'PARSING' ? (isPt ? 'Enviado' : 'Sent')
+                  : status === 'PENDING' ? (isPt ? 'Na Fila' : 'Queued')
+                  : status === 'PARSING' ? (isPt ? 'Analisando...' : 'Parsing...')
                   : status === 'PARSED' ? (isPt ? 'Analisado' : 'Parsed')
                   : status === 'FAILED' ? (isPt ? 'Falhou' : 'Failed')
                   : status;
                 const statusIcon = status === 'PARSED' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   : status === 'FAILED' ? <AlertCircle className="w-3 h-3 text-red-600" />
-                  : status === 'PARSING' ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
+                  : (status === 'PARSING') ? <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
                   : <Clock className="w-3 h-3 text-amber-600" />;
 
                 return (
                   <div key={bill.id} className={cn("p-2 border rounded-md text-xs", 
-                    status === 'FAILED' ? "bg-red-50 border-red-200" : "bg-slate-50"
+                    status === 'FAILED' ? "bg-red-50 border-red-200" :
+                    isStuck ? "bg-amber-50 border-amber-200" :
+                    "bg-slate-50"
                   )} data-testid={`bill-row-${bill.id}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
@@ -655,7 +690,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                             status === 'PARSING' ? "bg-blue-50 text-blue-700" :
                             "bg-amber-50 text-amber-700"
                           )}>
-                            {statusLabel}
+                            {isStuck ? (isPt ? 'Travado' : 'Stuck') : statusLabel}
                           </Badge>
                         </div>
                       </div>
@@ -667,6 +702,16 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 ml-1">
                             R$ {Number(bill.totalAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </Badge>
+                        )}
+                        {isStuck && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); retryBillParseMutation.mutate(bill.id); }}
+                            disabled={retryBillParseMutation.isPending}
+                            className="shrink-0 px-2 py-0.5 text-[10px] font-medium bg-amber-200 hover:bg-amber-300 rounded transition-colors disabled:opacity-50"
+                            data-testid={`button-retry-stuck-${bill.id}`}
+                          >
+                            {retryBillParseMutation.isPending ? (isPt ? 'Reenviando...' : 'Retrying...') : (isPt ? 'Reprocessar' : 'Retry')}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -686,6 +731,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                             {retryBillParseMutation.isPending ? (isPt ? 'Reenviando...' : 'Retrying...') : (isPt ? 'Reprocessar' : 'Retry')}
                           </button>
                         </div>
+                      </div>
+                    )}
+                    {isStuck && status !== 'FAILED' && (
+                      <div className="mt-1.5 text-[10px] text-amber-700 bg-amber-100 rounded px-2 py-1">
+                        {isPt ? 'Análise parada há mais de 5 minutos. Clique em Reprocessar.' : 'Parse stalled for over 5 minutes. Click Retry.'}
                       </div>
                     )}
                     {status === 'PARSED' && bill.tariffGroup && (

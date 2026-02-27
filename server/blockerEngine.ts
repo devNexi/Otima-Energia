@@ -37,10 +37,13 @@ export class BlockerEngine {
     return { ok: blockers.length === 0, blockers };
   }
 
-  async checkDealHasBill(dealId: string): Promise<{ hasBill: boolean; parsedCount: number }> {
-    const bills = await db.select().from(billsExtracted)
-      .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.parseStatus, 'PARSED')));
-    return { hasBill: bills.length > 0, parsedCount: bills.length };
+  async checkDealHasBill(dealId: string): Promise<{ hasBill: boolean; parsedCount: number; totalCount: number; pendingCount: number; failedCount: number }> {
+    const allBills = await db.select().from(billsExtracted)
+      .where(eq(billsExtracted.dealId, dealId));
+    const parsedCount = allBills.filter(b => b.parseStatus === 'PARSED').length;
+    const pendingCount = allBills.filter(b => b.parseStatus === 'PENDING' || b.parseStatus === 'PARSING' || b.parseStatus === 'UPLOADED').length;
+    const failedCount = allBills.filter(b => b.parseStatus === 'FAILED').length;
+    return { hasBill: parsedCount > 0, parsedCount, totalCount: allBills.length, pendingCount, failedCount };
   }
 
   async checkDealHasEcos(dealId: string): Promise<boolean> {
