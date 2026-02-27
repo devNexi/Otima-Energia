@@ -76,9 +76,10 @@ const statusColors: Record<string, string> = {
 interface AdminProps {
   defaultTab?: string;
   initialDealId?: string;
+  initialDealTab?: string;
 }
 
-export default function Admin({ defaultTab, initialDealId }: AdminProps) {
+export default function Admin({ defaultTab, initialDealId, initialDealTab }: AdminProps) {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
   const { user, isAuthenticated, isLoading: authLoading, login, logout, canAccess } = useAuth();

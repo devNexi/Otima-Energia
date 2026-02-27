@@ -191,6 +191,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const [editFormData, setEditFormData] = useState<Record<string, string>>({});
   const [debugBillId, setDebugBillId] = useState<number | null>(null);
   const [savingOverride, setSavingOverride] = useState(false);
+  const [showPrcDebug, setShowPrcDebug] = useState(false);
 
   const { data: assemblyData, isLoading, error } = useQuery<{ success: boolean } & AssemblyStatus>({
     queryKey: [`/api/deals/${dealId}/assembly-status`],
@@ -230,6 +231,20 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
         return res.json();
       } catch {
         return { online: false };
+      }
+    },
+    refetchInterval: 60000,
+    retry: false
+  });
+
+  const { data: prcReadiness } = useQuery({
+    queryKey: [`/api/deals/${dealId}/prc-readiness`],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/deals/${dealId}/prc-readiness`);
+        return res.json();
+      } catch {
+        return { ok: false };
       }
     },
     refetchInterval: 60000,
@@ -276,7 +291,23 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
     },
     onError: (err: any) => {
-      toast({ title: isPt ? "Erro no upload" : "Upload failed", description: err.message, variant: "destructive" });
+      const msg = err.message || '';
+      let description = msg;
+      let title = isPt ? "Erro no upload" : "Upload failed";
+      if (msg.startsWith('401:') || msg.includes('Authentication')) {
+        title = isPt ? "Sessão expirada" : "Session expired";
+        description = isPt ? "Faça login novamente para continuar." : "Please log in again to continue.";
+      } else if (msg.startsWith('404:') || msg.includes('not found')) {
+        title = isPt ? "Negócio não encontrado" : "Deal not found";
+        description = isPt ? "O negócio pode ter sido excluído." : "The deal may have been deleted.";
+      } else if (msg.startsWith('400:')) {
+        title = isPt ? "Arquivo inválido" : "Invalid file";
+      } else if (msg.startsWith('5')) {
+        title = isPt ? "Erro do servidor" : "Server error";
+        description = isPt ? "Tente novamente em instantes." : "Please try again shortly.";
+      }
+      console.error(`[BillUpload] FAILED: ${msg}`);
+      toast({ title, description, variant: "destructive" });
     }
   });
 
@@ -1086,18 +1117,76 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 : `${parsedBills.length} bill(s) available for analysis. Generate the ECOS profile to compute annual consumption, ACL eligibility, and potential savings.`
               }
             </p>
-            <Button
-              onClick={() => generateEcosMutation.mutate()}
-              disabled={generateEcosMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700"
-              data-testid="button-generate-ecos"
-            >
-              {generateEcosMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Gerando..." : "Generating..."}</>
-              ) : (
-                <><Cpu className="w-4 h-4 mr-2" />{isPt ? "Gerar ECOS" : "Generate ECOS"}</>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                onClick={() => generateEcosMutation.mutate()}
+                disabled={generateEcosMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-700"
+                data-testid="button-generate-ecos"
+              >
+                {generateEcosMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isPt ? "Gerando..." : "Generating..."}</>
+                ) : (
+                  <><Cpu className="w-4 h-4 mr-2" />{isPt ? "Gerar ECOS" : "Generate ECOS"}</>
+                )}
+              </Button>
+              {prcReadiness?.ok && (
+                <Badge variant="outline" className={cn("text-xs", prcReadiness.isReady ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")} data-testid="badge-prc-ready">
+                  PRC: {prcReadiness.isReady ? `${prcReadiness.submarketRows} rows (${prcReadiness.dealSubmarket})` : (isPt ? 'Sem dados' : 'No data')}
+                </Badge>
               )}
-            </Button>
+              {(user?.role === 'admin' || user?.role === 'ops') && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPrcDebug(!showPrcDebug)} data-testid="button-prc-debug">
+                  <Bug className="w-3 h-3 mr-1" />{isPt ? 'PRC Debug' : 'PRC Debug'}
+                </Button>
+              )}
+            </div>
+
+            {showPrcDebug && prcReadiness?.ok && (user?.role === 'admin' || user?.role === 'ops') && (
+              <div className="border rounded-md p-3 bg-slate-50 space-y-2 text-xs" data-testid="prc-debug-panel">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                  PRC / ECOS Readiness Debug
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-slate-600">
+                  <div><span className="font-medium">{isPt ? 'Submercado:' : 'Submarket:'}</span> {prcReadiness.dealSubmarket}</div>
+                  <div><span className="font-medium">{isPt ? 'Distribuidora:' : 'Distributor:'}</span> {prcReadiness.dealDistributor || '—'}</div>
+                  <div><span className="font-medium">{isPt ? 'Faturas analisadas:' : 'Parsed bills:'}</span> {prcReadiness.parsedBillCount}</div>
+                  <div><span className="font-medium">{isPt ? 'PRCs disponíveis:' : 'Available PRCs:'}</span> {prcReadiness.prcDocCount}</div>
+                  <div><span className="font-medium">{isPt ? 'Total linhas PRC:' : 'Total PRC rows:'}</span> {prcReadiness.totalPrcRows}</div>
+                  <div><span className="font-medium">{isPt ? 'Linhas submercado:' : 'Submarket rows:'}</span> {prcReadiness.submarketRows}</div>
+                  <div><span className="font-medium">{isPt ? 'Produtos encontrados:' : 'Found products:'}</span> {(prcReadiness.foundProducts || []).join(', ') || '—'}</div>
+                  <div><span className="font-medium">{isPt ? 'Termos encontrados:' : 'Found terms:'}</span> {(prcReadiness.foundTerms || []).map((t: number) => `${t}m`).join(', ') || '—'}</div>
+                </div>
+                {(prcReadiness.missingProducts?.length > 0 || prcReadiness.missingTerms?.length > 0) && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                    <AlertTriangle className="w-3 h-3 inline mr-1" />
+                    {prcReadiness.warnings?.join(' | ') || 'Missing coverage'}
+                  </div>
+                )}
+                {prcReadiness.docSummaries?.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-1">PRC Documents</p>
+                    {prcReadiness.docSummaries.map((doc: any) => (
+                      <div key={doc.id} className="text-[10px] text-slate-600 bg-white border rounded px-2 py-1">
+                        <span className="font-medium">Doc #{doc.id}</span>
+                        {' '}({doc.parseStatus}) — {doc.referenceMonth || '?'} — {doc.rowCount} rows
+                        {doc.countsBySubmarket && Object.keys(doc.countsBySubmarket).length > 0 && (
+                          <span className="ml-1 text-slate-500">
+                            [{Object.entries(doc.countsBySubmarket).map(([k, v]) => `${k}:${v}`).join(', ')}]
+                          </span>
+                        )}
+                        {doc.countsByProduct && Object.keys(doc.countsByProduct).length > 0 && (
+                          <span className="ml-1 text-slate-500">
+                            [{Object.entries(doc.countsByProduct).map(([k, v]) => `${k}:${v}`).join(', ')}]
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {transitionBlockers.length > 0 && renderBlockerCards(transitionBlockers, isPt ? "Bloqueadores ECOS:" : "ECOS Blockers:")}
           </CardContent>
         </Card>

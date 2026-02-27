@@ -38,7 +38,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
   - **RFQ Readiness UX**: DealAssemblyTab shows expandable RFQ field tables grouped by Identity/Tariff/Consumption/Demand/Payment. Missing/low-confidence fields highlighted. "Needs Review" banner for missing critical fields.
   - **Debug Panel**: Ops/admin-only expandable panel showing parser URL, latency, doc kind, pages, text source, fieldReasons, and raw JSON download.
   - **Doc Kind Detection**: Auto-classifies uploaded docs as STANDARD_BILL, CONSUMPTION_HISTORY, NF3E, or DEMONSTRATIVO based on filename and extracted text.
-  - **ECOS PRC Integration**: ECOS generation requires published PRC pricing rows, with robust resolver logic and idempotency.
+  - **ECOS PRC Integration**: ECOS generation accepts PUBLISHED, PARSED, and VERIFIED PRC pricing rows (3-stage resolver with product normalization). PRC readiness endpoint: `GET /api/deals/:dealId/prc-readiness`. Ops Debug panel in DealAssemblyTab shows submarket, product/term coverage, and per-doc summaries.
   - **Structured Blockers**: Standardized error handling with actionable CTAs and deep links.
 - **ECOS™ System**: AI for contract analysis, lead snapshots, renewal tracking, and client energy profiles.
 - **Deal OS**: Revenue-control and deal-execution system with a state machine, auditability, and commission tracking.

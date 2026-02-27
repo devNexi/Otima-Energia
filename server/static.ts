@@ -4,38 +4,43 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 export function serveStatic(app: Express) {
-  // Handle both ESM and CJS contexts
   let currentDir: string;
   try {
-    // For ESM
     currentDir = path.dirname(fileURLToPath(import.meta.url));
   } catch {
-    // For CJS or bundled code
     currentDir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
   }
   
-  // In production, the bundle is at dist/index.cjs and public is at dist/public
   const distPath = path.resolve(currentDir, "public");
   
+  let servePath = distPath;
   if (!fs.existsSync(distPath)) {
-    // Fallback to checking relative to process.cwd()
     const fallbackPath = path.resolve(process.cwd(), "dist", "public");
     if (fs.existsSync(fallbackPath)) {
-      app.use(express.static(fallbackPath));
-      app.use("*", (_req, res) => {
-        res.sendFile(path.resolve(fallbackPath, "index.html"));
-      });
-      return;
+      servePath = fallbackPath;
+    } else {
+      throw new Error(
+        `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      );
     }
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
   }
 
-  app.use(express.static(distPath));
+  const indexPath = path.resolve(servePath, "index.html");
+  console.log(`[static] Serving from: ${servePath}, index.html exists: ${fs.existsSync(indexPath)}`);
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  app.use(express.static(servePath));
+
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      return next();
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      return next();
+    }
+    const ext = path.extname(req.path);
+    if (ext && ext !== ".html") {
+      return next();
+    }
+    res.sendFile(indexPath);
   });
 }

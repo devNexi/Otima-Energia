@@ -9722,11 +9722,18 @@ export async function registerRoutes(
 
   // --- Deal Bill Upload (Bill-First Architecture) ---
   app.post("/api/deals/:dealId/bills/upload", upload.single("file"), async (req, res) => {
-    if (!await validateDealOsSession(req, res)) return;
+    const { dealId } = req.params;
+    console.log(`[DealBillUpload] POST /api/deals/${dealId}/bills/upload — file=${req.file?.originalname || 'NONE'} size=${req.file?.size || 0}`);
+    if (!await validateDealOsSession(req, res)) {
+      console.log(`[DealBillUpload] Auth failed for dealId=${dealId}`);
+      return;
+    }
     try {
-      const { dealId } = req.params;
       const deal = await storage.getDeal(dealId);
-      if (!deal) return res.status(404).json({ success: false, error: "Deal not found" });
+      if (!deal) {
+        console.log(`[DealBillUpload] Deal not found: ${dealId}`);
+        return res.status(404).json({ success: false, error: "Deal not found" });
+      }
 
       const file = req.file;
       if (!file || file.buffer.length === 0) return res.status(400).json({ success: false, error: "No file uploaded or file is empty" });
@@ -9985,6 +9992,100 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/deals/:dealId/prc-readiness", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId } = req.params;
+      const { billsExtracted, prcDocuments, prcRows } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, desc, or } = await import("drizzle-orm");
+
+      const bills = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.dealId, dealId), eq(billsExtracted.parseStatus, 'PARSED')));
+
+      const distributor = bills.find(b => b.distributor)?.distributor || null;
+      const distributorSubmarketMap: Record<string, string> = {
+        'CEMIG': 'SE_CO', 'LIGHT': 'SE_CO', 'ENEL SP': 'SE_CO', 'ENEL RJ': 'SE_CO',
+        'CPFL': 'SE_CO', 'ELEKTRO': 'SE_CO', 'EDP': 'SE_CO', 'NEOENERGIA': 'SE_CO',
+        'COPEL': 'S', 'CELESC': 'S', 'RGE': 'S', 'CEEE': 'S',
+        'COELBA': 'NE', 'CELPE': 'NE', 'COSERN': 'NE', 'ENEL CE': 'NE', 'ENERGISA': 'NE',
+        'EQUATORIAL': 'N', 'CEA': 'N', 'CELTINS': 'N',
+      };
+      const submarket = distributor
+        ? Object.entries(distributorSubmarketMap).find(([k]) => distributor.toUpperCase().includes(k))?.[1] || 'SE_CO'
+        : 'SE_CO';
+
+      const allDocs = await db.select().from(prcDocuments)
+        .where(or(eq(prcDocuments.parseStatus, 'PUBLISHED'), eq(prcDocuments.parseStatus, 'PARSED'), eq(prcDocuments.parseStatus, 'VERIFIED')))
+        .orderBy(desc(prcDocuments.referenceMonth));
+
+      const allRows: any[] = [];
+      const docSummaries: any[] = [];
+      for (const doc of allDocs) {
+        const rows = await db.select().from(prcRows).where(eq(prcRows.prcDocumentId, doc.id));
+        allRows.push(...rows);
+        const countsBySubmarket: Record<string, number> = {};
+        const countsByProduct: Record<string, number> = {};
+        for (const r of rows) {
+          countsBySubmarket[r.submarket] = (countsBySubmarket[r.submarket] || 0) + 1;
+          countsByProduct[r.productType] = (countsByProduct[r.productType] || 0) + 1;
+        }
+        docSummaries.push({
+          id: doc.id,
+          parseStatus: doc.parseStatus,
+          referenceMonth: doc.referenceMonth,
+          rowCount: rows.length,
+          countsBySubmarket,
+          countsByProduct,
+          parseDebugJson: doc.parseDebugJson,
+        });
+      }
+
+      const PRODUCT_NORMALIZE: Record<string, string> = {
+        'CONVENTIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL',
+        'INCENTIVIZED_50': 'INC_I50', 'INCENTIVADA 50%': 'INC_I50', 'I50': 'INC_I50',
+        'INCENTIVIZED_100': 'INC_I100', 'INCENTIVADA 100%': 'INC_I100', 'I100': 'INC_I100',
+      };
+      const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
+      const normalizedRows = allRows.map(r => {
+        const pt = (r.productType || '').toUpperCase();
+        return { ...r, productType: PRODUCT_NORMALIZE[pt] || r.productType };
+      });
+      const submarketRows = normalizedRows.filter(r => r.submarket === submarket && validProducts.includes(r.productType));
+      const expectedProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
+      const expectedTerms = [12, 24, 36];
+      const foundProducts = [...new Set(submarketRows.map(r => r.productType))];
+      const foundTerms = [...new Set(submarketRows.map(r => r.termMonths).filter(Boolean))];
+      const missingProducts = expectedProducts.filter(p => !foundProducts.includes(p));
+      const missingTerms = expectedTerms.filter(t => !foundTerms.includes(t));
+
+      const isReady = submarketRows.length > 0;
+      const warnings: string[] = [];
+      if (missingProducts.length > 0) warnings.push(`Missing products for ${submarket}: ${missingProducts.join(', ')}`);
+      if (missingTerms.length > 0) warnings.push(`Missing terms for ${submarket}: ${missingTerms.map(t => `${t}m`).join(', ')}`);
+
+      res.json({
+        ok: true,
+        isReady,
+        dealSubmarket: submarket,
+        dealDistributor: distributor,
+        parsedBillCount: bills.length,
+        prcDocCount: allDocs.length,
+        totalPrcRows: allRows.length,
+        submarketRows: submarketRows.length,
+        foundProducts,
+        foundTerms,
+        missingProducts,
+        missingTerms,
+        warnings,
+        docSummaries,
+      });
+    } catch (error: any) {
+      console.error("[PRC-Readiness] Error:", error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   // --- Deal ECOS Generation (Bill-First Architecture — PRC-backed) ---
   app.post("/api/deals/:dealId/ecos/generate", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -10044,54 +10145,80 @@ export async function registerRoutes(
 
       const billRefMonth = bills.find(b => b.referenceMonth)?.referenceMonth || null;
 
-      const publishedDocs = await db.select().from(prcDocuments)
-        .where(eq(prcDocuments.parseStatus, 'PUBLISHED'))
+      const { or } = await import("drizzle-orm");
+      const availableDocs = await db.select().from(prcDocuments)
+        .where(or(eq(prcDocuments.parseStatus, 'PUBLISHED'), eq(prcDocuments.parseStatus, 'PARSED'), eq(prcDocuments.parseStatus, 'VERIFIED')))
         .orderBy(desc(prcDocuments.referenceMonth));
 
       let resolvedPrcRows: any[] = [];
       let resolvedPrcDoc: any = null;
+      let prcResolverLog: string[] = [];
+
+      const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
+      const PRODUCT_NORMALIZE: Record<string, string> = {
+        'CONVENTIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL',
+        'INCENTIVIZED_50': 'INC_I50', 'INCENTIVADA 50%': 'INC_I50', 'I50': 'INC_I50',
+        'INCENTIVIZED_100': 'INC_I100', 'INCENTIVADA 100%': 'INC_I100', 'I100': 'INC_I100',
+      };
+
+      function normalizePrcRow(row: any) {
+        const pt = row.productType || '';
+        const normalized = PRODUCT_NORMALIZE[pt.toUpperCase()] || pt;
+        return { ...row, productType: normalized };
+      }
+
+      prcResolverLog.push(`Found ${availableDocs.length} available PRC docs (PUBLISHED/PARSED/VERIFIED)`);
 
       if (billRefMonth) {
-        const matchingDoc = publishedDocs.find(d => d.referenceMonth === billRefMonth);
+        const matchingDoc = availableDocs.find(d => d.referenceMonth === billRefMonth);
         if (matchingDoc) {
-          resolvedPrcRows = await db.select().from(prcRows)
+          const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, matchingDoc.id), eq(prcRows.submarket, submarket)));
+          resolvedPrcRows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
           resolvedPrcDoc = matchingDoc;
+          prcResolverLog.push(`Stage 1 (exact month ${billRefMonth}, submarket ${submarket}): ${resolvedPrcRows.length} rows from doc ${matchingDoc.id}`);
         }
       }
-      if (resolvedPrcRows.length === 0 && publishedDocs.length > 0) {
-        for (const doc of publishedDocs) {
-          const rows = await db.select().from(prcRows)
+      if (resolvedPrcRows.length === 0 && availableDocs.length > 0) {
+        for (const doc of availableDocs) {
+          const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
+          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
+            prcResolverLog.push(`Stage 2 (latest doc for submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
             break;
           }
         }
       }
-      if (resolvedPrcRows.length === 0 && publishedDocs.length > 0) {
-        for (const doc of publishedDocs) {
-          const rows = await db.select().from(prcRows)
+      if (resolvedPrcRows.length === 0 && availableDocs.length > 0) {
+        for (const doc of availableDocs) {
+          const raw = await db.select().from(prcRows)
             .where(eq(prcRows.prcDocumentId, doc.id));
+          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
+            prcResolverLog.push(`Stage 3 (global fallback): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
             break;
           }
         }
       }
 
       if (resolvedPrcRows.length === 0) {
+        prcResolverLog.push('No PRC rows found in any stage');
         return res.status(409).json({
           ok: false,
           blockers: [{
             code: "NO_PRC",
-            message: `No published PRC pricing rows found for submarket ${submarket}. Upload and publish a PRC first.`,
-            cta: "Upload PRC"
+            message: `No PRC pricing rows found for submarket ${submarket}. Upload and parse a PRC first.`,
+            cta: "Upload PRC",
+            debug: { availableDocCount: availableDocs.length, submarket, resolverLog: prcResolverLog }
           }]
         });
       }
+      console.log(`[ECOS] PRC resolver: ${prcResolverLog.join(' | ')}`);
 
       const pricingRowsSorted = [...resolvedPrcRows].sort((a, b) => a.id - b.id);
       const pricingRowsHash = crypto.createHash('sha256')

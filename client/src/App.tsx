@@ -49,7 +49,10 @@ import DossierPage from "@/pages/DossierPage";
 
 function AdminDealRoute() {
   const { dealId } = useParams<{ dealId: string }>();
-  return <Admin defaultTab="deals" initialDealId={dealId} />;
+  const initialTab = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('tab') || undefined
+    : undefined;
+  return <Admin defaultTab="deals" initialDealId={dealId} initialDealTab={initialTab} />;
 }
 
 function Router() {

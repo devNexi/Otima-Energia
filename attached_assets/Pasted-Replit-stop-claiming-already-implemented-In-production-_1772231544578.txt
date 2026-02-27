@@ -1,0 +1,106 @@
+Replit — stop claiming “already implemented”. In production, ECOS is failing because PRCs are not being parsed/stored/consumed correctly, and bill upload is hitting a 404 in the UI. I need you to make the full production journey work end-to-end and provide proof.
+
+Production URLs and the exact failing deep link
+
+Portal prod: https://otimaenergia.com
+
+Failing deep link (must work):
+https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly
+
+Parser base must be: https://parser.otimaenergia.com
+ (no port)
+
+What is broken right now (real symptoms)
+
+Deal Assembly deep link returns 404 (see screenshot evidence).
+
+Bill upload sometimes yields 404 (not “deal not found” — actual UI upload flow is failing).
+
+ECOS isn’t working because PRCs are not parsed/available (pipeline mismatch or not stored or wrong submarket/product mapping).
+
+What I need you to do (in order)
+1) Fix frontend routing for ops deep link
+
+/admin/ops/deals/:dealId?tab=assembly must render Deal Assembly with that deal selected.
+
+Must work on hard refresh (server SPA fallback).
+
+Must not rely on internal state only.
+
+Proof required:
+
+curl -I "https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly" returns 200 and HTML (not 404).
+
+Browser navigation loads the deal and selects assembly tab.
+
+2) Fix the bill upload 404
+
+I want you to identify the exact endpoint returning 404 and fix it.
+
+Add logging: when upload fails, log route + status + response body snippet.
+
+UI must display a helpful error: auth vs not found vs server error.
+
+Proof required:
+
+Paste the exact failing request path + response before fix
+
+Paste same request after fix showing success or correct error messaging.
+
+3) Make PRC → ECOS pipeline actually work
+
+Assume Trae is fixing parser PRC output. Your job is portal correctness:
+
+When PRC upload is parsed (docType PRC):
+
+rows must be stored in DB in the schema ECOS reads from (whatever your canonical source is)
+
+submarket values must match what ECOS queries (SE_CO, S, NE, N)
+
+product values must match what ECOS expects (CONVENCIONAL / INC_I50 / INC_I100)
+
+termMonths must match the query logic ECOS uses
+
+ECOS generation must:
+
+correctly detect “PRC readiness” for the deal
+
+no silent mismatch due to mapping (SE/CO vs SE_CO etc.)
+
+provide a clear blocker message if PRC rows missing
+
+Proof required:
+
+Provide SQL (or API) evidence that after PRC upload:
+
+rows exist for all required submarkets and products
+
+the deal is “PRC ready” according to the same logic ECOS uses
+
+Then generate an ECOS snapshot and show it succeeds.
+
+4) Add one “Ops Debug” panel for this exact flow
+
+In Deal Assembly tab (for ops/admin):
+
+show last parser PRC parse summary: rows count, counts by submarket/product, warnings/rejects
+
+show ECOS PRC readiness computed values (what submarket/product/terms it is looking for)
+
+Don’t do this
+
+Don’t talk about DNS
+
+Don’t say “it exists already” without proof outputs
+
+Don’t refactor unrelated stuff
+
+Deliverables
+
+diffs for router changes + any backend SPA fallback fixes
+
+diffs for bill upload endpoint/handler and error surfacing
+
+diffs for PRC storage/normalization + ECOS PRC lookup alignment
+
+a short “Verification in Prod” checklist with exact URLs/curls
