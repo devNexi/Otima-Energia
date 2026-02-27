@@ -195,11 +195,11 @@ export class DealAssemblyEngine {
       status,
       blockers,
       actionButtonPt: billCheck.hasBill ? null
-        : isParsing ? 'Aguardando Análise'
+        : isParsing ? null
         : billCheck.failedCount > 0 ? 'Reprocessar Fatura'
         : 'Carregar Fatura',
       actionButtonEn: billCheck.hasBill ? null
-        : isParsing ? 'Awaiting Parse'
+        : isParsing ? null
         : billCheck.failedCount > 0 ? 'Retry Parse'
         : 'Upload Bill',
       actionDeepLink: `/admin/ops/deals/${deal.id}?tab=assembly`,
