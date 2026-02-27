@@ -320,8 +320,6 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             hintDocType: 'PRC',
           });
 
-          const PRICE_MIN = 10;
-          const PRICE_MAX = 2000;
           const SUBMARKET_MAP: Record<string, string> = {
             'SE/CO': 'SE_CO', 'SECO': 'SE_CO', 'SE': 'SE_CO', 'CO': 'SE_CO',
             'SUDESTE': 'SE_CO', 'SUDESTE/CENTRO-OESTE': 'SE_CO', 'SE_CO': 'SE_CO',
@@ -334,30 +332,55 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
           function normalizeVpsPrice(raw: any): { price: number | null; rawText: string; rejectReason: string | null } {
             const rawText = String(raw ?? '');
-            let val: number;
-            if (typeof raw === 'number' && !isNaN(raw)) {
-              val = raw;
-            } else {
-              let cleaned = rawText.replace(/\s/g, '').replace(/%/g, '').replace(/R\$/gi, '');
-              if (/^\-?\d{1,3}(\.\d{3})+(,\d{1,4})?$/.test(cleaned)) {
-                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-              } else if (/^\-?\d+(,\d{1,4})$/.test(cleaned)) {
-                cleaned = cleaned.replace(',', '.');
-              }
-              val = parseFloat(cleaned);
+            if (typeof raw === 'number' && !isNaN(raw) && raw > 0) {
+              return { price: raw, rawText, rejectReason: null };
             }
+            let cleaned = rawText.replace(/\s/g, '').replace(/%/g, '').replace(/R\$/gi, '');
+            if (/^\-?\d{1,3}(\.\d{3})+(,\d{1,4})?$/.test(cleaned)) {
+              cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (/^\-?\d+(,\d{1,4})$/.test(cleaned)) {
+              cleaned = cleaned.replace(',', '.');
+            }
+            const val = parseFloat(cleaned);
             if (isNaN(val) || val <= 0) return { price: null, rawText, rejectReason: 'BAD_NUMBER' };
-            if (val < PRICE_MIN || val > PRICE_MAX) return { price: val, rawText, rejectReason: 'OUT_OF_RANGE' };
             return { price: val, rawText, rejectReason: null };
+          }
+
+          const TERM_MAP: Record<string, number> = {
+            'ANUAL': 12, 'ANNUAL': 12, '1 ANO': 12, '12': 12,
+            'TRIANUAL': 36, 'TRIENNIAL': 36, '3 ANOS': 36, '36': 36,
+            'QUINQUENAL': 60, 'FIVE-YEAR': 60, '5 ANOS': 60, '60': 60,
+            'BIANUAL': 24, 'BIENNIAL': 24, '2 ANOS': 24, '24': 24,
+          };
+
+          function resolveTermMonths(row: any): number | null {
+            if (row.termMonths && typeof row.termMonths === 'number' && row.termMonths > 0) return row.termMonths;
+            const rawTerm = String(row.termMonths || row.term || row.period || '').toUpperCase().trim();
+            if (TERM_MAP[rawTerm]) return TERM_MAP[rawTerm];
+            const yearMatch = rawTerm.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+            if (yearMatch) {
+              const years = parseInt(yearMatch[2]) - parseInt(yearMatch[1]);
+              if (years > 0 && years <= 10) return years * 12;
+            }
+            const numMatch = rawTerm.match(/^(\d+)$/);
+            if (numMatch) {
+              const n = parseInt(numMatch[1]);
+              if (n >= 1 && n <= 120) return n;
+            }
+            return null;
           }
 
           const PRODUCT_MAP: Record<string, string> = {
             'CONVENCIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL', 'CONVENTIONAL': 'CONVENCIONAL',
+            'ENERGIA CONVENCIONAL': 'CONVENCIONAL',
             'INCENTIVADA 50%': 'INC_I50', 'INCENTIVADA 50': 'INC_I50', 'INC_I50': 'INC_I50',
             'I50': 'INC_I50', '50%': 'INC_I50', 'INC 50': 'INC_I50',
+            'ENERGIA INCENTIVADA 50%': 'INC_I50', 'ENERGIA INCENTIVADA 50': 'INC_I50',
+            'INCENTIVADA ESPECIAL': 'INC_I50',
             'INCENTIVADA 100%': 'INC_I100', 'INCENTIVADA 100': 'INC_I100', 'INC_I100': 'INC_I100',
             'I100': 'INC_I100', '100%': 'INC_I100', 'INC 100': 'INC_I100',
-            'INCENTIVADA ESPECIAL': 'INC_I50',
+            'ENERGIA INCENTIVADA 100%': 'INC_I100', 'ENERGIA INCENTIVADA 100': 'INC_I100',
+            'INC_I0': 'INC_I100', 'I0': 'INC_I100',
           };
           const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
 
@@ -397,25 +420,27 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             if (!validProducts.includes(productType)) {
               rejectReasons['INVALID_PRODUCT'] = (rejectReasons['INVALID_PRODUCT'] || 0) + 1;
               rowsRejected++;
-              console.log(`[PRC_PARSE] Rejected row: product=${rawProduct} (unmapped)`);
+              console.log(`[PRC_PARSE] Rejected row: product=${rawProduct} → ${productType} (unmapped)`);
               continue;
             }
 
-            const isOutlier = price! > 800;
+            const termMonths = resolveTermMonths(row);
+
             const inserted = await db.insert(prcRows).values({
               prcDocumentId: documentId,
               supplierId: doc[0].supplierId,
               referenceMonth: result.data?.referenceMonth || doc[0].referenceMonth,
               submarket,
               productType,
-              termMonths: row.termMonths || null,
+              termMonths: termMonths,
               priceRPerMWh: String(price),
               confidence: Math.round((row.confidence || result.confidence) * 100),
-              isOutlierFlag: isOutlier,
-              outlierReason: isOutlier ? `Price ${price} R$/MWh flagged as high` : null,
-              rawSnippet: `${rawSm} ${row.product} ${row.termMonths}m: ${rawText}`,
+              isOutlierFlag: false,
+              outlierReason: null,
+              rawSnippet: `${rawSm} ${row.product} ${row.termMonths || row.term || row.period || ''}: R$${price}/MWh`,
             }).returning();
             insertedPrcRows.push(inserted[0]);
+            console.log(`[PRC_PARSE] Accepted row: ${submarket}/${productType} ${termMonths || '?'}m = R$${price}/MWh`);
           }
 
           console.log(`[PRC_PARSE] VPS results: ${result.rows.length} raw, ${insertedPrcRows.length} accepted, ${rowsRejected} rejected, reasons=${JSON.stringify(rejectReasons)}`);
