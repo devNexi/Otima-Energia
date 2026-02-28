@@ -1161,7 +1161,16 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                               <div><span className="font-medium">{isPt ? 'Páginas:' : 'Pages:'}</span> {(bill.parseDebugJson as any)?.pages || '—'}</div>
                               <div><span className="font-medium">{isPt ? 'Fonte Texto:' : 'Text Source:'}</span> {bill.textSource || (bill.parseDebugJson as any)?.textSource || '—'}</div>
                               <div><span className="font-medium">{isPt ? 'Confiança:' : 'Confidence:'}</span> {bill.parseConfidence != null ? normalizeConf(bill.parseConfidence) : '—'}</div>
+                              <div><span className="font-medium">{isPt ? 'Texto extraído:' : 'Text extracted:'}</span> {(bill.parseDebugJson as any)?.textLen || 0} chars</div>
+                              <div><span className="font-medium">OCR:</span> {(bill.parseDebugJson as any)?.textSource === 'ocr' || (bill.parseDebugJson as any)?.timingsMs?.ocrMs > 0 ? 'Yes' : 'No'}</div>
+                              <div><span className="font-medium">Force:</span> {(bill.parseDebugJson as any)?.autoDecision?.chosen || 'BILL'}</div>
                             </div>
+                            {(bill.parseDebugJson as any)?.chosenText && (
+                              <details className="text-[10px]">
+                                <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800 py-1">{isPt ? '▸ Preview do texto extraído' : '▸ Extracted text preview'} ({((bill.parseDebugJson as any)?.textLen || 0)} chars)</summary>
+                                <pre className="mt-1 bg-slate-50 border rounded p-2 text-[9px] font-mono overflow-auto max-h-[200px] whitespace-pre-wrap">{((bill.parseDebugJson as any)?.chosenText || '').substring(0, 500)}{((bill.parseDebugJson as any)?.chosenText?.length || 0) > 500 ? '\n... (truncated)' : ''}</pre>
+                              </details>
+                            )}
                             <div className="text-[10px] border rounded p-2 bg-slate-100">
                               <span className="font-medium text-slate-600">{isPt ? 'Extração: ' : 'Extraction: '}</span>
                               <span className="text-emerald-700">{foundFields.length} {isPt ? 'encontrados' : 'found'}</span>
@@ -1277,7 +1286,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
               </Button>
               {prcReadiness?.ok && (
                 <Badge variant="outline" className={cn("text-xs", prcReadiness.isReady ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")} data-testid="badge-prc-ready">
-                  PRC: {prcReadiness.isReady ? `${prcReadiness.submarketRows} rows (${prcReadiness.dealSubmarket})` : (isPt ? 'Sem dados' : 'No data')}
+                  PRC: {prcReadiness.isReady ? `${prcReadiness.submarketRows} rows (${({'SE_CO':'SE/CO','S':'Sul','NE':'Nordeste','N':'Norte'} as Record<string,string>)[prcReadiness.dealSubmarket] || prcReadiness.dealSubmarket})` : (isPt ? 'Sem dados' : 'No data')}
                 </Badge>
               )}
               {(user?.role === 'admin' || user?.role === 'ops') && (

@@ -51,6 +51,16 @@ function normalizeConfidence(raw: number | null | undefined): string {
   return raw.toFixed(2);
 }
 
+function formatSubmarket(sm: string): string {
+  const displayMap: Record<string, string> = {
+    'SE_CO': 'SE/CO',
+    'S': 'Sul',
+    'NE': 'Nordeste',
+    'N': 'Norte',
+  };
+  return displayMap[sm] || sm;
+}
+
 function formatProductType(pt: string): string {
   const fixMap: Record<string, string> = {
     'INC_150': 'INC_I50',
@@ -1033,6 +1043,38 @@ export default function PrcUploadCenter() {
                   )}
                 </div>
 
+                {debugData.debug.parseDebugJson && (() => {
+                  const pj = debugData.debug.parseDebugJson as any;
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm border rounded-lg p-4 bg-slate-50">
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Text Extracted</span>
+                        {pj.textLen || 0} chars
+                      </div>
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">OCR Used</span>
+                        {pj.textSource === 'ocr' || pj.timingsMs?.ocrMs > 0 ? 'Yes' : 'No'} {pj.timingsMs?.ocrMs ? `(${Math.round(pj.timingsMs.ocrMs)}ms)` : ''}
+                      </div>
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Force Parameter</span>
+                        {pj.autoDecision?.chosen || 'PRC'}
+                      </div>
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Auto Scores</span>
+                        PRC: {pj.prcScore ?? pj.autoDecision?.prcScore ?? '—'} / Bill: {pj.billScore ?? pj.autoDecision?.billScore ?? '—'}
+                      </div>
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Text Source</span>
+                        {pj.textSource || '—'}
+                      </div>
+                      <div>
+                        <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Pages</span>
+                        {pj.pages || '—'} {pj.droppedPages?.pagesDropped > 0 ? `(${pj.droppedPages.pagesDropped} dropped)` : ''}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {debugData.debug.parseErrors && (debugData.debug.parseErrors as any[]).length > 0 && (
                   <div className="border border-red-300 bg-red-50 rounded-lg p-4">
                     <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
@@ -1047,22 +1089,25 @@ export default function PrcUploadCenter() {
                   </div>
                 )}
 
-                {debugData.debug.rawExtractedText && (
-                  <Collapsible open={rawTextOpen} onOpenChange={setRawTextOpen}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="flex items-center gap-2 w-full justify-start p-2 h-auto" data-testid="button-toggle-raw-text">
-                        {rawTextOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <span className="font-medium">Raw Extracted Text</span>
-                        <span className="text-xs text-muted-foreground ml-2">({debugData.debug.rawExtractedText.length} chars)</span>
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <pre className="bg-gray-50 border rounded p-3 text-xs font-mono overflow-auto max-h-[300px] whitespace-pre-wrap mt-2" data-testid="text-raw-extracted">
-                        {debugData.debug.rawExtractedText}
-                      </pre>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                {(debugData.debug.rawExtractedText || (debugData.debug.parseDebugJson as any)?.chosenText) && (() => {
+                  const textContent = debugData.debug.rawExtractedText || (debugData.debug.parseDebugJson as any)?.chosenText || '';
+                  return (
+                    <Collapsible open={rawTextOpen} onOpenChange={setRawTextOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="flex items-center gap-2 w-full justify-start p-2 h-auto" data-testid="button-toggle-raw-text">
+                          {rawTextOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <span className="font-medium">Extracted Text Preview</span>
+                          <span className="text-xs text-muted-foreground ml-2">({textContent.length} chars)</span>
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <pre className="bg-gray-50 border rounded p-3 text-xs font-mono overflow-auto max-h-[300px] whitespace-pre-wrap mt-2" data-testid="text-raw-extracted">
+                          {textContent.substring(0, 500)}{textContent.length > 500 ? '\n... (truncated — see full in Debug JSON)' : ''}
+                        </pre>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })()}
 
                 {debugData.debug.parseDebugJson && (
                   <Collapsible open={debugJsonOpen} onOpenChange={setDebugJsonOpen}>
@@ -1127,7 +1172,7 @@ export default function PrcUploadCenter() {
                         <TableBody>
                           {debugRowsSlice.map((r: any) => (
                             <TableRow key={r.id} data-testid={`row-debug-${r.id}`}>
-                              <TableCell className="text-xs">{r.submarket}</TableCell>
+                              <TableCell className="text-xs" title={r.submarket}>{formatSubmarket(r.submarket)}</TableCell>
                               <TableCell className="text-xs" title={r.productType}>{formatProductType(r.productType)}</TableCell>
                               <TableCell className="text-xs">{r.termMonths ? `${r.termMonths}mo` : "—"}</TableCell>
                               <TableCell className="text-xs font-mono">{!isNaN(parseFloat(r.priceRPerMWh)) ? `R$ ${parseFloat(r.priceRPerMWh).toFixed(2)}` : (r.priceRPerMWh || '—')}</TableCell>
