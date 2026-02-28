@@ -52,15 +52,14 @@ function normalizeConfidence(raw: number | null | undefined): string {
 }
 
 function formatProductType(pt: string): string {
-  const map: Record<string, string> = {
-    'CONVENCIONAL': 'Convencional',
-    'INC_I50': 'Incentivada 50%',
-    'INC_I100': 'Incentivada 100%',
-    'INC_I0': 'Incentivada 0%',
-    'INCENTIVADA_50': 'Incentivada 50%',
-    'INCENTIVADA_100': 'Incentivada 100%',
+  const fixMap: Record<string, string> = {
+    'INC_150': 'INC_I50',
+    'INC_1100': 'INC_I100',
+    'INCENTIVADA_50': 'INC_I50',
+    'INCENTIVADA_100': 'INC_I100',
+    'CONVENTIONAL': 'CONVENCIONAL',
   };
-  return map[pt] || pt;
+  return fixMap[pt] || pt;
 }
 
 interface PrcDocument {
