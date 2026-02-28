@@ -47,11 +47,19 @@ import TracksQueue from "@/pages/TracksQueue";
 import VerificationPage from "@/pages/VerificationPage";
 import DossierPage from "@/pages/DossierPage";
 
+const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
+
 function AdminDealRoute() {
   const { dealId } = useParams<{ dealId: string }>();
-  const initialTab = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('tab') || undefined
-    : undefined;
+  const rawTab = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('tab')
+    : null;
+  const initialTab = rawTab && VALID_DEAL_TABS.includes(rawTab) ? rawTab : 'details';
+
+  if (typeof window !== 'undefined') {
+    console.log(`[DeepLink] AdminDealRoute: dealId=${dealId} rawTab=${rawTab} resolvedTab=${initialTab || 'default'} url=${window.location.href}`);
+  }
+
   return <Admin defaultTab="deals" initialDealId={dealId} initialDealTab={initialTab} />;
 }
 

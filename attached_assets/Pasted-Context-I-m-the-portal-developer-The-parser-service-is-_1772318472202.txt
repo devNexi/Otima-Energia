@@ -1,0 +1,157 @@
+Context: I'm the portal developer. The parser service is being fixed to return better data. We need to handle those responses correctly and fix routing issues that are blocking users.
+
+🎯 TASK 1: VERIFY AND FIX DEEP LINK ROUTING
+The Problem: https://otimaenergia.com/admin/ops/deals/e6ca5d58-53c8-4a03-93ba-7cde00b65805?tab=assembly shows 404 "Did you forget to add the page to the router?"
+
+Required Actions:
+
+Test in production:
+
+Deploy any pending router fixes
+
+Test the exact URL above
+
+Test with different deal UUIDs
+
+Test with ?tab=assembly, ?tab=details, no tab parameter
+
+Verify wouter configuration:
+
+Ensure route exists: /admin/ops/deals/:id
+
+Component reads tab query parameter and switches active tab
+
+Add fallback: if tab parameter invalid, default to "details"
+
+Add client-side logging:
+
+Log when deep link is accessed
+
+Log the route parameters received
+
+Log any routing errors
+
+🎯 TASK 2: IMPROVE PARSER RESPONSE HANDLING
+The Problem: Portal misinterprets parser responses (9800% confidence) and doesn't display error details.
+
+Required Fixes:
+
+Confidence display:
+
+If parser returns confidence as 98.0, divide by 100 to show 0.98
+
+Better: trust parser to return 0-1, but add validation:
+
+javascript
+const displayConfidence = confidence > 1 ? confidence / 100 : confidence;
+Add "Raw Parser Output" debug button:
+
+In QA console or ingestion screen
+
+Button shows modal with complete JSON response from parser
+
+Include HTTP status, headers, response body
+
+Helps debug what parser actually returned
+
+CNPJ display:
+
+If field exactly equals "N/A (redacted)", show "REDACTED" badge
+
+Don't run CNPJ validation/formatting on this value
+
+Add tooltip: "CNPJ redacted in original document"
+
+Error display improvements:
+
+Show specific error message if parser returns one
+
+Distinguish between: "Parser failed" vs "No data found" vs "Document format not recognized"
+
+Add retry button with different parser strategy hint
+
+🎯 TASK 3: BILL UPLOAD ERROR HANDLING
+The Problem: Intermittent 404/"fetch failed" on bill upload.
+
+Required Fixes:
+
+Add retry logic with exponential backoff:
+
+On failure, retry up to 3 times
+
+Wait: 1s, then 2s, then 4s between retries
+
+Only retry on network errors/5xx, not 4xx
+
+Better error messages:
+
+If 404: Check if parser service URL is correct
+
+If timeout: Show "Parser service busy, try again"
+
+Log full error details to console for debugging
+
+Add upload timeout:
+
+Set reasonable timeout (e.g., 30 seconds for bills, 60 seconds for PRCs)
+
+Show progress indicator for long uploads
+
+🎯 TASK 4: ECOS GENERATION READINESS
+The Goal: Ensure portal can use fixed parser data to generate ECOS snapshots.
+
+Required Actions:
+
+Validate PRC data structure:
+
+After parser fix, verify PRC upload creates 24 rows
+
+Check that all fields map correctly: product, submarket, term, price
+
+Confirm ECOS generation uses these rows
+
+Test complete flow:
+
+Upload PRC.pdf → 24 rows in PRC list
+
+Upload bill → shows redacted CNPJ, dates, consumption
+
+Navigate to deal via deep link → Assembly tab visible
+
+Generate ECOS → succeeds using PRC data
+
+📋 DEPLOYMENT CHECKLIST
+After changes:
+
+Deploy to production
+
+Test deep link: [insert your deal UUID here]
+
+Upload PRC.pdf → verify 24 rows
+
+Upload HISTORICO_DE_CONSUMO.pdf → verify fields
+
+Check browser console for any errors
+
+Verify "Raw Parser Output" button shows complete response
+
+🚨 URGENT: COORDINATION BETWEEN TEAMS
+For Trae: After implementing logging, share sample logs showing what's happening with PRC parsing. Specifically:
+
+Is PDF being received?
+
+Which detection strategy is trying/failing?
+
+Any exceptions being caught?
+
+For Replit: After deep link fix, confirm the exact URL format that works so Trae can document it for users.
+
+Shared Success Criteria:
+
+PRC upload → 24 rows visible in portal
+
+Bill upload → shows redacted CNPJ + dates + consumption
+
+Deep link → loads correct deal with Assembly tab
+
+ECOS generation → succeeds with no missing data

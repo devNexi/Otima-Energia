@@ -255,20 +255,57 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const uploadBillMutation = useMutation({
     mutationFn: async (file: File) => {
       const url = `/api/deals/${dealId}/bills/upload`;
-      console.log(`[BillUpload] POST ${url} dealId=${dealId} file=${file.name} size=${file.size} sessionId=${sessionId ? 'present' : 'MISSING'}`);
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'x-session-id': sessionId || '' },
-        body: formData,
-        credentials: 'include'
-      });
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`${res.status}: ${errBody.slice(0, 500)}`);
+      const maxRetries = 3;
+      const baseDelay = 1000;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[BillUpload] POST ${url} attempt=${attempt}/${maxRetries} dealId=${dealId} file=${file.name} size=${file.size}`);
+          const formData = new FormData();
+          formData.append('file', file);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60000);
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'x-session-id': sessionId || '' },
+            body: formData,
+            credentials: 'include',
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+
+          if (!res.ok) {
+            const errBody = await res.text();
+            const statusCode = res.status;
+            if (statusCode >= 400 && statusCode < 500) {
+              throw new Error(`${statusCode}: ${errBody.slice(0, 500)}`);
+            }
+            if (attempt < maxRetries) {
+              const delay = baseDelay * Math.pow(2, attempt - 1);
+              console.warn(`[BillUpload] ${statusCode} on attempt ${attempt}, retrying in ${delay}ms...`);
+              await new Promise(r => setTimeout(r, delay));
+              continue;
+            }
+            throw new Error(`${statusCode}: ${errBody.slice(0, 500)}`);
+          }
+          return res.json();
+        } catch (err: any) {
+          const isNetworkError = err.name === 'AbortError' || err.name === 'TypeError' || err.message?.includes('fetch');
+          const isClientError = err.message?.match(/^4\d{2}:/);
+
+          if (isClientError || attempt >= maxRetries) {
+            throw err;
+          }
+          if (isNetworkError) {
+            const delay = baseDelay * Math.pow(2, attempt - 1);
+            console.warn(`[BillUpload] Network error on attempt ${attempt}: ${err.message}, retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+          throw err;
+        }
       }
-      return res.json();
+      throw new Error('Upload failed after all retries');
     },
     onSuccess: (data) => {
       setUploadResult(data);
@@ -295,19 +332,25 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
       const msg = err.message || '';
       let description = msg;
       let title = isPt ? "Erro no upload" : "Upload failed";
-      if (msg.startsWith('401:') || msg.includes('Authentication')) {
+      if (err.name === 'AbortError' || msg.includes('aborted')) {
+        title = isPt ? "Tempo esgotado" : "Upload timed out";
+        description = isPt ? "O servidor demorou muito para responder. Tente novamente." : "Server took too long to respond. Please try again.";
+      } else if (msg.startsWith('401:') || msg.includes('Authentication')) {
         title = isPt ? "Sessão expirada" : "Session expired";
         description = isPt ? "Faça login novamente para continuar." : "Please log in again to continue.";
       } else if (msg.startsWith('404:') || msg.includes('not found')) {
-        title = isPt ? "Negócio não encontrado" : "Deal not found";
-        description = isPt ? "O negócio pode ter sido excluído." : "The deal may have been deleted.";
+        title = isPt ? "Serviço indisponível" : "Service unavailable";
+        description = isPt ? "Verifique se o serviço de análise está ativo." : "Check if the parser service URL is correct.";
       } else if (msg.startsWith('400:')) {
         title = isPt ? "Arquivo inválido" : "Invalid file";
-      } else if (msg.startsWith('5')) {
+      } else if (msg.startsWith('5') || msg.includes('retry')) {
         title = isPt ? "Erro do servidor" : "Server error";
-        description = isPt ? "Tente novamente em instantes." : "Please try again shortly.";
+        description = isPt ? "O serviço está ocupado. Tentamos novamente automaticamente." : "Service is busy. We retried automatically but it persisted.";
+      } else if (msg.includes('fetch') || msg.includes('network') || msg.includes('TypeError')) {
+        title = isPt ? "Erro de conexão" : "Connection error";
+        description = isPt ? "Verifique sua conexão com a internet." : "Check your internet connection.";
       }
-      console.error(`[BillUpload] FAILED: ${msg}`);
+      console.error(`[BillUpload] FAILED after retries: ${msg}`);
       toast({ title, description, variant: "destructive" });
     }
   });
@@ -1073,12 +1116,27 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                                         data-testid={`input-override-${field.key}-${bill.id}`}
                                       />
                                     ) : (
-                                      <span className={cn("truncate", !hasValue && "text-red-500 italic")}>
-                                        {hasValue ? (fmtVal(field.value, (field as any).fmt) || field.value) : (isPt ? 'Não detectado' : 'Not detected')}
-                                      </span>
+                                      <>
+                                        {hasValue && field.key === 'customerId' && String(field.value).toLowerCase().includes('redact') ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-slate-100 text-slate-600 border-slate-300 cursor-help" data-testid={`badge-cnpj-redacted-${bill.id}`}>
+                                                REDACTED
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="text-xs">
+                                              {isPt ? 'CNPJ não visível no documento original' : 'CNPJ redacted in original document'}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <span className={cn("truncate", !hasValue && "text-red-500 italic")}>
+                                            {hasValue ? (fmtVal(field.value, (field as any).fmt) || field.value) : (isPt ? 'Não detectado' : 'Not detected')}
+                                          </span>
+                                        )}
+                                      </>
                                     )}
                                     {isOverride && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-blue-100 text-blue-700 shrink-0">manual</Badge>}
-                                    {isLowConf && hasValue && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-amber-100 text-amber-700 shrink-0">{Math.round((fieldConf || 0) * 100)}%</Badge>}
+                                    {isLowConf && hasValue && !String(field.value || '').toLowerCase().includes('redact') && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-amber-100 text-amber-700 shrink-0">{Math.round((fieldConf || 0) * 100)}%</Badge>}
                                   </div>
                                 );
                               })}
@@ -1123,25 +1181,59 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                                 {(bill.parseWarnings as any[]).join('; ')}
                               </div>
                             )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 text-[10px]"
-                              onClick={() => {
-                                const blob = new Blob([JSON.stringify(bill.parseDebugJson, null, 2)], { type: 'application/json' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `parse_debug_bill_${bill.id}.json`;
-                                document.body.appendChild(a);
-                                a.click();
-                                URL.revokeObjectURL(url);
-                                document.body.removeChild(a);
-                              }}
-                              data-testid={`button-download-debug-${bill.id}`}
-                            >
-                              <Download className="w-3 h-3 mr-1" />{isPt ? 'Baixar JSON Debug' : 'Download Debug JSON'}
-                            </Button>
+                            {bill.parseStatus === 'FAILED' && (() => {
+                              const errors = bill.parseErrors;
+                              const errMsg = Array.isArray(errors) ? errors.join('; ') : String(errors || '');
+                              const errLower = errMsg.toLowerCase();
+                              let category = isPt ? 'Falha no parser' : 'Parser failed';
+                              let categoryClass = 'bg-red-100 text-red-700';
+                              if (errLower.includes('no data') || errLower.includes('no text') || errLower.includes('empty')) {
+                                category = isPt ? 'Nenhum dado encontrado' : 'No data found';
+                                categoryClass = 'bg-amber-100 text-amber-700';
+                              } else if (errLower.includes('format') || errLower.includes('unrecognized') || errLower.includes('unsupported')) {
+                                category = isPt ? 'Formato não reconhecido' : 'Document format not recognized';
+                                categoryClass = 'bg-orange-100 text-orange-700';
+                              } else if (errLower.includes('timeout')) {
+                                category = isPt ? 'Tempo esgotado' : 'Parser timeout';
+                                categoryClass = 'bg-blue-100 text-blue-700';
+                              }
+                              return (
+                                <div className={`text-[10px] rounded px-2 py-1 ${categoryClass}`}>
+                                  <span className="font-medium">{category}: </span>{errMsg || (isPt ? 'Sem detalhes' : 'No details')}
+                                </div>
+                              );
+                            })()}
+                            {bill.parseDebugJson && (
+                              <details className="text-[10px]" data-testid={`raw-parser-output-${bill.id}`}>
+                                <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800 py-1">
+                                  {isPt ? '▸ Saída Completa do Parser' : '▸ Raw Parser Output'}
+                                </summary>
+                                <pre className="mt-1 bg-slate-50 border rounded p-2 text-[9px] font-mono overflow-auto max-h-[250px] whitespace-pre-wrap">
+                                  {JSON.stringify(bill.parseDebugJson, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[10px]"
+                                onClick={() => {
+                                  const blob = new Blob([JSON.stringify(bill.parseDebugJson, null, 2)], { type: 'application/json' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `parse_debug_bill_${bill.id}.json`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  document.body.removeChild(a);
+                                }}
+                                data-testid={`button-download-debug-${bill.id}`}
+                              >
+                                <Download className="w-3 h-3 mr-1" />{isPt ? 'Baixar JSON' : 'Download JSON'}
+                              </Button>
+                            </div>
                           </div>
                           );
                         })()}
