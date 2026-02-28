@@ -44,6 +44,25 @@ const SOURCES = ["Email", "Portal", "Direct Upload", "API"];
 const MAX_CONCURRENT_UPLOADS = 3;
 const ROWS_PER_PAGE = 10;
 
+function normalizeConfidence(raw: number | null | undefined): string {
+  if (raw == null) return "—";
+  if (raw > 100) return (raw / 10000).toFixed(2);
+  if (raw > 1) return (raw / 100).toFixed(2);
+  return raw.toFixed(2);
+}
+
+function formatProductType(pt: string): string {
+  const map: Record<string, string> = {
+    'CONVENCIONAL': 'Convencional',
+    'INC_I50': 'Incentivada 50%',
+    'INC_I100': 'Incentivada 100%',
+    'INC_I0': 'Incentivada 0%',
+    'INCENTIVADA_50': 'Incentivada 50%',
+    'INCENTIVADA_100': 'Incentivada 100%',
+  };
+  return map[pt] || pt;
+}
+
 interface PrcDocument {
   id: number;
   supplierId: number;
@@ -903,8 +922,8 @@ export default function PrcUploadCenter() {
                           </TableCell>
                           <TableCell>
                             {doc.parseConfidence != null
-                              ? `${doc.parseConfidence}%`
-                              : "-"}
+                              ? normalizeConfidence(doc.parseConfidence)
+                              : "—"}
                           </TableCell>
                           <TableCell>{doc.rowsExtracted || 0}</TableCell>
                           <TableCell className="text-muted-foreground">
@@ -991,8 +1010,8 @@ export default function PrcUploadCenter() {
                   <div>
                     <span className="font-medium block text-muted-foreground text-xs uppercase tracking-wide mb-1">Confidence</span>
                     <div className="flex items-center gap-2">
-                      <Progress value={debugData.debug.parseConfidence ?? 0} className="h-2 flex-1" />
-                      <span className="font-mono text-sm">{debugData.debug.parseConfidence ?? 0}%</span>
+                      <Progress value={Math.min(debugData.debug.parseConfidence ?? 0, 100)} className="h-2 flex-1" />
+                      <span className="font-mono text-sm">{normalizeConfidence(debugData.debug.parseConfidence)}</span>
                     </div>
                   </div>
                   {debugData.debug.parseStartedAt && (
@@ -1110,10 +1129,10 @@ export default function PrcUploadCenter() {
                           {debugRowsSlice.map((r: any) => (
                             <TableRow key={r.id} data-testid={`row-debug-${r.id}`}>
                               <TableCell className="text-xs">{r.submarket}</TableCell>
-                              <TableCell className="text-xs">{r.productType}</TableCell>
-                              <TableCell className="text-xs">{r.termMonths || "-"}</TableCell>
-                              <TableCell className="text-xs font-mono">{r.priceRPerMWh}</TableCell>
-                              <TableCell className="text-xs">{r.confidence}%</TableCell>
+                              <TableCell className="text-xs" title={r.productType}>{formatProductType(r.productType)}</TableCell>
+                              <TableCell className="text-xs">{r.termMonths ? `${r.termMonths}mo` : "—"}</TableCell>
+                              <TableCell className="text-xs font-mono">{!isNaN(parseFloat(r.priceRPerMWh)) ? `R$ ${parseFloat(r.priceRPerMWh).toFixed(2)}` : (r.priceRPerMWh || '—')}</TableCell>
+                              <TableCell className="text-xs">{normalizeConfidence(r.confidence)}</TableCell>
                               <TableCell className="text-xs">
                                 {r.isOutlierFlag && (
                                   <Badge variant="outline" className="text-xs text-orange-600">

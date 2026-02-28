@@ -964,9 +964,13 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                     </div>
 
                     {status === 'PARSED' && needsReview && !isExpanded && (
-                      <div className="mx-2 mb-2 text-[10px] text-amber-800 bg-amber-100 rounded px-2 py-1" data-testid={`alert-needs-review-${bill.id}`}>
-                        {isPt ? 'Campos críticos ausentes: ' : 'Missing critical fields: '}{missingCritical.map(f => f.label).join(', ')}
-                        {isPt ? ' — clique para revisar e preencher manualmente' : ' — click to review and fill manually'}
+                      <div className="mx-2 mb-2 text-[10px] text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-1.5 flex items-start gap-1.5" data-testid={`alert-needs-review-${bill.id}`}>
+                        <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5 text-amber-600" />
+                        <span>
+                          {isPt ? 'Campos críticos ausentes: ' : 'Missing critical fields: '}
+                          <strong>{missingCritical.map(f => f.label).join(', ')}</strong>
+                          {isPt ? ' — clique para revisar e preencher manualmente' : ' — click to review and fill manually'}
+                        </span>
                       </div>
                     )}
 
@@ -1070,7 +1074,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                                       />
                                     ) : (
                                       <span className={cn("truncate", !hasValue && "text-red-500 italic")}>
-                                        {hasValue ? (fmtVal(field.value, (field as any).fmt) || field.value) : (isPt ? '—' : '—')}
+                                        {hasValue ? (fmtVal(field.value, (field as any).fmt) || field.value) : (isPt ? 'Não detectado' : 'Not detected')}
                                       </span>
                                     )}
                                     {isOverride && <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-blue-100 text-blue-700 shrink-0">manual</Badge>}
@@ -1082,7 +1086,12 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           </div>
                         ))}
 
-                        {isDebug && (
+                        {isDebug && (() => {
+                          const allFields = rfqFieldGroups.flatMap(g => g.fields);
+                          const foundFields = allFields.filter(f => f.value != null && f.value !== '');
+                          const missingFields = allFields.filter(f => f.value == null || f.value === '');
+                          const normalizeConf = (v: number) => v > 100 ? (v / 10000).toFixed(2) : v > 1 ? (v / 100).toFixed(2) : Number(v).toFixed(2);
+                          return (
                           <div className="border-t border-slate-200 pt-2 space-y-2" data-testid={`debug-panel-${bill.id}`}>
                             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                               {isPt ? 'Debug (Ops)' : 'Debug (Ops)'}
@@ -1090,10 +1099,17 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-slate-600">
                               <div><span className="font-medium">Parser URL:</span> {(bill.parseDebugJson as any)?.parserUrl || 'parser.otimaenergia.com'}</div>
                               <div><span className="font-medium">{isPt ? 'Latência:' : 'Latency:'}</span> {(bill.parseDebugJson as any)?.timingsMs?.totalMs ? `${Math.round((bill.parseDebugJson as any).timingsMs.totalMs)}ms` : '—'}</div>
-                              <div><span className="font-medium">{isPt ? 'Tipo Doc:' : 'Doc Kind:'}</span> {bill.docKind || 'STANDARD_BILL'}</div>
+                              <div><span className="font-medium">{isPt ? 'Tipo Doc:' : 'Doc Kind:'}</span> <Badge variant="outline" className="text-[9px] h-4 px-1">{bill.docKind || 'STANDARD_BILL'}</Badge></div>
                               <div><span className="font-medium">{isPt ? 'Páginas:' : 'Pages:'}</span> {(bill.parseDebugJson as any)?.pages || '—'}</div>
                               <div><span className="font-medium">{isPt ? 'Fonte Texto:' : 'Text Source:'}</span> {bill.textSource || (bill.parseDebugJson as any)?.textSource || '—'}</div>
-                              <div><span className="font-medium">{isPt ? 'Confiança:' : 'Confidence:'}</span> {bill.parseConfidence != null ? `${bill.parseConfidence}%` : '—'}</div>
+                              <div><span className="font-medium">{isPt ? 'Confiança:' : 'Confidence:'}</span> {bill.parseConfidence != null ? normalizeConf(bill.parseConfidence) : '—'}</div>
+                            </div>
+                            <div className="text-[10px] border rounded p-2 bg-slate-100">
+                              <span className="font-medium text-slate-600">{isPt ? 'Extração: ' : 'Extraction: '}</span>
+                              <span className="text-emerald-700">{foundFields.length} {isPt ? 'encontrados' : 'found'}</span>
+                              {missingFields.length > 0 && (
+                                <span className="text-red-600"> · {missingFields.length} {isPt ? 'ausentes' : 'missing'}: {missingFields.map(f => f.label).join(', ')}</span>
+                              )}
                             </div>
                             {reasons && Object.keys(reasons).length > 0 && (
                               <div className="text-[10px]">
@@ -1127,7 +1143,8 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                               <Download className="w-3 h-3 mr-1" />{isPt ? 'Baixar JSON Debug' : 'Download Debug JSON'}
                             </Button>
                           </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

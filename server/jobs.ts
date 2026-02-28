@@ -436,7 +436,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
               productType,
               termMonths: termMonths,
               priceRPerMWh: String(price),
-              confidence: Math.round((row.confidence || result.confidence) * 100),
+              confidence: Math.round(((row.confidence || result.confidence) > 1 ? (row.confidence || result.confidence) : (row.confidence || result.confidence) * 100)),
               isOutlierFlag: false,
               outlierReason: null,
               rawSnippet: `${rawSm} ${row.product} ${row.termMonths || row.term || row.period || ''}: R$${price}/MWh`,
@@ -496,7 +496,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
           await db.update(prcDocuments)
             .set({
               parseStatus: finalStatus,
-              parseConfidence: Math.round(result.confidence * 100),
+              parseConfidence: Math.round(result.confidence > 1 ? result.confidence : result.confidence * 100),
               parseErrors: rowsRejected > 0 ? [`${rowsRejected} rows rejected: ${JSON.stringify(rejectReasons)}`] : null,
               rawExtractedText: result.debug?.chosenText?.substring(0, 5000) || null,
               parseDebugJson: parseStats as any,
@@ -612,7 +612,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
         await db.update(billsExtracted)
           .set({
             parseStatus: result.validated ? 'PARSED' : 'FAILED',
-            parseConfidence: Math.round(result.confidence * 100),
+            parseConfidence: Math.round(result.confidence > 1 ? result.confidence : result.confidence * 100),
             distributor: d.distributor || null,
             referenceMonth: d.referenceMonth || null,
             dueDate: d.dueDate || null,
