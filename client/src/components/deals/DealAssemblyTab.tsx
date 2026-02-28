@@ -40,7 +40,8 @@ import {
   Bug,
   Eye,
   EyeOff,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -329,6 +330,27 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     },
     onError: (err: any) => {
       toast({ title: isPt ? "Erro ao reprocessar" : "Retry failed", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const deleteBillMutation = useMutation({
+    mutationFn: async (billId: number) => {
+      const res = await fetch(`/api/deals/${dealId}/bills/${billId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'x-session-id': sessionId || '' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({ title: isPt ? "Fatura excluída" : "Bill deleted", description: data.message });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/bills`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+    },
+    onError: (err: any) => {
+      toast({ title: isPt ? "Erro ao excluir" : "Delete failed", description: err.message, variant: "destructive" });
     }
   });
 
@@ -924,6 +946,20 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                             {retryBillParseMutation.isPending ? (isPt ? 'Reenviando...' : 'Retrying...') : (isPt ? 'Reprocessar' : 'Retry')}
                           </button>
                         )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(isPt ? `Excluir "${bill.originalFilename}"? Isso não pode ser desfeito.` : `Delete "${bill.originalFilename}"? This cannot be undone.`)) {
+                              deleteBillMutation.mutate(bill.id);
+                            }
+                          }}
+                          disabled={deleteBillMutation.isPending}
+                          className="shrink-0 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title={isPt ? 'Excluir fatura' : 'Delete bill'}
+                          data-testid={`button-delete-bill-${bill.id}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
 

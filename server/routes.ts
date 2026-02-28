@@ -9860,6 +9860,43 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/deals/:dealId/bills/:billId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, billId } = req.params;
+      const { billsExtracted } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      const bill = await db.select().from(billsExtracted)
+        .where(and(eq(billsExtracted.id, parseInt(billId)), eq(billsExtracted.dealId, dealId)))
+        .limit(1);
+
+      if (bill.length === 0) {
+        return res.status(404).json({ success: false, error: "Bill not found" });
+      }
+
+      const userId = await getSessionUserId(req) || 'system';
+      console.log(`[DealBillDelete] Deleting bill ${billId} from deal ${dealId} by ${userId}. File: ${bill[0].originalFilename}`);
+
+      await db.delete(billsExtracted)
+        .where(and(eq(billsExtracted.id, parseInt(billId)), eq(billsExtracted.dealId, dealId)));
+
+      await storage.logAdminAction({
+        action: 'BILL_DELETED',
+        entityType: 'bills_extracted',
+        entityId: parseInt(billId),
+        actor: userId,
+        detailsJson: { dealId, filename: bill[0].originalFilename, fileStorageKey: bill[0].fileStorageKey },
+      });
+
+      res.json({ success: true, message: `Bill ${bill[0].originalFilename} deleted` });
+    } catch (error: any) {
+      console.error("[DealBillDelete] Error:", error);
+      res.status(500).json({ success: false, error: "Failed to delete bill" });
+    }
+  });
+
   app.post("/api/deals/:dealId/bills/:billId/retry-parse", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
