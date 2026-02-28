@@ -10081,7 +10081,9 @@ export async function registerRoutes(
       const PRODUCT_NORMALIZE: Record<string, string> = {
         'CONVENTIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL',
         'INCENTIVIZED_50': 'INC_I50', 'INCENTIVADA 50%': 'INC_I50', 'I50': 'INC_I50',
+        'INCENTIVADA_50': 'INC_I50', 'INCENTIVADA_50%': 'INC_I50', 'INCENTIVADA 50': 'INC_I50',
         'INCENTIVIZED_100': 'INC_I100', 'INCENTIVADA 100%': 'INC_I100', 'I100': 'INC_I100',
+        'INCENTIVADA_100': 'INC_I100', 'INCENTIVADA_100%': 'INC_I100', 'INCENTIVADA 100': 'INC_I100',
       };
       const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
       const normalizedRows = allRows.map(r => {
@@ -10195,7 +10197,9 @@ export async function registerRoutes(
       const PRODUCT_NORMALIZE: Record<string, string> = {
         'CONVENTIONAL': 'CONVENCIONAL', 'CONV': 'CONVENCIONAL',
         'INCENTIVIZED_50': 'INC_I50', 'INCENTIVADA 50%': 'INC_I50', 'I50': 'INC_I50',
+        'INCENTIVADA_50': 'INC_I50', 'INCENTIVADA_50%': 'INC_I50', 'INCENTIVADA 50': 'INC_I50',
         'INCENTIVIZED_100': 'INC_I100', 'INCENTIVADA 100%': 'INC_I100', 'I100': 'INC_I100',
+        'INCENTIVADA_100': 'INC_I100', 'INCENTIVADA_100%': 'INC_I100', 'INCENTIVADA 100': 'INC_I100',
       };
 
       function normalizePrcRow(row: any) {
