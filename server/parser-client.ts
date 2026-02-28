@@ -102,7 +102,8 @@ export async function callParserService(
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PARSER_TIMEOUT_MS);
-    const url = `${PARSER_SERVICE_URL}/parse`;
+    const forceType = options.hintDocType === 'PRC' ? 'PRC' : 'BILL';
+    const url = `${PARSER_SERVICE_URL}/parse?force=${forceType}`;
 
     try {
       const startMs = Date.now();
