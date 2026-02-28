@@ -25,6 +25,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Purpose**: Offloads heavy PDF/OCR parsing using Python FastAPI.
 - **Functionality**: Extracts data from various document types (PRC, BILL) using `pdfplumber` and Tesseract OCR. Features two-pass validation with confidence scoring.
 - **Integration**: Supports both VPS and local parsing with fallback mechanisms and detailed diagnostics.
+- **PRC Extraction Strategy**: Three-tier extraction: (1) Columnar detection for side-by-side product tables (e.g., Light PRC with CONVENCIONAL + INCENTIVADA columns), (2) Section-based extraction for vertical product sections, (3) Fallback line scan. Handles named periods (Anual→12, Trianual→36, Quinquenal→60) with word-boundary matching to avoid substring collisions.
 
 ### Database
 - **ORM**: Drizzle ORM with PostgreSQL dialect
@@ -49,7 +50,7 @@ Language: English only (the website is in Portuguese, but communicate with user 
 - **Commission OS**: Milestone-based commission tracking (50/50 payment model) with invoice generation.
 - **Notification System**: Queue-based email notifications for operational alerts.
 - **Lost Deal Intelligence**: Structured taxonomy for analyzing reasons for lost deals.
-- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs) with status tracking and debug tools. Canonical submarkets: `SE_CO`, `S`, `NE`, `N`. Canonical product types: `CONVENCIONAL`, `INC_I50`, `INC_I100` (and `INC_I0`). Smart region detection handles Portuguese names (Sudeste, Sul, Nordeste, Norte). Product normalization maps bare "Incentivada" to `AMBIGUOUS_PRODUCT` (rejected). Parse status: PARSED (>=12 rows), NEEDS_REVIEW (1-11 rows or outliers), FAILED (0 rows). Debug JSON includes `countsByProduct`, `countsBySubmarket`, `rowsRejectedByReason`.
+- **PRC Upload Center**: Bulk upload and auto-parse pipeline for supplier Price Reference Circulars (PRCs) with status tracking and debug tools. Canonical submarkets: `SE_CO`, `S`, `NE`, `N`. Canonical product types: `CONVENCIONAL`, `INC_I50`, `INC_I100` (and `INC_I0`). Smart region detection handles Portuguese names (Sudeste, Sul, Nordeste, Norte). Product normalization maps bare "Incentivada" to `AMBIGUOUS_PRODUCT` (rejected). Parse status: PARSED (>=12 rows), NEEDS_REVIEW (1-11 rows or outliers), FAILED (0 rows). Debug JSON includes `countsByProduct`, `countsBySubmarket`, `rowsRejectedByReason`. Portal product normalization maps: `INCENTIVADA_50`→`INC_I50`, `INCENTIVADA_100`→`INC_I100`, `CONVENTIONAL`→`CONVENCIONAL`, underscore/space/percent variants all accepted.
 - **Supplier Intelligence Module**: Analytics layer providing KPIs (win rate, response time) for supplier performance.
 
 ### Authentication & Authorization

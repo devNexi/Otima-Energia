@@ -13,7 +13,7 @@ SUBMARKET_PATTERNS = [
     ("sudeste", "SE_CO"),
     ("nordeste", "NE"),
     ("norte", "N"),
-    ("sul", "SUL"),
+    ("sul", "S"),
 ]
 
 TERM_MAP = {
@@ -21,14 +21,22 @@ TERM_MAP = {
     "12meses": 12,
     "1 ano": 12,
     "1ano": 12,
+    "anual": 12,
+    "annual": 12,
     "24 meses": 24,
     "24meses": 24,
     "2 anos": 24,
     "2anos": 24,
+    "bianual": 24,
+    "biennial": 24,
+    "bienal": 24,
     "36 meses": 36,
     "36meses": 36,
     "3 anos": 36,
     "3anos": 36,
+    "trianual": 36,
+    "triennial": 36,
+    "trienal": 36,
     "48 meses": 48,
     "48meses": 48,
     "4 anos": 48,
@@ -37,6 +45,8 @@ TERM_MAP = {
     "60meses": 60,
     "5 anos": 60,
     "5anos": 60,
+    "quinquenal": 60,
+    "quinquennial": 60,
 }
 
 PRODUCT_MAP = {
@@ -63,6 +73,16 @@ PRODUCT_MAP = {
 
 PRICE_MIN = 50.0
 PRICE_MAX = 1500.0
+
+NAMED_PERIOD_PATTERNS = [
+    (r"\bquinquenal\b", 60),
+    (r"\btrianual\b", 36),
+    (r"\btrienal\b", 36),
+    (r"\bbianual\b", 24),
+    (r"\bbienal\b", 24),
+    (r"\banual\b", 12),
+    (r"\bannual\b", 12),
+]
 
 
 def parse_brazilian_number(text: str) -> Optional[float]:
@@ -92,7 +112,7 @@ def detect_submarket(text: str) -> Optional[str]:
     if re.match(r"^\s*n\s*$", text_lower):
         return "N"
     if re.match(r"^\s*s\s*$", text_lower):
-        return "SUL"
+        return "S"
     return None
 
 
@@ -109,12 +129,56 @@ def detect_term(text: str) -> Optional[int]:
     return None
 
 
+def detect_named_period(text: str) -> Optional[int]:
+    text_lower = text.lower().strip()
+    for pattern, months in NAMED_PERIOD_PATTERNS:
+        if re.search(pattern, text_lower):
+            return months
+    year_range = re.search(r"(\d{4})\s*[-–]\s*(\d{4})", text)
+    if year_range:
+        years = int(year_range.group(2)) - int(year_range.group(1))
+        if 0 < years <= 10:
+            return years * 12
+    match = re.search(r"(\d+)\s*(?:meses|mes|anos?|m\b)", text_lower)
+    if match:
+        val = int(match.group(1))
+        if val <= 5:
+            val = val * 12
+        if val in (12, 24, 36, 48, 60):
+            return val
+    return None
+
+
 def detect_product(text: str) -> Optional[str]:
     text_lower = text.lower().strip()
     for pattern, code in PRODUCT_MAP.items():
         if pattern in text_lower:
             return code
     return None
+
+
+def detect_all_products(text: str) -> list[str]:
+    text_lower = text.lower().strip()
+    found: list[tuple[int, str]] = []
+
+    patterns = [
+        (r"(?:energia\s+)?convencional", "CONVENCIONAL"),
+        (r"(?:energia\s+)?incentivada\s*100\s*%?", "INCENTIVADA_100"),
+        (r"(?:energia\s+)?incentivada\s*50\s*%?", "INCENTIVADA_50"),
+        (r"(?:energia\s+)?incentivada\s+especial", "INCENTIVADA_50"),
+    ]
+
+    for pattern, product in patterns:
+        for m in re.finditer(pattern, text_lower):
+            if product not in [p for _, p in found]:
+                found.append((m.start(), product))
+
+    if not found and "incentivada" in text_lower:
+        pos = text_lower.index("incentivada")
+        found.append((pos, "INCENTIVADA_50"))
+
+    found.sort(key=lambda x: x[0])
+    return [p for _, p in found]
 
 
 def detect_reference_month(text: str) -> Optional[str]:
@@ -175,12 +239,180 @@ def detect_supplier(text: str) -> Optional[str]:
     return None
 
 
+def _detect_submarket_columns(line: str) -> list[str]:
+    sm_pattern = r"\b(SE/CO|SE_CO|SECO|NE|N|S|SUL|NORTE|NORDESTE|SUDESTE)\b"
+    matches = list(re.finditer(sm_pattern, line, re.IGNORECASE))
+    if len(matches) < 3:
+        return []
+
+    SM_NORMALIZE = {
+        "SE/CO": "SE_CO", "SE_CO": "SE_CO", "SECO": "SE_CO", "SUDESTE": "SE_CO",
+        "S": "S", "SUL": "S",
+        "NE": "NE", "NORDESTE": "NE",
+        "N": "N", "NORTE": "N",
+    }
+    cols = []
+    for m in matches:
+        raw = m.group(1).upper()
+        normalized = SM_NORMALIZE.get(raw, raw)
+        cols.append(normalized)
+    return cols
+
+
+def _extract_prices_from_line(line: str) -> list[float]:
+    prices = re.findall(r"(\d{2,4}[.,]\d{2})", line)
+    parsed = []
+    for p in prices:
+        val = parse_brazilian_number(p)
+        if val is not None and PRICE_MIN <= val <= PRICE_MAX:
+            parsed.append(val)
+    return parsed
+
+
 def extract_prc_tables(text: str, supplier: Optional[str] = None, ref_month: Optional[str] = None, source_doc_id: Optional[str] = None) -> tuple[list[CanonicalPricingRow], list[str], dict]:
     rows: list[CanonicalPricingRow] = []
     warnings: list[str] = []
     details: dict = {"method": "deterministic", "sections_found": 0}
 
     lines = text.split("\n")
+
+    columnar_rows = _try_columnar_extraction(lines, supplier, ref_month, source_doc_id, warnings, details)
+    if columnar_rows and len(columnar_rows) >= 4:
+        details["method"] = "columnar"
+        details["total_rows"] = len(columnar_rows)
+        return columnar_rows, warnings, details
+
+    section_rows = _try_section_extraction(lines, supplier, ref_month, source_doc_id, warnings, details)
+    if section_rows:
+        details["total_rows"] = len(section_rows)
+        return section_rows, warnings, details
+
+    fallback_rows, fallback_warnings = _fallback_line_scan(text, supplier, ref_month, source_doc_id)
+    warnings.extend(fallback_warnings)
+    details["method"] = "fallback_line_scan"
+    details["total_rows"] = len(fallback_rows)
+    return fallback_rows, warnings, details
+
+
+def _try_columnar_extraction(lines: list[str], supplier: Optional[str], ref_month: Optional[str], source_doc_id: Optional[str], warnings: list[str], details: dict) -> list[CanonicalPricingRow]:
+    rows: list[CanonicalPricingRow] = []
+
+    sm_header_line_idx = None
+    submarket_columns: list[str] = []
+    product_sections: list[str] = []
+
+    for i, line in enumerate(lines):
+        cols = _detect_submarket_columns(line.strip())
+        if len(cols) >= 4:
+            submarket_columns = cols
+            sm_header_line_idx = i
+            break
+
+    if not submarket_columns or sm_header_line_idx is None:
+        return []
+
+    for i in range(max(0, sm_header_line_idx - 5), sm_header_line_idx):
+        line = lines[i].strip()
+        prods = detect_all_products(line)
+        for p in prods:
+            if p not in product_sections:
+                product_sections.append(p)
+
+    if not product_sections:
+        product_sections = ["CONVENCIONAL"]
+
+    n_submarkets_per_product = len(submarket_columns) // len(product_sections) if len(product_sections) > 0 else len(submarket_columns)
+    if n_submarkets_per_product < 2:
+        n_submarkets_per_product = 4
+
+    unique_sms = []
+    seen = set()
+    for sm in submarket_columns:
+        if sm not in seen:
+            unique_sms.append(sm)
+            seen.add(sm)
+
+    if len(unique_sms) < len(submarket_columns) and len(submarket_columns) == n_submarkets_per_product * len(product_sections):
+        pass
+    elif len(unique_sms) == len(submarket_columns) and len(product_sections) > 1:
+        n_submarkets_per_product = len(submarket_columns)
+        submarket_columns = submarket_columns * len(product_sections)
+
+    for i in range(sm_header_line_idx + 1, len(lines)):
+        line = lines[i].strip()
+        if not line:
+            continue
+
+        term = detect_named_period(line)
+        if term is None:
+            continue
+
+        prices = _extract_prices_from_line(line)
+        if not prices:
+            continue
+
+        expected_total = n_submarkets_per_product * len(product_sections)
+
+        if len(prices) == expected_total:
+            for prod_idx, product in enumerate(product_sections):
+                start = prod_idx * n_submarkets_per_product
+                for sm_idx in range(n_submarkets_per_product):
+                    price_idx = start + sm_idx
+                    if price_idx < len(prices):
+                        sm = unique_sms[sm_idx] if sm_idx < len(unique_sms) else submarket_columns[price_idx] if price_idx < len(submarket_columns) else "UNKNOWN"
+                        rows.append(CanonicalPricingRow(
+                            supplier=supplier,
+                            referenceMonth=ref_month,
+                            product=product,
+                            submarket=sm,
+                            termMonths=term,
+                            price=prices[price_idx],
+                            sourceDocId=source_doc_id,
+                            confidence=0.9,
+                            isOutlier=False,
+                            outlierReason=None,
+                        ))
+        elif len(prices) == n_submarkets_per_product and len(product_sections) == 1:
+            for sm_idx, price in enumerate(prices):
+                sm = unique_sms[sm_idx] if sm_idx < len(unique_sms) else "UNKNOWN"
+                rows.append(CanonicalPricingRow(
+                    supplier=supplier,
+                    referenceMonth=ref_month,
+                    product=product_sections[0],
+                    submarket=sm,
+                    termMonths=term,
+                    price=price,
+                    sourceDocId=source_doc_id,
+                    confidence=0.9,
+                    isOutlier=False,
+                    outlierReason=None,
+                ))
+        elif len(prices) >= n_submarkets_per_product:
+            for prod_idx, product in enumerate(product_sections):
+                start = prod_idx * n_submarkets_per_product
+                for sm_idx in range(n_submarkets_per_product):
+                    price_idx = start + sm_idx
+                    if price_idx < len(prices):
+                        sm = unique_sms[sm_idx] if sm_idx < len(unique_sms) else "UNKNOWN"
+                        rows.append(CanonicalPricingRow(
+                            supplier=supplier,
+                            referenceMonth=ref_month,
+                            product=product,
+                            submarket=sm,
+                            termMonths=term,
+                            price=prices[price_idx],
+                            sourceDocId=source_doc_id,
+                            confidence=0.7,
+                            isOutlier=False,
+                            outlierReason=None,
+                        ))
+
+    details["sections_found"] = len(product_sections)
+    return rows
+
+
+def _try_section_extraction(lines: list[str], supplier: Optional[str], ref_month: Optional[str], source_doc_id: Optional[str], warnings: list[str], details: dict) -> list[CanonicalPricingRow]:
+    rows: list[CanonicalPricingRow] = []
     current_product = None
     current_submarket = None
     current_terms: list[int] = []
@@ -199,16 +431,13 @@ def extract_prc_tables(text: str, supplier: Optional[str] = None, ref_month: Opt
             current_product = prod
             section_prices = {}
             current_terms = []
-            terms_in_line = re.findall(r"(\d+)\s*(?:meses|mes|anos?|m)", line_stripped.lower())
-            for t in terms_in_line:
-                tv = int(t)
-                if tv <= 5:
-                    tv = tv * 12
-                if tv in (12, 24, 36, 48, 60):
-                    current_terms.append(tv)
+
+        period = detect_named_period(line_stripped)
+        if period:
+            current_terms = [period]
 
         if not current_terms:
-            terms_in_line = re.findall(r"(\d+)\s*(?:meses|mes|anos?|m)", line_stripped.lower())
+            terms_in_line = re.findall(r"(\d+)\s*(?:meses|mes|anos?|m\b)", line_stripped.lower())
             found_terms = []
             for t in terms_in_line:
                 tv = int(t)
@@ -223,50 +452,43 @@ def extract_prc_tables(text: str, supplier: Optional[str] = None, ref_month: Opt
         if subm:
             current_submarket = subm
 
-        prices = re.findall(r"(\d{2,4}[.,]\d{2})", line_stripped)
-        parsed_prices = []
-        for p in prices:
-            val = parse_brazilian_number(p)
-            if val and PRICE_MIN <= val <= PRICE_MAX:
-                parsed_prices.append(val)
+        prices = _extract_prices_from_line(line_stripped)
 
-        if parsed_prices and current_submarket:
+        if prices and current_submarket:
             if not current_product:
                 current_product = "CONVENCIONAL"
 
-            if current_terms and len(parsed_prices) == len(current_terms):
-                for term, price in zip(current_terms, parsed_prices):
+            if current_terms and len(prices) == len(current_terms):
+                for term, price in zip(current_terms, prices):
                     key = (current_submarket, term)
                     if key not in section_prices:
                         section_prices[key] = price
+            elif current_terms and len(current_terms) == 1:
+                key = (current_submarket, current_terms[0])
+                if key not in section_prices:
+                    section_prices[key] = prices[0]
             elif current_terms:
-                for j, price in enumerate(parsed_prices):
+                for j, price in enumerate(prices):
                     if j < len(current_terms):
                         key = (current_submarket, current_terms[j])
                         if key not in section_prices:
                             section_prices[key] = price
-            elif len(parsed_prices) == 3:
+            elif len(prices) == 3:
                 default_terms = [12, 36, 60]
-                for term, price in zip(default_terms, parsed_prices):
+                for term, price in zip(default_terms, prices):
                     key = (current_submarket, term)
                     if key not in section_prices:
                         section_prices[key] = price
-            elif len(parsed_prices) == 1:
+            elif len(prices) == 1:
                 key = (current_submarket, 12)
                 if key not in section_prices:
-                    section_prices[key] = parsed_prices[0]
+                    section_prices[key] = prices[0]
 
     if current_product and section_prices:
         rows.extend(_flush_section(current_product, section_prices, supplier, ref_month, source_doc_id, warnings))
         details["sections_found"] += 1
 
-    if not rows:
-        rows, fallback_warnings = _fallback_line_scan(text, supplier, ref_month, source_doc_id)
-        warnings.extend(fallback_warnings)
-        details["method"] = "fallback_line_scan"
-
-    details["total_rows"] = len(rows)
-    return rows, warnings, details
+    return rows
 
 
 def _flush_section(product: str, prices: dict, supplier: Optional[str], ref_month: Optional[str], source_doc_id: Optional[str], warnings: list[str]) -> list[CanonicalPricingRow]:
@@ -308,18 +530,23 @@ def _fallback_line_scan(text: str, supplier: Optional[str], ref_month: Optional[
         if not subm:
             continue
 
-        prices = re.findall(r"(\d{2,4}[.,]\d{2})", line_stripped)
-        parsed_prices = []
-        for p in prices:
-            val = parse_brazilian_number(p)
-            if val and PRICE_MIN <= val <= PRICE_MAX:
-                parsed_prices.append(val)
-
-        if not parsed_prices:
+        prices = _extract_prices_from_line(line_stripped)
+        if not prices:
             continue
 
         prod = detect_product(line_stripped) or "CONVENCIONAL"
-        terms_in_line = re.findall(r"(\d+)\s*(?:meses|mes|anos?|m)", line_stripped.lower())
+
+        term = detect_named_period(line_stripped)
+        if term:
+            for price in prices:
+                rows.append(CanonicalPricingRow(
+                    supplier=supplier, referenceMonth=ref_month, product=prod,
+                    submarket=subm, termMonths=term, price=price,
+                    sourceDocId=source_doc_id, confidence=0.5,
+                ))
+            continue
+
+        terms_in_line = re.findall(r"(\d+)\s*(?:meses|mes|anos?|m\b)", line_stripped.lower())
         found_terms = []
         for t in terms_in_line:
             tv = int(t)
@@ -328,22 +555,22 @@ def _fallback_line_scan(text: str, supplier: Optional[str], ref_month: Optional[
             if tv in (12, 24, 36, 48, 60):
                 found_terms.append(tv)
 
-        if found_terms and len(parsed_prices) == len(found_terms):
-            for term, price in zip(found_terms, parsed_prices):
+        if found_terms and len(prices) == len(found_terms):
+            for t, price in zip(found_terms, prices):
                 rows.append(CanonicalPricingRow(
                     supplier=supplier, referenceMonth=ref_month, product=prod,
-                    submarket=subm, termMonths=term, price=price,
+                    submarket=subm, termMonths=t, price=price,
                     sourceDocId=source_doc_id, confidence=0.6,
                 ))
-        elif len(parsed_prices) == 3:
-            for term, price in zip([12, 36, 60], parsed_prices):
+        elif len(prices) == 3:
+            for t, price in zip([12, 36, 60], prices):
                 rows.append(CanonicalPricingRow(
                     supplier=supplier, referenceMonth=ref_month, product=prod,
-                    submarket=subm, termMonths=term, price=price,
+                    submarket=subm, termMonths=t, price=price,
                     sourceDocId=source_doc_id, confidence=0.5,
                 ))
         else:
-            for price in parsed_prices:
+            for price in prices:
                 rows.append(CanonicalPricingRow(
                     supplier=supplier, referenceMonth=ref_month, product=prod,
                     submarket=subm, termMonths=12, price=price,
