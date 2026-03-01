@@ -1148,7 +1148,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                           const allFields = rfqFieldGroups.flatMap(g => g.fields);
                           const foundFields = allFields.filter(f => f.value != null && f.value !== '');
                           const missingFields = allFields.filter(f => f.value == null || f.value === '');
-                          const normalizeConf = (v: number) => v > 100 ? (v / 10000).toFixed(2) : v > 1 ? (v / 100).toFixed(2) : Number(v).toFixed(2);
+                          const normalizeConf = (v: number) => { let n = v; if (n > 100) n = n / 10000; else if (n > 1) n = n / 100; return `${Math.round(n * 100)}%`; };
                           return (
                           <div className="border-t border-slate-200 pt-2 space-y-2" data-testid={`debug-panel-${bill.id}`}>
                             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">

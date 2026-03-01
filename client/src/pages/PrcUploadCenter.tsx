@@ -46,9 +46,10 @@ const ROWS_PER_PAGE = 10;
 
 function normalizeConfidence(raw: number | null | undefined): string {
   if (raw == null) return "—";
-  if (raw > 100) return (raw / 10000).toFixed(2);
-  if (raw > 1) return (raw / 100).toFixed(2);
-  return raw.toFixed(2);
+  let normalized = raw;
+  if (normalized > 100) normalized = normalized / 10000;
+  else if (normalized > 1) normalized = normalized / 100;
+  return `${Math.round(normalized * 100)}%`;
 }
 
 function formatSubmarket(sm: string): string {
