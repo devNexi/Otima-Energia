@@ -153,7 +153,7 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
     saveManualMutation.mutate();
   };
 
-  const confidencePercent = ocrResult ? Math.round(ocrResult.confidence * 100) : 0;
+  const confidencePercent = ocrResult ? (() => { let c = ocrResult.confidence; if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return Math.round(c * 100); })() : 0;
 
   return (
     <Card className="border-2 border-violet-200" data-testid="bill-upload-section">

@@ -824,7 +824,7 @@ export function PrcManagement() {
                   <Label className="text-xs text-muted-foreground">Confidence</Label>
                   <p className="font-medium">
                     {selectedDocument.parseConfidence !== null 
-                      ? `${Math.round(selectedDocument.parseConfidence * 100)}%` 
+                      ? (() => { let c = selectedDocument.parseConfidence; if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return `${Math.round(c * 100)}%`; })()
                       : 'N/A'}
                   </p>
                 </div>

@@ -498,7 +498,7 @@ export default function QuoteInbox() {
                             parsedFields.confidence >= 0.3 ? "bg-amber-100 text-amber-800" :
                             "bg-red-100 text-red-800"
                           }`}>
-                            {Math.round(parsedFields.confidence * 100)}% confidence
+                            {(() => { let c = parsedFields.confidence; if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return Math.round(c * 100); })()}% confidence
                           </Badge>
                         )}
                       </CardTitle>

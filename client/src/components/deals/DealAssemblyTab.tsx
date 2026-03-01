@@ -288,6 +288,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             }
             throw new Error(`${statusCode}: ${errBody.slice(0, 500)}`);
           }
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('application/json')) {
+            const text = await res.text();
+            throw new Error(`Unexpected response: ${text.slice(0, 200)}`);
+          }
           return res.json();
         } catch (err: any) {
           const isNetworkError = err.name === 'AbortError' || err.name === 'TypeError' || err.message?.includes('fetch');
@@ -790,7 +795,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                   parseFloat(uploadResult.extracted.confidence) >= 0.5 ? "bg-amber-100 text-amber-800" :
                   "bg-red-100 text-red-800"
                 )}>
-                  {isPt ? "Confiança:" : "Confidence:"} {Math.round(parseFloat(uploadResult.extracted.confidence || '0') * 100)}%
+                  {isPt ? "Confiança:" : "Confidence:"} {(() => { let c = parseFloat(uploadResult.extracted.confidence || '0'); if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return Math.round(c * 100); })()}%
                 </Badge>
               )}
             </div>
