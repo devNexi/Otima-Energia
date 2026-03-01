@@ -55,6 +55,112 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const PARSER_DATA_FIELDS = [
+  'customerName', 'customerCnpj', 'customerId', 'cnpj',
+  'distributor', 'referenceMonth', 'dueDate', 'totalAmount',
+  'totalEnergyKwh', 'tariffGroup', 'invoiceKey', 'ucCode', 'uc',
+  'unidadeConsumidora', 'endereco', 'address', 'modalidade',
+  'tariffModality', 'consumoPonta', 'consumoPontaKwh',
+  'consumoForaPonta', 'consumoForaPontaKwh', 'demandaContratada',
+  'demandaContratadaKw', 'demandaMedida', 'demandaMedidaKw',
+  'consumptionPeriod', 'grupo', 'subgrupo', 'docKind',
+  'fieldConfidence', 'fieldReasons',
+];
+
+const PARSER_META_FIELDS = new Set([
+  'status', 'docType', 'doc_type', 'confidence', 'validated',
+  'data', 'rows', 'warnings', 'debug', 'error', 'message',
+]);
+
+function normalizeParserResponse(raw: any): ParserResponse {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      status: 'failed',
+      docType: 'OTHER',
+      confidence: 0,
+      validated: false,
+      data: {},
+      rows: [],
+      warnings: ['Parser returned empty or non-object response'],
+      debug: { textSource: 'unknown', pages: 0, timingsMs: {} },
+    };
+  }
+
+  const isAlreadyWrapped = raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)
+    && (raw.status === 'parsed' || raw.status === 'failed');
+
+  if (isAlreadyWrapped) {
+    const r = raw as ParserResponse;
+    if (r.validated === undefined) {
+      r.validated = r.status === 'parsed';
+    }
+    return r;
+  }
+
+  const rawStatus = (raw.status || '').toString().toLowerCase();
+  const isSuccess = rawStatus === 'success' || rawStatus === 'parsed' || rawStatus === 'ok';
+  const isExplicitFail = rawStatus === 'failed' || rawStatus === 'error';
+
+  const data: Record<string, any> = raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)
+    ? { ...raw.data }
+    : {};
+
+  for (const field of PARSER_DATA_FIELDS) {
+    if (raw[field] !== undefined && data[field] === undefined) {
+      data[field] = raw[field];
+    }
+  }
+  for (const key of Object.keys(raw)) {
+    if (!PARSER_META_FIELDS.has(key) && data[key] === undefined) {
+      data[key] = raw[key];
+    }
+  }
+
+  if (data.customerCnpj && !data.customerId) {
+    data.customerId = data.customerCnpj;
+  }
+  if (data.cnpj && !data.customerId) {
+    data.customerId = data.cnpj;
+  }
+
+  const extractedFieldCount = Object.keys(data).filter(k => data[k] != null && data[k] !== '').length;
+
+  let confidence = typeof raw.confidence === 'number'
+    ? raw.confidence
+    : (extractedFieldCount >= 5 ? 0.85 : extractedFieldCount >= 3 ? 0.6 : extractedFieldCount >= 1 ? 0.4 : 0);
+
+  const hasMinimumData = extractedFieldCount >= 1;
+  const validated = raw.validated !== undefined
+    ? !!raw.validated
+    : (isSuccess || (!isExplicitFail && hasMinimumData));
+
+  const docType = raw.docType || raw.doc_type || 'BILL';
+
+  const debug = raw.debug || {
+    textSource: raw.textSource || 'unknown',
+    pages: raw.pages || 0,
+    timingsMs: raw.timingsMs || {},
+    chosenText: raw.chosenText || raw.rawText || undefined,
+  };
+
+  const warnings: string[] = Array.isArray(raw.warnings)
+    ? raw.warnings
+    : (raw.error ? [raw.error] : (raw.message && !isSuccess ? [raw.message] : []));
+
+  console.log(`[ParserClient] Normalized response: rawStatus="${rawStatus}" → validated=${validated}, extractedFields=${extractedFieldCount}, confidence=${confidence}, isWrapped=${isAlreadyWrapped}`);
+
+  return {
+    status: validated ? 'parsed' : 'failed',
+    docType: docType as ParserResponse['docType'],
+    confidence,
+    validated,
+    data,
+    rows: Array.isArray(raw.rows) ? raw.rows : [],
+    warnings,
+    debug,
+  };
+}
+
 export async function callParserService(
   fileBuffer: Buffer,
   filename: string,
@@ -145,14 +251,16 @@ export async function callParserService(
       }
 
       const rawBody = await response.text();
-      let result: ParserResponse;
+      let raw: any;
       try {
-        result = JSON.parse(rawBody) as ParserResponse;
+        raw = JSON.parse(rawBody);
       } catch (jsonErr) {
         const preview = rawBody.substring(0, 500);
         console.error(`[ParserClient] FATAL: Response is not valid JSON. Status: ${response.status}. Body preview: ${preview}`);
         throw new Error(`Parser returned non-JSON response (status ${response.status}). Body preview: ${preview}`);
       }
+
+      const result = normalizeParserResponse(raw);
 
       if (result.data?.customerId) {
         result.data.customerId = normalizeCnpj(result.data.customerId);
@@ -165,7 +273,7 @@ export async function callParserService(
         }
       }
 
-      console.log(`[ParserClient] Success: docType=${result.docType}, validated=${result.validated}, confidence=${result.confidence}`);
+      console.log(`[ParserClient] Success: docType=${result.docType}, validated=${result.validated}, confidence=${result.confidence}, dataKeys=${Object.keys(result.data || {}).join(',')}`);
       return result;
 
     } catch (error: any) {
