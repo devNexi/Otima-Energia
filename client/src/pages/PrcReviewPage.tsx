@@ -197,7 +197,7 @@ export default function PrcReviewPage() {
     setEditedRow({
       productType: row.productType,
       submarket: row.submarket,
-      termMonths: row.termMonths,
+      priceYear: row.priceYear,
       priceRPerMWh: row.priceRPerMWh,
       validUntil: row.validUntil,
       notes: row.notes
@@ -232,7 +232,7 @@ export default function PrcReviewPage() {
   }
 
   const isLoading = docLoading || rowsLoading;
-  const canVerify = document?.parseStatus === "PARSED" || document?.parseStatus === "NEEDS_REVIEW";
+  const canVerify = document?.parseStatus !== "VERIFIED" && document?.parseStatus !== "PUBLISHED";
   const isVerified = document?.parseStatus === "VERIFIED" || document?.parseStatus === "PUBLISHED";
   const flaggedRows = rows.filter(r => r.flaggedForReview);
 
@@ -391,7 +391,6 @@ export default function PrcReviewPage() {
                           <TableRow>
                             <TableHead>Product Type</TableHead>
                             <TableHead>Submarket</TableHead>
-                            <TableHead>Term</TableHead>
                             <TableHead>Year</TableHead>
                             <TableHead>Price (R$/MWh)</TableHead>
                             <TableHead>Valid Until</TableHead>
@@ -434,15 +433,6 @@ export default function PrcReviewPage() {
                                         ))}
                                       </SelectContent>
                                     </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      type="number"
-                                      className="w-20"
-                                      placeholder="Months"
-                                      value={editedRow.termMonths ?? row.termMonths ?? ""}
-                                      onChange={(e) => setEditedRow({ ...editedRow, termMonths: e.target.value ? parseInt(e.target.value) : null })}
-                                    />
                                   </TableCell>
                                   <TableCell>
                                     <Input
@@ -497,9 +487,6 @@ export default function PrcReviewPage() {
                                 <>
                                   <TableCell className="font-medium">{row.productType}</TableCell>
                                   <TableCell>{row.submarket}</TableCell>
-                                  <TableCell className="text-sm">
-                                    {row.termMonths ? `${row.termMonths}mo` : row.termLabel || "-"}
-                                  </TableCell>
                                   <TableCell className="font-mono text-sm">
                                     {row.priceYear || "—"}
                                   </TableCell>
@@ -628,8 +615,8 @@ export default function PrcReviewPage() {
                       <div className="space-y-2 text-sm">
                         {Object.entries(
                           rows.filter(r => !r.isOutlierFlag).reduce((acc, row) => {
-                            const termDisplay = row.termMonths ? `${row.termMonths}mo` : 'N/A';
-                            const key = `${row.submarket} | ${row.productType} | ${termDisplay}`;
+                            const yearDisplay = row.priceYear ? String(row.priceYear) : 'N/A';
+                            const key = `${row.submarket} | ${row.productType} | ${yearDisplay}`;
                             if (!acc[key]) acc[key] = { count: 0, prices: [] as number[] };
                             acc[key].count++;
                             acc[key].prices.push(parseFloat(row.priceRPerMWh));

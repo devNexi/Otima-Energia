@@ -103,7 +103,7 @@ export function PrcManagement() {
   const [newRow, setNewRow] = useState({
     submarket: 'SECO',
     productType: 'CONVENCIONAL',
-    termMonths: '24',
+    priceYear: String(new Date().getFullYear()),
     priceRPerMWh: ''
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -278,7 +278,7 @@ export function PrcManagement() {
           referenceMonth: document.referenceMonth,
           submarket: data.row.submarket,
           productType: data.row.productType,
-          termMonths: data.row.termMonths ? parseInt(data.row.termMonths, 10) : null,
+          priceYear: data.row.priceYear ? parseInt(data.row.priceYear, 10) : null,
           priceRPerMWh: parseFloat(data.row.priceRPerMWh),
           confidence: 100
         })
@@ -293,7 +293,7 @@ export function PrcManagement() {
       toast({ title: "Row added", description: "Price row has been added to the document." });
       queryClient.invalidateQueries({ queryKey: ['/api/prc/documents/rows', selectedDocument?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/prc/months/summary'] });
-      setNewRow({ submarket: 'SECO', productType: 'CONVENCIONAL', termMonths: '24', priceRPerMWh: '' });
+      setNewRow({ submarket: 'SECO', productType: 'CONVENCIONAL', priceYear: String(new Date().getFullYear()), priceRPerMWh: '' });
       setShowAddRowForm(false);
     }
   });
@@ -667,7 +667,6 @@ export function PrcManagement() {
                       <TableRow>
                         <TableHead>Submarket</TableHead>
                         <TableHead>Product</TableHead>
-                        <TableHead>Term</TableHead>
                         <TableHead>Low (P25)</TableHead>
                         <TableHead>Mid (P50)</TableHead>
                         <TableHead>High (P75)</TableHead>
@@ -679,7 +678,6 @@ export function PrcManagement() {
                         <TableRow key={idx}>
                           <TableCell className="font-medium">{bp.submarket}</TableCell>
                           <TableCell>{bp.productType}</TableCell>
-                          <TableCell>{bp.termMonths ? `${bp.termMonths}m` : '-'}</TableCell>
                           <TableCell className="text-green-600">R$ {bp.lowPrice.toFixed(2)}</TableCell>
                           <TableCell className="font-medium">R$ {bp.midPrice.toFixed(2)}</TableCell>
                           <TableCell className="text-red-600">R$ {bp.highPrice.toFixed(2)}</TableCell>
@@ -837,17 +835,15 @@ export function PrcManagement() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs text-muted-foreground">Price Rows ({documentRows.length})</Label>
-                  {(selectedDocument.parseStatus === 'NEEDS_REVIEW' || selectedDocument.parseStatus === 'PARSED') && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAddRowForm(!showAddRowForm)}
-                      data-testid="button-toggle-add-row"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Row
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddRowForm(!showAddRowForm)}
+                    data-testid="button-toggle-add-row"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Row
+                  </Button>
                 </div>
                 
                 {showAddRowForm && (
@@ -881,13 +877,13 @@ export function PrcManagement() {
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-xs">Term (months)</Label>
+                          <Label className="text-xs">Year</Label>
                           <Input
                             type="number"
-                            value={newRow.termMonths}
-                            onChange={(e) => setNewRow({...newRow, termMonths: e.target.value})}
-                            placeholder="24"
-                            data-testid="input-new-row-term"
+                            value={newRow.priceYear}
+                            onChange={(e) => setNewRow({...newRow, priceYear: e.target.value})}
+                            placeholder="2026"
+                            data-testid="input-new-row-year"
                           />
                         </div>
                         <div>
@@ -937,7 +933,6 @@ export function PrcManagement() {
                       <TableRow>
                         <TableHead>Submarket</TableHead>
                         <TableHead>Product</TableHead>
-                        <TableHead>Term</TableHead>
                         <TableHead>Year</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
@@ -949,7 +944,6 @@ export function PrcManagement() {
                         <TableRow key={row.id} className={row.isOutlierFlag ? 'bg-yellow-50' : ''}>
                           <TableCell>{row.submarket}</TableCell>
                           <TableCell>{row.productType}</TableCell>
-                          <TableCell>{row.termMonths ? `${row.termMonths}m` : '-'}</TableCell>
                           <TableCell className="font-mono">{row.priceYear || '—'}</TableCell>
                           <TableCell className="font-mono">R$ {row.priceRPerMWh}</TableCell>
                           <TableCell>
@@ -993,18 +987,16 @@ export function PrcManagement() {
                 <Button variant="outline" onClick={() => setSelectedDocument(null)}>
                   Close
                 </Button>
-                {(selectedDocument.parseStatus === 'PARSED' || selectedDocument.parseStatus === 'NEEDS_REVIEW') && (
-                  <Button
-                    onClick={() => {
-                      verifyDocumentMutation.mutate(selectedDocument.id);
-                      setSelectedDocument(null);
-                    }}
-                    disabled={verifyDocumentMutation.isPending}
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Verify Document
-                  </Button>
-                )}
+                <Button
+                  onClick={() => {
+                    verifyDocumentMutation.mutate(selectedDocument.id);
+                    setSelectedDocument(null);
+                  }}
+                  disabled={verifyDocumentMutation.isPending}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Verify Document
+                </Button>
               </div>
             </div>
           )}

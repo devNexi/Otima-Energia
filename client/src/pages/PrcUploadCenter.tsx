@@ -115,7 +115,7 @@ interface FileUploadState {
 type StatusFilter = "ALL" | "PARSING" | "FAILED" | "NEEDS_REVIEW" | "PARSED" | "VERIFIED";
 
 function generateCsv(rows: any[]): string {
-  const headers = ["submarket", "productType", "termMonths", "priceYear", "priceRPerMWh", "confidence", "isOutlierFlag", "outlierReason"];
+  const headers = ["submarket", "productType", "priceYear", "priceRPerMWh", "confidence", "isOutlierFlag", "outlierReason"];
   const lines = [headers.join(",")];
   for (const r of rows) {
     const vals = headers.map(h => {
@@ -1180,7 +1180,6 @@ export default function PrcUploadCenter() {
                           <TableRow>
                             <TableHead className="text-xs">Submarket</TableHead>
                             <TableHead className="text-xs">Product</TableHead>
-                            <TableHead className="text-xs">Term</TableHead>
                             <TableHead className="text-xs">Year</TableHead>
                             <TableHead className="text-xs">Price (R$/MWh)</TableHead>
                             <TableHead className="text-xs">Confidence</TableHead>
@@ -1192,7 +1191,6 @@ export default function PrcUploadCenter() {
                             <TableRow key={r.id} data-testid={`row-debug-${r.id}`}>
                               <TableCell className="text-xs" title={r.submarket}>{formatSubmarket(r.submarket)}</TableCell>
                               <TableCell className="text-xs" title={r.productType}>{formatProductType(r.productType)}</TableCell>
-                              <TableCell className="text-xs">{r.termMonths ? `${r.termMonths}mo` : "—"}</TableCell>
                               <TableCell className="text-xs font-mono">{r.priceYear || "—"}</TableCell>
                               <TableCell className="text-xs font-mono">{!isNaN(parseFloat(r.priceRPerMWh)) ? `R$ ${parseFloat(r.priceRPerMWh).toFixed(2)}` : (r.priceRPerMWh || '—')}</TableCell>
                               <TableCell className="text-xs">{normalizeConfidence(r.confidence)}</TableCell>
