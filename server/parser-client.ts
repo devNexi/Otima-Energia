@@ -59,11 +59,13 @@ const PARSER_DATA_FIELDS = [
   'customerName', 'customerCnpj', 'customerId', 'cnpj',
   'distributor', 'referenceMonth', 'dueDate', 'totalAmount',
   'totalEnergyKwh', 'tariffGroup', 'invoiceKey', 'ucCode', 'uc',
-  'unidadeConsumidora', 'endereco', 'address', 'modalidade',
+  'ucNumber', 'installation', 'unidadeConsumidora',
+  'endereco', 'address', 'modalidade', 'modality',
   'tariffModality', 'consumoPonta', 'consumoPontaKwh',
   'consumoForaPonta', 'consumoForaPontaKwh', 'demandaContratada',
   'demandaContratadaKw', 'demandaMedida', 'demandaMedidaKw',
-  'consumptionPeriod', 'grupo', 'subgrupo', 'docKind',
+  'consumption', 'consumptionPeriod', 'grupo', 'subgrupo',
+  'groupSubgroup', 'docKind',
   'fieldConfidence', 'fieldReasons',
 ];
 
@@ -121,6 +123,35 @@ function normalizeParserResponse(raw: any): ParserResponse {
   }
   if (data.cnpj && !data.customerId) {
     data.customerId = data.cnpj;
+  }
+
+  if (data.ucNumber && !data.ucCode) {
+    data.ucCode = data.ucNumber;
+  }
+  if (data.installation && !data.ucCode) {
+    data.ucCode = data.installation;
+  }
+
+  if (data.groupSubgroup && !data.tariffGroup) {
+    data.tariffGroup = data.groupSubgroup;
+  }
+
+  if (data.modality && !data.modalidade) {
+    data.modalidade = data.modality;
+  }
+
+  if (data.consumption != null && !data.totalEnergyKwh) {
+    data.totalEnergyKwh = data.consumption;
+  }
+
+  if (data.consumptionPeriod && !data.referenceMonth) {
+    const periodStr = String(data.consumptionPeriod);
+    const dateMatch = periodStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s*[-–]\s*(\d{2})\/(\d{2})\/(\d{4})/);
+    if (dateMatch) {
+      const endMonth = dateMatch[5];
+      const endYear = dateMatch[6];
+      data.referenceMonth = `${endYear}-${endMonth}`;
+    }
   }
 
   const extractedFieldCount = Object.keys(data).filter(k => data[k] != null && data[k] !== '').length;
