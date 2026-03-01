@@ -148,6 +148,7 @@ export default function PrcUploadCenter() {
   const [uploadQueue, setUploadQueue] = useState<FileUploadState[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [monthFilter, setMonthFilter] = useState<string>("ALL");
   const [debugDocId, setDebugDocId] = useState<number | null>(null);
   const [debugRowPage, setDebugRowPage] = useState(0);
   const [rawTextOpen, setRawTextOpen] = useState(false);
@@ -180,9 +181,13 @@ export default function PrcUploadCenter() {
   const suppliers = suppliersData?.suppliers || [];
   const documents = documentsData?.documents || [];
 
-  const filteredDocuments = statusFilter === "ALL"
-    ? documents
-    : documents.filter(d => d.parseStatus === statusFilter);
+  const availableMonths = [...new Set(documents.map(d => d.referenceMonth))].sort().reverse();
+
+  const filteredDocuments = documents.filter(d => {
+    if (statusFilter !== "ALL" && d.parseStatus !== statusFilter) return false;
+    if (monthFilter !== "ALL" && d.referenceMonth !== monthFilter) return false;
+    return true;
+  });
 
   const reparseMutation = useMutation({
     mutationFn: async (docId: number) => {
@@ -806,12 +811,23 @@ export default function PrcUploadCenter() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Select value={monthFilter} onValueChange={setMonthFilter}>
+                        <SelectTrigger className="w-[160px] h-8" data-testid="select-month-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All Months</SelectItem>
+                          {availableMonths.map(m => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
                         <SelectTrigger className="w-[160px] h-8" data-testid="select-status-filter">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="ALL">All</SelectItem>
+                          <SelectItem value="ALL">All Statuses</SelectItem>
                           <SelectItem value="PARSING">Parsing</SelectItem>
                           <SelectItem value="FAILED">Failed</SelectItem>
                           <SelectItem value="NEEDS_REVIEW">Needs Review</SelectItem>
@@ -880,7 +896,7 @@ export default function PrcUploadCenter() {
                   </div>
                 ) : filteredDocuments.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    {statusFilter === "ALL" ? "No documents uploaded yet" : `No ${statusFilter} documents`}
+                    {statusFilter === "ALL" && monthFilter === "ALL" ? "No documents uploaded yet" : `No documents matching filters`}
                   </div>
                 ) : (
                   <Table>
