@@ -37,8 +37,9 @@ function validateFileBeforeSend(fileBuffer: Buffer, filename: string): void {
   const lowerName = filename.toLowerCase();
   const isPdfName = lowerName.endsWith('.pdf');
   const hasPdfMagic = fileBuffer.length >= 5 && fileBuffer.subarray(0, 5).toString('ascii') === '%PDF-';
-  if (!isPdfName && !hasPdfMagic) {
-    throw new Error(`PARSER_PRE_CHECK: file "${filename}" is not a PDF (no .pdf extension and missing PDF magic bytes)`);
+  const isImage = /\.(png|jpg|jpeg|tiff|tif|bmp|webp)$/.test(lowerName);
+  if (!isPdfName && !hasPdfMagic && !isImage) {
+    throw new Error(`PARSER_PRE_CHECK: file "${filename}" is not a supported format (PDF or image required)`);
   }
 }
 
