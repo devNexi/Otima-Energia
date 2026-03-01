@@ -10183,15 +10183,21 @@ export async function registerRoutes(
         : 'SE_CO';
 
       const billRefMonth = bills.find(b => b.referenceMonth)?.referenceMonth || null;
+      const currentYear = String(new Date().getFullYear());
+      const currentYearMonth = new Date().toISOString().slice(0, 7);
 
-      const { or } = await import("drizzle-orm");
-      const availableDocs = await db.select().from(prcDocuments)
+      const { or, gte } = await import("drizzle-orm");
+      const allAvailableDocs = await db.select().from(prcDocuments)
         .where(or(eq(prcDocuments.parseStatus, 'PUBLISHED'), eq(prcDocuments.parseStatus, 'PARSED'), eq(prcDocuments.parseStatus, 'VERIFIED')))
         .orderBy(desc(prcDocuments.referenceMonth));
+
+      const currentYearDocs = allAvailableDocs.filter(d => d.referenceMonth.startsWith(currentYear));
+      const olderDocs = allAvailableDocs.filter(d => !d.referenceMonth.startsWith(currentYear));
 
       let resolvedPrcRows: any[] = [];
       let resolvedPrcDoc: any = null;
       let prcResolverLog: string[] = [];
+      let prcYearWarning: string | null = null;
 
       const validProducts = ['CONVENCIONAL', 'INC_I50', 'INC_I100'];
       const PRODUCT_NORMALIZE: Record<string, string> = {
@@ -10208,10 +10214,10 @@ export async function registerRoutes(
         return { ...row, productType: normalized };
       }
 
-      prcResolverLog.push(`Found ${availableDocs.length} available PRC docs (PUBLISHED/PARSED/VERIFIED)`);
+      prcResolverLog.push(`Found ${allAvailableDocs.length} available PRC docs (${currentYearDocs.length} current year ${currentYear}, ${olderDocs.length} older)`);
 
-      if (billRefMonth) {
-        const matchingDoc = availableDocs.find(d => d.referenceMonth === billRefMonth);
+      if (billRefMonth && billRefMonth.startsWith(currentYear)) {
+        const matchingDoc = currentYearDocs.find(d => d.referenceMonth === billRefMonth);
         if (matchingDoc) {
           const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, matchingDoc.id), eq(prcRows.submarket, submarket)));
@@ -10220,28 +10226,60 @@ export async function registerRoutes(
           prcResolverLog.push(`Stage 1 (exact month ${billRefMonth}, submarket ${submarket}): ${resolvedPrcRows.length} rows from doc ${matchingDoc.id}`);
         }
       }
-      if (resolvedPrcRows.length === 0 && availableDocs.length > 0) {
-        for (const doc of availableDocs) {
+      if (resolvedPrcRows.length === 0 && currentYearDocs.length > 0) {
+        for (const doc of currentYearDocs) {
           const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
           const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
-            prcResolverLog.push(`Stage 2 (latest doc for submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 2 (latest ${currentYear} doc for submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
             break;
           }
         }
       }
-      if (resolvedPrcRows.length === 0 && availableDocs.length > 0) {
-        for (const doc of availableDocs) {
+      if (resolvedPrcRows.length === 0 && currentYearDocs.length > 0) {
+        for (const doc of currentYearDocs) {
           const raw = await db.select().from(prcRows)
             .where(eq(prcRows.prcDocumentId, doc.id));
           const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
-            prcResolverLog.push(`Stage 3 (global fallback): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 3 (${currentYear} global fallback): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
+            break;
+          }
+        }
+      }
+      if (resolvedPrcRows.length === 0 && olderDocs.length > 0) {
+        for (const doc of olderDocs) {
+          const raw = await db.select().from(prcRows)
+            .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
+          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          if (rows.length > 0) {
+            resolvedPrcRows = rows;
+            resolvedPrcDoc = doc;
+            const docYear = doc.referenceMonth.substring(0, 4);
+            prcYearWarning = `Using ${docYear} prices for ${currentYear} — no current year PRC data available`;
+            console.warn(`[ECOS] WARNING: ${prcYearWarning} (doc ${doc.id}, ${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 4 FALLBACK (older year ${docYear}, submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth}) — WARNING: stale pricing`);
+            break;
+          }
+        }
+      }
+      if (resolvedPrcRows.length === 0 && olderDocs.length > 0) {
+        for (const doc of olderDocs) {
+          const raw = await db.select().from(prcRows)
+            .where(eq(prcRows.prcDocumentId, doc.id));
+          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          if (rows.length > 0) {
+            resolvedPrcRows = rows;
+            resolvedPrcDoc = doc;
+            const docYear = doc.referenceMonth.substring(0, 4);
+            prcYearWarning = `Using ${docYear} prices for ${currentYear} — no current year PRC data available`;
+            console.warn(`[ECOS] WARNING: ${prcYearWarning} (doc ${doc.id}, ${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 5 FALLBACK (older year ${docYear}, global): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth}) — WARNING: stale pricing`);
             break;
           }
         }
@@ -10285,12 +10323,16 @@ export async function registerRoutes(
       const prcBenchmark = {
         prcDocumentId: resolvedPrcDoc?.id,
         prcReferenceMonth: resolvedPrcDoc?.referenceMonth,
+        prcYear: resolvedPrcDoc?.referenceMonth?.substring(0, 4) || null,
+        currentYear,
+        yearWarning: prcYearWarning,
         submarket,
         rowCount: resolvedPrcRows.length,
         minPriceRmwh: Math.round(prcMinPrice * 100) / 100,
         maxPriceRmwh: Math.round(prcMaxPrice * 100) / 100,
         avgPriceRmwh: Math.round(prcAvgPrice * 100) / 100,
-        termBreakdown: resolvedPrcRows.map(r => ({ term: r.termLabel || `${r.termMonths}m`, product: r.productType, price: parseFloat(String(r.priceRPerMWh)) })),
+        termBreakdown: resolvedPrcRows.map(r => ({ term: r.termLabel || `${r.termMonths}m`, product: r.productType, price: parseFloat(String(r.priceRPerMWh)), referenceMonth: r.referenceMonth })),
+        resolverLog: prcResolverLog,
       };
 
       let status: string = 'NO_DATA';
@@ -10313,6 +10355,7 @@ export async function registerRoutes(
       if (bills.length >= 6) { confidenceLevel = 'HIGH'; confidenceReasons.push('6+ bill months analyzed'); }
       if (bills.length === 1) confidenceReasons.push('Only 1 bill month — annualized estimate');
       if (resolvedPrcRows.length < 3) confidenceReasons.push('Limited PRC pricing rows');
+      if (prcYearWarning) { confidenceReasons.push(prcYearWarning); confidenceLevel = 'LOW'; }
 
       const recommendedNextStep = status === 'ABOVE_BAND' ? 'REQUEST_RFQ'
         : status === 'WITHIN_BAND' ? 'WAIT' : 'NEED_MORE_DATA';

@@ -354,6 +354,62 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                 </Card>
               </div>
 
+              {latestSnapshot?.benchmarkMatch && (
+                <Card className={latestSnapshot.benchmarkMatch.yearWarning ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <BarChart3 className="w-4 h-4 text-slate-500" />
+                        <span className="font-medium">
+                          {language === "pt" ? "Preços PRC:" : "PRC Prices:"}
+                        </span>
+                        <Badge variant="outline" className="text-xs" data-testid="badge-prc-year">
+                          {latestSnapshot.benchmarkMatch.prcReferenceMonth || '—'}
+                        </Badge>
+                        <span className="text-xs text-slate-500">
+                          ({latestSnapshot.benchmarkMatch.rowCount} {language === "pt" ? "linhas" : "rows"}, {latestSnapshot.benchmarkMatch.submarket})
+                        </span>
+                      </div>
+                      {latestSnapshot.benchmarkMatch.termBreakdown?.length > 0 && (
+                        <div className="text-xs text-slate-500">
+                          {[...new Set(latestSnapshot.benchmarkMatch.termBreakdown.map((t: any) => t.product))].join(', ')}
+                        </div>
+                      )}
+                    </div>
+                    {latestSnapshot.benchmarkMatch.yearWarning && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-red-700">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span data-testid="text-prc-year-warning">{latestSnapshot.benchmarkMatch.yearWarning}</span>
+                      </div>
+                    )}
+                    {latestSnapshot.benchmarkMatch.termBreakdown?.length > 0 && (
+                      <div className="mt-3 overflow-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-left text-slate-500">
+                              <th className="py-1 pr-3 font-medium">{language === "pt" ? "Produto" : "Product"}</th>
+                              <th className="py-1 pr-3 font-medium">{language === "pt" ? "Prazo" : "Term"}</th>
+                              <th className="py-1 pr-3 font-medium">{language === "pt" ? "Preço" : "Price"}</th>
+                              <th className="py-1 font-medium">{language === "pt" ? "Ref." : "Ref."}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {latestSnapshot.benchmarkMatch.termBreakdown.map((row: any, idx: number) => (
+                              <tr key={idx} className="border-t border-slate-200">
+                                <td className="py-1 pr-3 font-mono">{row.product}</td>
+                                <td className="py-1 pr-3">{row.term}</td>
+                                <td className="py-1 pr-3 font-mono">R$ {row.price?.toFixed(2)}</td>
+                                <td className="py-1 text-slate-400">{row.referenceMonth || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="bg-amber-50 border-amber-200">
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-3">
