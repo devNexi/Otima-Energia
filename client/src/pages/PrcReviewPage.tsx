@@ -60,6 +60,7 @@ interface PrcRow {
   submarket: string;
   termMonths: number | null;
   termLabel: string | null;
+  priceYear: number | null;
   priceRPerMWh: string;
   validUntil: string | null;
   flaggedForReview: boolean;
@@ -391,6 +392,7 @@ export default function PrcReviewPage() {
                             <TableHead>Product Type</TableHead>
                             <TableHead>Submarket</TableHead>
                             <TableHead>Term</TableHead>
+                            <TableHead>Year</TableHead>
                             <TableHead>Price (R$/MWh)</TableHead>
                             <TableHead>Valid Until</TableHead>
                             <TableHead>Status</TableHead>
@@ -445,6 +447,15 @@ export default function PrcReviewPage() {
                                   <TableCell>
                                     <Input
                                       type="number"
+                                      className="w-20"
+                                      placeholder="Year"
+                                      value={editedRow.priceYear ?? row.priceYear ?? ""}
+                                      onChange={(e) => setEditedRow({ ...editedRow, priceYear: e.target.value ? parseInt(e.target.value) : null })}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      type="number"
                                       step="0.01"
                                       className="w-28"
                                       value={editedRow.priceRPerMWh ?? row.priceRPerMWh}
@@ -488,6 +499,9 @@ export default function PrcReviewPage() {
                                   <TableCell>{row.submarket}</TableCell>
                                   <TableCell className="text-sm">
                                     {row.termMonths ? `${row.termMonths}mo` : row.termLabel || "-"}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">
+                                    {row.priceYear || "—"}
                                   </TableCell>
                                   <TableCell className="font-mono">
                                     R$ {parseFloat(row.priceRPerMWh).toFixed(2)}

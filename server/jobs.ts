@@ -428,6 +428,9 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
             const termMonths = resolveTermMonths(row);
 
+            const rawYear = row.year != null ? parseInt(String(row.year)) : null;
+            const priceYear = rawYear && rawYear >= 2020 && rawYear <= 2040 ? rawYear : null;
+
             const inserted = await db.insert(prcRows).values({
               prcDocumentId: documentId,
               supplierId: doc[0].supplierId,
@@ -435,6 +438,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
               submarket,
               productType,
               termMonths: termMonths,
+              priceYear,
               priceRPerMWh: String(price),
               confidence: Math.round(((row.confidence || result.confidence) > 1 ? (row.confidence || result.confidence) : (row.confidence || result.confidence) * 100)),
               isOutlierFlag: false,

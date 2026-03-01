@@ -5678,7 +5678,8 @@ export async function registerRoutes(
         y -= 14;
         for (const tb of benchmarkMatch.termBreakdown) {
           if (y < 60) { page = pdfDoc.addPage([595, 842]); y = 800; }
-          drawText(`  ${tb.product} ${tb.term}: R$ ${Number(tb.price).toFixed(2)}/MWh`, leftMargin + 16, y, { size: 9 });
+          const yearLabel = tb.priceYear ? ` (${tb.priceYear})` : '';
+          drawText(`  ${tb.product} ${tb.term}${yearLabel}: R$ ${Number(tb.price).toFixed(2)}/MWh`, leftMargin + 16, y, { size: 9 });
           y -= 14;
         }
       }
@@ -10184,7 +10185,11 @@ export async function registerRoutes(
 
       const billRefMonth = bills.find(b => b.referenceMonth)?.referenceMonth || null;
       const currentYear = String(new Date().getFullYear());
+      const currentYearInt = new Date().getFullYear();
       const currentYearMonth = new Date().toISOString().slice(0, 7);
+
+      const parsedBillYear = billRefMonth ? parseInt(billRefMonth.substring(0, 4)) : NaN;
+      const consumptionYear = !isNaN(parsedBillYear) ? parsedBillYear : currentYearInt;
 
       const { or, gte } = await import("drizzle-orm");
       const allAvailableDocs = await db.select().from(prcDocuments)
@@ -10214,27 +10219,35 @@ export async function registerRoutes(
         return { ...row, productType: normalized };
       }
 
-      prcResolverLog.push(`Found ${allAvailableDocs.length} available PRC docs (${currentYearDocs.length} current year ${currentYear}, ${olderDocs.length} older)`);
+      function filterByYear(rows: any[]): any[] {
+        const withYear = rows.filter(r => r.priceYear === consumptionYear);
+        if (withYear.length > 0) return withYear;
+        const withoutYear = rows.filter(r => r.priceYear == null);
+        if (withoutYear.length > 0) return withoutYear;
+        return rows;
+      }
+
+      prcResolverLog.push(`Found ${allAvailableDocs.length} available PRC docs (${currentYearDocs.length} current year ${currentYear}, ${olderDocs.length} older). Consumption year: ${consumptionYear}`);
 
       if (billRefMonth && billRefMonth.startsWith(currentYear)) {
         const matchingDoc = currentYearDocs.find(d => d.referenceMonth === billRefMonth);
         if (matchingDoc) {
           const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, matchingDoc.id), eq(prcRows.submarket, submarket)));
-          resolvedPrcRows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          resolvedPrcRows = filterByYear(raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType)));
           resolvedPrcDoc = matchingDoc;
-          prcResolverLog.push(`Stage 1 (exact month ${billRefMonth}, submarket ${submarket}): ${resolvedPrcRows.length} rows from doc ${matchingDoc.id}`);
+          prcResolverLog.push(`Stage 1 (exact month ${billRefMonth}, submarket ${submarket}): ${resolvedPrcRows.length} rows from doc ${matchingDoc.id} (year-filtered for ${consumptionYear})`);
         }
       }
       if (resolvedPrcRows.length === 0 && currentYearDocs.length > 0) {
         for (const doc of currentYearDocs) {
           const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
-          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          const rows = filterByYear(raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType)));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
-            prcResolverLog.push(`Stage 2 (latest ${currentYear} doc for submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 2 (latest ${currentYear} doc for submarket ${submarket}): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth}, year-filtered for ${consumptionYear})`);
             break;
           }
         }
@@ -10243,11 +10256,11 @@ export async function registerRoutes(
         for (const doc of currentYearDocs) {
           const raw = await db.select().from(prcRows)
             .where(eq(prcRows.prcDocumentId, doc.id));
-          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          const rows = filterByYear(raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType)));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
-            prcResolverLog.push(`Stage 3 (${currentYear} global fallback): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth})`);
+            prcResolverLog.push(`Stage 3 (${currentYear} global fallback): ${rows.length} rows from doc ${doc.id} (${doc.referenceMonth}, year-filtered for ${consumptionYear})`);
             break;
           }
         }
@@ -10256,7 +10269,7 @@ export async function registerRoutes(
         for (const doc of olderDocs) {
           const raw = await db.select().from(prcRows)
             .where(and(eq(prcRows.prcDocumentId, doc.id), eq(prcRows.submarket, submarket)));
-          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          const rows = filterByYear(raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType)));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
@@ -10272,7 +10285,7 @@ export async function registerRoutes(
         for (const doc of olderDocs) {
           const raw = await db.select().from(prcRows)
             .where(eq(prcRows.prcDocumentId, doc.id));
-          const rows = raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType));
+          const rows = filterByYear(raw.map(normalizePrcRow).filter(r => validProducts.includes(r.productType)));
           if (rows.length > 0) {
             resolvedPrcRows = rows;
             resolvedPrcDoc = doc;
@@ -10331,7 +10344,7 @@ export async function registerRoutes(
         minPriceRmwh: Math.round(prcMinPrice * 100) / 100,
         maxPriceRmwh: Math.round(prcMaxPrice * 100) / 100,
         avgPriceRmwh: Math.round(prcAvgPrice * 100) / 100,
-        termBreakdown: resolvedPrcRows.map(r => ({ term: r.termLabel || `${r.termMonths}m`, product: r.productType, price: parseFloat(String(r.priceRPerMWh)), referenceMonth: r.referenceMonth })),
+        termBreakdown: resolvedPrcRows.map(r => ({ term: r.termLabel || `${r.termMonths}m`, product: r.productType, price: parseFloat(String(r.priceRPerMWh)), referenceMonth: r.referenceMonth, priceYear: r.priceYear || null })),
         resolverLog: prcResolverLog,
       };
 

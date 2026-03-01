@@ -3968,6 +3968,9 @@ export const prcRows = pgTable("prc_rows", {
   termMonths: integer("term_months"), // 12, 24, 36, 60
   termLabel: text("term_label"), // "ANUAL", "TRIANUAL", "QUINQUENAL", "2026-2028"
   
+  // Price year (from parser — the year the price applies to)
+  priceYear: integer("price_year"), // e.g. 2026
+  
   // Price data
   priceRPerMWh: decimal("price_r_per_mwh", { precision: 10, scale: 2 }).notNull(),
   currency: text("currency").default("BRL").notNull(),

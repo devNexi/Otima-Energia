@@ -938,6 +938,7 @@ export function PrcManagement() {
                         <TableHead>Submarket</TableHead>
                         <TableHead>Product</TableHead>
                         <TableHead>Term</TableHead>
+                        <TableHead>Year</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -949,6 +950,7 @@ export function PrcManagement() {
                           <TableCell>{row.submarket}</TableCell>
                           <TableCell>{row.productType}</TableCell>
                           <TableCell>{row.termMonths ? `${row.termMonths}m` : '-'}</TableCell>
+                          <TableCell className="font-mono">{row.priceYear || '—'}</TableCell>
                           <TableCell className="font-mono">R$ {row.priceRPerMWh}</TableCell>
                           <TableCell>
                             {row.isOutlierFlag && (

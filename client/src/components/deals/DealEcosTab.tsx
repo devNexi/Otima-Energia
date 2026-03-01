@@ -389,6 +389,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                             <tr className="text-left text-slate-500">
                               <th className="py-1 pr-3 font-medium">{language === "pt" ? "Produto" : "Product"}</th>
                               <th className="py-1 pr-3 font-medium">{language === "pt" ? "Prazo" : "Term"}</th>
+                              <th className="py-1 pr-3 font-medium">{language === "pt" ? "Ano" : "Year"}</th>
                               <th className="py-1 pr-3 font-medium">{language === "pt" ? "Preço" : "Price"}</th>
                               <th className="py-1 font-medium">{language === "pt" ? "Ref." : "Ref."}</th>
                             </tr>
@@ -398,6 +399,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                               <tr key={idx} className="border-t border-slate-200">
                                 <td className="py-1 pr-3 font-mono">{row.product}</td>
                                 <td className="py-1 pr-3">{row.term}</td>
+                                <td className="py-1 pr-3 font-mono">{row.priceYear || '—'}</td>
                                 <td className="py-1 pr-3 font-mono">R$ {row.price?.toFixed(2)}</td>
                                 <td className="py-1 text-slate-400">{row.referenceMonth || '—'}</td>
                               </tr>
