@@ -21,7 +21,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
-  Lightbulb
+  Lightbulb,
+  Eye,
+  X
 } from "lucide-react";
 import {
   Collapsible,
@@ -34,6 +36,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface DealEcosTabProps {
   dealId: string;
@@ -107,6 +115,9 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showHistory, setShowHistory] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [previewLoading2, setPreviewLoading2] = useState(false);
 
   const { data: snapshots, isLoading: snapshotsLoading } = useQuery<EcosSnapshot[]>({
     queryKey: ["/api/deals", dealId, "ecos-snapshots"],
@@ -165,7 +176,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ecos_insight_pack_${dealId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      a.download = `ecos_snapshot_${dealId}_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -174,8 +185,8 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
       toast({
         title: language === "pt" ? "PDF gerado" : "PDF generated",
         description: language === "pt" 
-          ? "O Insight Pack foi baixado com sucesso." 
-          : "Insight Pack has been downloaded successfully."
+          ? "O Insight Snapshot foi baixado com sucesso." 
+          : "Insight Snapshot has been downloaded successfully."
       });
     } catch (error: any) {
       toast({
@@ -187,6 +198,27 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
       });
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handlePreview = async (snapshotId: number) => {
+    setPreviewLoading2(true);
+    setPreviewOpen(true);
+    try {
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/preview`);
+      const html = await res.text();
+      setPreviewHtml(html);
+    } catch (error: any) {
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: language === "pt"
+          ? "Falha ao carregar preview."
+          : "Failed to load preview.",
+        variant: "destructive"
+      });
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading2(false);
     }
   };
 
@@ -215,6 +247,31 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
 
   return (
     <div className="space-y-6">
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+            <DialogTitle className="text-lg">
+              {language === "pt" ? "Preview do ECOS Snapshot" : "ECOS Snapshot Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-4 pt-0" style={{ height: 'calc(90vh - 60px)' }}>
+            {previewLoading2 ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full border rounded-lg"
+                style={{ minHeight: '800px' }}
+                title="ECOS Preview"
+                data-testid="iframe-ecos-preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -228,7 +285,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                 : "Compare current pricing against market benchmarks"}
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button 
               variant="outline" 
               size="sm"
@@ -253,29 +310,54 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
               {language === "pt" ? "Salvar Snapshot" : "Capture Snapshot"}
             </Button>
             {latestSnapshot && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadPdf(latestSnapshot.id)}
-                      disabled={downloadingPdf}
-                      data-testid="button-download-pdf"
-                    >
-                      {downloadingPdf ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="w-4 h-4 mr-2" />
-                      )}
-                      PDF
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{language === "pt" ? "Baixar Insight Pack em PDF" : "Download Insight Pack as PDF"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePreview(latestSnapshot.id)}
+                        disabled={previewLoading2}
+                        data-testid="button-preview-snapshot"
+                      >
+                        {previewLoading2 ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Eye className="w-4 h-4 mr-2" />
+                        )}
+                        Preview
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{language === "pt" ? "Visualizar Snapshot para cliente" : "Preview client-facing Snapshot"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadPdf(latestSnapshot.id)}
+                        disabled={downloadingPdf}
+                        data-testid="button-download-pdf"
+                      >
+                        {downloadingPdf ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <FileText className="w-4 h-4 mr-2" />
+                        )}
+                        PDF
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{language === "pt" ? "Baixar Insight Snapshot em PDF" : "Download Insight Snapshot as PDF"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             )}
           </div>
         </CardHeader>
@@ -476,14 +558,34 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                         {snapshot.confidenceLevel}
                       </Badge>
                     </div>
-                    <div className="text-sm text-gray-500" data-testid={`snapshot-date-${snapshot.id}`}>
-                      {new Date(snapshot.createdAt).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreview(snapshot.id)}
+                        data-testid={`button-preview-${snapshot.id}`}
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        Preview
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadPdf(snapshot.id)}
+                        data-testid={`button-pdf-${snapshot.id}`}
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        PDF
+                      </Button>
+                      <span className="text-sm text-gray-500" data-testid={`snapshot-date-${snapshot.id}`}>
+                        {new Date(snapshot.createdAt).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </span>
                     </div>
                   </div>
                 </CardContent>

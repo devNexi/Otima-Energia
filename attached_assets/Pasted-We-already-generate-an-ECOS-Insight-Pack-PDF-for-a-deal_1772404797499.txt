@@ -1,0 +1,258 @@
+We already generate an “ECOS™ Insight Pack” PDF for a deal snapshot, but it currently reads like an internal debug printout and is not persuasive. Example current output (Deal ID e6ca5d58-53c8-4a03-93ba-7cde00b65805, Snapshot v1 ID #1) shows: company + CNPJ, consumption block with zeros, PRC min/max/avg and a talk track, but it’s text-heavy, unclear, and not visually compelling. It also exposes precise numeric benchmark values that we do not want to show directly to clients.
+
+What’s wrong with the current ECOS PDF (must fix)
+
+Not a sales document: It reads like a compliance report (“DADOS INSUFICIENTES”, “Confiança: BAIXA”, raw fields).
+
+Too literal / too many raw numbers: It prints exact PRC min/max/avg and row detail lines (e.g. R$ 349.21 – R$ 405.61/MWh) and even shows “Rows: 2”. We want to keep benchmark numbers vague and show them visually.
+
+No clear “where you stand” summary: The document does not clearly tell the client if they’re well above / above / on par / below / well below the market.
+
+No persuasive narrative: Talk track is generic, not tailored to the client position vs market.
+
+Design is bland: Needs to look kick ass, modern, on-brand, with Ótima Energia logo, brand fonts/colors, spacing, hierarchy, visualizations.
+
+Goal
+
+Turn ECOS into a client-facing sales tool that:
+
+Communicates position vs market clearly and visually
+
+Provides smart, valuable insight (not just “data”)
+
+Includes tailored next-step guidance based on where they sit
+
+Avoids sharing exact benchmark averages; show bands and relative position
+
+Still supports ops/debug via an internal view, but the client PDF is polished
+
+What to build (deliverables)
+A) New “Client ECOS Snapshot” PDF Layout (client-facing)
+
+Create a new PDF template (or replace existing) with these sections:
+
+1) Cover/Header
+
+Ótima Energia logo
+
+“ECOS™ Insight Snapshot”
+
+Client company name (Razão Social)
+
+Unit identifier (UC / Unidade Consumidora if available)
+
+Snapshot date/time
+
+Minimal, premium look: large title, clean whitespace
+
+2) Executive Summary (1 block, super clear)
+
+A single sentence + a badge that states one of:
+
+Well below market
+
+Below market
+
+On par with market
+
+Above market
+
+Well above market
+
+Insufficient data (only when necessary)
+
+Example language (Portuguese):
+
+“Pelos dados atuais, sua tarifa aparenta estar acima da faixa de mercado para seu perfil.”
+
+If insufficient data: “Ainda não temos dados suficientes para uma conclusão definitiva — mas já dá para indicar uma tendência inicial.”
+
+3) Visual Benchmark Chart (NO exact market numbers displayed)
+
+We want a banded chart:
+
+A horizontal bar with 5 zones:
+
+well below / below / on par / above / well above
+
+Place a marker (dot/needle) for “Você” (client effective rate)
+
+Optionally show “Mercado” band center as a muted indicator without numeric labels
+
+Show the period and submarket as text labels only (e.g. “SE/CO • Fev/2026 PRC”)
+
+Important: Do not print exact PRC min/max/avg values.
+If we must show numbers at all, only show the client’s current effective value (optional), but ideally keep even that minimal and focus on relative placement.
+
+4) “What this means” insight block (tailored)
+
+This is where we add smart commentary:
+
+If well below:
+“Você parece estar em uma posição sólida hoje. Não recomendamos pressa para trocar. Ainda assim, podemos checar oportunidades sem custo e confirmar se existe upside escondido.”
+
+If on par:
+“Você está próximo do padrão de mercado. Uma cotação rápida pode revelar melhorias pequenas (estrutura/risco) — vale avaliar opções antes do próximo ciclo.”
+
+If above / well above:
+Stronger nudge:
+“Você provavelmente está pagando acima do mercado para seu perfil. Há boa chance de capturar economia com ajuste de estrutura/fornecedor. Recomendamos iniciar cotação e mapear cenários.”
+
+Keep it short, sharp, confident. No “DADOS INSUFICIENTES” style language in client version.
+
+5) Action CTA block
+
+A clear next step:
+
+“Próximo passo recomendado:”
+
+If above: “Rodar RFQ com 3–5 fornecedores e simular cenários.”
+
+If below: “Revisão rápida para validação + monitoramento.”
+
+Add call-to-action line:
+
+“Se quiser, a Ótima conduz isso ponta a ponta.”
+
+6) Footer
+
+Branding + contact
+
+Confidentiality line is fine but cleaner.
+
+B) Internal/Ops Debug stays available (but not in client PDF)
+
+We still need raw fields for troubleshooting (like rows counts, exact PRC values, “Rows: 2”, eligibility, warnings).
+But these should be:
+
+In portal UI only, behind ops/admin role gating
+
+Or in a separate “internal debug PDF” if needed
+Client PDF should not include raw PRC row dumps.
+
+Data / Logic Requirements (how to compute placement bands)
+Inputs (already in system)
+
+Bills parsed → consumption, UC, etc.
+
+PRC parsed rows → by product/submarket/term
+
+Current snapshot shows fields like:
+
+Submercado: SE_CO
+
+PRC min/max/avg
+
+Eligibility
+
+Bill count
+(but currently too raw)
+
+Need a single “client effective rate” value
+
+Define a consistent “effective client price” to compare vs market:
+
+If we have a negotiated energy price from bill/contract fields → use that
+
+If not available → mark “Insufficient data” but still show PRC band and say we need X more bills or contract price
+
+Market band boundaries (don’t show values)
+
+Define band thresholds using PRC distribution:
+
+Let marketMid = PRC average (or median)
+
+Let marketSpread = (max-min)
+
+Define bands by % distance from mid:
+
+Well below: client <= mid * 0.90
+
+Below: 0.90–0.97
+
+On par: 0.97–1.03
+
+Above: 1.03–1.10
+
+Well above: > 1.10
+(These thresholds can be tuned, but implement something deterministic.)
+
+Special case: insufficient data
+
+If:
+
+billsAnalyzed < 2 OR consumption=0 OR missing UC OR missing client effective price
+Then classify as Insufficient data, but still show a “Market band” chart without the “Você” marker OR show “Você (estimativa preliminar)” if we have partial.
+
+Portal UI changes needed (so the PDF can be great)
+1) “Snapshot Preview” view
+
+In Deal Assembly tab, add a “Preview ECOS Snapshot” button that opens a modal or page rendering the new layout (HTML preview). This makes iteration faster than downloading PDFs blind.
+
+2) PDF generation
+
+Generate the PDF using the same layout (either:
+
+Server-side HTML → PDF pipeline
+
+Or React → PDF library
+
+Or existing PDF generator refactor)
+
+Requirement: Output must match preview layout closely.
+
+3) Brand assets
+
+Use Ótima Energia logo (existing asset path in repo)
+
+Use brand colors and typography (define in a shared constants file)
+
+Layout should look modern: cards, spacing, headings, badges, chart.
+
+Acceptance criteria (must pass)
+
+Client PDF contains:
+
+Executive badge (“Above market” etc.)
+
+Visual band chart
+
+Tailored insight paragraph
+
+CTA next step
+
+Logo + clean styling
+
+Client PDF does NOT contain:
+
+Exact PRC min/max/avg numbers
+
+Raw “Rows: X”
+
+Debug warnings
+
+Internal portal view (ops/admin) can still see exact PRC rows + raw values for troubleshooting.
+
+Works even when data is incomplete:
+
+Shows “Insufficient data” but still looks polished and gives a recommended next step (“send more bills / confirm UC / confirm contract price”).
+
+Implementation notes (to prevent you going off-track)
+
+Do not add new “random” fields; focus on:
+
+Company name
+
+UC / Unidade
+
+Submarket
+
+Consumption summary (if available)
+
+Client effective rate (if available)
+
+Market position classification
+
+Keep copy in Portuguese (client-facing) and sharp.
+
+Make it beautiful. This is a sales tool, not a compliance report.

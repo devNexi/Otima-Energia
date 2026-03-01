@@ -5517,220 +5517,132 @@ export async function registerRoutes(
 
   // --- ECOS PDF Generation (canonical route) ---
   
+  async function buildEcosPdfData(dealId: string, snapshotId: string) {
+    const deal = await storage.getDeal(dealId);
+    if (!deal) throw Object.assign(new Error("Deal not found"), { status: 404 });
+
+    const { dealEcosSnapshots } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, desc } = await import("drizzle-orm");
+
+    let snapshot: any;
+    if (snapshotId === 'latest') {
+      const snaps = await db.select().from(dealEcosSnapshots)
+        .where(eq(dealEcosSnapshots.dealId, dealId))
+        .orderBy(desc(dealEcosSnapshots.version))
+        .limit(1);
+      snapshot = snaps[0] || null;
+    } else {
+      snapshot = await storage.getDealEcosSnapshot(parseInt(snapshotId));
+    }
+    if (!snapshot || snapshot.dealId !== dealId) {
+      throw Object.assign(new Error("No ECOS snapshot found"), { status: 404 });
+    }
+
+    const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
+    const brandKit = await storage.getBrandKit();
+
+    const inputData = snapshot.inputData as any || {};
+    const benchmarkMatch = snapshot.benchmarkMatch as any || {};
+    const results = snapshot.results as any || {};
+
+    const { computeClientBand, legacyStatusToClientBand } = await import("./ecos-pdf");
+
+    let clientBand = computeClientBand(
+      results.estimatedPriceRmwh || inputData.estimatedPriceRmwh || null,
+      benchmarkMatch.avgPriceRmwh || results.prcAvgPriceRmwh || null,
+      inputData.billCount || 0,
+      inputData.avgMonthlyKwh || results.avgMonthlyKwh || null,
+    );
+    if (clientBand === 'INSUFFICIENT_DATA' && snapshot.status && snapshot.status !== 'NO_DATA') {
+      clientBand = legacyStatusToClientBand(snapshot.status);
+    }
+
+    let logoBase64: string | null = null;
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const logoPath = path.join(process.cwd(), 'client/src/assets/branding/logo-full.png');
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = logoBuffer.toString('base64');
+    } catch {}
+
+    const snapshotDate = snapshot.createdAt
+      ? new Date(snapshot.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const ucCode = inputData.ucCode || (client as any)?.ucCode || null;
+
+    return {
+      snapshot,
+      deal,
+      client,
+      pdfData: {
+        companyName: client?.companyName || deal.companyName || 'Cliente',
+        ucCode,
+        submarket: inputData.submarket || benchmarkMatch.submarket || null,
+        snapshotDate,
+        snapshotVersion: snapshot.version,
+        status: snapshot.status,
+        clientBand,
+        estimatedPriceRmwh: results.estimatedPriceRmwh || inputData.estimatedPriceRmwh || null,
+        avgMonthlyKwh: inputData.avgMonthlyKwh || results.avgMonthlyKwh || null,
+        annualConsumptionMwh: inputData.annualConsumptionMwh || results.annualConsumptionMwh || null,
+        billCount: inputData.billCount || 0,
+        prcReferenceMonth: benchmarkMatch.prcReferenceMonth || null,
+        eligibility: inputData.eligibility || results.eligibility || null,
+        confidenceLevel: snapshot.confidenceLevel || 'LOW',
+        brandName: brandKit?.brandName || 'Ótima Energia',
+        primaryColor: brandKit?.primaryColor || '#9e3ffd',
+        secondaryColor: brandKit?.secondaryColor || '#df0af2',
+        darkColor: brandKit?.darkColor || '#16163f',
+        lightBgColor: brandKit?.lightBgColor || '#eee7f1',
+        textColor: brandKit?.textColor || '#736d77',
+        logoBase64,
+        footerText: brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com',
+      },
+    };
+  }
+
+  app.get("/api/deals/:dealId/ecos/:snapshotId/preview", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { dealId, snapshotId } = req.params;
+      const { pdfData } = await buildEcosPdfData(dealId, snapshotId);
+      const { generateEcosClientHtml } = await import("./ecos-pdf");
+      const html = generateEcosClientHtml(pdfData);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    } catch (error: any) {
+      const status = error.status || 500;
+      res.status(status).json({ success: false, error: error.message || "Failed to generate preview" });
+    }
+  });
+
   app.get("/api/deals/:dealId/ecos/:snapshotId/pdf", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
       const { dealId, snapshotId } = req.params;
-      
-      const deal = await storage.getDeal(dealId);
-      if (!deal) {
-        return res.status(404).json({ success: false, error: "Deal not found" });
-      }
-      
-      let snapshot: any;
-      if (snapshotId === 'latest') {
-        const { dealEcosSnapshots } = await import("@shared/schema");
-        const { db } = await import("./db");
-        const { eq, desc } = await import("drizzle-orm");
-        const snaps = await db.select().from(dealEcosSnapshots)
-          .where(eq(dealEcosSnapshots.dealId, dealId))
-          .orderBy(desc(dealEcosSnapshots.version))
-          .limit(1);
-        snapshot = snaps[0] || null;
-      } else {
-        snapshot = await storage.getDealEcosSnapshot(parseInt(snapshotId));
-      }
-      if (!snapshot || snapshot.dealId !== dealId) {
-        return res.status(404).json({ ok: false, error: "No ECOS snapshot found. Generate ECOS first.", blockers: [{ code: "NO_ECOS", message: "Generate ECOS first" }] });
-      }
-      
-      // Get related data
-      const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
-      const dossier = client ? await storage.getClientDossier(client.id) : null;
-      
-      // Status labels in PT-BR
-      const statusLabels: Record<string, { label: string; color: string; bgColor: string }> = {
-        'ABOVE_BAND': { label: 'ACIMA DA FAIXA', color: '#c53030', bgColor: '#fed7d7' },
-        'WITHIN_BAND': { label: 'DENTRO DA FAIXA', color: '#2f855a', bgColor: '#c6f6d5' },
-        'BELOW_BAND': { label: 'ABAIXO DA FAIXA', color: '#2b6cb0', bgColor: '#bee3f8' },
-        'NO_DATA': { label: 'DADOS INSUFICIENTES', color: '#718096', bgColor: '#e2e8f0' }
-      };
-      
-      const confidenceLabels: Record<string, string> = {
-        'HIGH': 'ALTA',
-        'MEDIUM': 'MÉDIA',
-        'LOW': 'BAIXA'
-      };
-      
-      const nextStepLabels: Record<string, string> = {
-        'REQUEST_RFQ': 'Solicitar Cotação (RFQ)',
-        'WAIT': 'Aguardar / Monitorar',
-        'NEED_MORE_DATA': 'Coletar Mais Dados'
-      };
-      
-      const statusInfo = statusLabels[snapshot.status] || statusLabels['NO_DATA'];
-      const frozenInputs = (snapshot as any).frozenInputs as any || {};
-      const benchmarkMatch = snapshot.benchmarkMatch as any || {};
-      const results = snapshot.results as any || {};
-      const confidenceReasons = (snapshot.confidenceReasons as any[]) || [];
-      
-      // Get brand kit for styling
-      const brandKit = await storage.getBrandKit();
-      const primaryColor = brandKit?.primaryColor || '#9e3ffd';
-      const secondaryColor = brandKit?.secondaryColor || '#df0af2';
-      const darkColor = brandKit?.darkColor || '#16163f';
-      const textColor = brandKit?.textColor || '#736d77';
-      const lightBgColor = brandKit?.lightBgColor || '#eee7f1';
-      const fontFamily = brandKit?.fontFamily || 'Inter';
-      const brandName = brandKit?.brandName || 'Ótima Energia';
-      const footerText = brandKit?.footerText || 'Ótima Energia • contato@otimaenergia.com';
-      
-      const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
-      const pdfDoc = await PDFDocument.create();
-      const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const { snapshot, pdfData } = await buildEcosPdfData(dealId, snapshotId);
+      const { generateEcosClientHtml } = await import("./ecos-pdf");
+      const html = generateEcosClientHtml(pdfData);
 
-      const parseHexColor = (hex: string) => {
-        const h = hex.replace('#', '');
-        return rgb(parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255);
-      };
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+      });
+      await browser.close();
 
-      const pColor = parseHexColor(primaryColor);
-      const dColor = parseHexColor(darkColor);
-      const grayColor = rgb(0.45, 0.43, 0.47);
-      const whiteColor = rgb(1, 1, 1);
-      const lightGray = rgb(0.93, 0.93, 0.93);
+      const fileName = `ecos_snapshot_${dealId}_v${snapshot.version}_${new Date().toISOString().split('T')[0]}.pdf`;
 
-      let page = pdfDoc.addPage([595, 842]);
-      let y = 800;
-      const leftMargin = 50;
-      const pageWidth = 495;
-
-      const drawText = (text: string, x: number, yPos: number, opts: { font?: any, size?: number, color?: any, maxWidth?: number } = {}) => {
-        page.drawText(text, {
-          x,
-          y: yPos,
-          font: opts.font || helvetica,
-          size: opts.size || 10,
-          color: opts.color || grayColor,
-          maxWidth: opts.maxWidth || pageWidth,
-        });
-      };
-
-      const drawLine = (yPos: number) => {
-        page.drawLine({ start: { x: leftMargin, y: yPos }, end: { x: leftMargin + pageWidth, y: yPos }, thickness: 0.5, color: lightGray });
-      };
-
-      const drawSection = (title: string) => {
-        if (y < 100) { page = pdfDoc.addPage([595, 842]); y = 800; }
-        y -= 10;
-        page.drawRectangle({ x: leftMargin, y: y - 5, width: pageWidth, height: 22, color: parseHexColor(lightBgColor || '#eee7f1') });
-        drawText(title.toUpperCase(), leftMargin + 8, y, { font: helveticaBold, size: 10, color: pColor });
-        y -= 25;
-      };
-
-      const drawRow = (label: string, value: string) => {
-        if (y < 60) { page = pdfDoc.addPage([595, 842]); y = 800; }
-        drawText(label, leftMargin + 8, y, { font: helveticaBold, size: 9, color: dColor });
-        drawText(value, leftMargin + 180, y, { size: 9, color: grayColor });
-        y -= 16;
-      };
-
-      page.drawRectangle({ x: 0, y: 790, width: 595, height: 52, color: pColor });
-      drawText(brandName.toUpperCase(), leftMargin, 820, { font: helveticaBold, size: 14, color: whiteColor });
-      drawText('ECOS\u2122 Insight Pack', leftMargin, 802, { font: helvetica, size: 10, color: whiteColor });
-
-      y = 770;
-      drawSection('Identifica\u00e7\u00e3o');
-      drawRow('Empresa:', client?.companyName || 'N\u00e3o informado');
-      const cnpjValue = (snapshot.inputData as any)?.customerId || client?.cnpj || 'N/A';
-      drawRow('CNPJ:', cnpjValue);
-      drawRow('Deal ID:', dealId);
-      drawRow('Snapshot:', `v${snapshot.version} \u2014 ID #${snapshot.id}`);
-
-      drawSection('Dados de Consumo');
-      const inputData = snapshot.inputData as any || {};
-      drawRow('Distribuidora:', inputData.distributor || 'N/A');
-      drawRow('Submercado:', inputData.submarket || 'N/A');
-      drawRow('Classe Tarif\u00e1ria:', inputData.tariffGroup || 'N/A');
-      if (inputData.billMonthsUsed && inputData.billMonthsUsed.length > 0) {
-        drawRow('M\u00eas(es) Refer\u00eancia:', inputData.billMonthsUsed.join(', '));
-      }
-      drawRow('Consumo M\u00e9dio (kWh/m\u00eas):', inputData.avgMonthlyKwh != null ? Number(inputData.avgMonthlyKwh).toLocaleString('pt-BR') : 'N/A');
-      drawRow('Consumo Anual (MWh):', inputData.annualConsumptionMwh != null ? Number(inputData.annualConsumptionMwh).toLocaleString('pt-BR') : 'N/A');
-      const billCount = inputData.billCount || 0;
-      const methodNote = billCount === 1 ? 'M\u00e9dia mensal x 12 (1 fatura)' : billCount < 12 ? `M\u00e9dia de ${billCount} faturas x 12` : `Soma de ${billCount} faturas`;
-      drawRow('M\u00e9todo de C\u00e1lculo:', methodNote);
-      drawRow('Elegibilidade:', inputData.eligibility || 'N/A');
-      drawRow('Faturas Analisadas:', String(billCount));
-
-      drawSection('Benchmark PRC');
-      drawRow('Submerc. PRC:', benchmarkMatch.submarket || 'N/A');
-      drawRow('Ref. M\u00eas PRC:', benchmarkMatch.prcReferenceMonth || 'N/A');
-      drawRow('Rows:', String(benchmarkMatch.rowCount || 0));
-      drawRow('Pre\u00e7o M\u00edn. (R$/MWh):', benchmarkMatch.minPriceRmwh != null ? `R$ ${Number(benchmarkMatch.minPriceRmwh).toFixed(2)}` : 'N/A');
-      drawRow('Pre\u00e7o M\u00e1x. (R$/MWh):', benchmarkMatch.maxPriceRmwh != null ? `R$ ${Number(benchmarkMatch.maxPriceRmwh).toFixed(2)}` : 'N/A');
-      drawRow('Pre\u00e7o M\u00e9dio (R$/MWh):', benchmarkMatch.avgPriceRmwh != null ? `R$ ${Number(benchmarkMatch.avgPriceRmwh).toFixed(2)}` : 'N/A');
-
-      if (benchmarkMatch.termBreakdown && benchmarkMatch.termBreakdown.length > 0) {
-        y -= 5;
-        drawText('Detalhamento por Prazo:', leftMargin + 8, y, { font: helveticaBold, size: 9, color: dColor });
-        y -= 14;
-        for (const tb of benchmarkMatch.termBreakdown) {
-          if (y < 60) { page = pdfDoc.addPage([595, 842]); y = 800; }
-          const yearLabel = tb.priceYear ? ` (${tb.priceYear})` : '';
-          drawText(`  ${tb.product} ${tb.term}${yearLabel}: R$ ${Number(tb.price).toFixed(2)}/MWh`, leftMargin + 16, y, { size: 9 });
-          y -= 14;
-        }
-      }
-
-      drawSection('Resultado da An\u00e1lise');
-      const statusLabel = statusInfo.label || snapshot.status;
-      drawRow('Situa\u00e7\u00e3o:', statusLabel);
-      drawRow('Confian\u00e7a:', confidenceLabels[snapshot.confidenceLevel || ''] || snapshot.confidenceLevel || 'N/A');
-      drawRow('Pr\u00f3ximo Passo:', nextStepLabels[snapshot.recommendedNextStep || ''] || snapshot.recommendedNextStep || 'N/A');
-      if (results.estimatedPriceRmwh) drawRow('Pre\u00e7o Estimado Atual:', `R$ ${Number(results.estimatedPriceRmwh).toFixed(2)}/MWh`);
-      if (results.potentialSavingsAnnual) drawRow('Economia Potencial Anual:', `R$ ${Number(results.potentialSavingsAnnual).toLocaleString('pt-BR')}`);
-
-      if (confidenceReasons.length > 0) {
-        y -= 5;
-        drawText('Observa\u00e7\u00f5es:', leftMargin + 8, y, { font: helveticaBold, size: 9, color: dColor });
-        y -= 14;
-        for (const reason of confidenceReasons) {
-          if (y < 60) { page = pdfDoc.addPage([595, 842]); y = 800; }
-          drawText(`\u2022 ${reason}`, leftMargin + 16, y, { size: 9 });
-          y -= 14;
-        }
-      }
-
-      if (snapshot.talkTrackPt) {
-        drawSection('Talk Track');
-        const lines = (snapshot.talkTrackPt as string).match(/.{1,80}(\s|$)/g) || [snapshot.talkTrackPt as string];
-        for (const line of lines) {
-          if (y < 60) { page = pdfDoc.addPage([595, 842]); y = 800; }
-          drawText(line.trim(), leftMargin + 8, y, { size: 9 });
-          y -= 14;
-        }
-      }
-
-      y -= 10;
-      drawLine(y);
-      y -= 12;
-      const now = new Date();
-      const snapshotCreatedAt = snapshot.createdAt ? new Date(snapshot.createdAt).toLocaleDateString('pt-BR') : now.toLocaleDateString('pt-BR');
-      drawText(`Snapshot #${snapshot.id} \u2014 Criado em ${snapshotCreatedAt} \u2014 Gerado em ${now.toLocaleDateString('pt-BR')} \u00e0s ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, leftMargin, y, { size: 7, color: grayColor });
-      y -= 10;
-      drawText(`${brandName} \u00a9 ${now.getFullYear()} \u2014 Todos os direitos reservados`, leftMargin, y, { size: 7, color: grayColor });
-      y -= 10;
-      drawText(footerText, leftMargin, y, { size: 7, color: grayColor });
-      y -= 10;
-      drawText('Este documento \u00e9 confidencial e destinado exclusivamente ao cliente identificado.', leftMargin, y, { size: 7, color: grayColor });
-
-      const pdfBytes = await pdfDoc.save();
-      const pdfBuffer = Buffer.from(pdfBytes);
-
-      const fileName = `ecos_insight_pack_${dealId}_v${snapshot.version}_${new Date().toISOString().split('T')[0]}.pdf`;
-      
       const sessionUserId = await getSessionUserId(req);
       let docCreatorId = sessionUserId;
       if (!docCreatorId) {
@@ -5741,7 +5653,7 @@ export async function registerRoutes(
         }
         docCreatorId = adminUser.id;
       }
-      
+
       const document = await storage.createDealDocument({
         dealId,
         documentType: 'ecos_insight_report',
@@ -5755,11 +5667,12 @@ export async function registerRoutes(
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.send(pdfBuffer);
-      
+      res.send(Buffer.from(pdfBuffer));
+
     } catch (error: any) {
       console.error("Error generating ECOS Insight Pack PDF:", error);
-      res.status(500).json({ success: false, error: "Failed to generate PDF" });
+      const status = error.status || 500;
+      res.status(status).json({ success: false, error: error.message || "Failed to generate PDF" });
     }
   });
 
