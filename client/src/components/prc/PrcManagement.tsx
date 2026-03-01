@@ -94,13 +94,11 @@ export function PrcManagement() {
   const queryClient = useQueryClient();
   
   const [activeTab, setActiveTab] = useState("documents");
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [selectedMonth, setSelectedMonth] = useState("ALL");
   const [selectedDocument, setSelectedDocument] = useState<PrcDocument | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [newPrc, setNewPrc] = useState({ supplierName: '', referenceMonth: selectedMonth });
+  const currentMonth = (() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; })();
+  const [newPrc, setNewPrc] = useState({ supplierName: '', referenceMonth: currentMonth });
   const [showAddRowForm, setShowAddRowForm] = useState(false);
   const [newRow, setNewRow] = useState({
     submarket: 'SECO',
@@ -129,7 +127,8 @@ export function PrcManagement() {
   const { data: documentsResponse, isLoading: documentsLoading, refetch: refetchDocuments } = useQuery({
     queryKey: ['/api/prc/documents', selectedMonth],
     queryFn: async () => {
-      const res = await fetch(`/api/prc/documents?referenceMonth=${selectedMonth}`, {
+      const url = selectedMonth === "ALL" ? '/api/prc/documents' : `/api/prc/documents?referenceMonth=${selectedMonth}`;
+      const res = await fetch(url, {
         headers: { 'x-session-id': sessionId || '' }
       });
       if (!res.ok) throw new Error('Failed to fetch PRC documents');
@@ -141,6 +140,12 @@ export function PrcManagement() {
   const { data: monthSummaryResponse } = useQuery({
     queryKey: ['/api/prc/months/summary', selectedMonth],
     queryFn: async () => {
+      if (selectedMonth === "ALL") {
+        const totalDocs = documents.length;
+        const verified = documents.filter(d => d.parseStatus === 'VERIFIED').length;
+        const supplierIds = [...new Set(documents.map(d => d.supplierId))];
+        return { summary: { documentCount: totalDocs, verifiedCount: verified, totalRows: 0, flaggedRows: 0, supplierCoverage: supplierIds } };
+      }
       const res = await fetch(`/api/prc/months/${selectedMonth}/summary`, {
         headers: { 'x-session-id': sessionId || '' }
       });
@@ -338,7 +343,7 @@ export function PrcManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/prc/months/summary'] });
       setUploadDialogOpen(false);
       setSelectedFile(null);
-      setNewPrc({ supplierName: '', referenceMonth: selectedMonth });
+      setNewPrc({ supplierName: '', referenceMonth: selectedMonth === "ALL" ? currentMonth : selectedMonth });
     },
     onError: (error: Error) => {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
@@ -385,6 +390,7 @@ export function PrcManagement() {
               <SelectValue placeholder="Select month" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="ALL">All Months</SelectItem>
               {generateMonthOptions().map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
@@ -476,9 +482,9 @@ export function PrcManagement() {
         <TabsContent value="documents" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>PRC Documents - {selectedMonth}</CardTitle>
+              <CardTitle>PRC Documents{selectedMonth !== "ALL" ? ` - ${selectedMonth}` : ''}</CardTitle>
               <CardDescription>
-                Uploaded supplier price reference cards for this month
+                {selectedMonth === "ALL" ? 'All uploaded supplier price reference cards' : 'Uploaded supplier price reference cards for this month'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -488,7 +494,7 @@ export function PrcManagement() {
                 </div>
               ) : documents.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No PRC documents uploaded for this month.
+                  {selectedMonth === "ALL" ? 'No PRC documents uploaded yet.' : 'No PRC documents uploaded for this month.'}
                 </div>
               ) : (
                 <Table>
@@ -496,6 +502,7 @@ export function PrcManagement() {
                     <TableRow>
                       <TableHead>Supplier</TableHead>
                       <TableHead>Filename</TableHead>
+                      {selectedMonth === "ALL" && <TableHead>Month</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead>Confidence</TableHead>
                       <TableHead>Uploaded</TableHead>
@@ -507,13 +514,14 @@ export function PrcManagement() {
                       <TableRow key={doc.id} data-testid={`row-prc-doc-${doc.id}`}>
                         <TableCell className="font-medium">{doc.supplierName || `Supplier #${doc.supplierId}`}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{doc.originalFilename}</TableCell>
+                        {selectedMonth === "ALL" && <TableCell className="text-sm">{doc.referenceMonth}</TableCell>}
                         <TableCell>
                           <Badge className={parseStatusColors[doc.parseStatus] || 'bg-gray-100'}>
                             {doc.parseStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {doc.parseConfidence !== null ? `${Math.round(doc.parseConfidence * 100)}%` : '-'}
+                          {doc.parseConfidence !== null ? (() => { let c = doc.parseConfidence; if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return `${Math.round(c * 100)}%`; })() : '-'}
                         </TableCell>
                         <TableCell>{format(new Date(doc.createdAt), 'MMM d, HH:mm')}</TableCell>
                         <TableCell>
@@ -620,7 +628,7 @@ export function PrcManagement() {
         <TabsContent value="publish" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Publish Benchmarks - {selectedMonth}</CardTitle>
+              <CardTitle>Publish Benchmarks{selectedMonth !== "ALL" ? ` - ${selectedMonth}` : ''}</CardTitle>
               <CardDescription>
                 Preview and publish market price benchmarks from verified PRC data
               </CardDescription>
