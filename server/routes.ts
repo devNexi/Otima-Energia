@@ -5463,6 +5463,35 @@ export async function registerRoutes(
     }
   });
 
+  // Delete an ECOS snapshot
+  app.delete("/api/deals/:dealId/ecos-snapshots/:snapshotId", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const snapshotId = parseInt(req.params.snapshotId);
+      if (isNaN(snapshotId)) {
+        return res.status(400).json({ success: false, error: "Invalid snapshot ID" });
+      }
+
+      const snapshot = await storage.getDealEcosSnapshot(snapshotId);
+      if (!snapshot) {
+        return res.status(404).json({ success: false, error: "ECOS snapshot not found" });
+      }
+      if (snapshot.dealId !== req.params.dealId) {
+        return res.status(404).json({ success: false, error: "ECOS snapshot not found for this deal" });
+      }
+
+      const { dealEcosSnapshots } = await import("@shared/schema");
+      const { db: dbConn } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      await dbConn.delete(dealEcosSnapshots).where(eq(dealEcosSnapshots.id, snapshotId));
+
+      res.json({ success: true, message: "ECOS snapshot deleted" });
+    } catch (error: any) {
+      console.error("Error deleting ECOS snapshot:", error);
+      res.status(500).json({ success: false, error: "Failed to delete ECOS snapshot" });
+    }
+  });
+
   // Create a new ECOS snapshot (evaluate and capture)
   app.post("/api/deals/:id/ecos-snapshots", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;

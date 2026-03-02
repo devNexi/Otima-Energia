@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,17 +67,14 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
   const { data, isLoading, refetch } = useQuery({
     queryKey: [`/api/clients/${clientId}/dossier`],
     queryFn: async () => {
-      const res = await fetch(`/api/clients/${clientId}/dossier`);
+      const res = await apiRequest("GET", `/api/clients/${clientId}/dossier`);
       return res.json();
     }
   });
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/clients/${clientId}/dossier/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest("POST", `/api/clients/${clientId}/dossier/generate`);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Falha ao gerar dossiê');
@@ -94,11 +92,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch(`/api/clients/${clientId}/dossier`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("POST", `/api/clients/${clientId}/dossier`, data);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Falha ao criar dossiê');
@@ -117,11 +111,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await fetch(`/api/dossiers/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const res = await apiRequest("PATCH", `/api/dossiers/${id}`, data);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Falha ao atualizar');
@@ -140,10 +130,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
 
   const markReadyMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/dossiers/${id}/mark-ready`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest("POST", `/api/dossiers/${id}/mark-ready`);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Falha ao marcar como pronto');
@@ -161,7 +148,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
 
   const handleDownloadPdf = async (dossierId: number) => {
     try {
-      const res = await fetch(`/api/dossiers/${dossierId}/pdf`);
+      const res = await apiRequest("GET", `/api/dossiers/${dossierId}/pdf`);
       if (!res.ok) throw new Error('Falha ao gerar PDF');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

@@ -23,7 +23,8 @@ import {
   Info,
   Lightbulb,
   Eye,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import {
   Collapsible,
@@ -155,6 +156,32 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
         description: language === "pt" 
           ? "A análise ECOS foi salva com sucesso." 
           : "ECOS analysis has been saved successfully."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteSnapshotMutation = useMutation({
+    mutationFn: async (snapshotId: number) => {
+      const res = await apiRequest("DELETE", `/api/deals/${dealId}/ecos-snapshots/${snapshotId}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-evaluation"] });
+      toast({
+        title: language === "pt" ? "Snapshot excluído" : "Snapshot deleted",
+        description: language === "pt"
+          ? "A análise ECOS foi removida."
+          : "ECOS analysis has been removed."
       });
     },
     onError: (error: any) => {
@@ -354,6 +381,34 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{language === "pt" ? "Baixar Insight Snapshot em PDF" : "Download Insight Snapshot as PDF"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        onClick={() => {
+                          if (window.confirm(language === "pt" ? "Tem certeza que deseja excluir este snapshot?" : "Are you sure you want to delete this snapshot?")) {
+                            deleteSnapshotMutation.mutate(latestSnapshot.id);
+                          }
+                        }}
+                        disabled={deleteSnapshotMutation.isPending}
+                        data-testid="button-delete-latest-snapshot"
+                      >
+                        {deleteSnapshotMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
+                        {language === "pt" ? "Excluir" : "Delete"}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{language === "pt" ? "Excluir este snapshot ECOS" : "Delete this ECOS snapshot"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -576,6 +631,21 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
                       >
                         <FileText className="w-3 h-3 mr-1" />
                         PDF
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          if (window.confirm(language === "pt" ? "Tem certeza que deseja excluir este snapshot?" : "Are you sure you want to delete this snapshot?")) {
+                            deleteSnapshotMutation.mutate(snapshot.id);
+                          }
+                        }}
+                        disabled={deleteSnapshotMutation.isPending}
+                        data-testid={`button-delete-snapshot-${snapshot.id}`}
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        {language === "pt" ? "Excluir" : "Delete"}
                       </Button>
                       <span className="text-sm text-gray-500" data-testid={`snapshot-date-${snapshot.id}`}>
                         {new Date(snapshot.createdAt).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
