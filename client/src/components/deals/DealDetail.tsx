@@ -336,106 +336,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </div>
       </div>
 
-      {/* Zoho Origin Banner - Read-only notice */}
-      {deal.zohoLeadId && (
-        <div 
-          className="bg-gradient-to-r from-orange-100 to-amber-50 border border-orange-300 rounded-lg p-4 flex items-center gap-3"
-          data-testid="banner-zoho-origin"
-        >
-          <div className="bg-orange-200 p-2 rounded-full">
-            <Zap className="w-5 h-5 text-orange-700" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium text-orange-900">
-              {language === "pt" 
-                ? "Originado do Zoho CRM • Controle operacional no Ótima Portal" 
-                : "Originated from Zoho CRM • Operational control lives in Ótima Portal"}
-            </p>
-            <p className="text-sm text-orange-700">
-              {language === "pt"
-                ? "Dados do lead são somente leitura. Todas as alterações de estado e documentos são gerenciadas aqui."
-                : "Lead data is read-only. All state changes and documents are managed here."}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Zoho Lead Summary Panel */}
-      {deal.zohoLeadId && (
-        <Card className="bg-orange-50 border-orange-200" data-testid="panel-zoho-lead-summary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-800 flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              {language === "pt" ? "Resumo do Lead (Zoho)" : "Lead Summary (Zoho)"}
-            </CardTitle>
-            <CardDescription className="text-xs text-orange-700">
-              {language === "pt" ? "Dados recebidos da qualificação automática - não editável" : "Data received from automatic qualification - read-only"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "ID do Lead" : "Lead ID"}</span>
-                <span className="font-mono text-xs" data-testid="text-zoho-lead-id">{deal.zohoLeadId}</span>
-              </div>
-              <div>
-                <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Resultado" : "Outcome"}</span>
-                <Badge 
-                  variant="outline" 
-                  className={
-                    deal.zohoLeadOutcome === "Hotkey" 
-                      ? "bg-green-100 text-green-800 border-green-300" 
-                      : deal.zohoLeadOutcome === "Warm" 
-                        ? "bg-yellow-100 text-yellow-800 border-yellow-300" 
-                        : "bg-gray-100 text-gray-800 border-gray-300"
-                  }
-                  data-testid="badge-zoho-outcome"
-                >
-                  {deal.zohoLeadOutcome || "Unknown"}
-                </Badge>
-              </div>
-              <div>
-                <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Agente" : "Agent"}</span>
-                <span data-testid="text-zoho-agent">{deal.zohoLeadSourceAgent || "Unknown"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Mercado" : "Market"}</span>
-                <span data-testid="text-zoho-market">{deal.brMarket || "Unknown"} / {language === "pt" ? "Grupo" : "Group"} {deal.brGroup || "?"}</span>
-              </div>
-              {deal.dmName && (
-                <div>
-                  <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Decisor" : "Decision Maker"}</span>
-                  <span data-testid="text-zoho-dm-name">{deal.dmName} {deal.dmRole ? `(${deal.dmRole})` : ""}</span>
-                </div>
-              )}
-              {deal.dmDirectPhone && (
-                <div>
-                  <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Telefone Decisor" : "DM Phone"}</span>
-                  <span data-testid="text-zoho-dm-phone">{deal.dmDirectPhone}</span>
-                </div>
-              )}
-              {deal.dmAvailability && (
-                <div>
-                  <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Disponibilidade" : "Availability"}</span>
-                  <span className="text-xs" data-testid="text-zoho-dm-availability">{deal.dmAvailability}</span>
-                </div>
-              )}
-              {deal.zohoCallbackAt && (
-                <div>
-                  <span className="text-xs text-orange-700 font-medium block">{language === "pt" ? "Callback Agendado" : "Callback Scheduled"}</span>
-                  <span className="text-xs" data-testid="text-zoho-callback">{new Date(deal.zohoCallbackAt).toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-            {deal.zohoQuickNote && (
-              <div className="mt-3 pt-3 border-t border-orange-200">
-                <span className="text-xs text-orange-700 font-medium block mb-1">{language === "pt" ? "Nota Rápida" : "Quick Note"}</span>
-                <p className="text-sm italic text-orange-900 bg-orange-100 p-2 rounded" data-testid="text-zoho-quick-note">{deal.zohoQuickNote}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      
 
       <Card className="overflow-hidden">
         <CardHeader className="pb-2">
@@ -706,6 +607,105 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </TabsContent>
 
         <TabsContent value="overview">
+          {deal.zohoLeadId && (
+            <div className="space-y-4 mb-6">
+              <div 
+                className="bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3"
+                data-testid="banner-zoho-origin"
+              >
+                <div className="bg-blue-100 p-2 rounded-full">
+                  <Zap className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-blue-900">
+                    {language === "pt" 
+                      ? "Originado do Zoho CRM • Controle operacional no Ótima Portal" 
+                      : "Originated from Zoho CRM • Operational control lives in Ótima Portal"}
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    {language === "pt"
+                      ? "Dados do lead são somente leitura. Todas as alterações de estado e documentos são gerenciadas aqui."
+                      : "Lead data is read-only. All state changes and documents are managed here."}
+                  </p>
+                </div>
+              </div>
+
+              <Card className="bg-blue-50 border-blue-200" data-testid="panel-zoho-lead-summary">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-800 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    {language === "pt" ? "Resumo do Lead (Zoho)" : "Lead Summary (Zoho)"}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-blue-600">
+                    {language === "pt" ? "Dados recebidos da qualificação automática - não editável" : "Data received from automatic qualification - read-only"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "ID do Lead" : "Lead ID"}</span>
+                      <span className="font-mono text-xs" data-testid="text-zoho-lead-id">{deal.zohoLeadId}</span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Resultado" : "Outcome"}</span>
+                      <Badge 
+                        variant="outline" 
+                        className={
+                          deal.zohoLeadOutcome === "Hotkey" 
+                            ? "bg-green-100 text-green-800 border-green-300" 
+                            : deal.zohoLeadOutcome === "Warm" 
+                              ? "bg-yellow-100 text-yellow-800 border-yellow-300" 
+                              : "bg-gray-100 text-gray-800 border-gray-300"
+                        }
+                        data-testid="badge-zoho-outcome"
+                      >
+                        {deal.zohoLeadOutcome || "Unknown"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Agente" : "Agent"}</span>
+                      <span data-testid="text-zoho-agent">{deal.zohoLeadSourceAgent || "Unknown"}</span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Mercado" : "Market"}</span>
+                      <span data-testid="text-zoho-market">{deal.brMarket || "Unknown"} / {language === "pt" ? "Grupo" : "Group"} {deal.brGroup || "?"}</span>
+                    </div>
+                    {deal.dmName && (
+                      <div>
+                        <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Decisor" : "Decision Maker"}</span>
+                        <span data-testid="text-zoho-dm-name">{deal.dmName} {deal.dmRole ? `(${deal.dmRole})` : ""}</span>
+                      </div>
+                    )}
+                    {deal.dmDirectPhone && (
+                      <div>
+                        <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Telefone Decisor" : "DM Phone"}</span>
+                        <span data-testid="text-zoho-dm-phone">{deal.dmDirectPhone}</span>
+                      </div>
+                    )}
+                    {deal.dmAvailability && (
+                      <div>
+                        <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Disponibilidade" : "Availability"}</span>
+                        <span className="text-xs" data-testid="text-zoho-dm-availability">{deal.dmAvailability}</span>
+                      </div>
+                    )}
+                    {deal.zohoCallbackAt && (
+                      <div>
+                        <span className="text-xs text-blue-600 font-medium block">{language === "pt" ? "Callback Agendado" : "Callback Scheduled"}</span>
+                        <span className="text-xs" data-testid="text-zoho-callback">{new Date(deal.zohoCallbackAt).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  {deal.zohoQuickNote && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <span className="text-xs text-blue-600 font-medium block mb-1">{language === "pt" ? "Nota Rápida" : "Quick Note"}</span>
+                      <p className="text-sm italic text-blue-900 bg-blue-100 p-2 rounded" data-testid="text-zoho-quick-note">{deal.zohoQuickNote}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>

@@ -151,6 +151,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-snapshots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-evaluation"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
       toast({
         title: language === "pt" ? "Snapshot criado" : "Snapshot created",
         description: language === "pt" 
@@ -177,6 +178,7 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-snapshots"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals", dealId, "ecos-evaluation"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
       toast({
         title: language === "pt" ? "Snapshot excluído" : "Snapshot deleted",
         description: language === "pt"
