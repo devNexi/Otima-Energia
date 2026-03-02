@@ -9689,6 +9689,8 @@ export async function registerRoutes(
           distributor: bill.distributor, referenceMonth: bill.referenceMonth,
           totalEnergyKwh: bill.totalEnergyKwh, totalAmount: bill.totalAmount,
           customerId: bill.customerId, tariffGroup: bill.tariffGroup,
+          grupo: bill.grupo, subgrupo: bill.subgrupo,
+          endereco: bill.endereco, bandeira: (bill as any).bandeira,
           invoiceKey: bill.invoiceKey, confidence: bill.parseConfidence,
           warnings: bill.parseWarnings,
         } : null;
@@ -9871,7 +9873,7 @@ export async function registerRoutes(
       const body = req.body || {};
       const allowedFields = [
         'ucCode', 'customerName', 'customerId', 'endereco', 'grupo', 'subgrupo',
-        'modalidade', 'distributor', 'referenceMonth', 'tariffGroup',
+        'modalidade', 'distributor', 'referenceMonth', 'tariffGroup', 'bandeira',
         'totalAmount', 'totalEnergyKwh', 'consumoPontaKwh', 'consumoForaPontaKwh',
         'demandaContratadaKw', 'demandaMedidaKw'
       ];

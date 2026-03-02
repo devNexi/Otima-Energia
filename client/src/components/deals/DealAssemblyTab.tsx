@@ -784,9 +784,12 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 {uploadResult.extracted.distributor && <div><span className="font-medium">{isPt ? "Distribuidora:" : "Distributor:"}</span> {uploadResult.extracted.distributor}</div>}
                 {uploadResult.extracted.referenceMonth && <div><span className="font-medium">{isPt ? "Mês Ref:" : "Ref Month:"}</span> {uploadResult.extracted.referenceMonth}</div>}
                 {uploadResult.extracted.totalEnergyKwh && <div><span className="font-medium">{isPt ? "Energia (kWh):" : "Energy (kWh):"}</span> {uploadResult.extracted.totalEnergyKwh}</div>}
-                {uploadResult.extracted.totalAmount && <div><span className="font-medium">{isPt ? "Valor Total:" : "Total Amount:"}</span> R$ {uploadResult.extracted.totalAmount}</div>}
+                {uploadResult.extracted.totalAmount && <div><span className="font-medium">{isPt ? "Valor Total:" : "Total Amount:"}</span> R$ {Number(uploadResult.extracted.totalAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>}
                 {uploadResult.extracted.customerId && <div><span className="font-medium">CNPJ:</span> {uploadResult.extracted.customerId}</div>}
-                {uploadResult.extracted.tariffGroup && <div><span className="font-medium">{isPt ? "Grupo Tarifário:" : "Tariff Group:"}</span> {uploadResult.extracted.tariffGroup}</div>}
+                {uploadResult.extracted.grupo && <div><span className="font-medium">{isPt ? "Grupo:" : "Group:"}</span> {uploadResult.extracted.grupo}</div>}
+                {uploadResult.extracted.subgrupo && <div><span className="font-medium">{isPt ? "Subgrupo:" : "Subgroup:"}</span> {uploadResult.extracted.subgrupo}</div>}
+                {uploadResult.extracted.bandeira && <div><span className="font-medium">{isPt ? "Bandeira:" : "Tariff Flag:"}</span> {uploadResult.extracted.bandeira}</div>}
+                {uploadResult.extracted.endereco && <div className="col-span-2"><span className="font-medium">{isPt ? "Endereço:" : "Address:"}</span> {uploadResult.extracted.endereco}</div>}
               </div>
               {uploadResult.extracted.confidence && (
                 <Badge variant="outline" className={cn(
@@ -850,7 +853,8 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                 const criticalFields = [
                   { key: 'customerId', label: isPt ? 'CNPJ' : 'CNPJ', value: bill.customerId },
                   { key: 'ucCode', label: 'UC', value: bill.ucCode || bill.customerId },
-                  { key: 'tariffGroup', label: isPt ? 'Grupo/Subgrupo' : 'Group/Subgroup', value: bill.tariffGroup || bill.subgrupo },
+                  { key: 'grupo', label: isPt ? 'Grupo' : 'Group', value: bill.grupo || (bill.tariffGroup ? bill.tariffGroup.charAt(0) : null) },
+                  { key: 'subgrupo', label: isPt ? 'Subgrupo' : 'Subgroup', value: bill.subgrupo || bill.tariffGroup },
                   { key: 'totalEnergyKwh', label: isPt ? 'Consumo' : 'Consumption', value: bill.totalEnergyKwh },
                   { key: 'totalAmount', label: isPt ? 'Total a pagar' : 'Total Amount', value: bill.totalAmount },
                 ];
@@ -870,9 +874,11 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                   {
                     title: isPt ? 'Tarifa' : 'Tariff',
                     fields: [
-                      { key: 'tariffGroup', label: isPt ? 'Grupo/Subgrupo' : 'Group/Subgroup', value: bill.tariffGroup || bill.subgrupo },
+                      { key: 'grupo', label: isPt ? 'Grupo' : 'Group', value: bill.grupo || (bill.tariffGroup ? bill.tariffGroup.charAt(0) : null) },
+                      { key: 'subgrupo', label: isPt ? 'Subgrupo' : 'Subgroup', value: bill.subgrupo || bill.tariffGroup },
                       { key: 'modalidade', label: isPt ? 'Modalidade' : 'Modality', value: bill.modalidade },
                       { key: 'distributor', label: isPt ? 'Distribuidora' : 'Distributor', value: bill.distributor },
+                      { key: 'bandeira', label: isPt ? 'Bandeira Tarifária' : 'Tariff Flag', value: (bill as any).bandeira },
                     ]
                   },
                   {

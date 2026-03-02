@@ -65,7 +65,8 @@ const PARSER_DATA_FIELDS = [
   'consumoForaPonta', 'consumoForaPontaKwh', 'demandaContratada',
   'demandaContratadaKw', 'demandaMedida', 'demandaMedidaKw',
   'consumption', 'consumptionPeriod', 'grupo', 'subgrupo',
-  'groupSubgroup', 'docKind',
+  'groupSubgroup', 'docKind', 'bandeira', 'tariffFlag',
+  'bandeiraColor', 'bandeiraName',
   'fieldConfidence', 'fieldReasons',
 ];
 
@@ -118,6 +119,33 @@ function normalizeParserResponse(raw: any): ParserResponse {
     }
   }
 
+  const parseBrazilianNumber = (val: any): number | null => {
+    if (val == null) return null;
+    const s = String(val).trim();
+    if (!s || s === 'N/A') return null;
+    if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) {
+      return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+    }
+    if (/^\d+(,\d{1,2})$/.test(s)) {
+      return parseFloat(s.replace(',', '.'));
+    }
+    if (typeof val === 'string' && /^\d{1,3}\.\d{3}$/.test(s)) {
+      return parseInt(s.replace('.', ''), 10);
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  };
+
+  const numericFields = ['totalAmount', 'totalEnergyKwh', 'consumption',
+    'consumoPonta', 'consumoPontaKwh', 'consumoForaPonta', 'consumoForaPontaKwh',
+    'demandaContratada', 'demandaContratadaKw', 'demandaMedida', 'demandaMedidaKw'];
+  for (const f of numericFields) {
+    if (data[f] != null) {
+      const parsed = parseBrazilianNumber(data[f]);
+      if (parsed !== null) data[f] = parsed;
+    }
+  }
+
   if (data.customerCnpj && !data.customerId) {
     data.customerId = data.customerCnpj;
   }
@@ -142,6 +170,12 @@ function normalizeParserResponse(raw: any): ParserResponse {
 
   if (data.consumption != null && !data.totalEnergyKwh) {
     data.totalEnergyKwh = data.consumption;
+  }
+
+  if (!data.bandeira) {
+    if (data.tariffFlag) data.bandeira = data.tariffFlag;
+    else if (data.bandeiraName) data.bandeira = data.bandeiraName;
+    else if (data.bandeiraColor) data.bandeira = data.bandeiraColor;
   }
 
   if (data.consumptionPeriod && !data.referenceMonth) {

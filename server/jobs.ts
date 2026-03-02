@@ -585,12 +585,17 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
         const d = result.data || {};
         const tariffGroup = d.tariffGroup || null;
-        let grupo: string | null = null;
-        let subgrupo: string | null = null;
-        if (tariffGroup) {
+        let grupo: string | null = d.grupo || null;
+        let subgrupo: string | null = d.subgrupo || null;
+        if (!grupo && !subgrupo && tariffGroup) {
           const tg = tariffGroup.toUpperCase().trim();
           if (tg.startsWith('A')) { grupo = 'A'; subgrupo = tg; }
           else if (tg.startsWith('B')) { grupo = 'B'; subgrupo = tg; }
+        }
+        if (!grupo && subgrupo) {
+          const sg = subgrupo.toUpperCase().trim();
+          if (sg.startsWith('A')) grupo = 'A';
+          else if (sg.startsWith('B')) grupo = 'B';
         }
 
         let docKind = d.docKind || null;
@@ -632,6 +637,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
             grupo,
             subgrupo,
             modalidade: d.modalidade || d.tariffModality || null,
+            bandeira: d.bandeira || d.tariffFlag || null,
             consumoPontaKwh: d.consumoPonta != null ? String(d.consumoPonta) : (d.consumoPontaKwh != null ? String(d.consumoPontaKwh) : null),
             consumoForaPontaKwh: d.consumoForaPonta != null ? String(d.consumoForaPonta) : (d.consumoForaPontaKwh != null ? String(d.consumoForaPontaKwh) : null),
             demandaContratadaKw: d.demandaContratada != null ? String(d.demandaContratada) : (d.demandaContratadaKw != null ? String(d.demandaContratadaKw) : null),
