@@ -298,6 +298,36 @@ export function PrcManagement() {
     }
   });
 
+  const [editingRowId, setEditingRowId] = useState<number | null>(null);
+  const [editedRowData, setEditedRowData] = useState<Record<string, any>>({});
+
+  const updateRowMutation = useMutation({
+    mutationFn: async ({ rowId, updates }: { rowId: number; updates: Record<string, any> }) => {
+      const payload = {
+        ...updates,
+        priceRPerMWh: updates.priceRPerMWh ? String(updates.priceRPerMWh) : undefined,
+        priceYear: updates.priceYear != null ? Number(updates.priceYear) : undefined,
+        wasManuallyEdited: true
+      };
+      const res = await fetch(`/api/prc/rows/${rowId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-session-id': sessionId || '' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to update row');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Row updated" });
+      setEditingRowId(null);
+      setEditedRowData({});
+      queryClient.invalidateQueries({ queryKey: ['/api/prc/documents/rows', selectedDocument?.id] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   const deleteRowMutation = useMutation({
     mutationFn: async (rowId: number) => {
       const res = await fetch(`/api/prc/rows/${rowId}`, {
@@ -942,36 +972,71 @@ export function PrcManagement() {
                     <TableBody>
                       {documentRows.map((row) => (
                         <TableRow key={row.id} className={row.isOutlierFlag ? 'bg-yellow-50' : ''}>
-                          <TableCell>{row.submarket}</TableCell>
-                          <TableCell>{row.productType}</TableCell>
-                          <TableCell className="font-mono">{row.priceYear || '—'}</TableCell>
-                          <TableCell className="font-mono">R$ {row.priceRPerMWh}</TableCell>
-                          <TableCell>
-                            {row.isOutlierFlag && (
-                              <Badge variant="outline" className="text-yellow-600">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                Outlier
-                              </Badge>
-                            )}
-                            {row.wasManuallyEdited && (
-                              <Badge variant="outline" className="ml-1">Edited</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm('Delete this price row?')) {
-                                  deleteRowMutation.mutate(row.id);
-                                }
-                              }}
-                              disabled={deleteRowMutation.isPending}
-                              data-testid={`button-delete-row-${row.id}`}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </TableCell>
+                          {editingRowId === row.id ? (
+                            <>
+                              <TableCell>
+                                <Select value={editedRowData.submarket || row.submarket} onValueChange={(v) => setEditedRowData({...editedRowData, submarket: v})}>
+                                  <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {SUBMARKETS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select value={editedRowData.productType || row.productType} onValueChange={(v) => setEditedRowData({...editedRowData, productType: v})}>
+                                  <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {PRODUCT_TYPES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Input className="h-8 w-20 font-mono" type="number" value={editedRowData.priceYear ?? row.priceYear ?? ''} onChange={(e) => setEditedRowData({...editedRowData, priceYear: e.target.value ? parseInt(e.target.value) : null})} />
+                              </TableCell>
+                              <TableCell>
+                                <Input className="h-8 w-24 font-mono" value={editedRowData.priceRPerMWh ?? row.priceRPerMWh} onChange={(e) => setEditedRowData({...editedRowData, priceRPerMWh: e.target.value})} />
+                              </TableCell>
+                              <TableCell />
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="ghost" onClick={() => { updateRowMutation.mutate({ rowId: row.id, updates: editedRowData }); }} disabled={updateRowMutation.isPending} data-testid={`button-save-edit-${row.id}`}>
+                                    <Check className="w-4 h-4 text-green-600" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => { setEditingRowId(null); setEditedRowData({}); }}>
+                                    <span className="text-xs text-muted-foreground">Cancel</span>
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>{row.submarket}</TableCell>
+                              <TableCell>{row.productType}</TableCell>
+                              <TableCell className="font-mono">{row.priceYear || '—'}</TableCell>
+                              <TableCell className="font-mono">R$ {row.priceRPerMWh}</TableCell>
+                              <TableCell>
+                                {row.isOutlierFlag && (
+                                  <Badge variant="outline" className="text-yellow-600">
+                                    <AlertTriangle className="w-3 h-3 mr-1" />
+                                    Outlier
+                                  </Badge>
+                                )}
+                                {row.wasManuallyEdited && (
+                                  <Badge variant="outline" className="ml-1">Edited</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" onClick={() => { setEditingRowId(row.id); setEditedRowData({ submarket: row.submarket, productType: row.productType, priceYear: row.priceYear, priceRPerMWh: row.priceRPerMWh }); }} data-testid={`button-edit-row-${row.id}`}>
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => { if (confirm('Delete this price row?')) { deleteRowMutation.mutate(row.id); } }} disabled={deleteRowMutation.isPending} data-testid={`button-delete-row-${row.id}`}>
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

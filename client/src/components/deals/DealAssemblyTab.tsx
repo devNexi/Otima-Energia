@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ParseStage {
   label: { pt: string; en: string };
@@ -184,6 +185,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [rawOutputBillId, setRawOutputBillId] = useState<number | null>(null);
   const [transitionBlockers, setTransitionBlockers] = useState<any[]>([]);
   const [rfqBlockers, setRfqBlockers] = useState<any[]>([]);
   const [isAdvancingRfq, setIsAdvancingRfq] = useState(false);
@@ -771,11 +773,36 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             )}
           </div>
 
-          {uploadBillMutation.isError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-upload-error">
-              {isPt ? "Erro ao carregar fatura. Tente novamente." : "Error uploading bill. Try again."}
-            </div>
-          )}
+          {uploadBillMutation.isError && (() => {
+            const errMsg = String((uploadBillMutation.error as any)?.message || '');
+            let category: string;
+            let detail: string;
+            if (errMsg.includes('AbortError') || errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('abort')) {
+              category = isPt ? 'Tempo esgotado' : 'Parser timeout';
+              detail = isPt ? 'O parser demorou demais para responder. Tente novamente em alguns minutos.' : 'Parser took too long to respond. Try again in a few minutes.';
+            } else if (errMsg.startsWith('404:')) {
+              category = isPt ? 'Endpoint não encontrado' : 'Endpoint not found';
+              detail = isPt ? 'Verifique a URL do parser ou o endpoint da API.' : 'Check parser URL or API endpoint configuration.';
+            } else if (errMsg.startsWith('413:')) {
+              category = isPt ? 'Arquivo muito grande' : 'File too large';
+              detail = isPt ? 'O PDF excede o tamanho máximo permitido.' : 'The PDF exceeds the maximum allowed size.';
+            } else if (errMsg.match(/^5\d{2}:/)) {
+              category = isPt ? 'Erro do servidor' : 'Server error';
+              detail = isPt ? 'O servidor retornou um erro. Tente novamente.' : 'The server returned an error. Please try again.';
+            } else if (errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network') || errMsg.includes('TypeError')) {
+              category = isPt ? 'Erro de rede' : 'Network error';
+              detail = isPt ? 'Não foi possível conectar ao servidor. Verifique sua conexão.' : 'Could not connect to server. Check your connection.';
+            } else {
+              category = isPt ? 'Erro no upload' : 'Upload error';
+              detail = errMsg || (isPt ? 'Erro desconhecido. Tente novamente.' : 'Unknown error. Try again.');
+            }
+            return (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700" data-testid="alert-upload-error">
+                <div className="font-medium">{category}</div>
+                <div className="text-xs mt-1">{detail}</div>
+              </div>
+            );
+          })()}
 
           {uploadResult && uploadResult.success && uploadResult.extracted && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md space-y-1" data-testid="card-extracted-fields">
@@ -1224,14 +1251,15 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
                               );
                             })()}
                             {bill.parseDebugJson && (
-                              <details className="text-[10px]" data-testid={`raw-parser-output-${bill.id}`}>
-                                <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800 py-1">
-                                  {isPt ? '▸ Saída Completa do Parser' : '▸ Raw Parser Output'}
-                                </summary>
-                                <pre className="mt-1 bg-slate-50 border rounded p-2 text-[9px] font-mono overflow-auto max-h-[250px] whitespace-pre-wrap">
-                                  {JSON.stringify(bill.parseDebugJson, null, 2)}
-                                </pre>
-                              </details>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-[10px]"
+                                onClick={() => setRawOutputBillId(bill.id)}
+                                data-testid={`button-raw-parser-output-${bill.id}`}
+                              >
+                                <Eye className="w-3 h-3 mr-1" />{isPt ? 'Ver Saída do Parser' : 'View Raw Parser Output'}
+                              </Button>
                             )}
                             <div className="flex gap-1">
                               <Button
@@ -1571,6 +1599,32 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={rawOutputBillId !== null} onOpenChange={(open) => { if (!open) setRawOutputBillId(null); }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{isPt ? 'Saída Completa do Parser' : 'Raw Parser Output'} — Bill #{rawOutputBillId}</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const bill = bills.find((b: any) => b.id === rawOutputBillId);
+            if (!bill?.parseDebugJson) return <p className="text-sm text-muted-foreground">{isPt ? 'Sem dados' : 'No data'}</p>;
+            const json = JSON.stringify(bill.parseDebugJson, null, 2);
+            return (
+              <div className="flex-1 overflow-auto">
+                <pre className="bg-slate-50 border rounded p-4 text-xs font-mono whitespace-pre-wrap" data-testid={`raw-parser-modal-${rawOutputBillId}`}>{json}</pre>
+                <div className="flex gap-2 mt-3 sticky bottom-0 bg-white py-2">
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(json); toast({ title: isPt ? 'Copiado' : 'Copied' }); }} data-testid="button-copy-parser-json">
+                    {isPt ? 'Copiar JSON' : 'Copy JSON'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => { const blob = new Blob([json], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `parse_debug_bill_${rawOutputBillId}.json`; document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); document.body.removeChild(a); }} data-testid="button-download-parser-json">
+                    <Download className="w-3 h-3 mr-1" />{isPt ? 'Baixar JSON' : 'Download JSON'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { DictionaryTooltip } from "@/components/dictionary/DictionaryTooltip";
+import { useI18n } from "@/lib/i18n";
 
 interface ClientDossierTabProps {
   clientId: number;
@@ -61,6 +62,8 @@ const CONFIDENCE_OPTIONS = [
 export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { language } = useI18n();
+  const isPt = language === "pt";
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
 

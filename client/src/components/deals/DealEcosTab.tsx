@@ -198,22 +198,23 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const handleDownloadPdf = async (snapshotId: number) => {
     setDownloadingPdf(true);
     try {
-      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/pdf`);
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ecos_snapshot_${dealId}_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/preview`);
+      const html = await res.text();
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        throw new Error('Pop-up blocked');
+      }
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+
       toast({
-        title: language === "pt" ? "PDF gerado" : "PDF generated",
+        title: language === "pt" ? "PDF pronto" : "PDF ready",
         description: language === "pt" 
-          ? "O Insight Snapshot foi baixado com sucesso." 
-          : "Insight Snapshot has been downloaded successfully."
+          ? "Use Ctrl+P / Cmd+P para salvar como PDF." 
+          : "Use Ctrl+P / Cmd+P to save as PDF."
       });
     } catch (error: any) {
       toast({
