@@ -70,12 +70,9 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
     enabled: open
   });
   
-  // Use API quotes only - never fall back to props to prevent base price leakage
   const quotes: QuoteWithSupplier[] = useMemo(() => {
     const apiQuotes = eligibleQuotesData?.quotes || [];
-    // Only use API quotes (already filtered server-side for eligibility and client pricing)
-    // Never expose base price by using unfiltered fallback props
-    return apiQuotes.filter((q: QuoteWithSupplier) => q.clientEnergyPriceRmwh && q.termMonths);
+    return apiQuotes.filter((q: QuoteWithSupplier) => (q.clientEnergyPriceRmwh || q.baseEnergyPriceRmwh) && q.termMonths);
   }, [eligibleQuotesData]);
   
   const [activeTab, setActiveTab] = useState("configure");
@@ -121,9 +118,9 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
       const quote = quotes.find(q => q.id === item.quoteId);
       if (!quote) return null;
       
-      // Use client-facing price ONLY (never expose base price)
-      if (!quote.clientEnergyPriceRmwh) return null; // Skip quotes without client pricing
-      const clientPrice = parseFloat(quote.clientEnergyPriceRmwh);
+      const effectivePrice = quote.clientEnergyPriceRmwh || quote.baseEnergyPriceRmwh;
+      if (!effectivePrice) return null;
+      const clientPrice = parseFloat(effectivePrice);
       const finalPrice = clientPrice + item.marginValue;
       
       let proposedCost12m = 0;
@@ -269,8 +266,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
   
   const addQuoteToProposal = (quoteId: string) => {
     const quote = quotes.find((q: QuoteWithSupplier) => q.id === quoteId);
-    // Security: never add quote without client pricing
-    if (!quote || !quote.clientEnergyPriceRmwh) {
+    if (!quote || !(quote.clientEnergyPriceRmwh || quote.baseEnergyPriceRmwh)) {
       toast({ 
         title: "Oferta inválida",
         description: "Esta oferta não possui preço definido.",
