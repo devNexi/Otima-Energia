@@ -545,7 +545,7 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {isBest && quote.status !== "won" && (
-                        <Badge className="bg-green-500 text-white">
+                        <Badge className="bg-emerald-500 text-white">
                           <Trophy className="w-3 h-3 mr-1" />
                           {t("quotes.best_price")}
                         </Badge>
@@ -633,15 +633,15 @@ export function SupplierQuoteManager({ client, onClose }: SupplierQuoteManagerPr
           })}
 
           {sortedQuotes.length > 1 && (
-            <Card className="bg-violet-50 border-violet-200">
+            <Card className="bg-emerald-50 border-emerald-200">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-violet-800">{t("quotes.commission_summary")}</CardTitle>
+                <CardTitle className="text-sm text-emerald-800">{t("quotes.best_commercial_fit")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-violet-700">
+                <div className="text-sm text-emerald-700">
                   <p>
-                    {t("quotes.best_quote")}: <strong>{sortedQuotes[0].supplierName}</strong> - 
-                    {t("quotes.annual_commission_label")}: <strong>{formatCurrency(sortedQuotes[0].ourCommissionAnnual)}</strong>
+                    {t("quotes.recommended_option")}: <strong>{sortedQuotes[0].supplierName}</strong> - 
+                    {t("quotes.best_price_label")}: <strong>{formatCurrency(sortedQuotes[0].totalClientCostAnnual)}</strong>
                   </p>
                 </div>
               </CardContent>

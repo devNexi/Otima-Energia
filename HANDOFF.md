@@ -262,12 +262,38 @@ Evaluates a client's energy costs against market benchmarks to determine if they
 
 ---
 
-## 11. RFQ & COMMISSION SYSTEM
+## 11. PRODUCT LINES & TRACK MANAGEMENT
+
+### Two Product Lines
+| Product | DB Value | Display | Description |
+|---------|----------|---------|-------------|
+| **GD** (Geração Distribuída) | `GDL` | "GD" | Distributed generation partnerships |
+| **ACL** (Livre) | `ACL` | "ACL" | Free market energy contracting |
+
+- **ACR** and **OTHER** track types are deprecated — hidden from creation UI but existing tracks still display read-only
+- Display mapping: `TRACK_TYPE_DISPLAY` constant (GDL→"GD")
+- Creation gate: `CREATABLE_TRACK_TYPES` = `['GDL', 'ACL']`
+
+### GD Coverage Matrix
+- Table: `supplier_gd_coverage` — tracks which suppliers cover which Brazilian states/distributors
+- API: `GET /api/suppliers/gd-eligible?state=XX&distributor=YY`
+- API: `PUT /api/suppliers/:id/gd-coverage`
+- `productLines` column on `supplier_rfq_playbooks` marks which product lines each playbook covers
+
+### Comparison-First Workflow
+- Commission uplift (set client price, markup) is **architecturally preserved but dormant**
+- Quotes are proposal-eligible based on `baseEnergyPriceRmwh` alone (no client price required)
+- `TrackComparisonPanel` component shows ranked supplier offers with "Best Fit" recommendation per track
+- All UI copy uses: "compare offers", "eligible suppliers", "best commercial fit"
+
+---
+
+## 11b. RFQ & COMMISSION SYSTEM
 
 ### RFQ Flow
 1. **Dossier** must be marked `READY` (required fields: legal name, CNPJ, distributor, annual consumption, eligibility)
 2. Dossier gets `LOCKED` when RFQ is created (snapshot preserved)
-3. **Blind Auction Panel** — select suppliers, send RFQs via multiple channels (email, WhatsApp, portal, phone)
+3. **Compare Offers Panel** — select eligible suppliers, send RFQs via multiple channels (email, WhatsApp, portal, phone)
 4. **SLA tracking** — response time monitoring, overdue marking
 5. **Quote recording** — quotes linked to specific RFQ dispatches
 

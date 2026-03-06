@@ -20,7 +20,10 @@ import {
   ACR_TRACK_STATUSES,
   OTHER_TRACK_STATUSES,
   TRACK_DOC_TYPES,
+  TRACK_TYPE_DISPLAY,
+  CREATABLE_TRACK_TYPES,
 } from "@shared/schema";
+import TrackComparisonPanel from "@/components/comparison/TrackComparisonPanel";
 import {
   Plus,
   ChevronRight,
@@ -210,7 +213,7 @@ export function DealTracksTab({ dealId }: DealTracksTabProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          {(["GDL", "ACL", "ACR", "OTHER"] as const).map((type) => (
+          {CREATABLE_TRACK_TYPES.map((type) => (
             <Button
               key={type}
               size="sm"
@@ -224,7 +227,7 @@ export function DealTracksTab({ dealId }: DealTracksTabProps) {
               ) : (
                 <Plus className="w-3 h-3 mr-1" />
               )}
-              + {type === "OTHER" ? (isPt ? "Outro" : "Other") : type}
+              + {TRACK_TYPE_DISPLAY[type] || type}
             </Button>
           ))}
         </div>
@@ -320,7 +323,7 @@ function TrackCard({
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             )}
             <Badge className={`${TYPE_BADGE_COLORS[track.type] || TYPE_BADGE_COLORS.OTHER} border`} data-testid={`badge-track-type-${track.id}`}>
-              {track.type}
+              {TRACK_TYPE_DISPLAY[track.type] || track.type}
             </Badge>
             <Badge variant="outline" className={`${getStatusColor(track.status)} border`} data-testid={`badge-track-status-${track.id}`}>
               {formatStatus(track.status)}
@@ -669,6 +672,8 @@ function TrackDetailView({
           </AlertDescription>
         </Alert>
       )}
+
+      <TrackComparisonPanel trackId={trackId} productType={trackType} dealId={dealId} />
 
       <div>
         <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">

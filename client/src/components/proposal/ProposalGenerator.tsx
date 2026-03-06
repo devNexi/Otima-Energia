@@ -272,8 +272,8 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
     // Security: never add quote without client pricing
     if (!quote || !quote.clientEnergyPriceRmwh) {
       toast({ 
-        title: "Cotação inválida",
-        description: "Esta cotação não possui preço cliente definido.",
+        title: "Oferta inválida",
+        description: "Esta oferta não possui preço definido.",
         variant: "destructive"
       });
       return;
@@ -441,7 +441,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
                     </Button>
                   ))}
                   {quotes.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Nenhuma cotação disponível para este deal</p>
+                    <p className="text-sm text-muted-foreground">Nenhuma oferta de fornecedor disponível para este deal</p>
                   )}
                 </div>
 
@@ -492,7 +492,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-xs">Margem (R$/MWh)</Label>
+                          <Label className="text-xs">Ajuste (R$/MWh)</Label>
                           <Input
                             type="number"
                             value={item.marginValue}
@@ -534,7 +534,7 @@ export function ProposalGenerator({ open, onOpenChange, dealId, client, quotes: 
                       
                       {computed && baseline.consumptionMwh12m && (
                         <div className="mt-3 p-2 bg-muted/50 rounded flex items-center justify-between text-sm">
-                          <span>Preço Cliente: <strong>R$ {computed.finalPrice.toFixed(2)}/MWh</strong></span>
+                          <span>Preço Final: <strong>R$ {computed.finalPrice.toFixed(2)}/MWh</strong></span>
                           <span className={computed.isNegative ? 'text-red-600' : 'text-emerald-600'}>
                             {computed.isNegative ? (
                               <>Aumento: {formatCurrency(Math.abs(computed.savingsTotal))} no período</>

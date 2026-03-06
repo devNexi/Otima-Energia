@@ -115,7 +115,8 @@ import {
   dealCrmLinks, dealSalesSnapshots, dealSalesActivityItems, dealInternalNotes, jobs,
   trackChaseState, type TrackChaseState, type InsertTrackChaseState,
   dealTrackContracts, type DealTrackContract, type InsertDealTrackContract,
-  DEAL_STATE_PRECEDENCE
+  DEAL_STATE_PRECEDENCE,
+  supplierGdCoverage, type SupplierGdCoverage, type InsertSupplierGdCoverage
 } from "@shared/schema";
 import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -850,6 +851,12 @@ export interface IStorage {
   updateTrackContract(trackId: number, data: Partial<InsertDealTrackContract>): Promise<DealTrackContract | undefined>;
   updateDealTrackDocument(id: number, data: Partial<InsertDealTrackDocument>): Promise<DealTrackDocument | undefined>;
   getContractsAwaitingSignature(): Promise<DealTrackContract[]>;
+
+  // GD Coverage Matrix
+  getSupplierGdCoverage(supplierId: number): Promise<SupplierGdCoverage | undefined>;
+  upsertSupplierGdCoverage(data: InsertSupplierGdCoverage): Promise<SupplierGdCoverage>;
+  getEligibleGdSuppliers(filters: { state?: string; distributor?: string }): Promise<(SupplierGdCoverage & { supplierName: string })[]>;
+  getAllGdCoverage(): Promise<(SupplierGdCoverage & { supplierName: string })[]>;
 }
 
 export class Storage implements IStorage {
@@ -4966,6 +4973,71 @@ export class Storage implements IStorage {
 
   async getContractsAwaitingSignature(): Promise<DealTrackContract[]> {
     return db.select().from(dealTrackContracts).where(eq(dealTrackContracts.status, 'SENT'));
+  }
+
+  // GD Coverage Matrix
+  async getSupplierGdCoverage(supplierId: number): Promise<SupplierGdCoverage | undefined> {
+    const result = await db.select().from(supplierGdCoverage)
+      .where(eq(supplierGdCoverage.supplierId, supplierId));
+    return result[0];
+  }
+
+  async upsertSupplierGdCoverage(data: InsertSupplierGdCoverage): Promise<SupplierGdCoverage> {
+    const existing = await this.getSupplierGdCoverage(data.supplierId);
+    if (existing) {
+      const result = await db.update(supplierGdCoverage)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(supplierGdCoverage.supplierId, data.supplierId))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(supplierGdCoverage).values(data).returning();
+    return result[0];
+  }
+
+  async getEligibleGdSuppliers(filters: { state?: string; distributor?: string }): Promise<(SupplierGdCoverage & { supplierName: string })[]> {
+    const conditions = [eq(supplierGdCoverage.isActive, true)];
+    
+    const rows = await db.select({
+      id: supplierGdCoverage.id,
+      supplierId: supplierGdCoverage.supplierId,
+      coveredStates: supplierGdCoverage.coveredStates,
+      coveredDistributors: supplierGdCoverage.coveredDistributors,
+      isActive: supplierGdCoverage.isActive,
+      notes: supplierGdCoverage.notes,
+      createdAt: supplierGdCoverage.createdAt,
+      updatedAt: supplierGdCoverage.updatedAt,
+      supplierName: suppliers.name,
+    })
+      .from(supplierGdCoverage)
+      .innerJoin(suppliers, eq(supplierGdCoverage.supplierId, suppliers.id))
+      .where(and(...conditions));
+
+    return rows.filter(row => {
+      if (filters.state && row.coveredStates && row.coveredStates.length > 0) {
+        if (!row.coveredStates.includes(filters.state)) return false;
+      }
+      if (filters.distributor && row.coveredDistributors && row.coveredDistributors.length > 0) {
+        if (!row.coveredDistributors.includes(filters.distributor)) return false;
+      }
+      return true;
+    });
+  }
+
+  async getAllGdCoverage(): Promise<(SupplierGdCoverage & { supplierName: string })[]> {
+    return db.select({
+      id: supplierGdCoverage.id,
+      supplierId: supplierGdCoverage.supplierId,
+      coveredStates: supplierGdCoverage.coveredStates,
+      coveredDistributors: supplierGdCoverage.coveredDistributors,
+      isActive: supplierGdCoverage.isActive,
+      notes: supplierGdCoverage.notes,
+      createdAt: supplierGdCoverage.createdAt,
+      updatedAt: supplierGdCoverage.updatedAt,
+      supplierName: suppliers.name,
+    })
+      .from(supplierGdCoverage)
+      .innerJoin(suppliers, eq(supplierGdCoverage.supplierId, suppliers.id));
   }
 }
 

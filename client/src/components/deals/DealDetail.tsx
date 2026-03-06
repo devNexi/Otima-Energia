@@ -522,13 +522,13 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           </ContextualTooltip>
           <ContextualTooltip
             tooltipKey="tab_quotes_overview"
-            title={language === "pt" ? "Seleção de Cotação" : "Quote Selection"}
+            title={language === "pt" ? "Comparar Ofertas" : "Compare Offers"}
             content={language === "pt" 
-              ? "Compare cotações recebidas e selecione a melhor oferta. Considere preço, termos e qualidade do fornecedor."
-              : "Compare received quotes and select the best offer. Consider price, terms, and supplier quality."}
+              ? "Compare ofertas recebidas e identifique a melhor opção comercial. Considere preço, termos e qualidade do fornecedor."
+              : "Compare received offers and identify the best commercial fit. Consider price, terms, and supplier quality."}
             whyMatters={language === "pt"
-              ? "A escolha da cotação determina a comissão e a relação de longo prazo do cliente."
-              : "Quote choice determines commission and client's long-term relationship."}
+              ? "A escolha da oferta impacta diretamente a economia do cliente e a relação de longo prazo."
+              : "Offer choice directly impacts client savings and long-term relationship."}
             mode="hover"
           >
             <TabsTrigger value="quotes" className="flex items-center gap-2">
@@ -999,11 +999,11 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{language === "pt" ? "Cotações de Fornecedores" : "Supplier Quotes"}</CardTitle>
+                  <CardTitle>{language === "pt" ? "Ofertas de Fornecedores" : "Supplier Offers"}</CardTitle>
                   <CardDescription>
                     {language === "pt" 
-                      ? "Cotações recebidas para este deal"
-                      : "Quotes received for this deal"}
+                      ? "Compare ofertas recebidas e selecione a melhor opção"
+                      : "Compare received offers and select the best fit"}
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1">
@@ -1016,7 +1016,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
               {!deal.quotes || deal.quotes.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{language === "pt" ? "Nenhuma cotação recebida ainda" : "No quotes received yet"}</p>
+                  <p>{language === "pt" ? "Nenhuma oferta recebida ainda" : "No offers received yet"}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1042,9 +1042,9 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                           )}
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Cotação do fornecedor" : "Supplier quote"} <span className="text-amber-600 text-[10px]">(uso interno)</span></p>
+                          <p className="text-gray-500">{language === "pt" ? "Preço da Oferta" : "Offer Price"}</p>
                           <p className="font-medium text-gray-600">
                             {quote.baseEnergyPriceRmwh 
                               ? `R$ ${parseFloat(quote.baseEnergyPriceRmwh).toFixed(2)}/MWh`
@@ -1052,23 +1052,9 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">{language === "pt" ? "Preço ao Cliente" : "Client Price"}</p>
-                          {quote.clientEnergyPriceRmwh ? (
-                            <p className="font-semibold text-green-700">
-                              R$ {parseFloat(quote.clientEnergyPriceRmwh).toFixed(2)}/MWh
-                            </p>
-                          ) : (
-                            <p className="text-orange-600 text-xs">
-                              {language === "pt" ? "Não definido" : "Not set"}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Margem" : "Margin"} <span className="text-amber-600 text-[10px]">(uso interno)</span></p>
+                          <p className="text-gray-500">{language === "pt" ? "Tipo" : "Type"}</p>
                           <p className="font-medium">
-                            {quote.upliftValue 
-                              ? `${quote.upliftType === "PERCENT" ? "" : "R$ "}${parseFloat(quote.upliftValue).toFixed(2)}${quote.upliftType === "PERCENT" ? "%" : "/MWh"}`
-                              : "-"}
+                            {quote.energyType || quote.priceStructure || "-"}
                           </p>
                         </div>
                         <div>
@@ -1081,37 +1067,22 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
                         </div>
                         <div>
                           <p className="text-gray-500">{language === "pt" ? "Status" : "Status"}</p>
-                          {quote.isProposalEligible ? (
+                          {quote.isSelected ? (
                             <Badge className="bg-green-100 text-green-800 text-xs">
-                              {language === "pt" ? "Elegível" : "Eligible"}
+                              {language === "pt" ? "Selecionada" : "Selected"}
+                            </Badge>
+                          ) : quote.isRejected ? (
+                            <Badge className="bg-red-100 text-red-800 text-xs">
+                              {language === "pt" ? "Rejeitada" : "Rejected"}
                             </Badge>
                           ) : (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs">
-                              {language === "pt" ? "Sem preço cliente" : "No client price"}
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">
+                              {language === "pt" ? "Ativa" : "Active"}
                             </Badge>
                           )}
                         </div>
                       </div>
                       
-                      {!quote.isRejected && !quote.isSelected && (
-                        <div className="mt-3 pt-3 border-t flex gap-2">
-                          <Button
-                            size="sm"
-                            variant={quote.clientEnergyPriceRmwh ? "outline" : "default"}
-                            onClick={() => {
-                              setClientPriceQuote({ ...quote, dealId: dealId });
-                              setClientPriceModalOpen(true);
-                            }}
-                            data-testid={`set-client-price-btn-${quote.id}`}
-                          >
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            {quote.clientEnergyPriceRmwh 
-                              ? (language === "pt" ? "Ajustar Preço" : "Adjust Price")
-                              : (language === "pt" ? "Definir Preço ao Cliente" : "Set Client Price")
-                            }
-                          </Button>
-                        </div>
-                      )}
                       {quote.selectionReason && (
                         <p className="text-sm text-green-600 mt-2">
                           <strong>{language === "pt" ? "Motivo seleção:" : "Selection reason:"}</strong> {quote.selectionReason}

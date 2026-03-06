@@ -6313,6 +6313,61 @@ export async function registerRoutes(
     }
   });
 
+  // --- GD Coverage Matrix ---
+  
+  app.get("/api/gd-coverage", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const coverage = await storage.getAllGdCoverage();
+      res.json({ success: true, coverage });
+    } catch (error: any) {
+      console.error("Error fetching all GD coverage:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch GD coverage" });
+    }
+  });
+
+  app.get("/api/suppliers/gd-eligible", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const state = req.query.state as string | undefined;
+      const distributor = req.query.distributor as string | undefined;
+      const eligible = await storage.getEligibleGdSuppliers({ state, distributor });
+      res.json({ success: true, suppliers: eligible });
+    } catch (error: any) {
+      console.error("Error fetching eligible GD suppliers:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch eligible suppliers" });
+    }
+  });
+
+  app.get("/api/suppliers/:id/gd-coverage", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const coverage = await storage.getSupplierGdCoverage(parseInt(req.params.id));
+      res.json({ success: true, coverage: coverage || null });
+    } catch (error: any) {
+      console.error("Error fetching GD coverage:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch GD coverage" });
+    }
+  });
+
+  app.put("/api/suppliers/:id/gd-coverage", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const supplierId = parseInt(req.params.id);
+      const coverage = await storage.upsertSupplierGdCoverage({
+        supplierId,
+        coveredStates: req.body.coveredStates || [],
+        coveredDistributors: req.body.coveredDistributors || [],
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        notes: req.body.notes || null,
+      });
+      res.json({ success: true, coverage });
+    } catch (error: any) {
+      console.error("Error saving GD coverage:", error);
+      res.status(500).json({ success: false, error: "Failed to save GD coverage" });
+    }
+  });
+
   // --- Supplier Report Imports ---
 
   // Import supplier report
@@ -10807,11 +10862,10 @@ export async function registerRoutes(
       const quotes = await storage.getDealQuotes(req.params.dealId);
       const today = new Date().toISOString().split('T')[0];
       
-      // Filter eligible quotes - MUST have client price set (isProposalEligible = true)
+      // Filter eligible quotes - quotes with base price are eligible (uplift no longer required)
       const eligibleQuotes = quotes.filter(q => {
-        // CRITICAL: Must have client price set to be proposal-eligible
-        if (!q.isProposalEligible) return false;
-        if (!q.clientEnergyPriceRmwh) return false;
+        // Must have a base energy price to be eligible
+        if (!q.baseEnergyPriceRmwh) return false;
         
         // Exclude expired
         if (q.validUntil && q.validUntil < today) return false;
@@ -10838,7 +10892,8 @@ export async function registerRoutes(
         supplierId: q.supplierId,
         supplierName: supplierMap.get(q.supplierId) || 'Unknown Supplier',
         energyType: q.energyType,
-        clientEnergyPriceRmwh: q.clientEnergyPriceRmwh,
+        baseEnergyPriceRmwh: q.baseEnergyPriceRmwh,
+        clientEnergyPriceRmwh: q.clientEnergyPriceRmwh || q.baseEnergyPriceRmwh,
         validUntil: q.validUntil,
         termMonths: q.termMonths,
         priceStructure: q.priceStructure
@@ -10981,11 +11036,11 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Deal quote not found" });
       }
       
-      // CRITICAL: Quote must have client price set (isProposalEligible = true)
-      if (!dealQuote.isProposalEligible || !dealQuote.clientEnergyPriceRmwh) {
+      // Quote must have a base price to be added to a proposal
+      if (!dealQuote.baseEnergyPriceRmwh) {
         return res.status(400).json({ 
           success: false, 
-          error: "Quote must have client price set before adding to proposal. Go to Quotes tab and click 'Set Client Price'." 
+          error: "Quote must have a base energy price before adding to proposal." 
         });
       }
       
@@ -10993,8 +11048,8 @@ export async function registerRoutes(
       const supplier = await storage.getSupplier(dealQuote.supplierId);
       const supplierName = supplier?.name || 'Unknown Supplier';
       
-      // Use pre-set client price (already includes Ótima margin)
-      const finalPrice = parseFloat(dealQuote.clientEnergyPriceRmwh);
+      // Use client price if set, otherwise fall back to base supplier price
+      const finalPrice = parseFloat(dealQuote.clientEnergyPriceRmwh || dealQuote.baseEnergyPriceRmwh);
       const marginType = dealQuote.upliftType || 'R_PER_MWH';
       const marginValue = parseFloat(dealQuote.upliftValue || '0');
       
@@ -14406,21 +14461,15 @@ export async function registerRoutes(
               throw new Error("No deals with quotes found.");
             }
             
-            const eligibleQuotes = testQuotes.filter((q: any) => q.isProposalEligible === true);
-            const ineligibleQuotes = testQuotes.filter((q: any) => q.isProposalEligible !== true);
+            const quotesWithBasePrice = testQuotes.filter((q: any) => !!q.baseEnergyPriceRmwh);
+            const quotesWithoutBasePrice = testQuotes.filter((q: any) => !q.baseEnergyPriceRmwh);
             
             metadata.dealId = testDeal.id;
             metadata.totalQuotes = testQuotes.length;
-            metadata.eligibleQuotes = eligibleQuotes.length;
-            metadata.ineligibleQuotes = ineligibleQuotes.length;
+            metadata.quotesWithBasePrice = quotesWithBasePrice.length;
+            metadata.quotesWithoutBasePrice = quotesWithoutBasePrice.length;
             
-            for (const q of eligibleQuotes) {
-              if (!q.clientEnergyPriceRmwh) {
-                throw new Error(`Quote ${q.id} is marked eligible but has no clientEnergyPriceRmwh`);
-              }
-            }
-            
-            metadata.assertion = "Client price gate enforced: eligible quotes have client price set";
+            metadata.assertion = "Proposal eligibility based on base price (uplift no longer required)";
             break;
           }
           

@@ -209,9 +209,9 @@ Best regards,
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Blind Auction - RFQ Distribution</h2>
+          <h2 className="text-xl font-semibold">Compare Offers - RFQ Distribution</h2>
           <p className="text-sm text-gray-500">
-            Send RFQs to multiple suppliers and track responses
+            Request quotes from eligible suppliers and compare offers
           </p>
         </div>
         <Button 
@@ -229,7 +229,7 @@ Best regards,
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold">{stats?.totalSuppliers || 0}</div>
-            <p className="text-xs text-gray-500">Available Suppliers</p>
+            <p className="text-xs text-gray-500">Eligible Suppliers</p>
           </CardContent>
         </Card>
         <Card>
@@ -293,8 +293,8 @@ Best regards,
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Send New RFQs</CardTitle>
-            <CardDescription>Select suppliers to include in this auction round</CardDescription>
+            <CardTitle className="text-lg">Request Quotes</CardTitle>
+            <CardDescription>Select eligible suppliers to compare offers</CardDescription>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -381,7 +381,7 @@ Best regards,
         <CardContent>
           {availableToSend?.length === 0 ? (
             <p className="text-sm text-gray-500 py-4">
-              All suppliers with active playbooks have been contacted.
+              All eligible suppliers have been contacted.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -425,7 +425,7 @@ Best regards,
         </CardHeader>
         <CardContent>
           {dispatches?.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4">No RFQ dispatches yet. Select suppliers above to begin.</p>
+            <p className="text-sm text-gray-500 py-4">No RFQ dispatches yet. Select eligible suppliers above to begin comparing offers.</p>
           ) : (
             <div className="space-y-3">
               {dispatches?.map((dispatch: any) => {

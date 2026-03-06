@@ -1,0 +1,427 @@
+Update portal workflow for two product lines (GD and ACL), remove active commission uplift logic, reuse supplier comparison flow via playbooks
+
+We need a structural update to the portal workflow.
+
+Current reality
+
+The portal already works from:
+
+Deals
+
+Tracks
+
+Tracks are already intended to represent different product/process lanes.
+
+We now want to simplify and formalise that around two product lines only:
+
+GD
+
+ACL
+
+Core instruction
+
+Do not redesign this around agents or separate people.
+Do not introduce a new routing concept based on users.
+
+This is a Deals + Tracks workflow update.
+
+What needs to change
+1) Standardise tracks around two product types only
+
+Tracks should now clearly represent the two live commercial product lines:
+
+GD
+
+ACL
+
+If there are old/legacy product types in tracks, review them and either:
+
+map them cleanly into this new structure, or
+
+deprecate/hide them if no longer needed
+
+Goal
+
+Within a Deal, a Track should represent:
+
+either a GD comparison process
+
+or an ACL comparison process
+
+Important
+
+We may still support multiple tracks inside one deal if needed, but each track must clearly be one of:
+
+GD
+
+ACL
+
+2) Remove commission uplift functionality from active workflow
+
+This is critical.
+
+We already built structure around:
+
+commission uplift
+
+markup logic
+
+set client price from supplier price + uplift
+
+pricing steps that assume we engineer margin before comparing options
+
+We are not using that now.
+
+What I want
+
+Keep the existing data model / structure in place in the codebase if useful for later
+
+But remove it from active workflow
+
+Hide it from the UI
+
+Do not require it for progression
+
+Do not show any language around uplift/markup/client pricing engineering in the current operating flow
+
+In practice this means
+
+Remove or hide from current UI/workflow:
+
+“set client price”
+
+uplift fields
+
+commission markup steps
+
+any blockers that require uplift/client-price before moving on
+
+any comparison logic based on uplifted price rather than actual supplier offer comparison
+
+Important
+
+We may switch this back on later.
+So do not rip out the architecture completely.
+Just deactivate it operationally.
+
+3) Use the same supplier comparison logic and flow for both products
+
+This is the most important design principle.
+
+We want one consistent comparison engine pattern, reused for both:
+
+GD
+
+ACL
+
+Meaning
+
+For each track:
+
+determine product type (GD or ACL)
+
+determine eligible suppliers/partners for that product
+
+request / ingest offers
+
+compare offers
+
+recommend the best option
+
+move the track forward
+
+This should use the existing supplier playbook architecture
+
+We already have supplier playbooks in the system.
+
+That means:
+
+keep supplier playbooks as the operational framework
+
+use them for both GD and ACL flows
+
+adapt the logic so the playbook-driven comparison process works cleanly for each product type
+
+Goal
+
+Do not build two completely different machines if we can avoid it.
+
+Build:
+
+one shared comparison workflow pattern
+
+product-specific eligibility + offer fields on top
+
+4) Introduce explicit product-type logic at track level
+
+Each track must clearly know whether it is:
+
+GD
+
+ACL
+
+This should control:
+
+which suppliers/partners are eligible
+
+which playbooks appear
+
+which comparison view appears
+
+which fields matter for comparison
+
+what recommendation gets generated
+
+Track-level product field
+
+If not already present cleanly, implement a canonical track product field:
+
+GD
+
+ACL
+
+This should be the primary switch for workflow behaviour.
+
+5) Build GD partner/supplier coverage logic
+
+For GD, partner eligibility depends on region / coverage.
+
+We need the portal to know:
+
+which GD partners operate in which regions
+
+which partners are eligible for a given track
+
+Build / improve a GD coverage matrix
+
+Each GD partner should have coverage metadata such as:
+
+partner name
+
+covered region(s)
+
+covered state(s) if relevant
+
+active/inactive
+
+notes / restrictions
+
+last updated
+
+Required system behaviour
+
+For a GD track, the portal should be able to answer:
+
+Which GD partners are eligible for this opportunity?
+
+Then feed those eligible partners into the same playbook/comparison workflow.
+
+6) Keep ACL inside the same comparison framework
+
+For ACL, we still want:
+
+supplier selection
+
+RFQ / quote collection
+
+comparison
+
+recommendation
+
+But without active commission uplift logic.
+
+ACL comparison should now be based on:
+
+actual supplier offer
+
+commercial fit
+
+term
+
+structure
+
+responsiveness / quality if relevant
+
+recommendation criteria
+
+Not on:
+
+uplifted client price
+
+margin engineering
+
+internal markup layers
+
+7) Update comparison UX so it feels unified
+
+We want the same comparison mindset across both product types.
+
+Desired UX
+
+For any track, the portal should clearly show:
+
+track product type (GD or ACL)
+
+eligible suppliers/partners
+
+offers received
+
+comparison table/cards
+
+recommended option
+
+next recommended step
+
+Important
+
+The UI should feel like:
+
+“compare offers and recommend the best fit”
+
+not:
+
+“load pricing, add markup, then derive a client price”
+
+8) Update workflow copy / labels
+
+Remove or hide language tied to the old commission-driven process.
+
+Avoid
+
+uplift
+
+markup
+
+set client price
+
+commission loading
+
+client price engineering
+
+Prefer
+
+compare offers
+
+eligible suppliers
+
+recommended option
+
+best commercial fit
+
+next recommended step
+
+playbook-driven supplier flow
+
+9) Ensure legacy structure stays dormant, not broken
+
+We do not want to destroy future optionality.
+
+So:
+
+keep the uplift architecture in place behind the scenes if useful
+
+but make sure it is not visible, not blocking, not active
+
+no current user should be forced through that logic
+
+Think of it as:
+
+feature retained in architecture
+
+feature disabled in operations
+
+10) What I want you to deliver
+
+Please inspect the current codebase and then implement the following:
+
+A. Track/Product cleanup
+
+standardise track product types to GD and ACL
+
+make sure track-level workflow branches correctly from product type
+
+B. Commission uplift deactivation
+
+identify every place uplift/markup/client-price is currently active
+
+hide/remove from active workflow
+
+remove blockers/dependencies on it
+
+keep architecture dormant for later use
+
+C. Shared comparison engine
+
+make sure both GD and ACL use the same overall comparison workflow pattern
+
+re-use supplier playbooks
+
+avoid duplicate logic where possible
+
+D. GD eligibility logic
+
+build or finalise GD partner coverage matrix
+
+ensure GD tracks only compare eligible partners
+
+E. Comparison UX
+
+make comparison screens clear, consistent, recommendation-first
+
+show best option / rationale / next step
+
+F. Safety / regression check
+
+make sure current Deals and Tracks do not break
+
+make sure old data still loads
+
+show me what schema changes, route changes, UI changes, and blockers were required
+
+Product logic summary
+
+This is the target model:
+
+Deal
+
+The commercial opportunity container.
+
+Track
+
+The product-specific lane inside the deal:
+
+GD track
+
+ACL track
+
+Shared operational pattern
+
+For each track:
+
+identify eligible suppliers/partners
+
+use supplier playbooks
+
+gather offers
+
+compare offers
+
+recommend best option
+
+Inactive for now
+
+commission uplift
+
+markup-based client pricing workflow
+
+Non-negotiable principle
+
+The portal must shift from:
+
+a markup/uplift-driven quote workflow
+
+to:
+
+a track-based multi-supplier comparison and recommendation workflow for two products: GD and ACL
+
+That is the change.

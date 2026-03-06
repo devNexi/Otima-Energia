@@ -27,7 +27,7 @@ const TEST_KEYS = [
   { value: "all", label: "All Tests" },
   { value: "bills.upload_ocr_flow", label: "Bills / OCR / Dossier" },
   { value: "quotes.immutable_intake", label: "Quotes Immutable Intake" },
-  { value: "proposals.client_price_gate", label: "Proposals Client Price Gate" },
+  { value: "proposals.client_price_gate", label: "Proposals Eligibility Gate" },
   { value: "proposals.pdf_security", label: "Proposals PDF Security" },
   { value: "prc.supplier_dropdown", label: "PRC Supplier Dropdown" },
   { value: "finance.commission_triggers", label: "Commission Triggers (50/50)" },

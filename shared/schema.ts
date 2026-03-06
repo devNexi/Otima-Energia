@@ -3451,6 +3451,9 @@ export const supplierRfqPlaybooks = pgTable("supplier_rfq_playbooks", {
   
   // ============== END OPERATIONAL DIFFERENTIATORS ==============
   
+  // Product Lines
+  productLines: text("product_lines").array(), // ['GD', 'ACL'] — which product lines this playbook covers
+  
   // Audit
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -4748,6 +4751,15 @@ export type DiagnosticSubmission = typeof diagnosticSubmissions.$inferSelect;
 export const TRACK_TYPES = ['GDL', 'ACL', 'ACR', 'OTHER'] as const;
 export type TrackType = typeof TRACK_TYPES[number];
 
+export const TRACK_TYPE_DISPLAY: Record<string, string> = {
+  GDL: 'GD',
+  ACL: 'ACL',
+  ACR: 'ACR',
+  OTHER: 'OTHER',
+};
+
+export const CREATABLE_TRACK_TYPES: TrackType[] = ['GDL', 'ACL'];
+
 export const GDL_TRACK_STATUSES = [
   'GDL_NEW',
   'GDL_ELIGIBILITY_PASSED',
@@ -5181,3 +5193,34 @@ export type InsertDealZohoTaskLink = z.infer<typeof insertDealZohoTaskLinkSchema
 export type DealZohoTaskLink = typeof dealZohoTaskLinks.$inferSelect;
 
 // ============== END SALES ACTIVITY MIRROR ==============
+
+// ============== GD COVERAGE MATRIX ==============
+
+export const supplierGdCoverage = pgTable("supplier_gd_coverage", {
+  id: serial("id").primaryKey(),
+  supplierId: integer("supplier_id").references(() => suppliers.id).notNull(),
+  coveredStates: text("covered_states").array(),
+  coveredDistributors: text("covered_distributors").array(),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSupplierGdCoverageSchema = createInsertSchema(supplierGdCoverage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSupplierGdCoverage = z.infer<typeof insertSupplierGdCoverageSchema>;
+export type SupplierGdCoverage = typeof supplierGdCoverage.$inferSelect;
+
+export const supplierGdCoverageRelations = relations(supplierGdCoverage, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierGdCoverage.supplierId],
+    references: [suppliers.id],
+  }),
+}));
+
+// ============== END GD COVERAGE MATRIX ==============

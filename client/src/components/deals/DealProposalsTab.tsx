@@ -35,6 +35,7 @@ interface EligibleQuote {
   supplierId: number;
   supplierName?: string;
   energyType: string;
+  baseEnergyPriceRmwh: string;
   clientEnergyPriceRmwh: string;
   validUntil: string;
   termMonths: number;
@@ -237,7 +238,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Propostas Comerciais</h3>
           <p className="text-sm text-muted-foreground">
-            Crie propostas com base em cotações com preço ao cliente definido
+            Compare ofertas e crie propostas com a melhor opção comercial
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -283,11 +284,10 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
           <DollarSign className="w-5 h-5 text-orange-500 mt-0.5" />
           <div>
             <p className="font-medium text-orange-800">
-              Nenhuma cotação elegível para propostas
+              Nenhuma cotação disponível para comparação
             </p>
             <p className="text-sm text-orange-600 mt-1">
-              Antes de criar propostas, acesse a aba "Cotações" e defina o preço ao cliente 
-              clicando em "Definir Preço ao Cliente" em cada cotação que deseja incluir.
+              Antes de criar propostas, solicite cotações de fornecedores elegíveis para comparar ofertas.
             </p>
           </div>
         </div>
@@ -468,9 +468,9 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Adicionar Cotação à Proposta</DialogTitle>
+                            <DialogTitle>Adicionar Oferta à Proposta</DialogTitle>
                             <DialogDescription>
-                              Selecione uma cotação com preço ao cliente já definido
+                              Selecione uma oferta de fornecedor para incluir na proposta
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
@@ -478,16 +478,16 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                               <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
                                 <DollarSign className="w-8 h-8 mx-auto text-orange-500 mb-2" />
                                 <p className="text-sm font-medium text-orange-800">
-                                  Nenhuma cotação elegível
+                                  Nenhuma oferta disponível
                                 </p>
                                 <p className="text-xs text-orange-600 mt-1">
-                                  Defina o preço ao cliente nas cotações antes de criar propostas
+                                  Solicite cotações de fornecedores elegíveis para comparar ofertas
                                 </p>
                               </div>
                             ) : (
                               <>
                                 <div className="space-y-2">
-                                  <Label>Cotação Elegível</Label>
+                                  <Label>Oferta Disponível</Label>
                                   <Select
                                     value={newItemForm.dealQuoteId}
                                     onValueChange={(v) => setNewItemForm(f => ({ ...f, dealQuoteId: v }))}
@@ -498,7 +498,7 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                                     <SelectContent>
                                       {eligibleQuotes.map((q) => (
                                         <SelectItem key={q.id} value={q.id}>
-                                          {q.supplierName || `Fornecedor ${q.supplierId}`} - R$ {parseFloat(q.clientEnergyPriceRmwh).toFixed(2)}/MWh
+                                          {q.supplierName || `Fornecedor ${q.supplierId}`} - R$ {parseFloat(q.clientEnergyPriceRmwh || q.baseEnergyPriceRmwh).toFixed(2)}/MWh
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -508,13 +508,13 @@ export function DealProposalsTab({ dealId }: DealProposalsTabProps) {
                                 {newItemForm.dealQuoteId && (
                                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm text-green-700">Preço ao Cliente:</span>
+                                      <span className="text-sm text-green-700">Preço da Oferta:</span>
                                       <span className="text-lg font-bold text-green-800">
-                                        R$ {parseFloat(eligibleQuotes.find(q => q.id === newItemForm.dealQuoteId)?.clientEnergyPriceRmwh || "0").toFixed(2)}/MWh
+                                        R$ {parseFloat(eligibleQuotes.find(q => q.id === newItemForm.dealQuoteId)?.clientEnergyPriceRmwh || eligibleQuotes.find(q => q.id === newItemForm.dealQuoteId)?.baseEnergyPriceRmwh || "0").toFixed(2)}/MWh
                                       </span>
                                     </div>
                                     <p className="text-xs text-green-600 mt-1">
-                                      Este valor inclui a margem Ótima e será exibido ao cliente
+                                      Este valor será exibido na proposta ao cliente
                                     </p>
                                   </div>
                                 )}

@@ -696,18 +696,18 @@ export default function ProposalsManager() {
               </div>
             )}
 
-            {/* Step 2: Select Client Price Options */}
+            {/* Step 2: Select Supplier Offers */}
             {wizardStep === 2 && (
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-medium">Opções de Preço ao Cliente</Label>
-                  <p className="text-sm text-gray-500 mt-1">Selecione as cotações que deseja incluir na proposta. Apenas cotações com preço ao cliente definido são exibidas.</p>
+                  <Label className="text-base font-medium">Ofertas de Fornecedores</Label>
+                  <p className="text-sm text-gray-500 mt-1">Selecione as ofertas que deseja incluir na proposta para comparação.</p>
                 </div>
 
                 <div className="p-3 bg-blue-50 rounded-lg flex items-start gap-2">
                   <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                   <p className="text-sm text-blue-700">
-                    Os preços abaixo já incluem a comissão da Ótima. O cliente verá apenas o "Preço Final".
+                    Compare as ofertas abaixo e selecione as melhores opções comerciais para o cliente.
                   </p>
                 </div>
 
@@ -902,7 +902,7 @@ export default function ProposalsManager() {
                   <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
                   <div className="text-sm text-blue-700">
                     <p className="font-medium">Proteção de receita ativa</p>
-                    <p>A proposta mostrará apenas o preço final ao cliente. Nenhum preço base ou margem será exposto.</p>
+                    <p>A proposta mostrará apenas o preço final ao cliente. Dados internos não serão expostos.</p>
                   </div>
                 </div>
               </div>
