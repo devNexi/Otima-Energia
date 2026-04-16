@@ -266,7 +266,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
           const formData = new FormData();
           formData.append('file', file);
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 60000);
+          const timeout = setTimeout(() => controller.abort(), 280000);
           const res = await fetch(url, {
             method: 'POST',
             headers: { 'x-session-id': sessionId || '' },

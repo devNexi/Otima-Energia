@@ -261,7 +261,7 @@ export class DealAssemblyEngine {
         titleEn: 'Dossier not created',
         descriptionPt: 'Crie o dossiê energético do cliente.',
         descriptionEn: 'Create the client energy dossier.',
-        deepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier`,
+        deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
     }
@@ -276,8 +276,8 @@ export class DealAssemblyEngine {
       blockers,
       actionButtonPt: status !== 'complete' ? 'Completar Dossiê' : null,
       actionButtonEn: status !== 'complete' ? 'Complete Dossier' : null,
-      actionDeepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier`,
-      evidenceLinks: dossier ? [{ label: 'Dossiê', url: `/admin/sales/clients/${deal.clientId}?tab=dossier` }] : [],
+      actionDeepLink: `/admin/dossier/${deal.clientId}`,
+      evidenceLinks: dossier ? [{ label: 'Dossiê', url: `/admin/dossier/${deal.clientId}` }] : [],
       completedAt: dossier?.status !== 'DRAFT' ? dossier?.updatedAt?.toISOString() : null
     };
   }
@@ -292,7 +292,7 @@ export class DealAssemblyEngine {
         titleEn: 'Dossier not ready',
         descriptionPt: 'Complete o dossiê antes de travar.',
         descriptionEn: 'Complete the dossier before locking.',
-        deepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier`,
+        deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
     } else if (dossier.status === 'READY') {
@@ -302,7 +302,7 @@ export class DealAssemblyEngine {
         titleEn: 'Dossier not locked',
         descriptionPt: 'Trave o dossiê para enviar RFQ.',
         descriptionEn: 'Lock the dossier to send RFQ.',
-        deepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier&action=lock`,
+        deepLink: `/admin/dossier/${deal.clientId}?action=lock`,
         severity: 'error'
       });
     }
@@ -317,7 +317,7 @@ export class DealAssemblyEngine {
       blockers,
       actionButtonPt: status !== 'complete' ? 'Travar Dossiê' : null,
       actionButtonEn: status !== 'complete' ? 'Lock Dossier' : null,
-      actionDeepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier&action=lock`,
+      actionDeepLink: `/admin/dossier/${deal.clientId}?action=lock`,
       evidenceLinks: [],
       completedAt: dossier?.lockedAt?.toISOString() || null
     };
@@ -333,7 +333,7 @@ export class DealAssemblyEngine {
         titleEn: 'Dossier not locked',
         descriptionPt: 'O dossiê deve estar travado antes de enviar RFQ.',
         descriptionEn: 'Dossier must be locked before sending RFQ.',
-        deepLink: `/admin/sales/clients/${deal.clientId}?tab=dossier`,
+        deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
     }
@@ -440,7 +440,7 @@ export class DealAssemblyEngine {
         titleEn: 'Proposal not generated',
         descriptionPt: 'Gere a proposta comercial para o cliente.',
         descriptionEn: 'Generate the commercial proposal for the client.',
-        deepLink: `/admin/ops/deals/${deal.id}?tab=proposal`,
+        deepLink: `/admin/ops/deals/${deal.id}?tab=proposals`,
         severity: 'warning'
       });
     }
@@ -453,8 +453,8 @@ export class DealAssemblyEngine {
       blockers,
       actionButtonPt: !hasProposal ? 'Gerar Proposta' : null,
       actionButtonEn: !hasProposal ? 'Generate Proposal' : null,
-      actionDeepLink: `/admin/ops/deals/${deal.id}?tab=proposal`,
-      evidenceLinks: generatedProposals.map(p => ({ label: `Proposta ${p.id.slice(0, 8)}`, url: `/admin/ops/deals/${deal.id}?tab=proposal&proposalId=${p.id}` })),
+      actionDeepLink: `/admin/ops/deals/${deal.id}?tab=proposals`,
+      evidenceLinks: generatedProposals.map(p => ({ label: `Proposta ${p.id.slice(0, 8)}`, url: `/admin/ops/deals/${deal.id}?tab=proposals&proposalId=${p.id}` })),
       completedAt: generatedProposals[0]?.createdAt?.toISOString() || null
     };
   }
