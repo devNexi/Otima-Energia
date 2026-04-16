@@ -19,6 +19,7 @@ import { BlindAuctionPanel } from "@/components/deals/BlindAuctionPanel";
 import { DealEcosTab } from "@/components/deals/DealEcosTab";
 import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
+import { DealReadinessCard } from "@/components/deals/DealReadinessCard";
 import { DealTracksTab } from "@/components/deals/DealTracksTab";
 import { SalesMirrorPanel, SalesSnapshotCompactCard } from "@/components/deals/SalesMirrorPanel";
 import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
@@ -493,6 +494,8 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           }
         }}
       />
+
+      <DealReadinessCard dealId={dealId} onTabChange={setActiveTab} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex flex-wrap h-auto gap-1 p-1">
