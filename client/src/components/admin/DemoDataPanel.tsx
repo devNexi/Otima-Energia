@@ -6,7 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle, Package } from "lucide-react";
+import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle, Package, Presentation } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { GuidedTestModal } from "./GuidedTestModal";
 
@@ -75,6 +75,7 @@ export function DemoDataPanel() {
   const queryClient = useQueryClient();
   const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [nukeResult, setNukeResult] = useState<NukeResult | null>(null);
+  const [confDemoResult, setConfDemoResult] = useState<{ success: boolean; summary: Record<string, number> } | null>(null);
   const [guidedTestOpen, setGuidedTestOpen] = useState(false);
   const [selectedPacks, setSelectedPacks] = useState<ScenarioPack[]>(['HAPPY_PATH', 'SLA_BREACH', 'COMMISSION_DISPUTE']);
 
@@ -112,6 +113,21 @@ export function DemoDataPanel() {
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/deals"] });
+    },
+  });
+
+  const confDemoMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/seed-conference-demo");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setConfDemoResult(data);
+      setSeedResult(null);
+      setNukeResult(null);
+      refetchStats();
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
     },
   });
 
@@ -241,6 +257,21 @@ export function DemoDataPanel() {
 
         <div className="flex flex-wrap gap-3">
           <Button
+            variant="outline"
+            onClick={() => confDemoMutation.mutate()}
+            disabled={confDemoMutation.isPending || seedMutation.isPending || nukeMutation.isPending}
+            data-testid="button-seed-conference-demo"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            {confDemoMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Presentation className="h-4 w-4 mr-2" />
+            )}
+            Seed Conference Demo
+          </Button>
+
+          <Button
             onClick={() => seedMutation.mutate(selectedPacks.length > 0 ? selectedPacks : ['FULL_DATASET'])}
             disabled={seedMutation.isPending || nukeMutation.isPending}
             data-testid="button-seed-demo"
@@ -291,6 +322,26 @@ export function DemoDataPanel() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+
+        {confDemoResult && (
+          <div className="rounded-lg border border-blue-500/50 bg-blue-50 p-4 dark:bg-blue-950/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Presentation className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-blue-800 dark:text-blue-200">
+                {confDemoResult.summary?.skipped ? 'Conference Demo Already Seeded' : 'Conference Demo Seeded Successfully'}
+              </span>
+            </div>
+            {!confDemoResult.summary?.skipped && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                {Object.entries(confDemoResult.summary).map(([key, value]) => (
+                  <div key={key} className="text-blue-700 dark:text-blue-300">
+                    {key}: <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {seedResult && (
           <div className="rounded-lg border border-green-500/50 bg-green-50 p-4 dark:bg-green-950/30">

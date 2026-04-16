@@ -200,29 +200,31 @@ export function DealEcosTab({ dealId }: DealEcosTabProps) {
   const handleDownloadPdf = async (snapshotId: number) => {
     setDownloadingPdf(true);
     try {
-      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/preview`);
-      const html = await res.text();
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        throw new Error('Pop-up blocked');
+      const res = await apiRequest("GET", `/api/deals/${dealId}/ecos/${snapshotId}/pdf`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to generate PDF");
       }
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ecos_${dealId}_snapshot_${snapshotId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast({
-        title: language === "pt" ? "PDF pronto" : "PDF ready",
-        description: language === "pt" 
-          ? "Use Ctrl+P / Cmd+P para salvar como PDF." 
-          : "Use Ctrl+P / Cmd+P to save as PDF."
+        title: language === "pt" ? "PDF gerado" : "PDF generated",
+        description: language === "pt"
+          ? "O PDF foi baixado com sucesso."
+          : "The PDF was downloaded successfully."
       });
     } catch (error: any) {
       toast({
         title: language === "pt" ? "Erro" : "Error",
-        description: language === "pt" 
-          ? "Falha ao gerar o PDF. Tente novamente." 
+        description: language === "pt"
+          ? "Falha ao gerar o PDF. Tente novamente."
           : "Failed to generate PDF. Please try again.",
         variant: "destructive"
       });

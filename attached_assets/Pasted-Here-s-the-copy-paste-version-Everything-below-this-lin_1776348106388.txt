@@ -1,0 +1,440 @@
+Here's the copy-paste version. Everything below this line goes into Replit.
+
+---
+
+The attached `bill.py` is for VPS deployment only (not Replit). I'll handle that separately via SSH. Start with Task 2 onwards for Replit-side work. Reference `bill.py` only to understand what fields will come back from the new parser.
+
+Work through tasks in order. After each task, summarize what you changed and any issues, then wait for my confirmation before proceeding to the next task. Do not skip ahead. Do not refactor files not listed in the task.
+
+---
+
+# REPLIT BUILD PROMPT — ÓTIMA MVP FOR CONFERENCE DEMO
+
+## CONTEXT (do not contradict)
+
+You are working inside the existing `otima_portal` Replit project. This is an energy brokerage OS for Brazilian ACL + GD markets. The codebase is Express + React + Drizzle + PostgreSQL. All files already exist.
+
+**Do NOT rebuild anything from scratch.** Only modify the specific files listed below. Preserve all existing functionality.
+
+## OBJECTIVE
+
+Prepare the portal for a conference demo next week. The demo must show this 5-minute story, cleanly and without broken flows:
+
+1. Open a GD or ACL deal
+2. Upload a real bill document at deal level
+3. See parsed fields clearly surfaced
+4. See RFQ-readiness status with clear blockers
+5. Generate a live, on-brand ECOS report (PDF)
+6. Open a historical deal with 4+ quotes
+7. Show a slick supplier comparison with intelligent recommendation
+
+**Out of scope for this work:**
+- MT (uplift/markup/client-price modal) — treat as dormant, do not touch
+- Full supplier portal
+- Commission workflows
+- Public marketplace
+- Any ACR or OTHER track work
+
+---
+
+## TASK 1 — DEPLOY NEW BILL PARSER (SKIP — HANDLED VIA VPS SSH)
+
+This task is handled outside Replit. The new `bill.py` will be deployed to `/opt/portal-parser/extractors/bill.py` on the VPS via SSH. No Replit-side changes needed for this task — the normalizer in `server/parser-client.ts` already maps the new fields correctly. Move directly to Task 2.
+
+---
+
+## TASK 2 — SWAP ECOS PDF GENERATION TO PUPPETEER
+
+**Background:** ECOS PDF currently uses `window.print()` which is browser-dependent and unreliable. The proposal PDF already uses Puppeteer successfully — copy that pattern.
+
+**Files to modify:**
+- `server/routes.ts` — find the ECOS PDF endpoint (`GET /api/deals/:dealId/ecos/:snapshotId/pdf`)
+
+**Reference pattern (already working in routes.ts around line 13702):**
+
+```typescript
+const puppeteer = await import('puppeteer');
+const browser = await puppeteer.default.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox']
+});
+const page = await browser.newPage();
+await page.setContent(html, { waitUntil: 'networkidle0' });
+
+const pdfBuffer = await page.pdf({
+  format: 'A4',
+  printBackground: true,
+  margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' }
+});
+
+await browser.close();
+
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `attachment; filename="ecos-${snapshot.id}.pdf"`);
+res.send(pdfBuffer);
+```
+
+**What to do:**
+1. Find the ECOS PDF route in `server/routes.ts`
+2. Import the ECOS HTML builder from `server/ecos-pdf.ts` (the `buildEcosHtml()` or equivalent function already exists — 557 lines of branded HTML)
+3. Pass the HTML to Puppeteer using the pattern above
+4. Return the PDF buffer instead of calling `window.print()` on the client
+5. Update the client call site in `client/src/components/deals/DealEcosTab.tsx` — replace any `window.print()` trigger with a direct download via `<a href="/api/deals/.../ecos/.../pdf" download>` or `fetch` + blob download
+
+**Acceptance criteria:**
+- Clicking "Download PDF" on an ECOS snapshot downloads a branded PDF file
+- PDF renders correctly with Ótima purple/pink branding (`#9e3ffd` primary, `#df0af2` secondary)
+- 5-band chart with "Você" marker is visible
+- No browser print dialog appears
+
+---
+
+## TASK 3 — VERIFY / SEED PRC→ECOS PIPELINE FOR DEMO
+
+**Background:** ECOS needs published PRC rows in `canonical_pricing_rows` to score against. If there's no data, ECOS will return `NO_PRC` blocker and the demo breaks.
+
+**What to do:**
+
+**Step A — Diagnostic query:**
+Run this in the Replit database console to check current state:
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM prc_documents WHERE parse_status IN ('PUBLISHED', 'PARSED', 'VERIFIED')) AS published_docs,
+  (SELECT COUNT(*) FROM prc_rows) AS total_prc_rows,
+  (SELECT COUNT(*) FROM canonical_pricing_rows WHERE source = 'prc') AS canonical_rows,
+  (SELECT COUNT(DISTINCT reference_month) FROM prc_rows) AS distinct_months,
+  (SELECT MAX(reference_month) FROM prc_rows) AS latest_month;
+```
+
+**Step B — If `canonical_rows = 0` or `latest_month` is older than 3 months:**
+
+Either:
+- **Option 1 (preferred):** Upload 3-5 real PRCs for the current month via `/admin/prc` upload center, verify they parse, then publish.
+- **Option 2 (fallback if no real PRCs available):** Seed canonical data via `server/demoSeeder.ts`. Add a new function `seedDemoPrcData()` that inserts ~20 canonical pricing rows covering all 4 submarkets (SE_CO, S, NE, N) × 3 products (CONVENCIONAL, INC_I50, INC_I100) × 2 terms (12, 24 months) for the current reference month.
+
+**Step C — Test ECOS generation end-to-end:**
+
+```bash
+# Pick a deal with a parsed bill
+curl -X POST "http://localhost:5000/api/deals/<dealId>/ecos/generate" \
+  -H "Content-Type: application/json" \
+  -H "x-session-id: <your-session-id>"
+```
+
+Expected: `{ ok: true, snapshot: {...} }` — not `{ ok: false, blockers: [{ code: "NO_PRC" }] }`
+
+**Acceptance criteria:**
+- At least one test deal can generate an ECOS snapshot successfully
+- Snapshot has a valid `band_result` (not `NO_DATA`)
+- `canonical_pricing_rows` table has ≥12 rows for the current reference month
+
+---
+
+## TASK 4 — REDESIGN SUPPLIER COMPARISON PANEL (THE DEMO MONEY SHOT)
+
+**Background:** Current `TrackComparisonPanel.tsx` (206 lines) is functional but plain — just a ranked list with a "Best Fit" badge. For the conference this needs to look decision-support-grade.
+
+**File to modify:**
+`client/src/components/comparison/TrackComparisonPanel.tsx`
+
+**New design requirements:**
+
+### Layout (top to bottom):
+
+**1. Header strip with context chips:**
+- "ACL" or "GD" product badge (color-coded)
+- Client consumption summary: "12,450 MWh/ano" (pull from deal/dossier)
+- Submarket chip: "SE/CO"
+- Eligible suppliers count: "8 elegíveis"
+- Quotes received: "4 cotações"
+
+**2. Recommendation card (prominent, at the top):**
+```
+┌─────────────────────────────────────────────────────────┐
+│  RECOMENDAÇÃO                                           │
+│  Matrix Energia                                         │
+│  R$ 287.50 /MWh  ·  24 meses  ·  Convencional           │
+│                                                         │
+│  Por que recomendamos:                                  │
+│  - Melhor preço (3.2% abaixo da média)                  │
+│  - Respondeu em 1 dia (SLA: 3 dias)                     │
+│  - Cobre seu submercado (SE/CO)                         │
+│  - Histórico: 12 contratos assinados                    │
+│                                                         │
+│  [Selecionar esta oferta]                               │
+└─────────────────────────────────────────────────────────┘
+```
+
+**3. Price distribution chart:**
+A horizontal bar chart showing each quote's price, with:
+- Bars sorted by price (ascending)
+- Best price highlighted in green
+- Market average line overlay (dashed)
+- Min/max range indicators
+
+Use `recharts` (already installed) — `BarChart` with `ReferenceLine` for market average.
+
+**4. Comparison table:**
+Rows for each quote with these columns:
+- Rank (1, 2, 3...)
+- Supplier name
+- Price (R$/MWh)
+- Δ vs best (e.g., "+R$ 12.30" or "best")
+- Term (months)
+- Structure (Convencional / Incentivada 50% / etc)
+- Response time (days, with SLA indicator dot)
+- Score (weighted — see below)
+- Action button ("Selecionar")
+
+**5. Scoring logic (add to the component):**
+
+```typescript
+function scoreQuote(q: QuoteRow, allQuotes: QuoteRow[]): {
+  totalScore: number;
+  priceScore: number;
+  slaScore: number;
+  termScore: number;
+  reasons: string[];
+} {
+  const prices = allQuotes.map(x => x.baseEnergyPriceRmwh);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceRange = maxPrice - minPrice || 1;
+
+  // Price score: 60% weight. Best price = 100, worst = 0.
+  const priceScore = ((maxPrice - q.baseEnergyPriceRmwh) / priceRange) * 100;
+
+  // SLA score: 25% weight. Under 2 days = 100, over 5 days = 0.
+  const responseDays = q.responseTimeDays ?? 5;
+  const slaScore = Math.max(0, Math.min(100, (5 - responseDays) / 3 * 100));
+
+  // Term match score: 15% weight. Prefer 24-36 month terms.
+  const termScore = q.termMonths >= 24 && q.termMonths <= 36 ? 100 :
+                    q.termMonths === 12 ? 60 :
+                    q.termMonths > 36 ? 70 : 50;
+
+  const totalScore = priceScore * 0.6 + slaScore * 0.25 + termScore * 0.15;
+
+  const reasons: string[] = [];
+  if (q.baseEnergyPriceRmwh === minPrice) reasons.push('Melhor preço do mercado');
+  else if (priceScore > 70) reasons.push(`${((maxPrice - q.baseEnergyPriceRmwh) / maxPrice * 100).toFixed(1)}% abaixo da oferta mais alta`);
+  if (responseDays <= 2) reasons.push(`Respondeu em ${responseDays} dia(s) — dentro do SLA`);
+  if (q.termMonths >= 24 && q.termMonths <= 36) reasons.push('Prazo ideal para este perfil');
+
+  return { totalScore, priceScore, slaScore, termScore, reasons };
+}
+```
+
+**6. Visual polish — MUST have:**
+- Use shadcn/ui components: `Card`, `Badge`, `Button`, `Table`
+- Tailwind classes only — no custom CSS
+- Brand colors: purple `#9e3ffd`, pink `#df0af2`, dark `#16163f`
+- Generous whitespace — minimum 16px padding between sections
+- Subtle borders, no harsh shadows
+- Dark mode must work (use `dark:` variants)
+- Typography hierarchy: 14px body, 16px prices, 18px supplier names, 22px recommendation heading
+- No emojis in production UI — use `lucide-react` icons (Trophy, TrendingDown, Clock, CheckCircle, AlertCircle)
+
+**Acceptance criteria:**
+- Opens in under 500ms on a deal with 4+ quotes
+- Recommendation card is immediately understandable without scrolling
+- At least 3 specific reasons shown for the recommendation
+- Chart renders without layout shift
+- Table is fully responsive — usable on 1024px width
+- Dark mode has no color-blind issues
+- Clicking "Selecionar" on any quote advances the deal state (existing `selectQuote` mutation)
+
+---
+
+## TASK 5 — UNIFIED DEAL READINESS CARD
+
+**Background:** Currently blockers show up scattered across tabs. For the demo we need a single at-a-glance card at the top of every deal detail view.
+
+**File to create:**
+`client/src/components/deals/DealReadinessCard.tsx`
+
+**Reference existing logic:**
+- Backend: `server/blockerEngine.ts` has `checkSendRfq()` and `checkCreateDeal()` methods returning `{ ok: boolean, blockers: Blocker[] }`
+- Backend: `server/deal-assembly-engine.ts` has 12-stage pipeline with blockers per stage
+- There are existing queries in `DealAssemblyTab.tsx`:
+  - `parser-status` query
+  - `prc-readiness` query
+  - Assembly status query
+
+**What the card must show:**
+
+```
+┌───────────────────────────────────────────────────────┐
+│  PRONTIDÃO DO DEAL                      [Detalhes]    │
+│                                                       │
+│  3/5 etapas completas                                 │
+│                                                       │
+│  [x] Fatura processada                                │
+│  [x] ECOS gerado                                      │
+│  [x] Dossiê completo                                  │
+│  [ ] Dossiê travado          [Travar dossiê →]        │
+│  [ ] Fornecedores selecionados  [Selecionar →]        │
+│                                                       │
+│  Próximo passo: Travar o dossiê para enviar RFQ       │
+└───────────────────────────────────────────────────────┘
+```
+
+**Implementation:**
+
+Add new endpoint `GET /api/deals/:dealId/readiness` that returns:
+
+```typescript
+{
+  stages: [
+    { key: 'bill_parsed', label: 'Fatura processada', complete: true, cta: null, deepLink: null },
+    { key: 'ecos_generated', label: 'ECOS gerado', complete: true, cta: null, deepLink: null },
+    { key: 'dossier_complete', label: 'Dossiê completo', complete: true, cta: null, deepLink: null },
+    { key: 'dossier_locked', label: 'Dossiê travado', complete: false, cta: 'Travar dossiê', deepLink: '/admin/dossier/<clientId>' },
+    { key: 'suppliers_selected', label: 'Fornecedores selecionados', complete: false, cta: 'Selecionar', deepLink: '/admin/ops/deals/<dealId>?tab=rfq' }
+  ],
+  completedCount: 3,
+  totalCount: 5,
+  nextStep: { label: 'Travar o dossiê para enviar RFQ', deepLink: '/admin/dossier/<clientId>' },
+  canSendRfq: false,
+  blockers: [...]
+}
+```
+
+Add this endpoint to `server/routes.ts` by composing existing `blockerEngine.checkSendRfq()` + bill/ecos/dossier existence checks.
+
+**Where to mount the card:**
+`client/src/components/deals/DealDetail.tsx` — insert above the `<TabsList>` around line 498.
+
+**Acceptance criteria:**
+- Card renders for every deal without errors
+- Progress indicator reflects actual state
+- All CTA buttons navigate correctly
+- "Next step" sentence is clear and actionable
+- Collapses to a thin strip if all stages complete
+
+---
+
+## TASK 6 — SEED / VERIFY HISTORICAL DEMO DEALS
+
+**Background:** The demo requires opening a historical deal with 4+ quotes. If none exist in prod, the demo fails.
+
+**What to do:**
+
+**Step A — Check existing:**
+```sql
+SELECT d.id, d.status, COUNT(q.id) AS quote_count
+FROM deals d
+LEFT JOIN deal_quotes q ON q.deal_id = d.id
+GROUP BY d.id, d.status
+HAVING COUNT(q.id) >= 4
+ORDER BY quote_count DESC
+LIMIT 5;
+```
+
+**Step B — If fewer than 2 deals exist with 4+ quotes:**
+
+Extend `server/demoSeeder.ts` with a function `seedConferenceDemoDeals()` that creates:
+- 2 GD deals, each with 4-5 quotes from different suppliers with varied prices, terms, response times
+- 2 ACL deals, each with 4-5 quotes from different suppliers with varied prices, terms, response times
+- All marked `isDemo = true`
+- All in `QUOTES_RECEIVED` state (pre-OFFER_SELECTED)
+- Realistic Brazilian supplier names: Matrix Energia, Comerc, Tradener, Safira, Neoenergia, Auren
+- Price spread: 5-10% between min and max so comparison is interesting
+- Include at least one quote with a slow response (4-5 days) to demonstrate SLA scoring
+
+**Step C — Expose a toggle to run the seeder:**
+Add button in `/admin/settings` page: "Seed conference demo data" → calls `POST /api/admin/seed-conference-demo`.
+
+**Acceptance criteria:**
+- At least 4 deals (2 GD + 2 ACL) are openable with 4+ quotes each
+- Comparison panel renders cleanly on all of them
+- Demo deals are clearly labeled (isDemo=true, visible badge in UI)
+- Seeder is idempotent (running twice doesn't duplicate)
+
+---
+
+## TASK 7 — AUDIT DEEP LINKS & UPLOAD STABILITY
+
+**What to do:**
+
+Run through this checklist manually and fix any broken link/button:
+
+1. `/admin/deals` — list loads, filtering works
+2. Click any deal → deal detail loads with all tabs
+3. Each tab (`assembly`, `overview`, `rfq`, `quotes`, `proposals`, `tracks`, `ecos`) loads without error
+4. Deep link `/admin/deals/:dealId?tab=assembly` works and selects correct tab
+5. Upload a bill:
+   - Shows progress
+   - Success toast appears
+   - Parsed fields appear in UI within 30s
+   - No 404s, no console errors
+6. Duplicate upload detection works (same file → "already uploaded" toast)
+7. Error handling:
+   - Parser timeout → user-friendly error, not stack trace
+   - Invalid file type → rejected cleanly
+   - Network failure → retry flow works
+
+**Fix any issue found. Priority: every button the demo touches must work.**
+
+---
+
+## FILE MANIFEST
+
+Files you will modify:
+- `server/routes.ts` (ECOS PDF endpoint, readiness endpoint, demo seed endpoint)
+- `server/demoSeeder.ts` (add conference demo deals function)
+- `server/ecos-pdf.ts` (potentially — if HTML template needs adjustments for Puppeteer)
+- `client/src/components/comparison/TrackComparisonPanel.tsx` (full redesign)
+- `client/src/components/deals/DealReadinessCard.tsx` (new file)
+- `client/src/components/deals/DealDetail.tsx` (mount new card)
+- `client/src/components/deals/DealEcosTab.tsx` (swap print → download)
+
+Files to NOT touch:
+- `shared/schema.ts` (no schema changes for this MVP)
+- Any authentication code
+- `server/parser-client.ts` (normalizer is correct as-is)
+- `server/jobs.ts` (job runner is fine)
+- Any file in `client/src/components/ecos/` beyond what's listed
+
+---
+
+## EXECUTION ORDER
+
+Do these in sequence, verifying each works before moving on:
+
+1. **Task 2** (ECOS PDF Puppeteer swap)
+2. **Task 3** (PRC→ECOS pipeline verify/seed) — needed for ECOS demo
+3. **Task 6** (seed historical demo deals) — unblocks comparison demo
+4. **Task 4** (comparison panel redesign) — the money shot, needs Task 6 data
+5. **Task 5** (readiness card) — polish layer
+6. **Task 7** (deep link audit) — final QA pass
+
+## ACCEPTANCE TEST (must pass before declaring done)
+
+Run through the 5-minute conference test end-to-end:
+
+1. Navigate to `/admin/deals`
+2. Click "Novo deal" → pick GD track → create deal for existing client
+3. Go to Assembly tab → upload a sample bill PDF
+4. Within 30s, parsed fields appear with ≥5 fields populated
+5. Readiness card shows "Fatura processada" as complete
+6. Click "Gerar ECOS" → PDF downloads, is branded, shows 5-band chart
+7. Navigate to the list → filter for deals with 4+ quotes
+8. Open one → go to Comparison tab → see recommendation card + chart + ranked table
+9. All buttons clickable, no console errors, no 404s
+
+**If any step fails, fix it. Do not report "done" until all 9 steps pass cleanly.**
+
+---
+
+## NOTES ON TONE / STYLE
+
+- This is for a brokerage commercial operating system — keep UI copy professional, not playful
+- Brazilian Portuguese is the primary UI language (English is secondary)
+- No emojis in production UI
+- Use `lucide-react` icons exclusively
+- Use shadcn/ui components from `@/components/ui`
+- Tailwind only — no custom CSS files
+- Colors must come from brand kit or existing CSS variables
+- Dark mode must work for every new component

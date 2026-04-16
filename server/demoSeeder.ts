@@ -15,6 +15,7 @@ import {
   dealProposalSnapshots,
   dealProposalViews,
   dealEcosSnapshots,
+  billsExtracted,
 } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -1784,4 +1785,244 @@ export async function getDemoDeals(): Promise<Array<{ id: string; clientName: st
   }
   
   return result;
+}
+
+// ============ CONFERENCE DEMO SEEDER ============
+// Seeds 3 rich demo deals with parsed bills so ECOS can be generated.
+// Idempotent: skips if conference demo clients already exist.
+
+const CONF_DEMO_IDS = {
+  client1: 'CONF_DEMO_CLIENT_001',
+  client2: 'CONF_DEMO_CLIENT_002',
+  client3: 'CONF_DEMO_CLIENT_003',
+  deal1: 'CONF_DEMO_DEAL_001',
+  deal2: 'CONF_DEMO_DEAL_002',
+  deal3: 'CONF_DEMO_DEAL_003',
+};
+
+export async function seedConferenceDemoDeals(): Promise<{ success: boolean; summary: Record<string, number> }> {
+  const summary: Record<string, number> = {
+    clients: 0,
+    deals: 0,
+    bills: 0,
+  };
+
+  // Check for existing conference demo deals (idempotent)
+  const existing = await db.select().from(deals).where(eq(deals.id, CONF_DEMO_IDS.deal1));
+  if (existing.length > 0) {
+    return { success: true, summary: { skipped: 1, message: 0 } };
+  }
+
+  // Seed 3 demo clients
+  const demoClients = [
+    {
+      companyName: 'CONF - Metalúrgica São Paulo Ltda',
+      cnpj: '12345678000101',
+      email: 'energia@metalsp.com.br',
+      contactPerson: 'Carlos Menezes',
+      currentSupplier: 'CEMIG',
+      currentPriceRmwh: '412.50',
+      avgConsumptionKwh: '850000',
+      segment: 'Industrial',
+      region: 'Sudeste',
+      isDemo: true,
+    },
+    {
+      companyName: 'CONF - Têxteis do Sul S.A.',
+      cnpj: '98765432000155',
+      email: 'financeiro@textilsul.com.br',
+      contactPerson: 'Ana Rodrigues',
+      currentSupplier: 'COPEL',
+      currentPriceRmwh: '395.00',
+      avgConsumptionKwh: '320000',
+      segment: 'Industrial',
+      region: 'Sul',
+      isDemo: true,
+    },
+    {
+      companyName: 'CONF - Supermercados Nordeste',
+      cnpj: '11223344000166',
+      email: 'compras@supernordeste.com.br',
+      contactPerson: 'João Silva',
+      currentSupplier: 'COELBA',
+      currentPriceRmwh: '445.00',
+      avgConsumptionKwh: '180000',
+      segment: 'SME',
+      region: 'Nordeste',
+      isDemo: true,
+    },
+  ];
+
+  const insertedClients = await db.insert(clients).values(demoClients).returning();
+  summary.clients = insertedClients.length;
+
+  const [c1, c2, c3] = insertedClients;
+
+  // Seed 3 deals at different stages of the Bill-First journey
+  const demoDeals = [
+    {
+      id: CONF_DEMO_IDS.deal1,
+      clientId: c1.id,
+      status: 'DRAFT',
+      internalOwner: 'Renan',
+      submarket: 'SE_CO',
+      energyType: 'incentivada_50',
+      volumeMwhYear: '10200.00',
+      volumeMwhMonth: '850.00',
+      isDemo: true,
+    },
+    {
+      id: CONF_DEMO_IDS.deal2,
+      clientId: c2.id,
+      status: 'DRAFT',
+      internalOwner: 'Renan',
+      submarket: 'S',
+      energyType: 'incentivada_100',
+      volumeMwhYear: '3840.00',
+      volumeMwhMonth: '320.00',
+      isDemo: true,
+    },
+    {
+      id: CONF_DEMO_IDS.deal3,
+      clientId: c3.id,
+      status: 'RFQ_SENT',
+      internalOwner: 'Renan',
+      submarket: 'NE',
+      energyType: 'convencional',
+      volumeMwhYear: '2160.00',
+      volumeMwhMonth: '180.00',
+      isDemo: true,
+    },
+  ];
+
+  const insertedDeals = await db.insert(deals).values(demoDeals).returning();
+  summary.deals = insertedDeals.length;
+
+  // Seed parsed bills for each deal (2 bills per deal for realistic data)
+  const demoBills = [
+    // Deal 1 – SE_CO, incentivada_50, 850 MWh/month
+    {
+      dealId: CONF_DEMO_IDS.deal1,
+      clientId: c1.id,
+      fileStorageKey: 'demo/conf_bill_001_feb.pdf',
+      originalFilename: 'conta_cemig_fev2026.pdf',
+      fileSizeBytes: 245000,
+      fileSha256: 'sha_conf_001_feb',
+      parseStatus: 'PARSED',
+      parseConfidence: 91,
+      distributor: 'CEMIG',
+      referenceMonth: '2026-02',
+      totalAmount: '349625.00',
+      totalEnergyKwh: '850000',
+      customerName: 'METALURGICA SAO PAULO LTDA',
+      customerId: '12345678000101',
+      tariffGroup: 'A4',
+      docKind: 'STANDARD_BILL',
+      ucCode: '7001234567',
+      grupo: 'A',
+      subgrupo: 'A4',
+      modalidade: 'VERDE',
+      bandeira: 'VERDE',
+      consumoForaPontaKwh: '805000',
+      consumoPontaKwh: '45000',
+      demandaContratadaKw: '1800',
+      demandaMedidaKw: '1650',
+      validated: true,
+      uploadedByUserId: null as any,
+    },
+    {
+      dealId: CONF_DEMO_IDS.deal1,
+      clientId: c1.id,
+      fileStorageKey: 'demo/conf_bill_001_mar.pdf',
+      originalFilename: 'conta_cemig_mar2026.pdf',
+      fileSizeBytes: 251000,
+      fileSha256: 'sha_conf_001_mar',
+      parseStatus: 'PARSED',
+      parseConfidence: 93,
+      distributor: 'CEMIG',
+      referenceMonth: '2026-03',
+      totalAmount: '356750.00',
+      totalEnergyKwh: '867000',
+      customerName: 'METALURGICA SAO PAULO LTDA',
+      customerId: '12345678000101',
+      tariffGroup: 'A4',
+      docKind: 'STANDARD_BILL',
+      ucCode: '7001234567',
+      grupo: 'A',
+      subgrupo: 'A4',
+      modalidade: 'VERDE',
+      bandeira: 'AMARELA',
+      consumoForaPontaKwh: '821000',
+      consumoPontaKwh: '46000',
+      demandaContratadaKw: '1800',
+      demandaMedidaKw: '1720',
+      validated: true,
+      uploadedByUserId: null as any,
+    },
+    // Deal 2 – S, incentivada_100, 320 MWh/month
+    {
+      dealId: CONF_DEMO_IDS.deal2,
+      clientId: c2.id,
+      fileStorageKey: 'demo/conf_bill_002_feb.pdf',
+      originalFilename: 'conta_copel_fev2026.pdf',
+      fileSizeBytes: 198000,
+      fileSha256: 'sha_conf_002_feb',
+      parseStatus: 'PARSED',
+      parseConfidence: 88,
+      distributor: 'COPEL',
+      referenceMonth: '2026-02',
+      totalAmount: '126400.00',
+      totalEnergyKwh: '320000',
+      customerName: 'TEXTEIS DO SUL SA',
+      customerId: '98765432000155',
+      tariffGroup: 'A3a',
+      docKind: 'STANDARD_BILL',
+      ucCode: '8002345678',
+      grupo: 'A',
+      subgrupo: 'A3a',
+      modalidade: 'AZUL',
+      bandeira: 'VERDE',
+      consumoForaPontaKwh: '295000',
+      consumoPontaKwh: '25000',
+      demandaContratadaKw: '700',
+      demandaMedidaKw: '680',
+      validated: true,
+      uploadedByUserId: null as any,
+    },
+    // Deal 3 – NE, convencional, 180 MWh/month
+    {
+      dealId: CONF_DEMO_IDS.deal3,
+      clientId: c3.id,
+      fileStorageKey: 'demo/conf_bill_003_mar.pdf',
+      originalFilename: 'conta_coelba_mar2026.pdf',
+      fileSizeBytes: 172000,
+      fileSha256: 'sha_conf_003_mar',
+      parseStatus: 'PARSED',
+      parseConfidence: 85,
+      distributor: 'COELBA',
+      referenceMonth: '2026-03',
+      totalAmount: '80100.00',
+      totalEnergyKwh: '180000',
+      customerName: 'SUPERMERCADOS NORDESTE LTDA',
+      customerId: '11223344000166',
+      tariffGroup: 'A4',
+      docKind: 'STANDARD_BILL',
+      ucCode: '9003456789',
+      grupo: 'A',
+      subgrupo: 'A4',
+      modalidade: 'VERDE',
+      bandeira: 'VERMELHA_P1',
+      consumoForaPontaKwh: '166000',
+      consumoPontaKwh: '14000',
+      demandaContratadaKw: '400',
+      demandaMedidaKw: '385',
+      validated: true,
+      uploadedByUserId: null as any,
+    },
+  ];
+
+  const insertedBills = await db.insert(billsExtracted).values(demoBills).returning();
+  summary.bills = insertedBills.length;
+
+  return { success: true, summary };
 }

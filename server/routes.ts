@@ -67,7 +67,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
-import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
+import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, seedConferenceDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
@@ -7858,6 +7858,17 @@ export async function registerRoutes(
     }
   });
   
+  app.post("/api/admin/seed-conference-demo", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const result = await seedConferenceDemoDeals();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error seeding conference demo:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed conference demo" });
+    }
+  });
+
   app.post("/api/admin/demo/nuke", async (req, res) => {
     if (!isDemoModeEnabled()) {
       return res.status(403).json({ success: false, error: "Demo mode is disabled. Set ENABLE_DEMO_MODE=true to enable." });
