@@ -6,7 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle, Package, Presentation } from "lucide-react";
+import { Loader2, Database, Trash2, RefreshCw, AlertTriangle, CheckCircle, PlayCircle, Package, Presentation, BookOpen } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { GuidedTestModal } from "./GuidedTestModal";
 
@@ -76,6 +76,7 @@ export function DemoDataPanel() {
   const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const [nukeResult, setNukeResult] = useState<NukeResult | null>(null);
   const [confDemoResult, setConfDemoResult] = useState<{ success: boolean; summary: Record<string, number> } | null>(null);
+  const [playbooksResult, setPlaybooksResult] = useState<{ success: boolean; summary: Record<string, number> } | null>(null);
   const [guidedTestOpen, setGuidedTestOpen] = useState(false);
   const [selectedPacks, setSelectedPacks] = useState<ScenarioPack[]>(['HAPPY_PATH', 'SLA_BREACH', 'COMMISSION_DISPUTE']);
 
@@ -128,6 +129,17 @@ export function DemoDataPanel() {
       refetchStats();
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+    },
+  });
+
+  const playbooksMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/seed-playbooks");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setPlaybooksResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
     },
   });
 
@@ -272,6 +284,21 @@ export function DemoDataPanel() {
           </Button>
 
           <Button
+            variant="outline"
+            onClick={() => playbooksMutation.mutate()}
+            disabled={playbooksMutation.isPending}
+            data-testid="button-import-supplier-playbooks"
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            {playbooksMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <BookOpen className="h-4 w-4 mr-2" />
+            )}
+            Import Supplier Playbooks
+          </Button>
+
+          <Button
             onClick={() => seedMutation.mutate(selectedPacks.length > 0 ? selectedPacks : ['FULL_DATASET'])}
             disabled={seedMutation.isPending || nukeMutation.isPending}
             data-testid="button-seed-demo"
@@ -340,6 +367,24 @@ export function DemoDataPanel() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {playbooksResult && (
+          <div className="rounded-lg border border-emerald-500/50 bg-emerald-50 p-4 dark:bg-emerald-950/30">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="h-4 w-4 text-emerald-600" />
+              <span className="font-medium text-emerald-800 dark:text-emerald-200">
+                {playbooksResult.success ? 'Supplier Playbooks Imported' : 'Import Failed'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              {Object.entries(playbooksResult.summary).map(([key, value]) => (
+                <div key={key} className="text-emerald-700 dark:text-emerald-300">
+                  {key}: <strong>{String(value)}</strong>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

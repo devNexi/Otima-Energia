@@ -10,6 +10,8 @@ import {
   clientDossiers,
   rfqDispatches,
   supplierRfqPlaybooks,
+  supplierContacts,
+  supplierGdCoverage,
   dealProposals,
   dealProposalItems,
   dealProposalSnapshots,
@@ -17,7 +19,7 @@ import {
   dealEcosSnapshots,
   billsExtracted,
 } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 const DEMO_PREFIX = "DEMO_";
@@ -2023,6 +2025,379 @@ export async function seedConferenceDemoDeals(): Promise<{ success: boolean; sum
 
   const insertedBills = await db.insert(billsExtracted).values(demoBills).returning();
   summary.bills = insertedBills.length;
+
+  return { success: true, summary };
+}
+
+// ============== SUPPLIER PLAYBOOK IMPORTER ==============
+
+const PLAYBOOK_SUPPLIERS = [
+  {
+    name: 'Prime Energy',
+    shortCode: 'PRIME',
+    category: 'large',
+    contactEmail: 'contasapagar@primeenergy.com.br',
+    website: 'https://www.primeenergy.com.br',
+    status: 'active',
+    isActive: true,
+    isDemo: false,
+  },
+  {
+    name: 'ATMO Energia',
+    shortCode: 'ATMO',
+    category: 'medium',
+    contactEmail: null,
+    website: null,
+    status: 'active',
+    isActive: true,
+    isDemo: false,
+  },
+  {
+    name: 'CEMIG',
+    shortCode: 'CEMIG',
+    category: 'large',
+    contactEmail: null,
+    website: null,
+    status: 'active',
+    isActive: true,
+    isDemo: false,
+  },
+  {
+    name: 'Delantis Energias Renováveis',
+    shortCode: 'DELANTIS',
+    category: 'medium',
+    contactEmail: null,
+    website: null,
+    status: 'active',
+    isActive: true,
+    isDemo: false,
+  },
+  {
+    name: 'Genial',
+    shortCode: 'GENIAL',
+    category: 'medium',
+    contactEmail: null,
+    website: null,
+    status: 'active',
+    isActive: true,
+    isDemo: false,
+  },
+];
+
+const CONTACT_ROLES = [
+  { role: 'Comercial', department: 'COMERCIAL', isPrimary: true },
+  { role: 'Operações', department: 'OPERACOES', isPrimary: false },
+  { role: 'ACL', department: 'ACL', isPrimary: false },
+  { role: 'GD', department: 'GD', isPrimary: false },
+  { role: 'Financeiro / Comissão', department: 'FINANCEIRO_COMISSAO', isPrimary: false },
+  { role: 'Escalonamento', department: 'ESCALONAMENTO', isPrimary: false },
+];
+
+export async function seedSupplierPlaybooks(): Promise<{
+  success: boolean;
+  summary: { suppliers: number; contacts: number; playbooks: number; gdCoverage: number; skipped: number };
+}> {
+  const summary = { suppliers: 0, contacts: 0, playbooks: 0, gdCoverage: 0, skipped: 0 };
+
+  // Step 1: Upsert suppliers
+  const supplierIds: Record<string, number> = {};
+
+  for (const s of PLAYBOOK_SUPPLIERS) {
+    const existing = await db.select().from(suppliers)
+      .where(eq(suppliers.shortCode, s.shortCode))
+      .limit(1);
+
+    if (existing.length > 0) {
+      supplierIds[s.shortCode] = existing[0].id;
+      // Update with latest data
+      await db.update(suppliers)
+        .set({
+          name: s.name,
+          category: s.category,
+          contactEmail: s.contactEmail,
+          website: s.website,
+          status: s.status,
+          isActive: s.isActive,
+        })
+        .where(eq(suppliers.shortCode, s.shortCode));
+      summary.skipped++;
+    } else {
+      const [inserted] = await db.insert(suppliers).values(s).returning();
+      supplierIds[s.shortCode] = inserted.id;
+      summary.suppliers++;
+    }
+  }
+
+  // Step 2: Contacts — skip if supplier already has contacts
+  for (const [shortCode, supplierId] of Object.entries(supplierIds)) {
+    const existingContacts = await db.select().from(supplierContacts)
+      .where(eq(supplierContacts.supplierId, supplierId))
+      .limit(1);
+
+    if (existingContacts.length > 0) continue;
+
+    const contactRows = CONTACT_ROLES.map(cr => ({
+      supplierId,
+      name: 'A preencher',
+      role: cr.role,
+      department: cr.department,
+      email: (shortCode === 'PRIME' && cr.department === 'FINANCEIRO_COMISSAO')
+        ? 'contasapagar@primeenergy.com.br'
+        : null,
+      preferredFormat: 'email' as const,
+      isPrimary: cr.isPrimary,
+      isActive: true,
+      notes: 'Aguardando preenchimento pelo time comercial',
+    }));
+
+    await db.insert(supplierContacts).values(contactRows);
+    summary.contacts += contactRows.length;
+  }
+
+  // Step 3: RFQ Playbooks — skip if supplier already has playbooks
+  const PRIME = supplierIds['PRIME'];
+  const ATMO = supplierIds['ATMO'];
+  const CEMIG = supplierIds['CEMIG'];
+  const DELANTIS = supplierIds['DELANTIS'];
+  const GENIAL = supplierIds['GENIAL'];
+
+  const playbooksToInsert: any[] = [];
+
+  // Check which suppliers already have playbooks
+  const existingPlaybooks = await db.select({ supplierId: supplierRfqPlaybooks.supplierId })
+    .from(supplierRfqPlaybooks)
+    .where(inArray(supplierRfqPlaybooks.supplierId, [PRIME, ATMO, CEMIG, DELANTIS, GENIAL]));
+  const suppliersWithPlaybooks = new Set(existingPlaybooks.map(p => p.supplierId));
+
+  // Prime Energy — 4 playbooks
+  if (!suppliersWithPlaybooks.has(PRIME)) {
+    playbooksToInsert.push(
+      {
+        supplierId: PRIME,
+        version: 1,
+        status: 'ACTIVE',
+        preferredChannel: 'EMAIL',
+        productLines: ['ACL'],
+        productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+        submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+        rfqIntakeMethod: 'EMAIL',
+        rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+        rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+        docsRequired: ['CNPJ', 'Contrato social', 'Procuração (se aplicável)'],
+        onboardingSlaDays: 30,
+        quoteResponseSlaHours: 72,
+        relationshipNotes: 'N e NE sujeitos a avaliação comercial prévia',
+        commissionReportFormat: 'PDF',
+        commissionReportFrequency: 'MONTHLY',
+        internalNotes: 'ACL Atacado — Demanda >= 500 kW, agente CCEE. Preço fixo por MWh ou estrutura customizada.',
+        isDemo: false,
+      },
+      {
+        supplierId: PRIME,
+        version: 1,
+        status: 'ACTIVE',
+        preferredChannel: 'EMAIL',
+        productLines: ['ACL'],
+        productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+        submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+        rfqIntakeMethod: 'EMAIL',
+        rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+        rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+        docsRequired: ['CNPJ', 'Contrato social'],
+        onboardingSlaDays: 30,
+        quoteResponseSlaHours: 72,
+        relationshipNotes: 'Varejo — Demanda < 500 kW, representação via gestor varejista',
+        commissionReportFormat: 'PDF',
+        commissionReportFrequency: 'MONTHLY',
+        internalNotes: 'ACL Varejo — Preço fixo ou desconto garantido. Baixa flexibilidade de volume.',
+        isDemo: false,
+      },
+      {
+        supplierId: PRIME,
+        version: 1,
+        status: 'ACTIVE',
+        preferredChannel: 'PORTAL',
+        productLines: ['GD'],
+        productsSupported: ['GD_ASSINATURA_BT'],
+        submarketsCovered: ['SE_CO', 'S', 'NE'],
+        rfqIntakeMethod: 'PORTAL',
+        rfqRequiredFields: ['CNPJ_ou_CPF', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+        rfqAttachmentRequirements: ['Última fatura de energia'],
+        docsRequired: ['CPF ou CNPJ', 'Conta de energia recente'],
+        onboardingSlaDays: 15,
+        quoteResponseSlaHours: 48,
+        relationshipNotes: 'GD BT via portal de parceiros. Código parceiro: 241254. Cobertura depende de usinas e área de concessão.',
+        slaConfig: { quoteDueHours: 48, followupCadenceHours: [48, 96] },
+        portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros', loginNotes: 'Usar código parceiro 241254' },
+        commissionReportFormat: 'PDF',
+        commissionReportFrequency: 'MONTHLY',
+        internalNotes: 'GD Assinatura BT — PF ou PJ com consumo médio >= 500 kWh/mês. Desconto garantido sobre tarifa bruta.',
+        isDemo: false,
+      },
+      {
+        supplierId: PRIME,
+        version: 1,
+        status: 'ACTIVE',
+        preferredChannel: 'PORTAL',
+        productLines: ['GD'],
+        productsSupported: ['GD_ASSINATURA_MT'],
+        submarketsCovered: ['SE_CO', 'S', 'NE'],
+        rfqIntakeMethod: 'PORTAL',
+        rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'demanda_kw', 'distribuidora'],
+        rfqAttachmentRequirements: ['Última fatura de energia', 'Histórico de consumo 12m'],
+        docsRequired: ['CNPJ', 'Contrato social', 'Conta de energia'],
+        onboardingSlaDays: 20,
+        quoteResponseSlaHours: 48,
+        relationshipNotes: 'GD MT via portal de parceiros. Código parceiro: 241254. Subgrupo A4.',
+        portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros', loginNotes: 'Usar código parceiro 241254' },
+        commissionReportFormat: 'PDF',
+        commissionReportFrequency: 'MONTHLY',
+        internalNotes: 'GD Assinatura MT — Subgrupo A4. Desconto garantido sobre tarifa bruta.',
+        isDemo: false,
+      },
+    );
+  }
+
+  // ATMO Energia — 1 GD playbook
+  if (!suppliersWithPlaybooks.has(ATMO)) {
+    playbooksToInsert.push({
+      supplierId: ATMO,
+      version: 1,
+      status: 'ACTIVE',
+      preferredChannel: 'EMAIL',
+      productLines: ['GD'],
+      productsSupported: ['GD_ASSINATURA_BT', 'GD_ASSINATURA_MT'],
+      submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+      rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CNPJ ou CPF', 'Conta de energia recente'],
+      onboardingSlaDays: 15,
+      quoteResponseSlaHours: 48,
+      internalNotes: 'GD — Dados a validar no playbook completo. Contatos a preencher.',
+      isDemo: false,
+    });
+  }
+
+  // CEMIG — 1 GD + ACL playbook
+  if (!suppliersWithPlaybooks.has(CEMIG)) {
+    playbooksToInsert.push({
+      supplierId: CEMIG,
+      version: 1,
+      status: 'ACTIVE',
+      preferredChannel: 'EMAIL',
+      productLines: ['GD', 'ACL'],
+      productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'GD_ASSINATURA_BT'],
+      submarketsCovered: ['SE_CO', 'S', 'NE'],
+      rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw'],
+      rfqAttachmentRequirements: ['Últimas 12 faturas', 'Dossiê de consumo'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 30,
+      quoteResponseSlaHours: 72,
+      internalNotes: 'CEMIG — Major distributor. GD + ACL. Dados a validar no playbook completo.',
+      isDemo: false,
+    });
+  }
+
+  // Delantis Energias Renováveis — 1 GD playbook
+  if (!suppliersWithPlaybooks.has(DELANTIS)) {
+    playbooksToInsert.push({
+      supplierId: DELANTIS,
+      version: 1,
+      status: 'ACTIVE',
+      preferredChannel: 'EMAIL',
+      productLines: ['GD'],
+      productsSupported: ['GD_ASSINATURA_BT', 'GD_ASSINATURA_MT'],
+      submarketsCovered: ['SE_CO', 'S', 'NE'],
+      rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 20,
+      quoteResponseSlaHours: 48,
+      internalNotes: 'GD Energias Renováveis — Foco em energia 100% renovável. Dados a validar.',
+      isDemo: false,
+    });
+  }
+
+  // Genial — 1 ACL Varejista playbook
+  if (!suppliersWithPlaybooks.has(GENIAL)) {
+    playbooksToInsert.push({
+      supplierId: GENIAL,
+      version: 1,
+      status: 'ACTIVE',
+      preferredChannel: 'EMAIL',
+      productLines: ['ACL'],
+      productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+      submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+      rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw'],
+      rfqAttachmentRequirements: ['Últimas 12 faturas', 'Dossiê de consumo'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 25,
+      quoteResponseSlaHours: 48,
+      internalNotes: 'ACL Varejista — Dados a validar no playbook completo.',
+      isDemo: false,
+    });
+  }
+
+  if (playbooksToInsert.length > 0) {
+    await db.insert(supplierRfqPlaybooks).values(playbooksToInsert);
+    summary.playbooks = playbooksToInsert.length;
+  }
+
+  // Step 4: GD Coverage — skip if already exists
+  const existingCoverage = await db.select({ supplierId: supplierGdCoverage.supplierId })
+    .from(supplierGdCoverage)
+    .where(inArray(supplierGdCoverage.supplierId, [PRIME, ATMO, CEMIG, DELANTIS, GENIAL]));
+  const suppliersWithCoverage = new Set(existingCoverage.map(c => c.supplierId));
+
+  const coverageRows: any[] = [];
+
+  if (!suppliersWithCoverage.has(PRIME)) {
+    coverageRows.push({
+      supplierId: PRIME,
+      coveredStates: ['SP', 'MG', 'MT', 'MS', 'GO', 'BA', 'PI', 'PR'],
+      coveredDistributors: [
+        'CPFL Paulista',
+        'CEMIG',
+        'CPFL Santa Cruz',
+        'Energisa MT',
+        'Energisa MS',
+        'Equatorial GO',
+        'COELBA',
+        'Equatorial PI',
+        'Elektro (Neoenergia)',
+        'COPEL',
+      ],
+      isActive: true,
+      notes: 'GD BT coverage. Discount rates: CPFL Paulista 19%, CEMIG 21%, CPFL Santa Cruz 16%, Energisa MT 15%, Energisa MS 18%, Equatorial GO 17%, COELBA 18%, Equatorial PI 17%, Elektro 16%, COPEL 15%.',
+    });
+  }
+  if (!suppliersWithCoverage.has(ATMO)) {
+    coverageRows.push({
+      supplierId: ATMO,
+      coveredStates: [],
+      coveredDistributors: [],
+      isActive: true,
+      notes: 'Cobertura a preencher via playbook completo.',
+    });
+  }
+  if (!suppliersWithCoverage.has(DELANTIS)) {
+    coverageRows.push({
+      supplierId: DELANTIS,
+      coveredStates: [],
+      coveredDistributors: [],
+      isActive: true,
+      notes: 'Cobertura a preencher via playbook completo.',
+    });
+  }
+
+  if (coverageRows.length > 0) {
+    await db.insert(supplierGdCoverage).values(coverageRows);
+    summary.gdCoverage = coverageRows.length;
+  }
 
   return { success: true, summary };
 }

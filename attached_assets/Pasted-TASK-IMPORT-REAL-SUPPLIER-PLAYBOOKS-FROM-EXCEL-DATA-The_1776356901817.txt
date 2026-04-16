@@ -1,0 +1,224 @@
+TASK: IMPORT REAL SUPPLIER PLAYBOOKS FROM EXCEL DATA
+The client has provided their actual supplier playbook (playbook_v4_3_final.xlsx). We need to seed the portal with this real data — 5 active suppliers with their products, contacts, RFQ config, contract terms, and GD coverage.
+Do NOT create fake/demo suppliers. Use the exact data below from the client's playbook.
+THE 5 SUPPLIERS TO CREATE
+1. Prime Energy
+
+supplier_id reference: PRIME_001
+shortCode: PRIME
+category: large
+status: active
+contactEmail: contasapagar@primeenergy.com.br
+website: https://www.primeenergy.com.br
+Products: ACL_ATACADO, ACL_VAREJO, GD_ASSINATURA_BT, GD_ASSINATURA_MT
+
+2. ATMO Energia
+
+supplier_id reference: ATMO_001
+shortCode: ATMO
+category: medium
+status: active
+Products: GD (details from playbook)
+
+3. CEMIG
+
+supplier_id reference: CEMIG_001
+shortCode: CEMIG
+category: large
+status: active
+Products: GD + ACL (major distributor)
+
+4. Delantis Energias Renováveis
+
+supplier_id reference: DELANTIS_001
+shortCode: DELANTIS
+category: medium
+status: active
+Products: GD (renewable energy)
+
+5. Genial
+
+supplier_id reference: GENIAL_001
+shortCode: GENIAL
+category: medium
+status: active
+Products: ACL Varejista
+
+STEP 1 — CREATE SUPPLIERS IN suppliers TABLE
+Check if these suppliers already exist (by name or shortCode). If they exist, update them. If not, create them. Use INSERT ... ON CONFLICT or check-then-insert pattern.
+typescriptconst PLAYBOOK_SUPPLIERS = [
+  { name: 'Prime Energy', shortCode: 'PRIME', category: 'large', contactEmail: 'contasapagar@primeenergy.com.br', website: 'https://www.primeenergy.com.br', status: 'active', isActive: true },
+  { name: 'ATMO Energia', shortCode: 'ATMO', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+  { name: 'CEMIG', shortCode: 'CEMIG', category: 'large', contactEmail: null, website: null, status: 'active', isActive: true },
+  { name: 'Delantis Energias Renováveis', shortCode: 'DELANTIS', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+  { name: 'Genial', shortCode: 'GENIAL', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+];
+STEP 2 — CREATE SUPPLIER CONTACTS IN supplier_contacts TABLE
+For each supplier, create contact records by function. Most are "A_PREENCHER" (to be filled) from the playbook — create them as placeholder entries so Alexandre can fill them in via the UI.
+typescriptconst CONTACT_ROLES = ['COMERCIAL', 'OPERACOES', 'ACL', 'GD', 'FINANCEIRO_COMISSAO', 'ESCALONAMENTO'];
+
+// For Prime Energy specifically:
+const PRIME_CONTACTS = [
+  { name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, preferredFormat: 'email', isPrimary: true },
+  { name: 'A preencher', role: 'Operações', department: 'OPERACOES', email: null, preferredFormat: 'email' },
+  { name: 'A preencher', role: 'ACL', department: 'ACL', email: null, preferredFormat: 'email' },
+  { name: 'A preencher', role: 'GD', department: 'GD', email: null, preferredFormat: 'email' },
+  { name: 'A preencher', role: 'Financeiro', department: 'FINANCEIRO_COMISSAO', email: 'contasapagar@primeenergy.com.br', preferredFormat: 'email' },
+  { name: 'A preencher', role: 'Escalonamento', department: 'ESCALONAMENTO', email: null, preferredFormat: 'email' },
+];
+// Repeat similar structure for ATMO, CEMIG, Delantis, Genial (all A_PREENCHER)
+STEP 3 — CREATE RFQ PLAYBOOKS IN supplier_rfq_playbooks TABLE
+Each supplier × product combination gets its own playbook. This is the critical table for eligibility and comparison logic.
+typescript// PRIME ENERGY PLAYBOOKS
+const PRIME_PLAYBOOKS = [
+  {
+    // ACL Atacado
+    supplierId: /* Prime's DB id */,
+    version: 1,
+    status: 'ACTIVE',
+    preferredChannel: 'EMAIL', // A_VALIDAR in playbook — default to EMAIL
+    productLines: ['ACL'],
+    productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+    submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+    rfqIntakeMethod: 'EMAIL',
+    rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+    rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+    docsRequired: ['CNPJ', 'Contrato social', 'Procuração (se aplicável)'],
+    onboardingSlaDays: 30,
+    quoteResponseSlaHours: 72,
+    relationshipNotes: 'N e NE sujeitos a avaliação comercial prévia',
+    commissionReportFormat: 'PDF',
+    commissionReportFrequency: 'MONTHLY',
+    internalNotes: 'ACL Atacado — Demanda >= 500 kW, agente CCEE. Preço fixo por MWh ou estrutura customizada.',
+  },
+  {
+    // ACL Varejo
+    supplierId: /* Prime's DB id */,
+    version: 1,
+    status: 'ACTIVE',
+    preferredChannel: 'EMAIL',
+    productLines: ['ACL'],
+    productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+    submarketsCovered: ['SE_CO', 'S', 'NE', 'N'],
+    rfqIntakeMethod: 'EMAIL',
+    rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+    rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+    docsRequired: ['CNPJ', 'Contrato social'],
+    onboardingSlaDays: 30,
+    quoteResponseSlaHours: 72,
+    relationshipNotes: 'Varejo — Demanda < 500 kW, representação via gestor varejista',
+    internalNotes: 'ACL Varejo — Preço fixo ou desconto garantido. Baixa flexibilidade de volume.',
+  },
+  {
+    // GD BT
+    supplierId: /* Prime's DB id */,
+    version: 1,
+    status: 'ACTIVE',
+    preferredChannel: 'PORTAL',
+    productLines: ['GD'],
+    productsSupported: ['GD_ASSINATURA_BT'],
+    submarketsCovered: ['SE_CO', 'S', 'NE'],
+    rfqIntakeMethod: 'PORTAL',
+    rfqRequiredFields: ['CNPJ_ou_CPF', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+    rfqAttachmentRequirements: ['Última fatura de energia'],
+    docsRequired: ['CPF ou CNPJ', 'Conta de energia recente'],
+    onboardingSlaDays: 15,
+    quoteResponseSlaHours: 48,
+    relationshipNotes: 'GD BT via portal de parceiros. Código parceiro: 241254. Cobertura depende de usinas e área de concessão.',
+    slaConfig: { quoteDueHours: 48, followupCadenceHours: [48, 96] },
+    portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros', loginNotes: 'Usar código parceiro 241254' },
+    internalNotes: 'GD Assinatura BT — PF ou PJ com consumo médio >= 500 kWh/mês. Desconto garantido sobre tarifa bruta.',
+  },
+  {
+    // GD MT
+    supplierId: /* Prime's DB id */,
+    version: 1,
+    status: 'ACTIVE',
+    preferredChannel: 'PORTAL',
+    productLines: ['GD'],
+    productsSupported: ['GD_ASSINATURA_MT'],
+    submarketsCovered: ['SE_CO', 'S', 'NE'],
+    rfqIntakeMethod: 'PORTAL',
+    rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'demanda_kw', 'distribuidora'],
+    rfqAttachmentRequirements: ['Última fatura de energia', 'Histórico de consumo 12m'],
+    docsRequired: ['CNPJ', 'Contrato social', 'Conta de energia'],
+    onboardingSlaDays: 20,
+    quoteResponseSlaHours: 48,
+    relationshipNotes: 'GD MT via portal de parceiros. Código parceiro: 241254. Subgrupo A4.',
+    portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros', loginNotes: 'Usar código parceiro 241254' },
+    internalNotes: 'GD Assinatura MT — Subgrupo A4. Desconto garantido sobre tarifa bruta.',
+  },
+];
+
+// For ATMO, CEMIG, Delantis, Genial — create at minimum one playbook each with:
+// - productLines: ['GD'] for ATMO, Delantis; ['ACL'] for Genial; ['GD', 'ACL'] for CEMIG
+// - status: 'ACTIVE'
+// - submarketsCovered based on their coverage data
+// - Other fields as available or reasonable defaults
+STEP 4 — CREATE GD COVERAGE IN supplier_gd_coverage TABLE
+This is the distributor-level coverage matrix. Prime has detailed data:
+typescriptconst PRIME_GD_COVERAGE = {
+  supplierId: /* Prime's DB id */,
+  coveredStates: ['SP', 'MG', 'MT', 'MS', 'GO', 'BA', 'PI', 'PR'],
+  coveredDistributors: [
+    'CPFL Paulista',
+    'CEMIG',
+    'CPFL Santa Cruz',
+    'Energisa MT',
+    'Energisa MS',
+    'Equatorial GO',
+    'COELBA',
+    'Equatorial PI',
+    'Elektro (Neoenergia)',
+    'COPEL',
+  ],
+  isActive: true,
+  notes: 'GD BT coverage. Discount rates: CPFL Paulista 19%, CEMIG 21%, CPFL Santa Cruz 16%, Energisa MT 15%, Energisa MS 18%, Equatorial GO 17%, COELBA 18%, Equatorial PI 17%, Elektro 16%, COPEL 15%.',
+};
+
+// For ATMO, Delantis, Genial — create with available data or empty arrays to be filled later
+STEP 5 — CREATE A SEEDER ENDPOINT
+Add to server/routes.ts:
+typescriptapp.post("/api/admin/seed-playbooks", async (req, res) => {
+  // Only admin can run this
+  // Idempotent — check if supplier exists by shortCode before inserting
+  // Run all steps above
+  // Return summary: { suppliers: 5, contacts: 30, playbooks: 8, gdCoverage: 5 }
+});
+Also add a button in /admin/settings (file: client/src/pages/AdminSettings.tsx): "Import supplier playbooks" that calls this endpoint.
+STEP 6 — VERIFY SUPPLIER DATA SURFACES IN THE UI
+After seeding, verify:
+
+/admin/suppliers — all 5 suppliers visible with correct names and status
+Click Prime Energy → contacts tab shows 6 contact roles
+Go to any deal → RFQ tab → "Eligible Suppliers" count should reflect the real playbook data
+GD deals should show Prime as eligible for matching distributors (e.g., Equatorial GO for Goiás-based clients)
+ACL deals should show Prime + Genial as eligible
+Comparison panel should use real supplier names, not demo names
+
+ACCEPTANCE CRITERIA
+
+5 suppliers in the suppliers table with correct names
+At least 6 contacts created (Prime's 6 roles + basic entries for others)
+At least 6 playbooks (Prime's 4 + at minimum 1 each for others)
+Prime GD coverage shows 10 distributors across 8 states
+Seeder is idempotent — running twice doesn't create duplicates
+Existing demo/test suppliers are NOT deleted — new suppliers are added alongside
+Supplier names appear correctly in the comparison panel and RFQ distribution view
+
+FILES TO MODIFY
+
+server/routes.ts — add seed endpoint
+server/demoSeeder.ts — add seedSupplierPlaybooks() function with all data above
+client/src/pages/AdminSettings.tsx — add "Import supplier playbooks" button
+
+FILES TO NOT TOUCH
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+Any comparison or assembly components (those are already done)
+
+After completing this task, summarize what was created and wait for my confirmation before proceeding.
+
+That covers the full playbook import. The key thing is it uses the actual supplier data from Alexandre's spreadsheet rather than fabricated demo data — Prime's real GD coverage matrix, real portal URL, real partner code, real contact structure.

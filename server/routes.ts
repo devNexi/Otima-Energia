@@ -67,7 +67,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
-import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, seedConferenceDemoDeals, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
+import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, seedConferenceDemoDeals, seedSupplierPlaybooks, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
@@ -7866,6 +7866,33 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error seeding conference demo:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to seed conference demo" });
+    }
+  });
+
+  app.post("/api/admin/seed-playbooks", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    try {
+      const result = await seedSupplierPlaybooks();
+      await logAuditEvent({
+        actor: user.username || "system",
+        actorRole: user.role || null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "SUPPLIER_PLAYBOOKS_SEEDED",
+        entityType: "supplier_playbooks",
+        entityId: null,
+        detailsJson: result.summary,
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error seeding supplier playbooks:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed supplier playbooks" });
     }
   });
 
