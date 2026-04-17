@@ -11928,6 +11928,45 @@ export async function registerRoutes(
     }
   });
 
+  // Update track type (GDL ↔ ACL) — admin/ops correction path
+  app.patch("/api/tracks/:trackId/type", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops'])) return;
+    try {
+      const { newType, reason } = req.body;
+      const ALLOWED_TYPES = ['GDL', 'ACL'];
+      if (!newType || !ALLOWED_TYPES.includes(newType)) {
+        return res.status(400).json({ error: `newType must be one of: ${ALLOWED_TYPES.join(', ')}` });
+      }
+      const track = await storage.getDealTrack(parseInt(req.params.trackId));
+      if (!track) return res.status(404).json({ error: "Track not found" });
+      if (track.type === newType) {
+        return res.json({ ...track, message: "Type unchanged" });
+      }
+      const updated = await storage.updateDealTrack(track.id, { type: newType });
+      await storage.createDealTrackEvent({
+        trackId: track.id,
+        eventType: 'TYPE_CHANGE',
+        fromStatus: track.status,
+        toStatus: track.status,
+        payload: { fromType: track.type, toType: newType, reason: reason || null },
+        createdByUserId: await getSessionUserId(req) || null,
+      });
+      await logAuditEvent({
+        actor: (await getSessionUserId(req)) || "system",
+        actorRole: null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "TRACK_TYPE_CHANGED",
+        entityType: "deal_track",
+        entityId: String(track.id),
+        detailsJson: { dealId: track.dealId, fromType: track.type, toType: newType, reason: reason || null },
+      });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/tracks/:trackId/documents", async (req, res) => {
     if (!await validateDealOsSession(req, res, ['admin', 'ops', 'sales'])) return;
     try {

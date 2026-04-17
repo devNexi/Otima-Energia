@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { BillUploadSection } from "@/components/BillUploadSection";
+import { EditClientModal } from "@/components/clients/EditClientModal";
 import { SupplierQuoteManager } from "@/components/quotes/SupplierQuoteManager";
 import { RFOGenerator } from "@/components/rfo/RFOGenerator";
 import { RFODetailDialog } from "@/components/rfo/RFODetailDialog";
@@ -30,6 +31,7 @@ import {
   Plus, 
   Link as LinkIcon, 
   ArrowRight,
+  Pencil,
   Building2,
   Mail,
   Phone,
@@ -88,6 +90,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
   const [loginError, setLoginError] = useState('');
   const [loginPending, setLoginPending] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<any | null>(null);
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [rfoClient, setRfoClient] = useState<{ id: number; companyName: string; ucCode?: string | null; avgConsumptionKwh?: string | null; currentSupplier?: string | null } | null>(null);
@@ -741,6 +744,15 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                           <div className="flex items-center gap-2">
                             <Button 
                               size="sm" 
+                              variant="outline"
+                              onClick={() => setEditingClient(client)}
+                              data-testid={`button-edit-client-${client.id}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5 mr-1" />
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
                               variant="default"
                               className="bg-emerald-600 hover:bg-emerald-700"
                               onClick={() => setEnergyProfileClient({
@@ -848,6 +860,15 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Edit Client Modal — rendered outside the card so it overlays cleanly */}
+          {editingClient && (
+            <EditClientModal
+              client={editingClient}
+              open={!!editingClient}
+              onClose={() => setEditingClient(null)}
+            />
+          )}
 
           {/* Proposals - visible to all */}
           <TabsContent value="proposals">

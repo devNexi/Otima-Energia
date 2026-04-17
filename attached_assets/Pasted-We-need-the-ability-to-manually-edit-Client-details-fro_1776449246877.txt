@@ -1,0 +1,86 @@
+We need the ability to **manually edit Client details from the Clients tab** in the portal.
+
+Right now this is operationally necessary because some clients have been set up incorrectly — for example, a few are showing as **ACL when they should be GD** — and there is currently no way for us to correct that manually from the UI.
+
+This matters because the portal is now meant to operate as a **Deal / Track-based system** with only **two active product lanes: GD and ACL**, and tracks are supposed to represent those product lanes consistently across the workflow. If a client or related product classification is wrong, it can affect downstream logic around eligibility, comparison, RFQ flow, and recommendation.  
+
+### What we need
+
+Please add an **Edit Client** capability from the **Clients tab/list view** and from the **individual Client detail view**.
+
+At minimum, we need to be able to manually update:
+
+* client name / Razão Social
+* CNPJ
+* client product classification / lane (**GD or ACL**)
+* any linked tariff / connection fields that are relevant to routing and dossier logic
+* notes / ops notes
+* contact basics if stored at client level
+
+### Core requirement
+
+The main use case is simple:
+
+* user opens **Clients**
+* selects a client
+* clicks **Edit**
+* updates incorrect fields
+* saves changes
+* changes are reflected immediately in the client record and in any dependent deal / track views where appropriate
+
+### Important business rule
+
+Because the portal direction is now standardized around **GD and ACL only**, we need edits to respect that model. We do **not** want old legacy product types or dormant uplift-era logic creeping back into active workflow. The active operational model should remain GD / ACL only. 
+
+### What should happen when product/lane is changed
+
+This is especially important for cases where a client is wrongly marked as ACL vs GD.
+
+If a user changes the client’s product/lane manually:
+
+* the system should update the canonical client record
+* any related labels/badges/views should reflect the new value
+* the system should either:
+
+  * safely sync related deal/track values where appropriate, or
+  * clearly warn the user if related deals/tracks need manual review
+
+We should avoid silent inconsistencies where the client says one thing and the deal/track says another.
+
+### UX expectation
+
+This does not need to be fancy. MVP is fine.
+
+A simple modal or edit page is enough, as long as:
+
+* it is easy to access
+* fields are editable
+* validation exists for obvious issues
+* save/cancel works cleanly
+* errors are surfaced properly
+
+### Validation / safety
+
+Please include:
+
+* CNPJ validation where practical
+* clear restriction so product/lane can only be set to **GD** or **ACL**
+* audit-safe behavior so we do not accidentally corrupt related records
+* visible success/error feedback after save
+
+### Why this matters now
+
+We already know there are cases where parsed/imported/client-created data is wrong, and the bill-first architecture means client/deal data can be auto-populated from upstream inputs. That is useful, but it also means we need a manual correction path when the system gets something wrong. The bill-first flow is supposed to auto-populate deal/client data from parsed inputs, and the dossier/RFQ flow is informed by that downstream.  
+
+### Acceptance criteria
+
+I would consider this done when:
+
+1. From **Clients**, I can open a client and edit it manually.
+2. I can change an incorrect product classification from **ACL → GD** or **GD → ACL**.
+3. The system prevents invalid product values outside **GD / ACL**.
+4. The update persists correctly after refresh.
+5. Related views do not remain misleading after the change.
+6. Any dependency/conflict is surfaced clearly rather than failing silently.
+
+Please build this as a straightforward operational correction tool, not a heavy admin-only rebuild.
