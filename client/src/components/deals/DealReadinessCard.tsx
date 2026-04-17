@@ -139,9 +139,19 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
   const overallPct = Math.round((completedCount / PIPELINE_STAGES.length) * 100);
 
   function handleAction(stage: typeof pipelineStatuses[0]) {
-    if (stage.actionDeepLink && stage.actionDeepLink.startsWith("/")) {
-      navigate(stage.actionDeepLink);
-    } else if (onTabChange) {
+    if (stage.actionDeepLink) {
+      const tabMatch = stage.actionDeepLink.match(/[?&]tab=([^&]+)/);
+      const tabFromLink = tabMatch?.[1];
+      if (tabFromLink && onTabChange) {
+        onTabChange(tabFromLink);
+        return;
+      }
+      if (stage.actionDeepLink.startsWith("/")) {
+        navigate(stage.actionDeepLink);
+        return;
+      }
+    }
+    if (onTabChange) {
       onTabChange(stage.tab);
     }
   }

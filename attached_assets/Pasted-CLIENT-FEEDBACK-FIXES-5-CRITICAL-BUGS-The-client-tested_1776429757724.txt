@@ -1,0 +1,194 @@
+CLIENT FEEDBACK FIXES — 5 CRITICAL BUGS
+The client tested the portal and reported 5 issues. Fix all of them. These are blocking the conference demo.
+BUG 1 — GD NOT AVAILABLE AS DEAL TYPE IN "CRIAR NOVO DEAL" MODAL
+What's wrong: The "Criar Novo Deal" modal shows energy type dropdown (Convencional, Incentivada 50%, Incentivada 100%, Gás) but there's no way to create a GD deal. The modal is conflating "energy type" with "product line / track type."
+What the client expects: When creating a new deal, the user should be able to choose between GD (Geração Distribuída) and ACL (Mercado Livre) as the primary product line. This maps to the track system (CREATABLE_TRACK_TYPES = ['GDL', 'ACL'] in shared/schema.ts).
+How to fix:
+Find the "Criar Novo Deal" / "Create New Deal" modal component. It's likely in client/src/components/deals/DealRegistry.tsx or client/src/pages/Admin.tsx. Look for the energy type dropdown that shows Convencional/Incentivada/Gás.
+Replace or add a Product Line selector that maps to track types:
+typescript// Product line options (maps to deal tracks)
+const PRODUCT_LINE_OPTIONS = [
+  { value: 'GDL', label: { pt: 'GD (Geração Distribuída)', en: 'GD (Distributed Generation)' } },
+  { value: 'ACL', label: { pt: 'ACL (Mercado Livre)', en: 'ACL (Free Market)' } },
+];
+When a deal is created with product line GDL or ACL, it should automatically create the corresponding track (dealTracks table) with the correct initial status (GDL_NEW or ACL_NEW from INITIAL_TRACK_STATUS in schema).
+The existing energy type dropdown (Convencional, Incentivada, etc.) can remain as a secondary field but should NOT be the primary choice. The primary choice is GD vs ACL.
+Acceptance criteria:
+
+"Criar Novo Deal" modal has a clear "Linha de Produto" / "Product Line" selector showing GD and ACL
+Selecting GD creates a deal with a GDL track
+Selecting ACL creates a deal with an ACL track
+The track appears in the Tracks tab immediately after creation
+
+
+BUG 2 — "COTAÇÕES FORNECEDOR" (SUPPLIER QUOTES) PAGE BLANK/ERROR
+What's wrong: Clicking "Cotações Fornecedor" in the left nav shows a blank page or error.
+How to fix:
+Find the route for "Cotações Fornecedor" / "Supplier Quotes" in the left nav. It's in the Admin sidebar, likely pointing to a route like /admin/quote-inbox or /admin/supplier-quotes.
+Check:
+
+Does the route exist in client/src/App.tsx? Look for QuoteInbox — it's imported and routed at /admin/quote-inbox
+Does the nav link point to the correct path? Check the sidebar in client/src/pages/Admin.tsx — the nav item labeled "Cotações Fornecedor" must point to /admin/quote-inbox
+Does QuoteInbox.tsx (client/src/pages/QuoteInbox.tsx) load without errors? Check for missing API endpoints or broken queries
+
+If the page component itself errors, check the console for the specific error and fix it. Common causes:
+
+API endpoint returns 500 (missing table query)
+Component references a prop that's undefined
+Missing import
+
+Acceptance criteria:
+
+Clicking "Cotações Fornecedor" in the nav loads a functional page
+No console errors
+Page shows either an empty state ("No quotes received yet") or existing quote data
+
+
+BUG 3 — GD ELIGIBILITY NOT RECOGNIZED IN DOSSIER
+What's wrong: The dossier shows "Não elegível / Em análise" for a client with 10.29 MWh annual consumption. The eligibility logic only checks ACL thresholds (≥500 MWh = ACL Direct, ≥50 MWh = ACL Varejista). But for GD, the threshold is much lower — GD BT requires only ≥500 kWh/month (~6 MWh/year).
+Current broken logic (in server/routes.ts and server/deal-ecos-engine.ts):
+typescriptif (annualConsumptionMwh >= 500) eligibility = 'ACL_DIRECT';
+else if (annualConsumptionMwh >= 50) eligibility = 'ACL_VAREJISTA';
+else eligibility = 'NOT_ELIGIBLE_YET';
+How to fix:
+The eligibility calculation must consider the deal's track type (GD vs ACL). Update the logic:
+typescriptfunction calculateEligibility(annualConsumptionMwh: number, trackType?: string): string {
+  // GD eligibility — much lower threshold
+  if (trackType === 'GDL' || trackType === 'GD') {
+    // GD BT: >= 500 kWh/month = ~6 MWh/year
+    if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE';
+    // GD MT: higher consumption, Subgrupo A4
+    if (annualConsumptionMwh >= 50) return 'GD_MT_ELIGIBLE';
+    return 'GD_UNDER_REVIEW';
+  }
+
+  // ACL eligibility
+  if (annualConsumptionMwh >= 500) return 'ACL_DIRECT';
+  if (annualConsumptionMwh >= 50) return 'ACL_VAREJISTA';
+
+  // Below ACL but may qualify for GD
+  if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE_ONLY';
+
+  return 'NOT_ELIGIBLE_YET';
+}
+Apply this fix in ALL places where eligibility is calculated:
+
+server/routes.ts — search for eligibility = 'ACL_DIRECT' (appears around lines 3977-3980, 4160-4162, 10166-10168)
+server/deal-ecos-engine.ts — if eligibility is calculated there
+client/src/components/dossier/ClientDossierTab.tsx — if eligibility display logic is client-side
+
+Also update the dossier display to show the correct eligibility label in Portuguese:
+typescriptconst ELIGIBILITY_LABELS: Record<string, { pt: string; en: string }> = {
+  'ACL_DIRECT': { pt: 'ACL Direto (≥500 MWh)', en: 'ACL Direct (≥500 MWh)' },
+  'ACL_VAREJISTA': { pt: 'ACL Varejista (50-500 MWh)', en: 'ACL Retail (50-500 MWh)' },
+  'GD_ELIGIBLE': { pt: 'GD Elegível (BT)', en: 'GD Eligible (LV)' },
+  'GD_MT_ELIGIBLE': { pt: 'GD Elegível (MT/A4)', en: 'GD Eligible (MV/A4)' },
+  'GD_UNDER_REVIEW': { pt: 'GD Em análise', en: 'GD Under Review' },
+  'GD_ELIGIBLE_ONLY': { pt: 'Elegível apenas para GD', en: 'GD Eligible Only' },
+  'NOT_ELIGIBLE_YET': { pt: 'Não elegível', en: 'Not Eligible' },
+};
+Also important: The dossier shows "Consumo Anual 10,29 MWh" — verify the unit display is correct. The consumption input field should clearly label whether it expects kWh or MWh. If the dossier auto-populates from bill data, make sure the conversion from kWh (bill) to MWh (dossier) is correct (divide by 1000).
+Acceptance criteria:
+
+A client with 10 MWh annual consumption on a GD deal shows "GD Elegível" not "Não elegível"
+ACL eligibility thresholds remain unchanged (≥500 MWh Direct, ≥50 MWh Varejista)
+Eligibility label updates dynamically when consumption is edited
+Unit labels are clear (MWh in dossier, kWh in bill data)
+
+
+BUG 4 — "SELECT SUPPLIERS" LINK NOT OPENING
+What's wrong: In the "Next Steps" card, clicking "Select Suppliers →" does nothing. The link appears to be dead.
+How to fix:
+Find the "Select Suppliers" CTA in the Next Steps component. It's in client/src/components/deals/DealAssemblyTab.tsx or wherever the Next Steps checklist renders.
+The link should navigate to the RFQ tab of the current deal. Check:
+
+Is it an <a> tag or a button? If <a>, check the href. If button, check the onClick.
+The correct navigation should be either:
+
+onClick={() => setActiveTab('rfq')} — if it's switching tabs within DealDetail
+window.location.href = '/admin/ops/deals/${dealId}?tab=rfq' — if it's a deep link
+Or using wouter's useLocation: const [, navigate] = useLocation(); navigate('/admin/ops/deals/${dealId}?tab=rfq')
+
+
+If the link targets a BlindAuctionPanel or supplier selection modal, make sure that component exists and the trigger works.
+
+Most likely the "Select Suppliers →" onClick handler is either missing, navigating to a wrong path, or trying to open a modal that doesn't exist.
+Acceptance criteria:
+
+Clicking "Select Suppliers →" navigates to the RFQ tab
+The RFQ tab shows the supplier selection / blind auction panel
+No console errors on click
+
+
+BUG 5 — ECOS "IR PARA AÇÃO" / "RESOLVER" BUTTONS NOT WORKING
+What's wrong: On a deal where bill is parsed but ECOS is not generated:
+
+The readiness card shows "ECOS não gerado" with "Resolver" button — button doesn't work
+The "Próximo Passo" section shows "ECOS Gerado" with "Ir para Ação" button — button doesn't work
+The bill-first journey shows "Gerar ECOS" button under the ECOS stage — need to verify this works too
+
+How to fix:
+Find all three buttons and check their click handlers:
+Button 1: "Resolver" in the blocker warning bar
+This is in the readiness/blocker card area. The onClick should either:
+
+Navigate to the ECOS tab: setActiveTab('ecos') or navigate to ?tab=ecos
+Or directly trigger ECOS generation: call POST /api/deals/${dealId}/ecos/generate
+
+Button 2: "Ir para Ação" in the "Próximo Passo" card
+This is the red CTA button at the bottom. It should navigate to whichever tab can resolve the current blocker. For ECOS, it should go to the ECOS tab or the Assembly tab where "Gerar ECOS" lives.
+Button 3: "Gerar ECOS" in the bill-first journey strip
+This is the button under the ECOS stage in the top journey visualization. Check:
+
+Does it call POST /api/deals/${dealId}/ecos/generate?
+If the API returns { ok: false, blockers: [{ code: "NO_PRC" }] }, does it show the error clearly?
+If PRC data is missing, the error should say "Dados de referência de preço (PRC) não disponíveis" not a generic error
+
+Check all button onClick handlers in:
+
+client/src/components/deals/DealAssemblyTab.tsx — the assembly pipeline buttons
+client/src/components/deals/DealDetail.tsx — the readiness card "Resolver" button
+Any component rendering the "Próximo Passo" / "Next Step" section
+
+If the ECOS generation itself fails (not just the button), check:
+
+Are there published PRC rows? Run: SELECT COUNT(*) FROM canonical_pricing_rows WHERE source = 'prc';
+If zero, the ECOS will always fail with NO_PRC blocker. Seed PRC data (see Task 3 from previous prompt)
+Check the API response in the browser Network tab when clicking "Gerar ECOS"
+
+Acceptance criteria:
+
+"Resolver" button navigates to ECOS tab or triggers generation
+"Ir para Ação" button navigates to the correct tab for the current blocker
+"Gerar ECOS" button in the journey strip triggers generation and shows result
+If ECOS generation fails due to missing PRC data, error message is clear and actionable
+If ECOS generation succeeds, the journey strip updates to show ECOS as complete
+
+
+FILES TO MODIFY
+
+client/src/components/deals/DealRegistry.tsx or wherever the "Criar Novo Deal" modal lives (Bug 1)
+client/src/pages/Admin.tsx — sidebar nav link for Cotações Fornecedor (Bug 2)
+client/src/pages/QuoteInbox.tsx — if the page component itself errors (Bug 2)
+server/routes.ts — eligibility calculation, all 3 occurrences (Bug 3)
+client/src/components/dossier/ClientDossierTab.tsx — eligibility display (Bug 3)
+client/src/components/deals/DealAssemblyTab.tsx — Select Suppliers link, ECOS buttons (Bug 4, 5)
+client/src/components/deals/DealDetail.tsx — readiness card Resolver button (Bug 5)
+
+FILES TO NOT TOUCH
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+server/demoSeeder.ts
+
+EXECUTION ORDER
+Fix in this order (each one is independently testable):
+
+Bug 1 (GD deal creation) — unblocks everything GD-related
+Bug 3 (GD eligibility) — makes GD dossiers work correctly
+Bug 4 (Select Suppliers link) — navigation fix
+Bug 5 (ECOS buttons) — functionality fix
+Bug 2 (Supplier Quotes page) — page load fix
+
+After each fix, verify the fix works and summarize what you changed. Wait for confirmation before proceeding to the next bug.

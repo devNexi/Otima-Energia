@@ -589,10 +589,17 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
 
           {/* Supplier Quotes - operational quote management */}
           <TabsContent value="supplier-quotes">
-            <SupplierQuoteManager 
-              client={quotesClient}
-              onClose={() => setQuotesClient(null)}
-            />
+            {quotesClient ? (
+              <SupplierQuoteManager 
+                client={quotesClient}
+                onClose={() => setQuotesClient(null)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <p className="text-sm font-medium">No client selected</p>
+                <p className="text-xs mt-1">Open a deal or client and click "Manage Quotes" to get started.</p>
+              </div>
+            )}
           </TabsContent>
 
           {/* ECOS Dashboard - visible to all */}

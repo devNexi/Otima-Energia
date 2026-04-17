@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +113,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
     return 'assembly';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [, setLocation] = useLocation();
   const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
   const [clientPriceQuote, setClientPriceQuote] = useState<any>(null);
   const [clientPriceModalOpen, setClientPriceModalOpen] = useState(false);
@@ -479,7 +481,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             }
           } else if (action === "select_suppliers") {
             setActiveTab("rfq");
-          } else if (action === "open_rfq" || action === "track_responses" || action === "send_followup") {
+          } else if (action === "open_rfq" || action === "track_responses" || action === "send_followup" || action === "view_rfqs" || action === "compare_offers") {
             setActiveTab("rfq");
           } else if (action === "compare_quotes" || action === "verify_terms" || action === "request_approval") {
             setActiveTab("quotes");
@@ -602,7 +604,17 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </TabsList>
 
         <TabsContent value="assembly">
-          <DealAssemblyTab dealId={dealId} />
+          <DealAssemblyTab 
+            dealId={dealId}
+            onNavigate={(path) => {
+              const tabMatch = path.match(/[?&]tab=([^&]+)/);
+              if (tabMatch?.[1] && path.includes(dealId)) {
+                setActiveTab(tabMatch[1]);
+              } else {
+                setLocation(path);
+              }
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="rfq">

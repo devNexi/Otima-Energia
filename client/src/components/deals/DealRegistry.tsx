@@ -83,7 +83,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [newDealForm, setNewDealForm] = useState({
     clientId: "",
-    energyType: "convencional",
+    productLine: "GDL" as "GDL" | "ACL",
     submarket: "SE_CO",
     volumeType: "flat",
     internalOwner: "Renan"
@@ -107,8 +107,14 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
   const createDealMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/deals", data);
-      return res.json();
+      const { productLine, ...rest } = data;
+      const energyType = productLine === "GDL" ? "incentivada_50" : "convencional";
+      const res = await apiRequest("POST", "/api/deals", { ...rest, energyType });
+      const deal = await res.json();
+      if (deal.success && deal.deal?.id) {
+        await apiRequest("POST", `/api/deals/${deal.deal.id}/tracks`, { type: productLine });
+      }
+      return deal;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -121,7 +127,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
         setNewDealOpen(false);
         setNewDealForm({
           clientId: "",
-          energyType: "convencional",
+          productLine: "GDL",
           submarket: "SE_CO",
           volumeType: "flat",
           internalOwner: "Renan"
@@ -173,7 +179,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
     }
     createDealMutation.mutate({
       clientId: parseInt(newDealForm.clientId),
-      energyType: newDealForm.energyType,
+      productLine: newDealForm.productLine,
       submarket: newDealForm.submarket,
       volumeType: newDealForm.volumeType,
       internalOwner: newDealForm.internalOwner
@@ -367,19 +373,17 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{language === "pt" ? "Tipo de Energia" : "Energy Type"}</Label>
+                      <Label>{language === "pt" ? "Linha de Produto" : "Product Line"}</Label>
                       <Select 
-                        value={newDealForm.energyType} 
-                        onValueChange={(v) => setNewDealForm(prev => ({ ...prev, energyType: v }))}
+                        value={newDealForm.productLine} 
+                        onValueChange={(v) => setNewDealForm(prev => ({ ...prev, productLine: v as "GDL" | "ACL" }))}
                       >
-                        <SelectTrigger data-testid="select-energy-type">
+                        <SelectTrigger data-testid="select-product-line">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="convencional">Convencional</SelectItem>
-                          <SelectItem value="incentivada_50">Incentivada 50%</SelectItem>
-                          <SelectItem value="incentivada_100">Incentivada 100%</SelectItem>
-                          <SelectItem value="gas">Gás</SelectItem>
+                          <SelectItem value="GDL">GD (Geração Distribuída)</SelectItem>
+                          <SelectItem value="ACL">ACL (Mercado Livre)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
