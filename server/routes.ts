@@ -67,7 +67,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { evaluateClient, evaluateAllClients, getClientEcosStatus } from "./ecos-engine";
 import { logAuditEvent } from "./audit";
-import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, seedConferenceDemoDeals, seedSupplierPlaybooks, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
+import { seedDemoData, nukeDemoData, getDemoDataStats, getDemoDeals, getDemoProposals, getDemoEcosSnapshots, seedConferenceDemoDeals, seedSupplierPlaybooks, seedSupplierPlaybooksV5, SCENARIO_PACK_LABELS, type ScenarioPack } from "./demoSeeder";
 import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
@@ -7890,21 +7890,21 @@ export async function registerRoutes(
       return res.status(403).json({ success: false, error: "Admin access required" });
     }
     try {
-      const result = await seedSupplierPlaybooks();
+      const result = await seedSupplierPlaybooksV5();
       await logAuditEvent({
         actor: user.username || "system",
         actorRole: user.role || null,
         actorIp: req.ip || null,
         userAgent: req.get("User-Agent") || null,
-        action: "SUPPLIER_PLAYBOOKS_SEEDED",
+        action: "SUPPLIER_PLAYBOOKS_SEEDED_V5",
         entityType: "supplier_playbooks",
         entityId: null,
         detailsJson: result.summary,
       });
       res.json(result);
     } catch (error: any) {
-      console.error("Error seeding supplier playbooks:", error);
-      res.status(500).json({ success: false, error: error.message || "Failed to seed supplier playbooks" });
+      console.error("Error seeding supplier playbooks v5:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to seed supplier playbooks v5" });
     }
   });
 

@@ -2401,3 +2401,251 @@ export async function seedSupplierPlaybooks(): Promise<{
 
   return { success: true, summary };
 }
+
+// ─── V5.0 Supplier Playbook Seeder ───────────────────────────────────────────
+// Full upsert — suppliers & contacts are merged, playbooks & GD coverage are REPLACED.
+
+const SUPPLIERS_V5 = [
+  { name: 'Prime Energy', shortCode: 'PRIME', category: 'large' as const, contactEmail: 'contasapagar@primeenergy.com.br', website: 'https://www.primeenergy.com.br', status: 'active', isActive: true, isDemo: false },
+  { name: 'ATMO Energia', shortCode: 'ATMO', category: 'medium' as const, contactEmail: null, website: null, status: 'active', isActive: true, isDemo: false },
+  { name: 'CEMIG', shortCode: 'CEMIG', category: 'large' as const, contactEmail: null, website: null, status: 'active', isActive: true, isDemo: false },
+  { name: 'Delantis Energias Renováveis', shortCode: 'DELANTIS', category: 'medium' as const, contactEmail: null, website: null, status: 'active', isActive: true, isDemo: false },
+  { name: 'Genial Energia', shortCode: 'GENIAL', category: 'medium' as const, contactEmail: null, website: null, status: 'active', isActive: true, isDemo: false },
+];
+
+export async function seedSupplierPlaybooksV5(): Promise<{
+  success: boolean;
+  summary: { suppliers: number; updated: number; contacts: number; playbooks: number; gdCoverage: number };
+}> {
+  const summary = { suppliers: 0, updated: 0, contacts: 0, playbooks: 0, gdCoverage: 0 };
+
+  // ── STEP 1: Upsert all 5 suppliers ─────────────────────────────────────────
+  const supplierIds: Record<string, number> = {};
+
+  for (const s of SUPPLIERS_V5) {
+    const existing = await db.select().from(suppliers)
+      .where(eq(suppliers.shortCode, s.shortCode))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db.update(suppliers).set({
+        name: s.name,
+        category: s.category,
+        contactEmail: s.contactEmail,
+        website: s.website,
+        status: s.status,
+        isActive: s.isActive,
+      }).where(eq(suppliers.shortCode, s.shortCode));
+      supplierIds[s.shortCode] = existing[0].id;
+      summary.updated++;
+    } else {
+      const [inserted] = await db.insert(suppliers).values(s).returning();
+      supplierIds[s.shortCode] = inserted.id;
+      summary.suppliers++;
+    }
+  }
+
+  const PRIME = supplierIds['PRIME'];
+  const ATMO = supplierIds['ATMO'];
+  const CEMIG = supplierIds['CEMIG'];
+  const DELANTIS = supplierIds['DELANTIS'];
+  const GENIAL = supplierIds['GENIAL'];
+  const allIds = [PRIME, ATMO, CEMIG, DELANTIS, GENIAL];
+
+  // ── STEP 2: Contacts — create only if supplier has none yet ───────────────
+  const DEFAULT_CONTACT_ROLES = [
+    { role: 'Comercial', department: 'COMERCIAL', isPrimary: true },
+    { role: 'Financeiro', department: 'FINANCEIRO_COMISSAO', isPrimary: false },
+  ];
+
+  for (const [shortCode, supplierId] of Object.entries(supplierIds)) {
+    const existing = await db.select().from(supplierContacts)
+      .where(eq(supplierContacts.supplierId, supplierId))
+      .limit(1);
+    if (existing.length > 0) continue;
+
+    const roles = shortCode === 'PRIME'
+      ? [
+          { role: 'Comercial', department: 'COMERCIAL', isPrimary: true },
+          { role: 'Operações', department: 'OPERACOES', isPrimary: false },
+          { role: 'ACL', department: 'ACL', isPrimary: false },
+          { role: 'GD', department: 'GD', isPrimary: false },
+          { role: 'Financeiro / Comissão', department: 'FINANCEIRO_COMISSAO', isPrimary: false },
+          { role: 'Escalonamento', department: 'ESCALONAMENTO', isPrimary: false },
+        ]
+      : DEFAULT_CONTACT_ROLES;
+
+    const rows = roles.map(cr => ({
+      supplierId,
+      name: 'A preencher',
+      role: cr.role,
+      department: cr.department,
+      email: (shortCode === 'PRIME' && cr.department === 'FINANCEIRO_COMISSAO')
+        ? 'contasapagar@primeenergy.com.br'
+        : null,
+      preferredFormat: 'email' as const,
+      isPrimary: cr.isPrimary,
+      isActive: true,
+      notes: 'Aguardando preenchimento pelo time comercial',
+    }));
+
+    await db.insert(supplierContacts).values(rows);
+    summary.contacts += rows.length;
+  }
+
+  // ── STEP 3: Replace playbooks (delete all, re-insert v5) ──────────────────
+  await db.delete(supplierRfqPlaybooks).where(inArray(supplierRfqPlaybooks.supplierId, allIds));
+
+  const v5Playbooks: any[] = [
+    // Prime Energy — ACL Atacado
+    {
+      supplierId: PRIME, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['ACL'], productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+      submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+      rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+      docsRequired: ['CNPJ', 'Contrato social', 'Procuração (se aplicável)'],
+      onboardingSlaDays: 30, quoteResponseSlaHours: 72,
+      commissionReportFormat: 'PDF', commissionReportFrequency: 'MONTHLY',
+      internalNotes: 'ACL Atacado — Demanda >= 500 kW, agente CCEE. Channel A_VALIDAR — default email. Remuneração base R$2/MWh.',
+      calcDefaults: { commissionEvidence: { baseRate: 'R$2/MWh', paymentType: 'Per MWh consumed', source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 4', lastUpdated: '23/12/2025' } },
+      isDemo: false,
+    },
+    // Prime Energy — ACL Varejo
+    {
+      supplierId: PRIME, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['ACL'], productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'],
+      submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw', 'historico_faturas'],
+      rfqAttachmentRequirements: ['Últimas 12 faturas (PDF)', 'Dossiê de consumo'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 30, quoteResponseSlaHours: 72,
+      commissionReportFormat: 'PDF', commissionReportFrequency: 'MONTHLY',
+      internalNotes: 'ACL Varejo — Demanda < 500 kW, representação via gestor varejista. Remuneração base R$5/MWh.',
+      calcDefaults: { commissionEvidence: { baseRate: 'R$5/MWh', paymentType: 'Per MWh consumed', source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 5', lastUpdated: '23/12/2025' } },
+      isDemo: false,
+    },
+    // Prime Energy — GD BT
+    {
+      supplierId: PRIME, version: 2, status: 'ACTIVE', preferredChannel: 'PORTAL',
+      productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'],
+      submarketsCovered: ['SE_CO', 'S', 'NE'], rfqIntakeMethod: 'PORTAL',
+      rfqRequiredFields: ['CNPJ_ou_CPF', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CPF ou CNPJ', 'Conta de energia recente'],
+      onboardingSlaDays: 15, quoteResponseSlaHours: 48,
+      slaConfig: { quoteDueHours: 48, followupCadenceHours: [48, 96] },
+      portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros-novos-negocios', loginNotes: 'Código parceiro: 241254' },
+      commissionReportFormat: 'PDF', commissionReportFrequency: 'MONTHLY',
+      internalNotes: 'GD Assinatura BT — PF ou PJ >= 500 kWh/mês. Comissão = fatura × 85% × 50%; 50/50 split. Portal submission.',
+      calcDefaults: { commissionEvidence: { formula: 'fatura × 85% × 50%', split: '50/50', source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 6-7', lastUpdated: '23/12/2025' } },
+      isDemo: false,
+    },
+    // Prime Energy — GD MT
+    {
+      supplierId: PRIME, version: 2, status: 'ACTIVE', preferredChannel: 'PORTAL',
+      productLines: ['GD'], productsSupported: ['GD_ASSINATURA_MT'],
+      submarketsCovered: ['SE_CO', 'S', 'NE'], rfqIntakeMethod: 'PORTAL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'demanda_kw', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia', 'Histórico de consumo 12m'],
+      docsRequired: ['CNPJ', 'Contrato social', 'Conta de energia'],
+      onboardingSlaDays: 20, quoteResponseSlaHours: 48,
+      portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros-novos-negocios', loginNotes: 'Código parceiro: 241254' },
+      commissionReportFormat: 'PDF', commissionReportFrequency: 'MONTHLY',
+      internalNotes: 'GD Assinatura MT — Subgrupo A4. Comissão recorrente mensal = fatura × percentual definido. Portal submission.',
+      calcDefaults: { commissionEvidence: { formula: 'fatura × percentual definido (recorrente mensal)', source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 7-8', lastUpdated: '23/12/2025' } },
+      isDemo: false,
+    },
+    // ATMO Energia — GD BT
+    {
+      supplierId: ATMO, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'],
+      submarketsCovered: ['SE_CO', 'S'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CNPJ ou CPF', 'Conta de energia recente'],
+      onboardingSlaDays: 15, quoteResponseSlaHours: 48,
+      internalNotes: 'GD Assinatura BT — covers CEMIG (MG) and COPEL (PR).',
+      isDemo: false,
+    },
+    // CEMIG — ACL only (distributor, not a GD reseller)
+    {
+      supplierId: CEMIG, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['ACL'], productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50'],
+      submarketsCovered: ['SE_CO'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_12m', 'demanda_kw'],
+      rfqAttachmentRequirements: ['Últimas 12 faturas', 'Dossiê de consumo'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 30, quoteResponseSlaHours: 72,
+      internalNotes: 'CEMIG ACL — major distributor, Minas Gerais region.',
+      isDemo: false,
+    },
+    // Delantis — GD Compensação Nacional
+    {
+      supplierId: DELANTIS, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['GD'], productsSupported: ['GD_COMPENSACAO'],
+      submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CNPJ', 'Contrato social'],
+      onboardingSlaDays: 20, quoteResponseSlaHours: 48,
+      internalNotes: 'GD Compensação Nacional — Brazil-wide coverage through compensation model.',
+      isDemo: false,
+    },
+    // Genial Energia — GD BT (RJ only)
+    {
+      supplierId: GENIAL, version: 2, status: 'ACTIVE', preferredChannel: 'EMAIL',
+      productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'],
+      submarketsCovered: ['SE_CO'], rfqIntakeMethod: 'EMAIL',
+      rfqRequiredFields: ['CNPJ', 'UC', 'consumo_medio_mensal', 'distribuidora'],
+      rfqAttachmentRequirements: ['Última fatura de energia'],
+      docsRequired: ['CNPJ ou CPF', 'Conta de energia recente'],
+      onboardingSlaDays: 15, quoteResponseSlaHours: 48,
+      internalNotes: 'GD BT — covers Light and Enel RJ in Rio de Janeiro only.',
+      isDemo: false,
+    },
+  ];
+
+  await db.insert(supplierRfqPlaybooks).values(v5Playbooks);
+  summary.playbooks = v5Playbooks.length;
+
+  // ── STEP 4: Replace GD coverage (CEMIG has no GD — skip it) ──────────────
+  const gdCoverageIds = [PRIME, ATMO, DELANTIS, GENIAL];
+  await db.delete(supplierGdCoverage).where(inArray(supplierGdCoverage.supplierId, gdCoverageIds));
+
+  const v5Coverage = [
+    {
+      supplierId: PRIME,
+      coveredStates: ['SP', 'MG', 'MT', 'MS', 'GO', 'BA', 'PI', 'PR'],
+      coveredDistributors: ['CPFL Paulista', 'CEMIG', 'CPFL Santa Cruz', 'Energisa MT', 'Energisa MS', 'Equatorial GO', 'COELBA', 'Equatorial PI', 'Elektro (Neoenergia)', 'COPEL'],
+      isActive: true,
+      notes: 'GD Assinatura BT. Coverage conditional on active solar plants in concession area. Partner code: 241254. Portal: primeenergy.com.br/parceiros-novos-negocios',
+    },
+    {
+      supplierId: ATMO,
+      coveredStates: ['MG', 'PR'],
+      coveredDistributors: ['CEMIG', 'COPEL'],
+      isActive: true,
+      notes: 'GD Assinatura BT. Covers CEMIG (Minas Gerais) and COPEL (Paraná).',
+    },
+    {
+      supplierId: DELANTIS,
+      coveredStates: ['ALL'],
+      coveredDistributors: ['Nacional - Compensação'],
+      isActive: true,
+      notes: 'GD Compensação Nacional. Brazil-wide coverage through compensation model.',
+    },
+    {
+      supplierId: GENIAL,
+      coveredStates: ['RJ'],
+      coveredDistributors: ['Light', 'Enel RJ'],
+      isActive: true,
+      notes: 'GD BT. Covers Light and Enel RJ in Rio de Janeiro (DDD 21, 22, 24).',
+    },
+  ];
+
+  await db.insert(supplierGdCoverage).values(v5Coverage);
+  summary.gdCoverage = v5Coverage.length;
+
+  return { success: true, summary };
+}

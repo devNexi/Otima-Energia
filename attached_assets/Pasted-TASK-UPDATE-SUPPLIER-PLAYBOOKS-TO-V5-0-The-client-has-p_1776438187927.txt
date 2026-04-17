@@ -1,0 +1,155 @@
+TASK: UPDATE SUPPLIER PLAYBOOKS TO V5.0
+The client has provided an updated playbook (v5.0). Update the portal supplier data to match. This is an UPDATE, not a fresh import — suppliers may already exist from the previous seed. Use upsert logic throughout.
+STEP 1 — UPSERT ALL 5 SUPPLIERS
+Check by shortCode or name, update if exists, create if not:
+typescriptconst SUPPLIERS_V5 = [
+  { name: 'Prime Energy', shortCode: 'PRIME', category: 'large', contactEmail: 'contasapagar@primeenergy.com.br', website: 'https://www.primeenergy.com.br', status: 'active', isActive: true },
+  { name: 'ATMO Energia', shortCode: 'ATMO', category: 'medium', status: 'active', isActive: true },
+  { name: 'CEMIG', shortCode: 'CEMIG', category: 'large', status: 'active', isActive: true },
+  { name: 'Delantis Energias Renováveis', shortCode: 'DELANTIS', category: 'medium', status: 'active', isActive: true },
+  { name: 'Genial Energia', shortCode: 'GENIAL', category: 'medium', status: 'active', isActive: true },
+];
+Important: Genial is now "Genial Energia" (was "Genial" in v4.3). If a supplier named "Genial" exists, update its name to "Genial Energia".
+STEP 2 — UPDATE GD COVERAGE MATRICES
+This is the critical data for GD deal eligibility. Replace existing coverage data for each supplier.
+typescript// PRIME ENERGY — 10 distributors, 8 states, GD BT
+const PRIME_GD_COVERAGE = {
+  coveredStates: ['SP', 'MG', 'MT', 'MS', 'GO', 'BA', 'PI', 'PR'],
+  coveredDistributors: [
+    'CPFL Paulista',
+    'CEMIG',
+    'CPFL Santa Cruz',
+    'Energisa MT',
+    'Energisa MS',
+    'Equatorial GO',
+    'COELBA',
+    'Equatorial PI',
+    'Elektro (Neoenergia)',
+    'COPEL',
+  ],
+  isActive: true,
+  notes: 'GD Assinatura BT. Coverage conditional on active solar plants in concession area. Partner code: 241254. Portal: primeenergy.com.br/parceiros-novos-negocios',
+};
+
+// ATMO ENERGIA — 2 distributors, 2 states, GD BT
+const ATMO_GD_COVERAGE = {
+  coveredStates: ['MG', 'PR'],
+  coveredDistributors: [
+    'CEMIG',
+    'COPEL',
+  ],
+  isActive: true,
+  notes: 'GD Assinatura BT. Covers CEMIG (Minas Gerais) and COPEL (Paraná).',
+};
+
+// DELANTIS — National coverage, compensação model
+const DELANTIS_GD_COVERAGE = {
+  coveredStates: ['ALL'],
+  coveredDistributors: ['Nacional - Compensação'],
+  isActive: true,
+  notes: 'GD Compensação Nacional. Brazil-wide coverage through compensation model.',
+};
+
+// GENIAL ENERGIA — 2 distributors, 1 state (Rio de Janeiro), GD BT
+const GENIAL_GD_COVERAGE = {
+  coveredStates: ['RJ'],
+  coveredDistributors: [
+    'Light',
+    'Enel RJ',
+  ],
+  isActive: true,
+  notes: 'GD BT. Covers Light and Enel RJ in Rio de Janeiro (DDD 21, 22, 24).',
+};
+
+// CEMIG — No GD coverage in playbook (distributor themselves, not a GD reseller)
+// Do not create GD coverage for CEMIG
+STEP 3 — UPDATE RFQ PLAYBOOKS
+Ensure each supplier has playbooks for their active products:
+Prime Energy — 4 playbooks:
+
+ACL Atacado: preferredChannel: 'EMAIL', productLines: ['ACL'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'ACL Atacado — Demanda >= 500 kW, agente CCEE. Channel A_VALIDAR — default email. Remuneração base R$2/MWh.'
+ACL Varejo: preferredChannel: 'EMAIL', productLines: ['ACL'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'ACL Varejo — Demanda < 500 kW, representação via gestor varejista. Remuneração base R$5/MWh.'
+GD BT: preferredChannel: 'PORTAL', productLines: ['GD'], portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros-novos-negocios', loginNotes: 'Código parceiro: 241254' }, internalNotes: 'GD Assinatura BT — PF ou PJ >= 500 kWh/mês. Comissão = fatura × 85% × 50%; 50/50 split. Portal submission.'
+GD MT: preferredChannel: 'PORTAL', productLines: ['GD'], portalConfig: { portalUrl: 'https://www.primeenergy.com.br/parceiros-novos-negocios', loginNotes: 'Código parceiro: 241254' }, internalNotes: 'GD Assinatura MT — Subgrupo A4. Comissão recorrente mensal = fatura × percentual definido. Portal submission.'
+
+ATMO Energia — 1 playbook:
+
+GD BT: preferredChannel: 'EMAIL', productLines: ['GD'], submarketsCovered: ['SE_CO', 'S'], internalNotes: 'GD Assinatura BT — covers CEMIG (MG) and COPEL (PR).'
+
+CEMIG — 1 playbook:
+
+ACL: preferredChannel: 'EMAIL', productLines: ['ACL'], submarketsCovered: ['SE_CO'], internalNotes: 'CEMIG ACL — major distributor, Minas Gerais region.'
+
+Delantis — 1 playbook:
+
+GD Compensação: preferredChannel: 'EMAIL', productLines: ['GD'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'GD Compensação Nacional — Brazil-wide coverage through compensation model.'
+
+Genial Energia — 1 playbook:
+
+GD BT: preferredChannel: 'EMAIL', productLines: ['GD'], submarketsCovered: ['SE_CO'], internalNotes: 'GD BT — covers Light and Enel RJ in Rio de Janeiro only.'
+
+STEP 4 — STORE COMMISSION EVIDENCE DATA
+The v5.0 playbook has commission structure evidence from Prime. Store this in the playbook's calcDefaults field or internalNotes:
+typescriptconst PRIME_COMMISSION_EVIDENCE = {
+  ACL_ATACADO: {
+    baseRate: 'R$2/MWh',
+    paymentType: 'Per MWh consumed',
+    source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 4',
+    lastUpdated: '23/12/2025',
+  },
+  ACL_VAREJO: {
+    baseRate: 'R$5/MWh',
+    paymentType: 'Per MWh consumed',
+    source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 5',
+    lastUpdated: '23/12/2025',
+  },
+  GD_BT: {
+    formula: 'fatura × 85% × 50%',
+    split: '50/50',
+    source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 6-7',
+    lastUpdated: '23/12/2025',
+  },
+  GD_MT: {
+    formula: 'fatura × percentual definido (recorrente mensal)',
+    source: 'ANEXO III - Remuneração e Forma de Pagamento, Pag. 7-8',
+    lastUpdated: '23/12/2025',
+  },
+};
+Store this in the corresponding supplier_playbooks.calcDefaults JSONB field for each Prime playbook.
+STEP 5 — UPSERT CONTACTS
+Same 6 contact roles for Prime (mostly A_PREENCHER except finance email). Create basic placeholder contacts for ATMO, CEMIG, Delantis, Genial if they don't already exist:
+typescript// For each non-Prime supplier, create at minimum:
+const DEFAULT_CONTACTS = [
+  { role: 'Comercial', department: 'COMERCIAL', isPrimary: true },
+  { role: 'Financeiro', department: 'FINANCEIRO_COMISSAO' },
+];
+// All with name: 'A preencher', email: null
+STEP 6 — CREATE/UPDATE THE SEED ENDPOINT
+Update the existing POST /api/admin/seed-playbooks endpoint (or create if it doesn't exist) with all the v5.0 data above. Make it fully idempotent — safe to run multiple times.
+ACCEPTANCE CRITERIA
+
+5 suppliers in the system with correct names (Genial → "Genial Energia")
+Prime has 4 playbooks (ACL Atacado, ACL Varejo, GD BT, GD MT)
+ATMO, CEMIG, Delantis, Genial each have 1 playbook
+Prime GD coverage: 10 distributors, 8 states
+ATMO GD coverage: CEMIG + COPEL (2 distributors, 2 states)
+Delantis GD coverage: Nacional
+Genial GD coverage: Light + Enel RJ (2 distributors, 1 state)
+CEMIG has NO GD coverage (they're a distributor, not reseller)
+Commission evidence stored for Prime's 4 products
+Running the seeder twice produces no duplicates
+/admin/suppliers shows all 5 with correct data
+
+FILES TO MODIFY
+
+server/routes.ts — seed endpoint
+server/demoSeeder.ts — seedSupplierPlaybooksV5() function
+
+FILES TO NOT TOUCH
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+Any frontend comparison or assembly components
+
+After completing, summarize what was created/updated and wait for confirmation.

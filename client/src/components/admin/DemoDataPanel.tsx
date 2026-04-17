@@ -295,7 +295,7 @@ export function DemoDataPanel() {
             ) : (
               <BookOpen className="h-4 w-4 mr-2" />
             )}
-            Import Supplier Playbooks
+            Update Supplier Playbooks v5.0
           </Button>
 
           <Button
@@ -375,7 +375,7 @@ export function DemoDataPanel() {
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-4 w-4 text-emerald-600" />
               <span className="font-medium text-emerald-800 dark:text-emerald-200">
-                {playbooksResult.success ? 'Supplier Playbooks Imported' : 'Import Failed'}
+                {playbooksResult.success ? 'Supplier Playbooks v5.0 Applied' : 'Update Failed'}
               </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
