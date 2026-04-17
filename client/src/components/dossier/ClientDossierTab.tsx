@@ -36,9 +36,11 @@ const STATUS_BADGES: Record<string, { class: string; icon: any; label: string }>
 };
 
 const ELIGIBILITY_OPTIONS = [
-  { value: 'ACL_DIRECT', label: 'Elegível ACL (Consumidor Livre)' },
-  { value: 'ACL_VAREJISTA', label: 'Elegível ACL via Varejista' },
-  { value: 'NOT_ELIGIBLE_YET', label: 'Não elegível / Em análise' }
+  { value: 'ACL_DIRECT', label: 'ACL Direto' },
+  { value: 'ACL_VAREJISTA', label: 'ACL Varejista' },
+  { value: 'GD_ELIGIBLE', label: 'GD Elegível' },
+  { value: 'GD_MT_ELIGIBLE', label: 'GD Média Tensão' },
+  { value: 'NOT_ELIGIBLE_YET', label: 'Não elegível' },
 ];
 
 const CONNECTION_OPTIONS = [

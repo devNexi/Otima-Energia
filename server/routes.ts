@@ -3924,6 +3924,23 @@ export async function registerRoutes(
 
   // --- Client Dossiers ---
 
+  function calculateEligibility(annualConsumptionMwh: number, trackType?: string | null): string {
+    if (trackType === 'GDL') {
+      if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE';
+      return 'NOT_ELIGIBLE_YET';
+    }
+    if (trackType === 'ACL') {
+      if (annualConsumptionMwh >= 500) return 'ACL_DIRECT';
+      if (annualConsumptionMwh >= 50) return 'ACL_VAREJISTA';
+      return 'NOT_ELIGIBLE_YET';
+    }
+    // No track specified — show best available eligibility
+    if (annualConsumptionMwh >= 500) return 'ACL_DIRECT';
+    if (annualConsumptionMwh >= 50) return 'ACL_VAREJISTA';
+    if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE';
+    return 'NOT_ELIGIBLE_YET';
+  }
+
   // Get client dossier
   app.get("/api/clients/:id/dossier", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -3975,9 +3992,7 @@ export async function registerRoutes(
           const annualMwh = avgMonthlyKwh * 12 / 1000;
 
           let eligibility = null;
-          if (annualMwh >= 500) eligibility = 'ACL_DIRECT';
-          else if (annualMwh >= 50) eligibility = 'ACL_VAREJISTA';
-          else if (annualMwh > 0) eligibility = 'NOT_ELIGIBLE_YET';
+          if (annualMwh > 0) eligibility = calculateEligibility(annualMwh);
 
           const submarket = dist
             ? Object.entries(distributorSubmarketMap).find(([k]) => dist.toUpperCase().includes(k))?.[1] || null
@@ -4156,13 +4171,8 @@ export async function registerRoutes(
       const annualMWh = annualKwh / 1000;
       const averageMonthlyMWh = averageMonthlyKwh / 1000;
       
-      // Determine eligibility based on consumption
-      let eligibilityType = 'NOT_ELIGIBLE_YET';
-      if (annualMWh >= 500) {
-        eligibilityType = 'ACL_DIRECT'; // >= 500 MWh/year = direct ACL eligible
-      } else if (annualMWh >= 50) {
-        eligibilityType = 'ACL_VAREJISTA'; // >= 50 MWh/year = can join via varejista
-      }
+      // Determine eligibility based on consumption (track-aware via best available)
+      const eligibilityType = calculateEligibility(annualMWh);
       
       // Determine connection type based on demand
       const connectionType = totalDemandKw > 0 ? 'GROUP_A' : null;
@@ -4383,9 +4393,11 @@ export async function registerRoutes(
       
       // Map eligibility types to Portuguese labels
       const eligibilityLabels: Record<string, string> = {
-        'ACL_DIRECT': 'Elegível para ACL (Consumidor Livre)',
-        'ACL_VAREJISTA': 'Elegível para ACL via Varejista',
-        'NOT_ELIGIBLE_YET': 'Não elegível / Em análise'
+        'ACL_DIRECT': 'ACL Direto',
+        'ACL_VAREJISTA': 'ACL Varejista',
+        'GD_ELIGIBLE': 'GD Elegível',
+        'GD_MT_ELIGIBLE': 'GD Média Tensão',
+        'NOT_ELIGIBLE_YET': 'Não elegível',
       };
       
       const submarketLabels: Record<string, string> = {
@@ -4484,7 +4496,7 @@ export async function registerRoutes(
     <div class="row">
       <span class="label">Status:</span>
       <span class="value">
-        <span class="badge ${dossier.eligibilityType === 'ACL_DIRECT' ? 'badge-eligible' : dossier.eligibilityType === 'ACL_VAREJISTA' ? 'badge-varejista' : 'badge-pending'}">
+        <span class="badge ${dossier.eligibilityType === 'ACL_DIRECT' ? 'badge-eligible' : (dossier.eligibilityType === 'ACL_VAREJISTA' || dossier.eligibilityType === 'GD_ELIGIBLE' || dossier.eligibilityType === 'GD_MT_ELIGIBLE') ? 'badge-varejista' : 'badge-pending'}">
           ${eligibilityLabels[dossier.eligibilityType || 'NOT_ELIGIBLE_YET']}
         </span>
       </span>
@@ -10200,10 +10212,9 @@ export async function registerRoutes(
       const peakDemandKw = 0;
       const loadFactor = peakDemandKw > 0 ? (avgMonthlyKwh / (peakDemandKw * 730)) : null;
 
-      let eligibility: string;
-      if (annualConsumptionMwh >= 500) eligibility = 'ACL_DIRECT';
-      else if (annualConsumptionMwh >= 50) eligibility = 'ACL_VAREJISTA';
-      else eligibility = 'NOT_ELIGIBLE_YET';
+      const dealTracks = await storage.getDealTracks(dealId);
+      const firstTrackType = dealTracks.length > 0 ? dealTracks[0].type : null;
+      const eligibility = calculateEligibility(annualConsumptionMwh, firstTrackType);
 
       const distributor = bills.find(b => b.distributor)?.distributor || null;
       const tariffGroup = bills.find(b => b.tariffGroup)?.tariffGroup || null;

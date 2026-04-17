@@ -1,0 +1,42 @@
+Keep the ACL thresholds as-is. Add GD eligibility below them. The logic needs to be track-aware — a client that's "not eligible" for ACL can still be perfectly eligible for GD.
+Here are the correct thresholds based on the supplier playbook data (from Prime Energy's actual requirements):
+ACL (unchanged):
+
+>= 500 MWh/year → ACL_DIRECT (agente CCEE, demanda >= 500 kW)
+>= 50 MWh/year → ACL_VAREJISTA (representação via gestor varejista)
+
+GD (new):
+
+>= 6 MWh/year (≈ 500 kWh/month) → GD_ELIGIBLE (Prime BT minimum: "consumo médio >= 500 kWh/mês")
+>= 50 MWh/year with Subgrupo A4 → GD_MT_ELIGIBLE (Prime MT: média tensão)
+< 6 MWh/year → NOT_ELIGIBLE_YET
+
+The function should check the deal's track type to determine which thresholds apply:
+typescriptfunction calculateEligibility(annualConsumptionMwh: number, trackType?: string): string {
+  if (trackType === 'GDL') {
+    if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE';
+    return 'NOT_ELIGIBLE_YET';
+  }
+  if (trackType === 'ACL') {
+    if (annualConsumptionMwh >= 500) return 'ACL_DIRECT';
+    if (annualConsumptionMwh >= 50) return 'ACL_VAREJISTA';
+    return 'NOT_ELIGIBLE_YET';
+  }
+  // No track specified — show best available
+  if (annualConsumptionMwh >= 500) return 'ACL_DIRECT';
+  if (annualConsumptionMwh >= 50) return 'ACL_VAREJISTA';
+  if (annualConsumptionMwh >= 6) return 'GD_ELIGIBLE';
+  return 'NOT_ELIGIBLE_YET';
+}
+To get the track type, look up the deal's tracks from dealTracks table — the deal ID is already available in the dossier and ECOS contexts. Use the first active track's type.
+Update the eligibility display labels in the dossier to show the correct Portuguese text:
+typescriptconst ELIGIBILITY_LABELS: Record<string, string> = {
+  'ACL_DIRECT': 'ACL Direto',
+  'ACL_VAREJISTA': 'ACL Varejista',
+  'GD_ELIGIBLE': 'GD Elegível',
+  'GD_MT_ELIGIBLE': 'GD Média Tensão',
+  'NOT_ELIGIBLE_YET': 'Não elegível',
+};
+Apply this in all 3 places where eligibility is calculated in server/routes.ts (search for ACL_DIRECT) and in the dossier display component.
+
+That gives Replit the exact thresholds from the real playbook data. The key fix is that 10.29 MWh client from the screenshot will now show "GD Elegível" instead of "Não elegível" when on a GD track.
