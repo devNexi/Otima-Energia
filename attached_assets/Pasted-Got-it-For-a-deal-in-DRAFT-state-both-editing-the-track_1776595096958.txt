@@ -1,0 +1,116 @@
+Got it. For a deal in DRAFT state, both editing the track type and deleting should be allowed. Here's the Replit prompt for this one:
+
+---
+
+## FIX: ALLOW DEAL TRACK TYPE EDIT + DEAL DELETION FOR DRAFT DEALS
+
+### Problem
+Once a deal is created, there's no way to change the product line (ACL → GD or vice versa) or delete a deal that was created with the wrong type. The client created a deal as ACL that should have been GD.
+
+### What to build
+
+**1. Allow track type change on DRAFT deals**
+
+In the deal detail view, when a deal is in `DRAFT` status, add an "Edit" button next to the product line / track type display that lets the user switch between GDL and ACL.
+
+When the track type is changed:
+- Delete the existing track from `deal_tracks` table (only if deal is in DRAFT and track is in its initial state `GDL_NEW` or `ACL_NEW`)
+- Create a new track with the correct type and initial status
+- Update the deal's `energyType` field if it was set
+- Log the change in `deal_state_transitions` with reason "Track type corrected"
+
+Backend endpoint — add to `server/routes.ts`:
+
+```typescript
+app.patch("/api/deals/:dealId/track-type", async (req, res) => {
+  // Only allow if deal is in DRAFT status
+  // Only allow GDL or ACL as new track type
+  // Delete old track (must be in initial state)
+  // Create new track with correct initial status
+  // Return updated deal
+});
+```
+
+**2. Allow deal deletion for DRAFT deals**
+
+Add a "Delete Deal" button in the deal detail view, visible only when:
+- Deal is in `DRAFT` status
+- User has `admin` role
+
+When deleting:
+- Delete related tracks from `deal_tracks`
+- Delete related track events from `deal_track_events`
+- Delete the deal from `deals`
+- Redirect back to `/admin/deals`
+- Show confirmation dialog before deleting: "Tem certeza que deseja excluir este deal? Esta ação não pode ser desfeita."
+
+Backend endpoint — add to `server/routes.ts`:
+
+```typescript
+app.delete("/api/deals/:dealId", async (req, res) => {
+  // Only allow if deal is in DRAFT status
+  // Only allow admin role
+  // Delete tracks, track events, track documents first (foreign keys)
+  // Delete the deal
+  // Log in audit trail
+  // Return success
+});
+```
+
+**3. UI changes**
+
+In `client/src/components/deals/DealDetail.tsx`, add near the deal header (where status badge and deal title are shown):
+
+- A small dropdown or icon button with options:
+  - "Alterar tipo" / "Change track type" (only visible in DRAFT)
+  - "Excluir deal" / "Delete deal" (only visible in DRAFT, admin only)
+
+For the track type change, show a simple dialog:
+```
+┌──────────────────────────────────┐
+│  Alterar Linha de Produto        │
+│                                  │
+│  ○ GD (Geração Distribuída)      │
+│  ● ACL (Mercado Livre)           │
+│                                  │
+│  [Cancelar]  [Confirmar]         │
+└──────────────────────────────────┘
+```
+
+For delete, show a confirmation dialog:
+```
+┌──────────────────────────────────┐
+│  Excluir Deal                    │
+│                                  │
+│  Tem certeza que deseja excluir  │
+│  este deal? Esta ação não pode   │
+│  ser desfeita.                   │
+│                                  │
+│  [Cancelar]  [Excluir]           │
+└──────────────────────────────────┘
+```
+
+### Files to modify
+- `server/routes.ts` — add PATCH track-type and DELETE deal endpoints
+- `client/src/components/deals/DealDetail.tsx` — add edit/delete UI
+
+### Files to NOT touch
+- `shared/schema.ts`
+- `server/jobs.ts`
+- `server/parser-client.ts`
+
+### Acceptance criteria
+- DRAFT deal shows edit and delete options
+- Non-DRAFT deals do NOT show these options
+- Changing track type from ACL to GD creates the correct GDL track with `GDL_NEW` status
+- Changing track type from GD to ACL creates the correct ACL track with `ACL_NEW` status
+- Deleting a DRAFT deal removes it from the deals list and redirects to `/admin/deals`
+- Delete requires admin role
+- Both actions show confirmation dialogs before executing
+- Both actions log to audit trail
+
+After completing, summarize what was changed and wait for confirmation.
+
+---
+
+Ready for issue #2 whenever you are.

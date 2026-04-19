@@ -11793,6 +11793,103 @@ export async function registerRoutes(
     }
   });
 
+  // Correct track type for DRAFT deals (admin/ops only)
+  app.patch("/api/deals/:dealId/track-type", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin', 'ops'])) return;
+    try {
+      const dealId = req.params.dealId;
+      const { newType } = req.body;
+      if (!newType || !['GDL', 'ACL'].includes(newType)) {
+        return res.status(400).json({ error: "newType must be GDL or ACL" });
+      }
+      const deal = await storage.getDeal(dealId);
+      if (!deal) return res.status(404).json({ error: "Deal not found" });
+      if (deal.status !== 'DRAFT') {
+        return res.status(400).json({ error: "Track type can only be changed for DRAFT deals" });
+      }
+      const tracks = await storage.getDealTracks(dealId);
+      const { INITIAL_TRACK_STATUS, dealTrackEvents: trackEventsTable } = await import("@shared/schema");
+      const initialStatus = INITIAL_TRACK_STATUS[newType as keyof typeof INITIAL_TRACK_STATUS];
+      const INITIAL_STATES = ['GDL_NEW', 'ACL_NEW'];
+      const existingTrack = tracks.find(t => INITIAL_STATES.includes(t.status));
+      const actorId = await getSessionUserId(req);
+      if (existingTrack) {
+        await db.delete(trackEventsTable).where(eq(trackEventsTable.trackId, existingTrack.id));
+        await db.delete(dealTrackDocuments).where(eq(dealTrackDocuments.trackId, existingTrack.id));
+        await db.delete(dealTracks).where(eq(dealTracks.id, existingTrack.id));
+      }
+      const newTrack = await storage.createDealTrack({
+        dealId,
+        type: newType,
+        status: initialStatus,
+        createdByUserId: actorId || null,
+        metadata: null,
+      });
+      await storage.createDealTrackEvent({
+        trackId: newTrack.id,
+        eventType: 'TRACK_CREATED',
+        fromStatus: null,
+        toStatus: newTrack.status,
+        payload: { reason: 'Track type corrected', previousType: existingTrack?.type || null },
+        createdByUserId: actorId || null,
+      });
+      await logAuditEvent({
+        actor: actorId || "system",
+        actorRole: null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEAL_TRACK_TYPE_CORRECTED",
+        entityType: "deal",
+        entityId: dealId,
+        detailsJson: { fromType: existingTrack?.type || null, toType: newType },
+      });
+      res.json({ success: true, track: newTrack });
+    } catch (error: any) {
+      console.error("Error changing deal track type:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a DRAFT deal (admin only)
+  app.delete("/api/deals/:dealId", async (req, res) => {
+    if (!await validateDealOsSession(req, res, ['admin'])) return;
+    try {
+      const dealId = req.params.dealId;
+      const deal = await storage.getDeal(dealId);
+      if (!deal) return res.status(404).json({ error: "Deal not found" });
+      if (deal.status !== 'DRAFT') {
+        return res.status(400).json({ error: "Only DRAFT deals can be deleted" });
+      }
+      const tracks = await storage.getDealTracks(dealId);
+      const { dealTrackEvents: trackEventsTable, dealStateTransitions, dealCommissionEvents } = await import("@shared/schema");
+      for (const track of tracks) {
+        await db.delete(trackEventsTable).where(eq(trackEventsTable.trackId, track.id));
+        await db.delete(dealTrackDocuments).where(eq(dealTrackDocuments.trackId, track.id));
+      }
+      if (tracks.length > 0) {
+        await db.delete(dealTracks).where(eq(dealTracks.dealId, dealId));
+      }
+      await db.delete(dealStateTransitions).where(eq(dealStateTransitions.dealId, dealId));
+      await db.delete(dealCommissionEvents).where(eq(dealCommissionEvents.dealId, dealId));
+      await db.delete(deals).where(eq(deals.id, dealId));
+      const actorId = await getSessionUserId(req);
+      await logAuditEvent({
+        actor: actorId || "system",
+        actorRole: null,
+        actorIp: req.ip || null,
+        userAgent: req.get("User-Agent") || null,
+        action: "DEAL_DELETED",
+        entityType: "deal",
+        entityId: dealId,
+        detailsJson: { clientId: deal.clientId, status: deal.status, reason: "Deleted by admin (DRAFT)" },
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting deal:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/tracks/:trackId", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {

@@ -2,11 +2,14 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,7 +54,10 @@ import {
   Send,
   BarChart3,
   GitBranch,
-  Phone
+  Phone,
+  MoreVertical,
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 
 const DEAL_STATES = [
@@ -103,6 +109,7 @@ interface DealDetailProps {
 export function DealDetail({ dealId, onBack }: DealDetailProps) {
   const { toast } = useToast();
   const { language } = useI18n();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
   const initialTab = (() => {
@@ -122,6 +129,10 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
     notes: ""
   });
   
+  const [changeTypeOpen, setChangeTypeOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedNewType, setSelectedNewType] = useState<"GDL" | "ACL">("GDL");
+
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     invoiceType: "MILESTONE_1" as "MILESTONE_1" | "MILESTONE_2" | "ADJUSTMENT" | "MONTHLY" | "QUARTERLY" | "FINAL",
@@ -219,6 +230,55 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         });
       }
     }
+  });
+
+  const changeTrackTypeMutation = useMutation({
+    mutationFn: async (newType: "GDL" | "ACL") => {
+      const res = await apiRequest("PATCH", `/api/deals/${dealId}/track-type`, { newType });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: language === "pt" ? "Linha de produto alterada" : "Product line changed",
+          description: language === "pt"
+            ? `Track atualizado com sucesso.`
+            : `Track updated successfully.`,
+        });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/tracks`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+        setChangeTypeOpen(false);
+      } else {
+        toast({ title: language === "pt" ? "Erro" : "Error", description: data.error, variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: language === "pt" ? "Erro" : "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteDealMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/deals/${dealId}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: language === "pt" ? "Deal excluído" : "Deal deleted",
+          description: language === "pt" ? "O deal foi removido com sucesso." : "The deal was removed successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+        setDeleteConfirmOpen(false);
+        onBack();
+      } else {
+        toast({ title: language === "pt" ? "Erro" : "Error", description: data.error, variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: language === "pt" ? "Erro" : "Error", description: err.message, variant: "destructive" });
+    },
   });
 
   const deal = dealData?.deal;
@@ -336,8 +396,118 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
           <Badge className={`${stateColors[deal.status as DealState] || "bg-gray-100 text-gray-800 border-gray-300"} border text-lg px-4 py-2`} data-testid="badge-deal-status">
             {stateLabels[deal.status as DealState]?.[language as "en" | "pt"] || deal.status}
           </Badge>
+          {deal.status === 'DRAFT' && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9" data-testid="button-deal-actions-menu">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const currentType = deal.tracks?.[0]?.type || 'ACL';
+                    setSelectedNewType(currentType === 'GDL' ? 'ACL' : 'GDL');
+                    setChangeTypeOpen(true);
+                  }}
+                  data-testid="menu-item-change-track-type"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {language === "pt" ? "Alterar linha de produto" : "Change product line"}
+                </DropdownMenuItem>
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      data-testid="menu-item-delete-deal"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {language === "pt" ? "Excluir deal" : "Delete deal"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
+
+      {/* Change Track Type Dialog */}
+      <Dialog open={changeTypeOpen} onOpenChange={setChangeTypeOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{language === "pt" ? "Alterar Linha de Produto" : "Change Product Line"}</DialogTitle>
+            <DialogDescription>
+              {language === "pt"
+                ? "Selecione a nova linha de produto. A track atual será substituída."
+                : "Select the new product line. The current track will be replaced."}
+            </DialogDescription>
+          </DialogHeader>
+          <RadioGroup
+            value={selectedNewType}
+            onValueChange={(v) => setSelectedNewType(v as "GDL" | "ACL")}
+            className="space-y-3 mt-2"
+          >
+            <div className="flex items-center space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/40">
+              <RadioGroupItem value="GDL" id="type-gdl" data-testid="radio-type-gdl" />
+              <Label htmlFor="type-gdl" className="cursor-pointer">
+                <span className="font-medium">GD</span>
+                <span className="text-sm text-muted-foreground ml-2">Geração Distribuída</span>
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/40">
+              <RadioGroupItem value="ACL" id="type-acl" data-testid="radio-type-acl" />
+              <Label htmlFor="type-acl" className="cursor-pointer">
+                <span className="font-medium">ACL</span>
+                <span className="text-sm text-muted-foreground ml-2">Mercado Livre</span>
+              </Label>
+            </div>
+          </RadioGroup>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setChangeTypeOpen(false)} data-testid="button-change-type-cancel">
+              {language === "pt" ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button
+              onClick={() => changeTrackTypeMutation.mutate(selectedNewType)}
+              disabled={changeTrackTypeMutation.isPending}
+              data-testid="button-change-type-confirm"
+            >
+              {changeTrackTypeMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {language === "pt" ? "Confirmar" : "Confirm"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Deal Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">{language === "pt" ? "Excluir Deal" : "Delete Deal"}</DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              {language === "pt"
+                ? "Tem certeza que deseja excluir este deal? Esta ação não pode ser desfeita."
+                : "Are you sure you want to delete this deal? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} data-testid="button-delete-cancel">
+              {language === "pt" ? "Cancelar" : "Cancel"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteDealMutation.mutate()}
+              disabled={deleteDealMutation.isPending}
+              data-testid="button-delete-confirm"
+            >
+              {deleteDealMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              {language === "pt" ? "Excluir" : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       
 
