@@ -11840,7 +11840,9 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "DEAL_TRACK_TYPE_CORRECTED",
         entityType: "deal",
-        entityId: dealId,
+        entityId: null,
+        dealId,
+        clientId: deal.clientId || null,
         detailsJson: { fromType: existingTrack?.type || null, toType: newType },
       });
       res.json({ success: true, track: newTrack });
@@ -11880,8 +11882,10 @@ export async function registerRoutes(
         userAgent: req.get("User-Agent") || null,
         action: "DEAL_DELETED",
         entityType: "deal",
-        entityId: dealId,
-        detailsJson: { clientId: deal.clientId, status: deal.status, reason: "Deleted by admin (DRAFT)" },
+        entityId: null,
+        dealId,
+        clientId: deal.clientId || null,
+        detailsJson: { status: deal.status, reason: "Deleted by admin (DRAFT)" },
       });
       res.json({ success: true });
     } catch (error: any) {
