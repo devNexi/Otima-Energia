@@ -1,0 +1,100 @@
+FIX: GD DEALS SHOWING AS "INCENTIVADA 50" — DEAL CREATION + DISPLAY
+Problem
+When creating a GD deal, the deal card shows "Incentivada 50 SE_CO" instead of "GD". Two root causes:
+
+The "Criar Novo Deal" modal is still setting the energyType field on the deals table to "Incentivada 50" when GD is selected — it should either not set energyType at all for GD deals, or set it to something like "gd_assinatura"
+The deal card in the deals registry (DealRegistry.tsx) displays deal.energyType + deal.submarket under the company name — it should show the track type (GD or ACL) instead, since that's the primary product line
+
+Fix 1 — Deal creation modal
+Find the "Criar Novo Deal" modal (likely in client/src/components/deals/DealRegistry.tsx or wherever the + Novo Deal button triggers).
+When "GD" is selected as the product line:
+
+Do NOT set energyType to "Incentivada 50" or "Convencional"
+Either leave energyType null, or set it to "gd_assinatura"
+The GDL track creation should already be happening from the previous fix — verify it still works
+
+When "ACL" is selected:
+
+Keep the energy type sub-selector (Convencional, Incentivada 50%, Incentivada 100%) since ACL deals need this
+Set energyType based on the sub-selection
+
+The modal flow should be:
+Step 1: Select product line → GD or ACL
+
+If GD selected:
+  - No energy type sub-selector needed
+  - Submarket can still be selected
+  - Creates deal + GDL track
+
+If ACL selected:
+  - Show energy type sub-selector (Convencional, Incentivada 50%, etc.)
+  - Submarket selection
+  - Creates deal + ACL track
+Fix 2 — Deal card display in registry
+In the deal card component (the card that shows "STUDIO NOVA ONDA..." with "Incentivada 50 SE_CO" underneath), change the display to show the track type prominently:
+Current display:
+STUDIO NOVA ONDA SOM E IMAGEM LTDA.  [Rascunho]
+Incentivada 50   SE_CO
+Should be:
+STUDIO NOVA ONDA SOM E IMAGEM LTDA.  [Rascunho]
+GD   SE_CO
+or for ACL deals:
+STUDIO NOVA ONDA SOM E IMAGEM LTDA.  [Rascunho]
+ACL · Convencional   SE_CO
+To get the track type for display, you have two options:
+Option A (preferred): When loading deals for the registry, join with deal_tracks to get the track type. The API at GET /api/deals already enriches deals with client and supplier info — add track type enrichment there:
+typescript// In the deals listing endpoint, after fetching deals:
+const allTracks = await db.select().from(dealTracks);
+const tracksByDeal = new Map();
+for (const track of allTracks) {
+  if (!tracksByDeal.has(track.dealId)) tracksByDeal.set(track.dealId, []);
+  tracksByDeal.get(track.dealId).push(track);
+}
+
+const enrichedDeals = deals.map(deal => ({
+  ...deal,
+  client: clientsMap.get(deal.clientId),
+  supplier: deal.supplierId ? suppliersMap.get(deal.supplierId) : null,
+  tracks: tracksByDeal.get(deal.id) || [],
+  primaryTrackType: tracksByDeal.get(deal.id)?.[0]?.type || null,
+}));
+Option B (simpler): Use the energyType field but map it properly. If energyType is null or "gd_assinatura", display "GD". Otherwise display the energy type.
+Use the TRACK_TYPE_DISPLAY map from shared/schema.ts (GDL → "GD", ACL → "ACL") for the display value.
+In the deal card component, update the subtitle line:
+typescript// Get display label
+const trackLabel = deal.primaryTrackType
+  ? TRACK_TYPE_DISPLAY[deal.primaryTrackType] || deal.primaryTrackType
+  : deal.energyType || '';
+
+// For ACL, append energy sub-type
+const displayLabel = deal.primaryTrackType === 'ACL' && deal.energyType
+  ? `ACL · ${deal.energyType}`
+  : trackLabel;
+Fix 3 — Also add track type as a color-coded badge
+Add a small badge next to the status badge to make GD vs ACL instantly scannable:
+typescript// GD badge: green
+<Badge className="bg-green-100 text-green-800 border-green-300">GD</Badge>
+
+// ACL badge: blue
+<Badge className="bg-blue-100 text-blue-800 border-blue-300">ACL</Badge>
+Files to modify
+
+client/src/components/deals/DealRegistry.tsx — deal creation modal fix + deal card display
+server/routes.ts — deals listing endpoint (GET /api/deals) to include track type enrichment
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+Creating a GD deal does NOT set energyType to "Incentivada 50"
+GD deal cards show "GD" not "Incentivada 50"
+ACL deal cards show "ACL · Convencional" or "ACL · Incentivada 50%" as appropriate
+Each deal card has a color-coded GD (green) or ACL (blue) badge
+Energy type sub-selector only appears when ACL is chosen in the creation modal
+Existing deals that were wrongly created as "Incentivada 50" but have a GDL track should display as "GD" (track type takes precedence over energyType field)
+
+After completing, summarize changes and wait for confirmation.

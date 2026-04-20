@@ -4566,11 +4566,24 @@ export async function registerRoutes(
       const clientsMap = new Map(clients.map(c => [c.id, c]));
       const suppliersMap = new Map(suppliers.map(s => [s.id, s]));
       
-      const enrichedDeals = deals.map(deal => ({
-        ...deal,
-        client: clientsMap.get(deal.clientId),
-        supplier: deal.supplierId ? suppliersMap.get(deal.supplierId) : null
-      }));
+      const allTracks = await db.select({ id: dealTracks.id, dealId: dealTracks.dealId, type: dealTracks.type, status: dealTracks.status }).from(dealTracks);
+      const tracksByDeal = new Map<string, typeof allTracks>();
+      for (const track of allTracks) {
+        if (!tracksByDeal.has(track.dealId)) tracksByDeal.set(track.dealId, []);
+        tracksByDeal.get(track.dealId)!.push(track);
+      }
+
+      const enrichedDeals = deals.map(deal => {
+        const dealTrackList = tracksByDeal.get(deal.id) || [];
+        const primaryTrack = dealTrackList[0] || null;
+        return {
+          ...deal,
+          client: clientsMap.get(deal.clientId),
+          supplier: deal.supplierId ? suppliersMap.get(deal.supplierId) : null,
+          tracks: dealTrackList,
+          primaryTrackType: primaryTrack?.type || null,
+        };
+      });
       
       res.json({ success: true, deals: enrichedDeals });
     } catch (error: any) {

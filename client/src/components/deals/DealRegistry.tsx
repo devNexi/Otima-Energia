@@ -84,6 +84,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
   const [newDealForm, setNewDealForm] = useState({
     clientId: "",
     productLine: "GDL" as "GDL" | "ACL",
+    energyType: "convencional",
     submarket: "SE_CO",
     volumeType: "flat",
     internalOwner: "Renan"
@@ -107,9 +108,12 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
 
   const createDealMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { productLine, ...rest } = data;
-      const energyType = productLine === "GDL" ? "incentivada_50" : "convencional";
-      const res = await apiRequest("POST", "/api/deals", { ...rest, energyType });
+      const { productLine, energyType, ...rest } = data;
+      const payload: any = { ...rest };
+      if (productLine === "ACL") {
+        payload.energyType = energyType || "convencional";
+      }
+      const res = await apiRequest("POST", "/api/deals", payload);
       const deal = await res.json();
       if (deal.success && deal.deal?.id) {
         await apiRequest("POST", `/api/deals/${deal.deal.id}/tracks`, { type: productLine });
@@ -128,6 +132,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
         setNewDealForm({
           clientId: "",
           productLine: "GDL",
+          energyType: "convencional",
           submarket: "SE_CO",
           volumeType: "flat",
           internalOwner: "Renan"
@@ -180,6 +185,7 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
     createDealMutation.mutate({
       clientId: parseInt(newDealForm.clientId),
       productLine: newDealForm.productLine,
+      energyType: newDealForm.energyType,
       submarket: newDealForm.submarket,
       volumeType: newDealForm.volumeType,
       internalOwner: newDealForm.internalOwner
@@ -407,6 +413,25 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                     </div>
                   </div>
 
+                  {newDealForm.productLine === "ACL" && (
+                    <div className="space-y-2">
+                      <Label>{language === "pt" ? "Tipo de Energia" : "Energy Type"}</Label>
+                      <Select
+                        value={newDealForm.energyType}
+                        onValueChange={(v) => setNewDealForm(prev => ({ ...prev, energyType: v }))}
+                      >
+                        <SelectTrigger data-testid="select-energy-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="convencional">Convencional</SelectItem>
+                          <SelectItem value="incentivada_50">Incentivada 50%</SelectItem>
+                          <SelectItem value="incentivada_100">Incentivada 100%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{language === "pt" ? "Tipo de Volume" : "Volume Type"}</Label>
@@ -514,6 +539,12 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                             {language === "pt" ? "Aguardando Assinatura" : "Awaiting Signature"}
                           </Badge>
                         )}
+                        {deal.primaryTrackType === 'GDL' && (
+                          <Badge className="bg-green-100 text-green-800 border-green-300 border text-xs" data-testid={`badge-track-gd-${deal.id}`}>GD</Badge>
+                        )}
+                        {deal.primaryTrackType === 'ACL' && (
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-300 border text-xs" data-testid={`badge-track-acl-${deal.id}`}>ACL</Badge>
+                        )}
                         {deal.manualOverrideRequired && (
                           <Badge variant="destructive" className="text-xs">
                             <AlertTriangle className="w-3 h-3 mr-1" />
@@ -529,9 +560,14 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
                             {deal.supplier.name}
                           </span>
                         )}
-                        {deal.energyType && (
-                          <span className="capitalize">{deal.energyType.replace("_", " ")}</span>
-                        )}
+                        {(() => {
+                          const trackType = deal.primaryTrackType;
+                          if (trackType === 'GDL') return <span>GD</span>;
+                          if (trackType === 'ACL' && deal.energyType) return <span>ACL · <span className="capitalize">{deal.energyType.replace(/_/g, ' ')}</span></span>;
+                          if (trackType === 'ACL') return <span>ACL</span>;
+                          if (deal.energyType) return <span className="capitalize">{deal.energyType.replace(/_/g, ' ')}</span>;
+                          return null;
+                        })()}
                         {deal.submarket && (
                           <span>{deal.submarket}</span>
                         )}
