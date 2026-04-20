@@ -373,6 +373,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                   onChange={(e) => setFormData({...formData, annualConsumptionMWh: e.target.value})}
                   data-testid="input-annual-consumption"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Valor em MWh. Para converter de kWh, divida por 1.000</p>
               </div>
               <div>
                 <Label className="flex items-center gap-1">Consumo Médio Mensal (MWh) <DictionaryTooltip termKey="consumo" /></Label>
@@ -382,6 +383,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                   onChange={(e) => setFormData({...formData, averageMonthlyMWh: e.target.value})}
                   data-testid="input-monthly-consumption"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Deixe em branco — será calculado automaticamente a partir do anual</p>
               </div>
               <div>
                 <Label className="flex items-center gap-1">Demanda de Pico (kW) <DictionaryTooltip termKey="demanda" /></Label>

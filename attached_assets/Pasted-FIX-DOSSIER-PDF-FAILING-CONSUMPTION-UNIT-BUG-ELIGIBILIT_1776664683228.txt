@@ -1,0 +1,205 @@
+FIX: DOSSIER PDF FAILING + CONSUMPTION UNIT BUG + ELIGIBILITY BROKEN
+Three connected issues on the Dossier page. Fix all three.
+Bug 1 — PDF Download Failing
+What's wrong: Clicking the PDF button on the Dossier shows red toast "Erro - Falha ao baixar PDF".
+How to diagnose:
+
+Find the PDF download handler — search client/src/pages/DossierPage.tsx and client/src/components/dossier/ClientDossierTab.tsx for "pdf" or "PDF"
+Check what API endpoint it calls
+Check if that endpoint exists in server/routes.ts — search for dossier.*pdf
+If it uses Puppeteer, it will fail in Replit — Puppeteer is unreliable in this environment
+
+Fix: Create or fix the dossier PDF endpoint using pdf-lib (already installed in package.json). Do NOT use Puppeteer for this.
+Server-side — add to server/routes.ts:
+typescriptapp.get("/api/clients/:clientId/dossier/pdf", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    const clientId = parseInt(req.params.clientId);
+    const dossier = await storage.getClientDossier(clientId);
+    if (!dossier) return res.status(404).json({ error: "Dossier not found" });
+
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([595.28, 841.89]); // A4
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+    const purple = rgb(0.62, 0.25, 0.99); // #9e3ffd
+
+    // Header
+    page.drawRectangle({ x: 0, y: 790, width: 595.28, height: 52, color: purple });
+    page.drawText('Dossiê Energético', { x: 50, y: 808, size: 20, font: bold, color: rgb(1, 1, 1) });
+
+    // Company name
+    page.drawText(dossier.legalName || 'N/A', { x: 50, y: 750, size: 16, font: bold });
+    if (dossier.tradeName) {
+      page.drawText(dossier.tradeName, { x: 50, y: 730, size: 11, font, color: rgb(0.4, 0.4, 0.4) });
+    }
+
+    // Fields
+    const fields = [
+      ['CNPJ', dossier.cnpj || 'N/A'],
+      ['Distribuidora', dossier.distributor || 'N/A'],
+      ['Submercado', dossier.submarket || 'N/A'],
+      ['Tipo de Conexão', dossier.connectionType === 'GROUP_A' ? 'Grupo A (Alta Tensão)' : dossier.connectionType === 'GROUP_B' ? 'Grupo B (Baixa Tensão)' : dossier.connectionType || 'N/A'],
+      ['Consumo Anual', `${Number(dossier.annualConsumptionMWh || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`],
+      ['Consumo Médio Mensal', `${Number(dossier.averageMonthlyMWh || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`],
+      ['Demanda de Pico', `${Number(dossier.peakDemandKW || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kW`],
+      ['Número de UCs', String(dossier.numberOfUCs || 1)],
+      ['Classe Tarifária', dossier.tariffClass || 'N/A'],
+      ['Elegibilidade', dossier.eligibilityType || 'N/A'],
+      ['Confiança', dossier.confidenceScore || 'N/A'],
+      ['Status', dossier.status || 'N/A'],
+    ];
+
+    let y = 690;
+    for (const [label, value] of fields) {
+      page.drawText(label, { x: 50, y, size: 10, font: bold, color: rgb(0.3, 0.3, 0.3) });
+      page.drawText(String(value), { x: 220, y, size: 10, font });
+      y -= 24;
+      if (y < 80) {
+        // Add new page if needed
+        break;
+      }
+    }
+
+    // Footer
+    page.drawText('Ótima Energia • contato@otimaenergia.com', { x: 50, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+
+    const pdfBytes = await doc.save();
+    const filename = `dossier-${dossier.legalName?.replace(/[^a-zA-Z0-9]/g, '_') || clientId}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(Buffer.from(pdfBytes));
+  } catch (error: any) {
+    console.error("Error generating dossier PDF:", error);
+    res.status(500).json({ error: "Failed to generate PDF" });
+  }
+});
+Client-side — find the PDF button click handler and make sure it does a proper blob download:
+typescriptconst downloadPdf = async () => {
+  try {
+    const res = await fetch(`/api/clients/${clientId}/dossier/pdf`, {
+      headers: { 'x-session-id': sessionId },
+    });
+    if (!res.ok) throw new Error('Failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dossier.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    toast({ title: 'Erro', description: 'Falha ao baixar PDF', variant: 'destructive' });
+  }
+};
+If the existing handler calls a different endpoint path, either fix the handler to match the new endpoint or create the endpoint at the path the handler already calls.
+Bug 2 — Consumption Unit Conversion (kWh vs MWh)
+What's wrong: The dossier shows:
+
+Consumo Anual: 30.290,00 MWh
+Consumo Médio Mensal: 1.057,50 MWh
+Demanda de Pico: 6,00 kW
+
+This is a small studio with 6 kW demand and Group B (Baixa Tensão). It does NOT consume 30,290 MWh/year — that's a factory. The real values are 30,290 kWh/year = 30.29 MWh/year and 1,057.50 kWh/month = 1.06 MWh/month.
+Root cause: When the dossier auto-populates from bill data, it copies the kWh values directly into the MWh fields without dividing by 1000. The bill parser returns consumption in kWh (e.g., totalEnergyKwh: 121224.6). The dossier fields annualConsumptionMWh and averageMonthlyMWh expect MWh.
+Fix: Find every place where dossier consumption is populated from bill data. Search server/routes.ts for where annualConsumptionMWh or averageMonthlyMWh is set from bill extraction data.
+The conversion must be:
+typescript// Bill data is in kWh — dossier stores MWh
+const billEnergyKwh = parseFloat(String(bill.totalEnergyKwh || 0));
+const billEnergyMwh = billEnergyKwh / 1000; // Convert kWh → MWh
+
+// If we have multiple bills, average the monthly consumption
+const avgMonthlyMwh = billEnergyMwh; // Each bill is typically one month
+const annualMwh = avgMonthlyMwh * 12; // Annualize
+
+// Store in dossier
+dossier.averageMonthlyMWh = avgMonthlyMwh;
+dossier.annualConsumptionMWh = annualMwh;
+Also fix the auto-populate logic that runs when a dossier is first created from bill data. Search for:
+
+totalEnergyKwh being assigned to annualConsumptionMWh or averageMonthlyMWh
+Any place where bill consumption values feed into the dossier without /1000
+
+Check these specific areas:
+
+The dossier auto-creation when a bill is parsed (in the BILL_PARSE job handler or assembly engine)
+The dossier creation endpoint (POST /api/clients/:clientId/dossier or similar)
+The "auto-populate from bills" function if one exists
+
+Additionally, add unit labels that are unmistakable in the edit form:
+
+Field label should say "Consumo Anual (MWh)" — already shows this ✓
+Add a helper text under the field: "Valor em MWh. Para converter de kWh, divida por 1.000"
+
+Bug 3 — Eligibility Not Recalculating
+What's wrong: Even with 30,290 in the consumption field (whether kWh or MWh), eligibility shows "Não elegível". If the value were truly 30,290 MWh, this client should be ACL_DIRECT. If the corrected value is 30.29 MWh, they should be GD_ELIGIBLE (on a GD track).
+Root cause: Eligibility is not recalculated when consumption is edited. It was set once at creation and never updated.
+Fix: Make eligibility auto-recalculate on EVERY dossier save.
+In the dossier update endpoint (PATCH/PUT), add this after the fields are saved:
+typescript// After saving dossier fields, recalculate eligibility
+const annualMwh = parseFloat(String(updatedDossier.annualConsumptionMWh || 0));
+
+// Get the deal's track type to make eligibility track-aware
+let trackType: string | null = null;
+const clientDeals = await storage.getDealsForClient(clientId);
+if (clientDeals.length > 0) {
+  const { dealTracks } = await import('@shared/schema');
+  const tracks = await db.select().from(dealTracks).where(eq(dealTracks.dealId, clientDeals[0].id));
+  trackType = tracks[0]?.type || null;
+}
+
+// Calculate eligibility based on track type
+let newEligibility: string;
+if (trackType === 'GDL') {
+  newEligibility = annualMwh >= 6 ? 'GD_ELIGIBLE' : 'NOT_ELIGIBLE_YET';
+} else if (trackType === 'ACL') {
+  if (annualMwh >= 500) newEligibility = 'ACL_DIRECT';
+  else if (annualMwh >= 50) newEligibility = 'ACL_VAREJISTA';
+  else newEligibility = 'NOT_ELIGIBLE_YET';
+} else {
+  // No track — general thresholds
+  if (annualMwh >= 500) newEligibility = 'ACL_DIRECT';
+  else if (annualMwh >= 50) newEligibility = 'ACL_VAREJISTA';
+  else if (annualMwh >= 6) newEligibility = 'GD_ELIGIBLE';
+  else newEligibility = 'NOT_ELIGIBLE_YET';
+}
+
+// Update eligibility
+await db.update(clientDossiers)
+  .set({ eligibilityType: newEligibility, updatedAt: new Date() })
+  .where(eq(clientDossiers.clientId, clientId));
+Also apply this in the initial dossier creation path and the auto-populate-from-bills path.
+Also fix: Monthly ↔ Annual consistency
+When one field is edited, auto-derive the other:
+typescript// In the dossier save handler:
+if (body.annualConsumptionMWh !== undefined && body.averageMonthlyMWh === undefined) {
+  body.averageMonthlyMWh = parseFloat(body.annualConsumptionMWh) / 12;
+}
+if (body.averageMonthlyMWh !== undefined && body.annualConsumptionMWh === undefined) {
+  body.annualConsumptionMWh = parseFloat(body.averageMonthlyMWh) * 12;
+}
+Files to modify
+
+server/routes.ts — dossier PDF endpoint (create with pdf-lib), dossier save handler (unit conversion + eligibility recalc)
+client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx — PDF button handler
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+PDF button downloads a branded PDF with all dossier fields — no error toast
+Small studio with 30,290 kWh/year consumption shows as 30.29 MWh in the dossier, not 30,290 MWh
+Eligibility auto-recalculates on every save
+A 30.29 MWh GD deal shows "GD Elegível"
+A 30.29 MWh ACL deal shows "Não elegível" (correct — below 50 MWh)
+A 600 MWh ACL deal shows "ACL Direto"
+Monthly and annual stay consistent — editing one derives the other
+Unit labels are clear in both edit and display views
+
+After completing, summarize changes and wait for confirmation.

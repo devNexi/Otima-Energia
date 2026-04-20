@@ -3998,6 +3998,7 @@ export async function registerRoutes(
             ? Object.entries(distributorSubmarketMap).find(([k]) => dist.toUpperCase().includes(k))?.[1] || null
             : null;
 
+          const avgMonthlyMwh = avgMonthlyKwh / 1000;
           prepopData = {
             ...prepopData,
             cnpj: cnpj || prepopData.cnpj,
@@ -4006,6 +4007,7 @@ export async function registerRoutes(
             tariffClass: tariff,
             eligibilityType: eligibility,
             annualConsumptionMWh: annualMwh > 0 ? Math.round(annualMwh * 100) / 100 : null,
+            averageMonthlyMWh: avgMonthlyMwh > 0 ? Math.round(avgMonthlyMwh * 100) / 100 : null,
             confidenceScore: parsedBills.length >= 6 ? 'HIGH' : parsedBills.length >= 3 ? 'MEDIUM' : 'LOW',
             dataSources: ['OCR'],
           };
@@ -4289,7 +4291,31 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
-      
+
+      // Monthly ↔ Annual consistency: derive one from the other if only one is provided
+      if (updateData.annualConsumptionMWh !== undefined && updateData.averageMonthlyMWh === undefined) {
+        const annual = parseFloat(String(updateData.annualConsumptionMWh || 0));
+        if (annual > 0) updateData.averageMonthlyMWh = (annual / 12).toFixed(4);
+      } else if (updateData.averageMonthlyMWh !== undefined && updateData.annualConsumptionMWh === undefined) {
+        const monthly = parseFloat(String(updateData.averageMonthlyMWh || 0));
+        if (monthly > 0) updateData.annualConsumptionMWh = (monthly * 12).toFixed(4);
+      }
+
+      // Recalculate eligibility on every save
+      const annualMwhForElig = parseFloat(String(
+        updateData.annualConsumptionMWh ?? dossier.annualConsumptionMWh ?? 0
+      ));
+      if (annualMwhForElig > 0 && updateData.eligibilityType === undefined) {
+        // Get the client's primary track type for track-aware eligibility
+        let trackTypeForElig: string | null = null;
+        const clientDeals = await storage.getDealsForClient(dossier.clientId);
+        if (clientDeals.length > 0) {
+          const firstDealTracks = await storage.getDealTracks(clientDeals[0].id);
+          trackTypeForElig = firstDealTracks[0]?.type || null;
+        }
+        updateData.eligibilityType = calculateEligibility(annualMwhForElig, trackTypeForElig);
+      }
+
       const updated = await storage.updateClientDossier(dossierId, updateData, userId);
       
       if (!updated) {
@@ -4413,8 +4439,8 @@ export async function registerRoutes(
         'GROUP_B': 'Grupo B (Baixa Tensão)'
       };
       
-      // Generate HTML for PDF
-      const html = `
+      // NOTE: HTML template removed — PDF now generated directly with pdf-lib below
+      const _unusedHtmlStart = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4512,23 +4538,108 @@ export async function registerRoutes(
 </html>
       `;
       
-      // Use puppeteer to generate PDF
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' }
-      });
-      
-      await browser.close();
-      
+      // Generate PDF using pdf-lib (no Puppeteer/browser required)
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.create();
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const purple = rgb(0.62, 0.25, 0.99);
+      const darkGray = rgb(0.3, 0.3, 0.3);
+      const midGray = rgb(0.5, 0.5, 0.5);
+      const white = rgb(1, 1, 1);
+
+      // Header bar
+      pdfPage.drawRectangle({ x: 0, y: pageHeight - 60, width: pageWidth, height: 60, color: purple });
+      pdfPage.drawText('ÓTIMA ENERGIA', { x: 40, y: pageHeight - 22, size: 10, font: fontBold, color: white });
+      pdfPage.drawText('Dossiê Energético', { x: 40, y: pageHeight - 42, size: 16, font: fontBold, color: white });
+
+      // Company identification
+      let y = pageHeight - 90;
+      pdfPage.drawText(dossier.legalName || 'N/A', { x: 40, y, size: 14, font: fontBold });
+      y -= 18;
+      if (dossier.tradeName) {
+        pdfPage.drawText(dossier.tradeName, { x: 40, y, size: 10, font: fontRegular, color: midGray });
+        y -= 14;
+      }
+      pdfPage.drawText(`CNPJ: ${dossier.cnpj || 'N/A'}`, { x: 40, y, size: 10, font: fontRegular, color: darkGray });
+      y -= 24;
+
+      // Section helper
+      const drawSection = (title: string) => {
+        pdfPage.drawRectangle({ x: 40, y: y - 2, width: pageWidth - 80, height: 18, color: rgb(0.94, 0.90, 1.0) });
+        pdfPage.drawText(title, { x: 44, y, size: 10, font: fontBold, color: purple });
+        y -= 22;
+      };
+
+      // Row helper
+      const drawRow = (label: string, value: string) => {
+        pdfPage.drawText(label, { x: 44, y, size: 9, font: fontBold, color: darkGray });
+        pdfPage.drawText(value, { x: 200, y, size: 9, font: fontRegular });
+        y -= 16;
+      };
+
+      // Estrutura Energética
+      drawSection('Estrutura Energética');
+      drawRow('Distribuidora', dossier.distributor || 'N/A');
+      drawRow('Submercado', submarketLabels[dossier.submarket || ''] || dossier.submarket || 'N/A');
+      drawRow('Tipo de Conexão', connectionLabels[dossier.connectionType || ''] || dossier.connectionType || 'N/A');
+      drawRow('Classe Tarifária', dossier.tariffClass || 'N/A');
+      drawRow('Número de UCs', String(dossier.numberOfUCs || 1));
+      y -= 8;
+
+      // Perfil de Consumo
+      drawSection('Perfil de Consumo');
+      drawRow('Consumo Anual', dossier.annualConsumptionMWh
+        ? `${parseFloat(dossier.annualConsumptionMWh.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`
+        : 'Não calculado');
+      drawRow('Consumo Médio Mensal', dossier.averageMonthlyMWh
+        ? `${parseFloat(dossier.averageMonthlyMWh.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`
+        : 'Não calculado');
+      drawRow('Demanda de Pico', dossier.peakDemandKW
+        ? `${parseFloat(dossier.peakDemandKW.toString()).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kW`
+        : 'Não informado');
+      y -= 8;
+
+      // Elegibilidade
+      drawSection('Classificação de Elegibilidade');
+      drawRow('Status', eligibilityLabels[dossier.eligibilityType || 'NOT_ELIGIBLE_YET']);
+      drawRow('Confiança', dossier.confidenceScore || 'N/A');
+      y -= 8;
+
+      if (dossier.opsNotes) {
+        drawSection('Notas Operacionais');
+        // Word wrap notes
+        const words = (dossier.opsNotes as string).split(' ');
+        let line = '';
+        for (const word of words) {
+          const test = line ? `${line} ${word}` : word;
+          if (test.length > 85) {
+            pdfPage.drawText(line, { x: 44, y, size: 8, font: fontRegular, color: darkGray });
+            y -= 13;
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) {
+          pdfPage.drawText(line, { x: 44, y, size: 8, font: fontRegular, color: darkGray });
+          y -= 13;
+        }
+      }
+
+      // Footer
+      pdfPage.drawLine({ start: { x: 40, y: 40 }, end: { x: pageWidth - 40, y: 40 }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
+      pdfPage.drawText('Ótima Energia  •  contato@otimaenergia.com', { x: 40, y: 26, size: 8, font: fontRegular, color: midGray });
+      const genDate = new Date().toLocaleDateString('pt-BR');
+      pdfPage.drawText(`Gerado em: ${genDate}`, { x: pageWidth - 150, y: 26, size: 8, font: fontRegular, color: midGray });
+
+      const pdfBytes = await pdfDoc.save();
+      const pdfBuffer = Buffer.from(pdfBytes);
+
       // Set headers for PDF download
       const filename = `dossie_${dossier.legalName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
