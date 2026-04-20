@@ -1,0 +1,178 @@
+FIX: "CONFIANÇA BAIXA" BLOCKING DOSSIER + UNIT STANDARDIZATION
+Bug 1 — "Confiança Baixa" blocking the process
+What's wrong: The dossier shows "Confiança Baixa" with warning "Os dados precisam de validação manual antes de enviar RFQs." The client says this is stalling the entire proposal process. Looking at the data, this dossier has all required fields filled — legal name, CNPJ, distributor, consumption, demand, tariff class, eligibility. There's no reason it should be blocked.
+Root cause: The confidence scoring logic is too aggressive. It marks dossiers as "Low" unless very specific conditions are met, and the UI treats "Low" as a blocker when it should be an advisory warning.
+Two things to fix:
+Fix A — Confidence should NOT block progression.
+Find everywhere that confidence level gates advancement. Search server/blockerEngine.ts and server/routes.ts and server/deal-assembly-engine.ts for confidence, confidenceScore, Baixa, LOW.
+If any blocker check says something like "cannot send RFQ because confidence is LOW", remove that blocker or downgrade it from error to warning severity:
+typescript// WRONG — confidence blocking RFQ:
+if (dossier.confidenceScore === 'LOW') {
+  blockers.push({ code: 'LOW_CONFIDENCE', message: '...', severity: 'error' });
+}
+
+// RIGHT — confidence is advisory only:
+// Remove this blocker entirely, OR change severity to 'warning':
+if (dossier.confidenceScore === 'LOW') {
+  blockers.push({ code: 'LOW_CONFIDENCE', message: '...', severity: 'warning' }); // warning, not error
+}
+Warnings should display in the UI but NOT prevent advancing to the next stage.
+Also check the assembly engine — if checkSendRfq() or any stage gate checks confidence, make it non-blocking.
+Fix B — Improve the confidence calculation.
+Find the confidence calculation logic. It's likely in server/routes.ts where the dossier is created/updated, or in a helper function. Search for confidenceScore, MEDIUM, HIGH, LOW.
+The current logic is probably something like "if auto-populated from bills, confidence = LOW". Fix it to be based on actual data completeness:
+typescriptfunction calculateDossierConfidence(dossier: any): 'LOW' | 'MEDIUM' | 'HIGH' {
+  let score = 0;
+  const checks = [
+    { field: 'legalName', weight: 1 },
+    { field: 'cnpj', weight: 1 },
+    { field: 'distributor', weight: 1 },
+    { field: 'submarket', weight: 1 },
+    { field: 'connectionType', weight: 1 },
+    { field: 'annualConsumptionMWh', weight: 2 },  // Double weight — critical field
+    { field: 'averageMonthlyMWh', weight: 1 },
+    { field: 'peakDemandKW', weight: 1 },
+    { field: 'tariffClass', weight: 1 },
+    { field: 'eligibilityType', weight: 1 },
+  ];
+
+  const maxScore = checks.reduce((sum, c) => sum + c.weight, 0); // 11
+
+  for (const check of checks) {
+    const val = dossier[check.field];
+    if (val !== null && val !== undefined && val !== '' && val !== 'NOT_ELIGIBLE_YET') {
+      score += check.weight;
+    }
+  }
+
+  const ratio = score / maxScore;
+
+  if (ratio >= 0.8) return 'HIGH';    // 9+ out of 11 fields
+  if (ratio >= 0.5) return 'MEDIUM';  // 6+ out of 11 fields
+  return 'LOW';                        // Less than 6 fields
+}
+The dossier in the screenshot has ALL fields filled (legalName, CNPJ, distributor, submarket, connectionType, consumption, demand, tariffClass, eligibility) — that's at least 9/11 fields. It should be HIGH confidence, not LOW.
+Apply this recalculation every time the dossier is saved, just like the eligibility recalculation.
+Fix C — Update the UI warning to be non-blocking.
+In the dossier display component (client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx), change the warning banner behavior:
+typescript// LOW confidence — yellow advisory, not a red blocker
+{confidenceScore === 'LOW' && (
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+    <p className="text-sm font-medium text-amber-800">Confiança Baixa</p>
+    <p className="text-xs text-amber-700">Recomendamos validar os dados manualmente. Isso não impede o avanço do deal.</p>
+  </div>
+)}
+
+// MEDIUM confidence — subtle note
+{confidenceScore === 'MEDIUM' && (
+  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+    <p className="text-sm font-medium text-blue-800">Confiança Média</p>
+    <p className="text-xs text-blue-700">Dados parcialmente validados.</p>
+  </div>
+)}
+
+// HIGH confidence — green confirmation
+{confidenceScore === 'HIGH' && (
+  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+    <p className="text-sm font-medium text-green-800">Confiança Alta</p>
+    <p className="text-xs text-green-700">Dados validados e completos.</p>
+  </div>
+)}
+The key message change: "Isso não impede o avanço do deal" (This does not prevent deal advancement).
+Bug 2 — Mixed kWh / MWh units
+What's wrong: The client says some records store consumption in kWh and others in MWh. The platform fields say "MWh" but some values were imported as kWh without converting.
+Decision: standardize on kWh for display, MWh for internal storage.
+The industry standard for commercial energy in Brazil is:
+
+Bills report in kWh (what the client sees on their fatura)
+Dossier/ECOS should store in MWh (what suppliers quote in R$/MWh)
+Display should show kWh for consumption (familiar to clients) and MWh for pricing/market context
+
+Fix approach:
+
+Bill import → Dossier: Already fixed in the previous prompt (divide by 1000). Verify this is working.
+Existing bad data: Find dossiers where consumption is suspiciously high (stored in kWh but labeled as MWh) and correct them:
+
+typescript// Add a one-time cleanup endpoint
+app.post("/api/admin/fix-consumption-units", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    const { clientDossiers } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { gt } = await import("drizzle-orm");
+
+    // Find dossiers where annual consumption > 1000 MWh but peak demand < 100 kW
+    // These are almost certainly stored in kWh instead of MWh
+    const suspicious = await db.select().from(clientDossiers)
+      .where(gt(clientDossiers.annualConsumptionMWh, '1000'));
+
+    let fixed = 0;
+    for (const d of suspicious) {
+      const annual = parseFloat(String(d.annualConsumptionMWh || 0));
+      const demand = parseFloat(String(d.peakDemandKW || 0));
+
+      // If consumption is > 1000 "MWh" but demand is < 100 kW, it's probably kWh
+      if (annual > 1000 && demand < 100) {
+        const correctedAnnual = annual / 1000;
+        const correctedMonthly = correctedAnnual / 12;
+
+        await db.update(clientDossiers).set({
+          annualConsumptionMWh: String(correctedAnnual.toFixed(2)),
+          averageMonthlyMWh: String(correctedMonthly.toFixed(2)),
+          updatedAt: new Date(),
+        }).where(eq(clientDossiers.id, d.id));
+        fixed++;
+      }
+    }
+
+    res.json({ success: true, checked: suspicious.length, fixed });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+Add a button in Admin Settings to run this cleanup:
+
+typescript<Button onClick={fixUnits} variant="outline">
+  Corrigir unidades de consumo (kWh → MWh)
+</Button>
+
+Add clear unit indicators in the dossier form:
+
+When the user is editing consumption fields, show a helper that makes the expected unit unmistakable:
+typescript<Label>Consumo Anual (MWh) *</Label>
+<Input value={annualConsumption} onChange={...} />
+<p className="text-xs text-muted-foreground mt-1">
+  Valor em MWh. Ex: 18,09 MWh = 18.090 kWh
+</p>
+
+<Label>Consumo Médio Mensal (MWh)</Label>
+<Input value={monthlyConsumption} onChange={...} />
+<p className="text-xs text-muted-foreground mt-1">
+  Valor em MWh. Ex: 1,51 MWh = 1.510 kWh
+</p>
+Files to modify
+
+server/blockerEngine.ts — remove or downgrade confidence as a blocker
+server/deal-assembly-engine.ts — same, if confidence gates any stage
+server/routes.ts — fix confidence calculation on dossier save, add unit cleanup endpoint
+client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx — update warning banner to non-blocking, add unit helper text
+client/src/pages/AdminSettings.tsx — add "Fix consumption units" button
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+The dossier in the screenshot (18.09 MWh, all fields filled) shows "Confiança Alta" not "Confiança Baixa"
+Low confidence is advisory only — it does NOT prevent advancing to RFQ or any other stage
+Warning message says "Isso não impede o avanço do deal"
+Existing dossiers with kWh values stored as MWh are corrected by the cleanup tool
+New bill imports correctly convert kWh → MWh (divide by 1000)
+Unit helper text appears under consumption fields in edit mode
+Dossier can progress to LOCKED status regardless of confidence level
+
+After completing, summarize changes and wait for confirmation.

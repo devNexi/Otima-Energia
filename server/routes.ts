@@ -3941,6 +3941,33 @@ export async function registerRoutes(
     return 'NOT_ELIGIBLE_YET';
   }
 
+  function calculateDossierConfidence(dossier: Record<string, any>): 'LOW' | 'MEDIUM' | 'HIGH' {
+    const checks = [
+      { field: 'legalName', weight: 1 },
+      { field: 'cnpj', weight: 1 },
+      { field: 'distributor', weight: 1 },
+      { field: 'submarket', weight: 1 },
+      { field: 'connectionType', weight: 1 },
+      { field: 'annualConsumptionMWh', weight: 2 },
+      { field: 'averageMonthlyMWh', weight: 1 },
+      { field: 'peakDemandKW', weight: 1 },
+      { field: 'tariffClass', weight: 1 },
+      { field: 'eligibilityType', weight: 1 },
+    ];
+    const maxScore = checks.reduce((s, c) => s + c.weight, 0); // 11
+    let score = 0;
+    for (const c of checks) {
+      const val = dossier[c.field];
+      if (val !== null && val !== undefined && val !== '' && val !== 'NOT_ELIGIBLE_YET') {
+        score += c.weight;
+      }
+    }
+    const ratio = score / maxScore;
+    if (ratio >= 0.8) return 'HIGH';
+    if (ratio >= 0.5) return 'MEDIUM';
+    return 'LOW';
+  }
+
   // Get client dossier
   app.get("/api/clients/:id/dossier", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -3979,9 +4006,9 @@ export async function registerRoutes(
           eligibilityType: null,
           annualConsumptionMWh: null,
           tariffClass: null,
-          confidenceScore: 'LOW',
           dataSources: ['MANUAL'],
         };
+        prepopData.confidenceScore = calculateDossierConfidence(prepopData);
 
         if (parsedBills.length > 0) {
           const dist = parsedBills.find(b => b.distributor)?.distributor || null;
@@ -4008,9 +4035,9 @@ export async function registerRoutes(
             eligibilityType: eligibility,
             annualConsumptionMWh: annualMwh > 0 ? Math.round(annualMwh * 100) / 100 : null,
             averageMonthlyMWh: avgMonthlyMwh > 0 ? Math.round(avgMonthlyMwh * 100) / 100 : null,
-            confidenceScore: parsedBills.length >= 6 ? 'HIGH' : parsedBills.length >= 3 ? 'MEDIUM' : 'LOW',
             dataSources: ['OCR'],
           };
+          prepopData.confidenceScore = calculateDossierConfidence(prepopData);
         }
 
         const dossierUserId = await getSessionUserId(req);
@@ -4032,6 +4059,13 @@ export async function registerRoutes(
         });
       }
       
+      // Recalculate confidence on read — fixes stale LOW values without a DB migration
+      // Only mutate the in-memory object; DB is updated next time the user saves the dossier
+      const recalculated = calculateDossierConfidence(dossier as any);
+      if (recalculated !== dossier.confidenceScore) {
+        (dossier as any).confidenceScore = recalculated;
+      }
+
       const snapshots = await storage.getDossierSnapshots(dossier.id);
       
       res.json({ success: true, dossier, snapshots });
@@ -4075,11 +4109,11 @@ export async function registerRoutes(
         numberOfUCs: req.body.numberOfUCs || 1,
         tariffClass: req.body.tariffClass || null,
         dataSources: req.body.dataSources || ['MANUAL'],
-        confidenceScore: req.body.confidenceScore || 'LOW',
         opsNotes: req.body.opsNotes || null,
         createdBy: userId,
         updatedBy: userId,
       };
+      (dossierData as any).confidenceScore = req.body.confidenceScore || calculateDossierConfidence(dossierData);
       
       const dossier = await storage.createClientDossier(dossierData);
       
@@ -4185,13 +4219,7 @@ export async function registerRoutes(
       if (profiles.length > 0) dataSources.push('CLIENT_CONFIRMATION');
       if (dataSources.length === 0) dataSources.push('MANUAL');
       
-      // Determine confidence score
-      let confidenceScore = 'LOW';
-      if (verifiedBills.length >= 6 || (profiles.length > 0 && verifiedBills.length >= 3)) {
-        confidenceScore = 'HIGH';
-      } else if (verifiedBills.length >= 3 || profiles.length > 0) {
-        confidenceScore = 'MEDIUM';
-      }
+      // Determine confidence score (will be recalculated from field completeness below)
       
       // Determine submarket from distributor (basic mapping)
       let submarket: string | null = null;
@@ -4223,11 +4251,12 @@ export async function registerRoutes(
         numberOfUCs: ucCodes.size || 1,
         tariffClass: null,
         dataSources,
-        confidenceScore,
         opsNotes: `Auto-generated from ${verifiedBills.length} bills and ${profiles.length} consumption profiles.`,
         createdBy: userId,
         updatedBy: userId,
       };
+      const confidenceScore = calculateDossierConfidence(dossierData as any);
+      (dossierData as any).confidenceScore = confidenceScore;
       
       const dossier = await storage.createClientDossier(dossierData);
       
@@ -4314,6 +4343,12 @@ export async function registerRoutes(
           trackTypeForElig = firstDealTracks[0]?.type || null;
         }
         updateData.eligibilityType = calculateEligibility(annualMwhForElig, trackTypeForElig);
+      }
+
+      // Recalculate confidence on every save based on field completeness
+      if (updateData.confidenceScore === undefined) {
+        const mergedForConfidence = { ...dossier, ...updateData };
+        updateData.confidenceScore = calculateDossierConfidence(mergedForConfidence);
       }
 
       const updated = await storage.updateClientDossier(dossierId, updateData, userId);
@@ -8151,6 +8186,50 @@ export async function registerRoutes(
       res.json({ success: true, results });
     } catch (error: any) {
       console.error('[SeedSuppliers] Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Fix consumption units — one-time cleanup for dossiers storing kWh instead of MWh
+  app.post("/api/admin/fix-consumption-units", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    try {
+      const { clientDossiers } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { gt, eq } = await import("drizzle-orm");
+
+      const all = await db.select().from(clientDossiers);
+      let checked = 0;
+      let fixed = 0;
+      for (const d of all) {
+        const annual = parseFloat(String(d.annualConsumptionMWh || 0));
+        const demand = parseFloat(String(d.peakDemandKW || 0));
+        checked++;
+        // Heuristic: annual > 1000 "MWh" AND demand < 100 kW → almost certainly stored in kWh
+        if (annual > 1000 && (demand < 100 || demand === 0)) {
+          const correctedAnnual = annual / 1000;
+          const correctedMonthly = correctedAnnual / 12;
+          const newConfidence = calculateDossierConfidence({ ...d, annualConsumptionMWh: correctedAnnual, averageMonthlyMWh: correctedMonthly });
+          await db.update(clientDossiers).set({
+            annualConsumptionMWh: correctedAnnual.toFixed(4),
+            averageMonthlyMWh: correctedMonthly.toFixed(4),
+            confidenceScore: newConfidence,
+            updatedAt: new Date(),
+          } as any).where(eq(clientDossiers.id, d.id));
+          fixed++;
+        }
+      }
+
+      await logAuditEvent({ actor: user.username, actorRole: user.role, actorIp: req.ip || null, userAgent: req.get("User-Agent") || null, action: "CONSUMPTION_UNITS_FIXED", entityType: "client_dossier", entityId: null, detailsJson: { checked, fixed } });
+      res.json({ success: true, checked, fixed });
+    } catch (error: any) {
+      console.error("[fix-consumption-units] Error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

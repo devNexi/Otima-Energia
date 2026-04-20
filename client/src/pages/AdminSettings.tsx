@@ -18,6 +18,8 @@ export default function AdminSettings() {
   const { toast } = useToast();
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<{ suppliers: number; playbooks: number; coverage: number; contacts: number } | null>(null);
+  const [fixingUnits, setFixingUnits] = useState(false);
+  const [fixUnitsResult, setFixUnitsResult] = useState<{ checked: number; fixed: number } | null>(null);
 
   const seedSuppliers = async () => {
     setSeeding(true);
@@ -38,6 +40,27 @@ export default function AdminSettings() {
       toast({ title: "Erro", description: "Falha ao importar fornecedores", variant: "destructive" });
     }
     setSeeding(false);
+  };
+
+  const fixUnits = async () => {
+    setFixingUnits(true);
+    setFixUnitsResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/fix-consumption-units");
+      const data = await res.json();
+      if (data.success) {
+        setFixUnitsResult({ checked: data.checked, fixed: data.fixed });
+        toast({
+          title: "Unidades corrigidas",
+          description: `${data.fixed} dossiers corrigidos de ${data.checked} verificados.`,
+        });
+      } else {
+        toast({ title: "Erro", description: data.error || "Falha ao corrigir unidades", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Falha ao corrigir unidades", variant: "destructive" });
+    }
+    setFixingUnits(false);
   };
 
   if (isLoading) {
@@ -151,6 +174,50 @@ export default function AdminSettings() {
                     <>
                       <Building2 className="h-4 w-4 mr-2" />
                       Importar Fornecedores
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Corrigir Unidades de Consumo
+                </CardTitle>
+                <CardDescription>
+                  Detecta e corrige dossiers onde o consumo foi salvo em kWh em vez de MWh.
+                  Usa heurística: consumo anual &gt; 1.000 com demanda &lt; 100 kW.
+                  A operação é segura e pode ser executada múltiplas vezes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fixUnitsResult && (
+                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg" data-testid="fix-units-result">
+                    <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+                    <div className="text-sm text-green-800">
+                      <span className="font-medium">{fixUnitsResult.fixed}</span> dossier(s) corrigido(s) de{' '}
+                      <span className="font-medium">{fixUnitsResult.checked}</span> verificados.
+                      {fixUnitsResult.fixed === 0 && ' Nenhuma correção necessária.'}
+                    </div>
+                  </div>
+                )}
+                <Button
+                  onClick={fixUnits}
+                  disabled={fixingUnits}
+                  variant="outline"
+                  data-testid="button-fix-units"
+                >
+                  {fixingUnits ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4 mr-2" />
+                      Corrigir unidades de consumo (kWh → MWh)
                     </>
                   )}
                 </Button>
