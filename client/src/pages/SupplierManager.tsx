@@ -204,6 +204,28 @@ export default function SupplierManager() {
     setEditingContact(null);
   };
 
+  const seedSuppliersMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/seed-suppliers");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers-with-contacts"] });
+      toast({
+        title: language === "pt" ? "Fornecedores carregados!" : "Suppliers seeded!",
+        description: language === "pt"
+          ? `${data.suppliers} fornecedores configurados.`
+          : `${data.suppliers} suppliers configured.`
+      });
+    },
+    onError: () => {
+      toast({
+        title: language === "pt" ? "Erro ao carregar fornecedores" : "Failed to seed suppliers",
+        variant: "destructive"
+      });
+    }
+  });
+
   const openAddContact = (supplierId: number) => {
     resetContactForm();
     setSelectedSupplierId(supplierId);
@@ -359,6 +381,33 @@ export default function SupplierManager() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
+        ) : suppliers.length === 0 ? (
+          <Card className="text-center py-16 border-dashed" data-testid="panel-empty-suppliers">
+            <CardContent className="flex flex-col items-center gap-4">
+              <Building2 className="h-12 w-12 text-gray-300" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-1">
+                  {language === "pt" ? "Nenhum fornecedor cadastrado" : "No suppliers yet"}
+                </h3>
+                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                  {language === "pt"
+                    ? "Carregue os fornecedores padrão para começar a gerenciar cotações e comunicações."
+                    : "Load the default suppliers to start managing quotes and communications."}
+                </p>
+              </div>
+              <Button
+                onClick={() => seedSuppliersMutation.mutate()}
+                disabled={seedSuppliersMutation.isPending}
+                data-testid="button-seed-suppliers-empty"
+              >
+                {seedSuppliersMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{language === "pt" ? "Carregando..." : "Loading..."}</>
+                ) : (
+                  <><Plus className="w-4 h-4 mr-2" />{language === "pt" ? "Carregar Fornecedores Padrão" : "Load Default Suppliers"}</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {suppliers.map((supplier) => {
