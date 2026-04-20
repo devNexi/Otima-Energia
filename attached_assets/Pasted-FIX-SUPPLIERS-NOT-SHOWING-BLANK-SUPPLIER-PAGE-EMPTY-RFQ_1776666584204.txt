@@ -1,0 +1,279 @@
+FIX: SUPPLIERS NOT SHOWING — BLANK SUPPLIER PAGE + EMPTY RFQ SUPPLIER LIST
+What's wrong
+
+Suppliers page (/admin/suppliers → "Gestão de Fornecedores") is completely blank — no suppliers listed
+"Select Suppliers →" in Next Steps opens the RFQ modal but shows "Selecionados: 0 fornecedor(es)" with no suppliers to pick
+RFQ modal (image 3) has filter buttons (Todos, Top 3, Fornecedores Verdes) but no actual supplier rows appear below them
+
+Root cause diagnosis
+Run these checks first to understand where the data is:
+Check 1 — Do suppliers exist in the database?
+sqlSELECT id, name, short_code, status, is_active FROM suppliers ORDER BY id;
+Check 2 — Do playbooks exist?
+sqlSELECT sp.id, s.name, sp.preferred_channel, sp.product_lines, sp.status 
+FROM supplier_rfq_playbooks sp 
+JOIN suppliers s ON s.id = sp.supplier_id 
+ORDER BY s.name;
+Check 3 — Does GD coverage exist?
+sqlSELECT s.name, gc.covered_states, gc.covered_distributors, gc.is_active 
+FROM supplier_gd_coverage gc 
+JOIN suppliers s ON s.id = gc.supplier_id;
+Fix based on diagnosis results
+If suppliers table is empty (Check 1 returns 0 rows):
+The playbook seeder didn't run or failed silently. Create the suppliers directly in the seed endpoint and make sure it actually gets called. Add a clearly visible "Seed Suppliers" button that works:
+In server/routes.ts, add or fix:
+typescriptapp.post("/api/admin/seed-suppliers", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    const { suppliers: suppliersTable, supplierGdCoverage, supplierRfqPlaybooks, supplierContacts } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq } = await import("drizzle-orm");
+
+    const results = { suppliers: 0, playbooks: 0, coverage: 0, contacts: 0 };
+
+    // ===== SUPPLIERS =====
+    const SUPPLIERS = [
+      { name: 'Prime Energy', shortCode: 'PRIME', category: 'large', contactEmail: 'contasapagar@primeenergy.com.br', website: 'https://www.primeenergy.com.br', status: 'active', isActive: true },
+      { name: 'ATMO Energia', shortCode: 'ATMO', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+      { name: 'CEMIG', shortCode: 'CEMIG', category: 'large', contactEmail: null, website: null, status: 'active', isActive: true },
+      { name: 'Delantis Energias Renováveis', shortCode: 'DELANTIS', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+      { name: 'Genial Energia', shortCode: 'GENIAL', category: 'medium', contactEmail: null, website: null, status: 'active', isActive: true },
+    ];
+
+    const supplierIds: Record<string, number> = {};
+
+    for (const s of SUPPLIERS) {
+      // Check if exists by shortCode
+      const existing = await db.select().from(suppliersTable).where(eq(suppliersTable.shortCode, s.shortCode)).limit(1);
+      
+      if (existing.length > 0) {
+        // Update
+        await db.update(suppliersTable).set({ name: s.name, status: s.status, isActive: s.isActive, contactEmail: s.contactEmail, website: s.website }).where(eq(suppliersTable.id, existing[0].id));
+        supplierIds[s.shortCode] = existing[0].id;
+      } else {
+        // Insert
+        const [inserted] = await db.insert(suppliersTable).values(s).returning();
+        supplierIds[s.shortCode] = inserted.id;
+      }
+      results.suppliers++;
+    }
+
+    // ===== GD COVERAGE =====
+    const GD_COVERAGE = [
+      {
+        shortCode: 'PRIME',
+        coveredStates: ['SP', 'MG', 'MT', 'MS', 'GO', 'BA', 'PI', 'PR'],
+        coveredDistributors: ['CPFL Paulista', 'CEMIG', 'CPFL Santa Cruz', 'Energisa MT', 'Energisa MS', 'Equatorial GO', 'COELBA', 'Equatorial PI', 'Elektro (Neoenergia)', 'COPEL'],
+        notes: 'GD Assinatura BT. Partner code: 241254.',
+      },
+      {
+        shortCode: 'ATMO',
+        coveredStates: ['MG', 'PR'],
+        coveredDistributors: ['CEMIG', 'COPEL'],
+        notes: 'GD Assinatura BT. CEMIG (MG) + COPEL (PR).',
+      },
+      {
+        shortCode: 'DELANTIS',
+        coveredStates: ['ALL'],
+        coveredDistributors: ['Nacional - Compensação'],
+        notes: 'GD Compensação Nacional.',
+      },
+      {
+        shortCode: 'GENIAL',
+        coveredStates: ['RJ'],
+        coveredDistributors: ['Light', 'Enel RJ'],
+        notes: 'GD BT. Light + Enel RJ (Rio de Janeiro).',
+      },
+    ];
+
+    for (const gc of GD_COVERAGE) {
+      const supplierId = supplierIds[gc.shortCode];
+      if (!supplierId) continue;
+      
+      // Delete existing coverage for this supplier
+      await db.delete(supplierGdCoverage).where(eq(supplierGdCoverage.supplierId, supplierId));
+      
+      // Insert new
+      await db.insert(supplierGdCoverage).values({
+        supplierId,
+        coveredStates: gc.coveredStates,
+        coveredDistributors: gc.coveredDistributors,
+        isActive: true,
+        notes: gc.notes,
+      });
+      results.coverage++;
+    }
+
+    // ===== RFQ PLAYBOOKS =====
+    const PLAYBOOKS = [
+      { shortCode: 'PRIME', preferredChannel: 'EMAIL', productLines: ['ACL'], productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50', 'INCENTIVADA_100'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'ACL Atacado — Demanda >= 500 kW. R$2/MWh commission.' },
+      { shortCode: 'PRIME', preferredChannel: 'EMAIL', productLines: ['ACL'], productsSupported: ['CONVENCIONAL', 'INCENTIVADA_50'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'ACL Varejo — Demanda < 500 kW. R$5/MWh commission.' },
+      { shortCode: 'PRIME', preferredChannel: 'PORTAL', productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'], submarketsCovered: ['SE_CO', 'S', 'NE'], internalNotes: 'GD BT — >= 500 kWh/mês. Portal: primeenergy.com.br/parceiros. Code: 241254.' },
+      { shortCode: 'PRIME', preferredChannel: 'PORTAL', productLines: ['GD'], productsSupported: ['GD_ASSINATURA_MT'], submarketsCovered: ['SE_CO', 'S', 'NE'], internalNotes: 'GD MT — Subgrupo A4. Portal: primeenergy.com.br/parceiros. Code: 241254.' },
+      { shortCode: 'ATMO', preferredChannel: 'EMAIL', productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'], submarketsCovered: ['SE_CO', 'S'], internalNotes: 'GD BT — CEMIG (MG) + COPEL (PR).' },
+      { shortCode: 'CEMIG', preferredChannel: 'EMAIL', productLines: ['ACL'], productsSupported: ['CONVENCIONAL'], submarketsCovered: ['SE_CO'], internalNotes: 'CEMIG ACL — major distributor, Minas Gerais.' },
+      { shortCode: 'DELANTIS', preferredChannel: 'EMAIL', productLines: ['GD'], productsSupported: ['GD_COMPENSACAO'], submarketsCovered: ['SE_CO', 'S', 'NE', 'N'], internalNotes: 'GD Compensação Nacional.' },
+      { shortCode: 'GENIAL', preferredChannel: 'EMAIL', productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'], submarketsCovered: ['SE_CO'], internalNotes: 'GD BT — Light + Enel RJ (Rio de Janeiro).' },
+    ];
+
+    // Delete existing playbooks for these suppliers to avoid duplicates
+    for (const shortCode of Object.keys(supplierIds)) {
+      await db.delete(supplierRfqPlaybooks).where(eq(supplierRfqPlaybooks.supplierId, supplierIds[shortCode]));
+    }
+
+    for (const pb of PLAYBOOKS) {
+      const supplierId = supplierIds[pb.shortCode];
+      if (!supplierId) continue;
+
+      await db.insert(supplierRfqPlaybooks).values({
+        supplierId,
+        version: 1,
+        status: 'ACTIVE',
+        preferredChannel: pb.preferredChannel,
+        productLines: pb.productLines,
+        productsSupported: pb.productsSupported,
+        submarketsCovered: pb.submarketsCovered,
+        internalNotes: pb.internalNotes,
+      });
+      results.playbooks++;
+    }
+
+    // ===== CONTACTS =====
+    const CONTACTS = [
+      { shortCode: 'PRIME', name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, isPrimary: true },
+      { shortCode: 'PRIME', name: 'A preencher', role: 'Operações', department: 'OPERACOES', email: null, isPrimary: false },
+      { shortCode: 'PRIME', name: 'A preencher', role: 'Financeiro', department: 'FINANCEIRO', email: 'contasapagar@primeenergy.com.br', isPrimary: false },
+      { shortCode: 'ATMO', name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, isPrimary: true },
+      { shortCode: 'CEMIG', name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, isPrimary: true },
+      { shortCode: 'DELANTIS', name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, isPrimary: true },
+      { shortCode: 'GENIAL', name: 'A preencher', role: 'Comercial', department: 'COMERCIAL', email: null, isPrimary: true },
+    ];
+
+    for (const c of CONTACTS) {
+      const supplierId = supplierIds[c.shortCode];
+      if (!supplierId) continue;
+
+      // Check if contact already exists for this supplier + role
+      const existing = await db.select().from(supplierContacts)
+        .where(eq(supplierContacts.supplierId, supplierId))
+        .limit(1);
+
+      if (existing.length === 0 || c.shortCode === 'PRIME') {
+        await db.insert(supplierContacts).values({
+          supplierId,
+          name: c.name,
+          role: c.role,
+          department: c.department,
+          email: c.email,
+          isPrimary: c.isPrimary,
+          preferredFormat: 'email',
+          isActive: true,
+        }).onConflictDoNothing();
+        results.contacts++;
+      }
+    }
+
+    console.log('[SeedSuppliers] Results:', results);
+    res.json({ success: true, results });
+  } catch (error: any) {
+    console.error('[SeedSuppliers] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+IMPORTANT: Also check if there's an existing seed endpoint that was supposed to work — search for seed-playbooks or seed-supplier in server/routes.ts. If one exists, it may have failed silently. Fix it or replace it with the above.
+Fix the Supplier List Page
+If suppliers exist in DB but the page is blank:
+The issue is in the supplier list query or component. Check:
+
+client/src/pages/SupplierManager.tsx — does it call GET /api/suppliers?
+server/routes.ts — search for app.get("/api/suppliers" — does it return isActive suppliers only? If so, check the isActive flag is set correctly.
+Does the endpoint filter by isDemo === false? If so, the seeded suppliers need isDemo: false.
+
+Common causes:
+
+Endpoint returns { success: true, suppliers: [...] } but component expects data.suppliers or just data
+Endpoint filters isActive = true but seeded suppliers have isActive = null
+Endpoint filters isDemo = false but seeded suppliers have isDemo = true
+
+Fix the RFQ Supplier Selection
+Image 3 shows the RFQ modal ("Solicitar Cotações") loads but "Selecionados: 0 fornecedor(es)" with no supplier checkboxes visible.
+Find the RFQ supplier selection component — likely in client/src/components/deals/BlindAuctionPanel.tsx or client/src/components/rfo/. Check what query loads the supplier list:
+
+It probably calls GET /api/suppliers or GET /api/supplier-rfq-playbooks or GET /api/suppliers/gd-eligible
+If it filters by playbook productLines matching the deal's track type, verify the playbooks have the correct productLines values
+If it filters by GD coverage matching the client's distributor, verify coverage data exists
+
+The query chain is likely:
+
+Get deal's track type (GDL or ACL)
+If GDL → call GET /api/suppliers/gd-eligible?distributor=X&state=Y
+If ACL → call GET /api/supplier-rfq-playbooks?productLine=ACL
+Render suppliers that match
+
+If no suppliers match the filter criteria, none show up. Check that:
+
+The deal's distributor (from the bill/dossier) matches one of the coveredDistributors in GD coverage
+The productLines field in playbooks uses the correct values (['GD'] or ['ACL'], not ['GDL'] or ['gd'])
+
+Add a "Seed Suppliers" button to Admin Settings
+In client/src/pages/AdminSettings.tsx, add a visible button:
+typescriptconst [seeding, setSeeding] = useState(false);
+const [seedResult, setSeedResult] = useState<any>(null);
+
+const seedSuppliers = async () => {
+  setSeeding(true);
+  try {
+    const res = await apiRequest('POST', '/api/admin/seed-suppliers');
+    const data = await res.json();
+    setSeedResult(data);
+    toast({ title: 'Fornecedores importados', description: `${data.results?.suppliers || 0} fornecedores, ${data.results?.playbooks || 0} playbooks` });
+  } catch (err) {
+    toast({ title: 'Erro', description: 'Falha ao importar fornecedores', variant: 'destructive' });
+  }
+  setSeeding(false);
+};
+
+// In the render:
+<Card>
+  <CardHeader>
+    <CardTitle>Importar Fornecedores</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <p className="text-sm text-muted-foreground mb-4">
+      Importa dados dos playbooks (Prime Energy, ATMO, CEMIG, Delantis, Genial Energia) com cobertura GD, contatos e configuração RFQ.
+    </p>
+    <Button onClick={seedSuppliers} disabled={seeding}>
+      {seeding ? 'Importando...' : 'Importar Fornecedores'}
+    </Button>
+    {seedResult && (
+      <div className="mt-2 text-sm text-green-600">
+        {seedResult.results?.suppliers} fornecedores, {seedResult.results?.playbooks} playbooks, {seedResult.results?.coverage} coberturas GD
+      </div>
+    )}
+  </CardContent>
+</Card>
+Files to modify
+
+server/routes.ts — add/fix seed endpoint, check supplier list endpoint
+client/src/pages/AdminSettings.tsx — add seed button
+client/src/pages/SupplierManager.tsx — check why supplier list is blank (query or filter issue)
+client/src/components/deals/BlindAuctionPanel.tsx — check why RFQ modal shows 0 suppliers
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+After clicking "Importar Fornecedores" in Admin Settings, 5 suppliers appear
+/admin/suppliers page shows all 5 suppliers with names, status, and category
+Clicking any supplier shows their contacts and playbook data
+RFQ modal ("Solicitar Cotações") shows supplier checkboxes — at least Prime for most deals
+For a GD deal with CEMIG distributor, Prime and ATMO show as eligible
+For a GD deal with Light distributor, Prime and Genial show as eligible
+"Todos" button in RFQ modal selects all eligible suppliers
+Selected count updates when suppliers are checked
+
+After completing, summarize changes and wait for confirmation.

@@ -4,12 +4,41 @@ import { BrandKitPanel } from "@/components/admin/BrandKitPanel";
 import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
-import { Settings, Database, Shield, Globe, Palette, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Settings, Database, Shield, Globe, Palette, Users, Building2, CheckCircle, Loader2 } from "lucide-react";
 import { Redirect } from "wouter";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminSettings() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { toast } = useToast();
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<{ suppliers: number; playbooks: number; coverage: number; contacts: number } | null>(null);
+
+  const seedSuppliers = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/seed-suppliers");
+      const data = await res.json();
+      if (data.success) {
+        setSeedResult(data.results);
+        toast({
+          title: "Fornecedores importados",
+          description: `${data.results?.suppliers || 0} fornecedores, ${data.results?.playbooks || 0} playbooks, ${data.results?.coverage || 0} coberturas GD`,
+        });
+      } else {
+        toast({ title: "Erro", description: data.error || "Falha ao importar fornecedores", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Falha ao importar fornecedores", variant: "destructive" });
+    }
+    setSeeding(false);
+  };
 
   if (isLoading) {
     return (
@@ -50,6 +79,10 @@ export default function AdminSettings() {
               <Users className="h-4 w-4" />
               Usuários
             </TabsTrigger>
+            <TabsTrigger value="suppliers" className="flex items-center gap-2" data-testid="tab-suppliers">
+              <Building2 className="h-4 w-4" />
+              Fornecedores
+            </TabsTrigger>
             <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
               <Globe className="h-4 w-4" />
               Integrações
@@ -66,6 +99,63 @@ export default function AdminSettings() {
 
           <TabsContent value="security">
             <UserManagementPanel />
+          </TabsContent>
+
+          <TabsContent value="suppliers">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Importar Fornecedores
+                </CardTitle>
+                <CardDescription>
+                  Importa o catálogo base de fornecedores com playbooks RFQ, cobertura GD e contatos padrão.
+                  A operação é idempotente — pode ser executada múltiplas vezes sem duplicar dados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
+                  <p className="font-medium">Fornecedores incluídos:</p>
+                  <ul className="space-y-1 text-muted-foreground ml-2">
+                    <li>• <strong>Prime Energy</strong> — ACL Atacado/Varejo + GD BT/MT (SP, MG, MT, MS, GO, BA, PI, PR)</li>
+                    <li>• <strong>ATMO Energia</strong> — GD BT (CEMIG MG + COPEL PR)</li>
+                    <li>• <strong>CEMIG</strong> — ACL Convencional (SE/CO)</li>
+                    <li>• <strong>Delantis Energias Renováveis</strong> — GD Compensação Nacional</li>
+                    <li>• <strong>Genial Energia</strong> — GD BT (Light + Enel RJ)</li>
+                  </ul>
+                </div>
+
+                {seedResult && (
+                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg" data-testid="seed-result">
+                    <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <Badge variant="outline" className="text-green-700 border-green-300">{seedResult.suppliers} fornecedores</Badge>
+                      <Badge variant="outline" className="text-green-700 border-green-300">{seedResult.playbooks} playbooks</Badge>
+                      <Badge variant="outline" className="text-green-700 border-green-300">{seedResult.coverage} coberturas GD</Badge>
+                      <Badge variant="outline" className="text-green-700 border-green-300">{seedResult.contacts} contatos</Badge>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={seedSuppliers}
+                  disabled={seeding}
+                  data-testid="button-seed-suppliers"
+                >
+                  {seeding ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importando...
+                    </>
+                  ) : (
+                    <>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Importar Fornecedores
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="integrations">
