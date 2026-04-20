@@ -1,0 +1,164 @@
+FIX: "RESOLVER" AND "GERAR ECOS" BUTTONS STILL NOT WORKING
+What's happening
+On the bill-first journey strip, the deal shows:
+
+Fatura: Completo ✓
+ECOS: Bloqueado ✗ — "Gerar ECOS" button underneath
+Dossiê: Completo ✓
+RFQ: Bloqueado ✗
+
+Below the strip there's a pink warning bar: "ECOS não gerado — Gere o perfil ECOS a partir dos dados da fatura" with a "Resolver >" button.
+Neither "Gerar ECOS" nor "Resolver" does anything when clicked.
+How to diagnose
+Open the browser console (F12 → Console tab) and click both buttons. Look for:
+
+JavaScript errors
+Network requests that fire (or don't fire)
+Console logs from click handlers
+
+Then find these buttons in the code:
+Button 1: "Gerar ECOS" — this is in the bill-first journey strip at the top of the deal detail. Search client/src/components/deals/DealAssemblyTab.tsx for "Gerar ECOS" or "Generate ECOS" or "ecos/generate".
+Button 2: "Resolver" — this is in the pink blocker warning bar. Search the same file or client/src/components/deals/DealDetail.tsx for "Resolver" or "resolve".
+Most likely causes
+Cause A: onClick handler is missing or empty. The button renders but has no onClick prop, or the onClick calls a function that does nothing.
+Cause B: onClick tries to navigate but the navigation doesn't work. For example, it might try window.location.href = '...' or router.push('...') but the target doesn't exist or the tab switch logic is broken.
+Cause C: onClick calls the ECOS generate API but swallows the error. The API might return { ok: false, blockers: [{ code: "NO_PRC" }] } because there's no PRC pricing data, and the error handling doesn't show anything to the user.
+Fix — all three buttons must work
+"Gerar ECOS" button must call the ECOS generation endpoint directly:
+Find the button in DealAssemblyTab.tsx and make sure its onClick does this:
+typescriptconst generateEcos = async () => {
+  try {
+    const res = await fetch(`/api/deals/${dealId}/ecos/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-id': sessionId,
+      },
+    });
+    const data = await res.json();
+    
+    if (data.ok === false && data.blockers) {
+      // Show blockers to user
+      const blockerMessages = data.blockers.map((b: any) => b.message || b.code).join('\n');
+      toast({
+        title: isPt ? 'ECOS bloqueado' : 'ECOS blocked',
+        description: blockerMessages,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!res.ok) {
+      toast({
+        title: isPt ? 'Erro' : 'Error',
+        description: data.error || 'Failed to generate ECOS',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Success
+    toast({
+      title: isPt ? 'ECOS gerado' : 'ECOS generated',
+      description: isPt ? 'Perfil ECOS criado com sucesso' : 'ECOS profile created successfully',
+    });
+    
+    // Refresh the assembly data and ECOS data
+    queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos/snapshots`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos`] });
+  } catch (err: any) {
+    toast({
+      title: isPt ? 'Erro' : 'Error',
+      description: err.message || 'Network error',
+      variant: 'destructive',
+    });
+  }
+};
+Then make sure the button element actually calls it:
+tsx<Button onClick={generateEcos} variant="destructive" size="sm">
+  {isPt ? 'Gerar ECOS' : 'Generate ECOS'}
+</Button>
+"Resolver" button must either:
+
+Call the same generateEcos function directly, OR
+Navigate to the ECOS tab where the user can trigger generation
+
+Simplest fix — make "Resolver" also call generateEcos:
+tsx<Button onClick={generateEcos} variant="outline" size="sm">
+  Resolver <ChevronRight className="w-4 h-4 ml-1" />
+</Button>
+Also check: does the API endpoint actually work?
+Test from the Replit shell:
+bash# Get a valid session first by logging in
+# Then test ECOS generation on a deal with a parsed bill
+curl -X POST "http://localhost:5000/api/deals/DEAL_ID_HERE/ecos/generate" \
+  -H "Content-Type: application/json" \
+  -H "x-session-id: SESSION_ID_HERE"
+If it returns { ok: false, blockers: [{ code: "NO_PRC" }] }, the problem is missing PRC data, not the button. In that case:
+
+The buttons ARE working — they're just not showing the error
+Fix the error display (the toast code above handles this)
+Also seed PRC data so ECOS can actually generate — run this SQL:
+
+sql-- Check if any PRC/canonical pricing data exists
+SELECT COUNT(*) FROM canonical_pricing_rows;
+SELECT COUNT(*) FROM prc_rows;
+If both are 0, ECOS will always fail. Add seed data:
+typescript// In the seed endpoint, add canonical pricing rows for demo
+const DEMO_PRICING = [
+  { submarket: 'SE_CO', productType: 'CONVENCIONAL', termMonths: 12, price: 285.00 },
+  { submarket: 'SE_CO', productType: 'CONVENCIONAL', termMonths: 24, price: 275.00 },
+  { submarket: 'SE_CO', productType: 'INC_I50', termMonths: 12, price: 265.00 },
+  { submarket: 'SE_CO', productType: 'INC_I50', termMonths: 24, price: 255.00 },
+  { submarket: 'SE_CO', productType: 'INC_I100', termMonths: 12, price: 245.00 },
+  { submarket: 'SE_CO', productType: 'INC_I100', termMonths: 24, price: 235.00 },
+  { submarket: 'S', productType: 'CONVENCIONAL', termMonths: 12, price: 290.00 },
+  { submarket: 'S', productType: 'CONVENCIONAL', termMonths: 24, price: 280.00 },
+  { submarket: 'NE', productType: 'CONVENCIONAL', termMonths: 12, price: 295.00 },
+  { submarket: 'NE', productType: 'CONVENCIONAL', termMonths: 24, price: 282.00 },
+  { submarket: 'N', productType: 'CONVENCIONAL', termMonths: 12, price: 300.00 },
+  { submarket: 'N', productType: 'CONVENCIONAL', termMonths: 24, price: 288.00 },
+];
+
+const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+
+for (const row of DEMO_PRICING) {
+  await db.insert(canonicalPricingRows).values({
+    source: 'prc',
+    sourceId: null,
+    supplierId: supplierIds['PRIME'], // Use Prime as reference supplier
+    referenceMonth: currentMonth,
+    submarket: row.submarket,
+    productType: row.productType,
+    termMonths: row.termMonths,
+    priceRPerMWh: String(row.price),
+    currency: 'BRL',
+    confidence: 80,
+    isOutlierFlag: false,
+  }).onConflictDoNothing();
+}
+Add this to the same POST /api/admin/seed-suppliers endpoint from the previous fix, or create a separate POST /api/admin/seed-pricing endpoint and add a button for it in Admin Settings.
+Files to modify
+
+client/src/components/deals/DealAssemblyTab.tsx — fix "Gerar ECOS" and "Resolver" button onClick handlers
+client/src/components/deals/DealDetail.tsx — if "Resolver" button lives here instead
+server/routes.ts — add PRC pricing seed to the seed endpoint (if ECOS fails due to NO_PRC)
+client/src/pages/AdminSettings.tsx — add "Seed Pricing Data" button if needed
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+Clicking "Gerar ECOS" either generates ECOS successfully OR shows a clear error toast explaining what's wrong
+Clicking "Resolver" does the same thing as "Gerar ECOS"
+If ECOS generates successfully, the journey strip updates to show ECOS as "Completo"
+If ECOS fails due to missing PRC data, the toast says "Dados de referência de preço (PRC) não disponíveis" — not a silent failure
+After seeding PRC data, ECOS generation works end to end
+No silent failures — every button click produces visible feedback
+
+After completing, summarize changes and wait for confirmation.

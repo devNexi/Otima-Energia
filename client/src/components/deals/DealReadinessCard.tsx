@@ -1,6 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -92,6 +94,9 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
   const { language } = useI18n();
   const isPt = language === "pt";
   const [, navigate] = useLocation();
+  const { sessionId } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: [`/api/deals/${dealId}/assembly-status`],
@@ -100,6 +105,51 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
       return res.json();
     },
     refetchInterval: 30000,
+  });
+
+  const generateEcosMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/deals/${dealId}/ecos/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-id": sessionId || "",
+        },
+      });
+      const json = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok && json.blockers) return json;
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      return json;
+    },
+    onSuccess: (data) => {
+      if (data.blockers && data.blockers.length > 0) {
+        const firstBlocker = data.blockers[0];
+        toast({
+          title: isPt ? "ECOS bloqueado" : "ECOS blocked",
+          description: firstBlocker.message || firstBlocker.code || data.blockers.map((b: any) => b.message || b.code).join("; "),
+          variant: "destructive",
+        });
+      } else if (data.ok || data.success || data.snapshot) {
+        toast({
+          title: isPt ? "ECOS gerado" : "ECOS generated",
+          description: data.idempotent
+            ? isPt ? "Snapshot existente retornado." : "Existing snapshot returned."
+            : isPt ? "Perfil ECOS criado com sucesso." : "ECOS profile created successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/assembly-status`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos/snapshots`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/ecos`] });
+        if (onTabChange) onTabChange("assembly");
+      }
+    },
+    onError: (err: any) => {
+      toast({
+        title: isPt ? "Erro ao gerar ECOS" : "ECOS generation failed",
+        description: err.message || "Network error",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -138,7 +188,16 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
 
   const overallPct = Math.round((completedCount / PIPELINE_STAGES.length) * 100);
 
-  function handleAction(stage: typeof pipelineStatuses[0]) {
+  const isEcosStage = (key: string) => key === "ECOS_GENERATED";
+
+  function handleStageAction(stage: typeof pipelineStatuses[0], e?: React.MouseEvent) {
+    e?.stopPropagation();
+    // ECOS stage: always attempt generation directly
+    if (isEcosStage(stage.key)) {
+      generateEcosMutation.mutate();
+      return;
+    }
+    // Other stages: navigate via deepLink or tab
     if (stage.actionDeepLink) {
       const tabMatch = stage.actionDeepLink.match(/[?&]tab=([^&]+)/);
       const tabFromLink = tabMatch?.[1];
@@ -211,6 +270,7 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
           const isActive = stage.status === "in_progress" || stage.status === "blocked";
           const isLast = idx === pipelineStatuses.length - 1;
           const prevStatus = idx > 0 ? pipelineStatuses[idx - 1].status : "complete";
+          const isEcos = isEcosStage(stage.key);
 
           return (
             <div key={stage.key} className="flex items-center flex-1 min-w-0">
@@ -220,11 +280,19 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
                   isActive ? "bg-slate-50" : "hover:bg-slate-50/50"
                 }`}
                 onClick={() => {
-                  if (onTabChange) onTabChange(stage.tab);
+                  if (isEcos && (stage.status === "blocked" || stage.status === "in_progress")) {
+                    generateEcosMutation.mutate();
+                  } else if (onTabChange) {
+                    onTabChange(stage.tab);
+                  }
                 }}
                 data-testid={`stage-${stage.key}`}
               >
-                <StageIcon status={stage.status} />
+                {isEcos && generateEcosMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
+                ) : (
+                  <StageIcon status={stage.status} />
+                )}
 
                 <div className="text-center">
                   <div
@@ -257,18 +325,22 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
 
                 {/* CTA button for current/blocked stage */}
                 {(stage.status === "in_progress" || stage.status === "blocked") &&
-                  (stage.actionButtonPt || stage.actionButtonEn) && (
+                  (stage.actionButtonPt || stage.actionButtonEn || isEcos) && (
                     <Button
                       size="sm"
                       variant={stage.status === "blocked" ? "destructive" : "default"}
                       className="h-6 text-[10px] px-2 mt-0.5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAction(stage);
-                      }}
+                      disabled={isEcos && generateEcosMutation.isPending}
+                      onClick={(e) => handleStageAction(stage, e)}
                       data-testid={`button-action-${stage.key}`}
                     >
-                      {isPt ? stage.actionButtonPt : stage.actionButtonEn}
+                      {isEcos && generateEcosMutation.isPending ? (
+                        <><Loader2 className="w-3 h-3 mr-1 animate-spin" />{isPt ? "Gerando..." : "Generating..."}</>
+                      ) : (
+                        isPt
+                          ? (stage.actionButtonPt || (isEcos ? "Gerar ECOS" : null))
+                          : (stage.actionButtonEn || (isEcos ? "Generate ECOS" : null))
+                      )}
                     </Button>
                   )}
               </div>
@@ -303,16 +375,21 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
                 : blockedStage.blockers[0].descriptionEn}
             </p>
           </div>
-          {blockedStage.actionDeepLink && (
+          {/* Always show Resolver for ECOS, otherwise gate on actionDeepLink */}
+          {(isEcosStage(blockedStage.key) || blockedStage.actionDeepLink) && (
             <Button
               size="sm"
               variant="outline"
               className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-100 shrink-0"
-              onClick={() => handleAction(blockedStage)}
+              disabled={isEcosStage(blockedStage.key) && generateEcosMutation.isPending}
+              onClick={() => handleStageAction(blockedStage)}
               data-testid="button-resolve-blocker"
             >
-              {isPt ? "Resolver" : "Resolve"}
-              <ChevronRight className="w-3 h-3 ml-1" />
+              {isEcosStage(blockedStage.key) && generateEcosMutation.isPending ? (
+                <><Loader2 className="w-3 h-3 mr-1 animate-spin" />{isPt ? "Gerando..." : "Generating..."}</>
+              ) : (
+                <>{isPt ? "Resolver" : "Resolve"}<ChevronRight className="w-3 h-3 ml-1" /></>
+              )}
             </Button>
           )}
         </div>
@@ -336,7 +413,7 @@ export function DealReadinessCard({ dealId, onTabChange }: DealReadinessCardProp
             size="sm"
             variant="ghost"
             className="h-6 text-[10px] px-2 text-blue-700 hover:bg-blue-100 shrink-0"
-            onClick={() => handleAction(nextActionStage)}
+            onClick={() => handleStageAction(nextActionStage)}
             data-testid="button-next-step"
           >
             {isPt ? "Ir" : "Go"}
