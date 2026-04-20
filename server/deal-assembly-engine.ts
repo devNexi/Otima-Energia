@@ -551,11 +551,14 @@ export class DealAssemblyEngine {
     stage?: AssemblyStage;
     blockedOnly?: boolean;
     needsActionToday?: boolean;
+    limit?: number;
   } = {}): Promise<Array<AssemblyStatus & { deal: any; client: any }>> {
+    const maxItems = filters.limit ?? 50;
     const allDeals = await this.storage.getDeals();
     const queue: Array<AssemblyStatus & { deal: any; client: any }> = [];
 
     for (const deal of allDeals) {
+      if (queue.length >= maxItems) break;
       if (deal.status === 'LOST' || deal.status === 'CLOSED' || deal.status === 'CONTRACT_ENDED') continue;
       
       if (filters.userId && deal.opsOwner !== filters.userId && deal.internalOwner !== filters.userId) continue;

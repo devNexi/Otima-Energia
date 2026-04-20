@@ -1,0 +1,119 @@
+FIX: OPS DASHBOARD INFINITE LOADING SPINNER
+What's wrong
+Clicking "Ops" in the left sidebar shows an infinite loading spinner. The page never loads. This is on production at otimaenergia.com/admin/deals.
+How to diagnose
+Step 1 — Find what the Ops page calls.
+The "Ops" nav item likely renders a component that calls one of these endpoints:
+
+GET /api/ops/dashboard
+GET /api/deals/dashboard
+GET /api/deals/assembly-queue
+
+Search client/src/pages/Admin.tsx for the "Ops" or "ops" tab content. Find which component renders when "Ops" is selected — it might be something like OpsDashboard, OpsOverview, or inline content that calls an ops-related API.
+Also check client/src/components/ops/ — there are 77K of components in that directory.
+Step 2 — Check the API endpoint in the Replit console.
+Open the Replit Console tab and look for errors when the Ops page is loaded. You'll likely see one of:
+
+A 500 error on the API call
+A query timeout (the query is too heavy with 853 clients and 854 deals)
+A missing function or table reference
+
+Step 3 — Test the endpoint directly:
+bashcurl -s "http://localhost:5000/api/ops/dashboard" -H "x-session-id: YOUR_SESSION_ID" | head -200
+Or whichever endpoint the Ops page calls.
+Most likely causes
+Cause A: Heavy query timeout. The ops dashboard probably tries to load ALL deals with their assembly status, blockers, and SLA data. With 854 deals, this query might be extremely slow or timing out. The getOpsDashboardTasks() function in server/storage.ts or the assembly queue endpoint might be doing N+1 queries (one per deal for blockers).
+Cause B: Null reference crash. The dashboard query joins across multiple tables and one of the joins hits a null value it doesn't handle — e.g., a deal without a client, or a deal without tracks.
+Cause C: Missing function. The endpoint calls a storage method that throws an error.
+Fix approach
+If it's a query performance issue (Cause A):
+Add pagination and limit to the ops dashboard query. The endpoint should NOT load all 854 deals at once. Add a limit:
+typescript// In the ops dashboard endpoint, add pagination
+const page = parseInt(req.query.page as string || '1');
+const limit = parseInt(req.query.limit as string || '20');
+const offset = (page - 1) * limit;
+
+// Only load deals that need attention (not all 854)
+// Filter to: deals in active states (not CLOSED, not LOST, not CONTRACT_ENDED)
+const activeStatuses = ['DRAFT', 'RFQ_SENT', 'QUOTES_RECEIVED', 'OFFER_SELECTED', 'ONBOARDING_PENDING', 'CONTRACT_SENT', 'CONTRACT_SIGNED', 'SUPPLY_LIVE'];
+If it's a null crash (Cause B):
+Wrap the dashboard data fetching in try/catch and add null checks:
+typescriptapp.get("/api/ops/dashboard", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    // Add timeout protection
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Dashboard query timeout')), 10000)
+    );
+    
+    const dataPromise = storage.getOpsDashboardTasks();
+    const data = await Promise.race([dataPromise, timeoutPromise]);
+    
+    res.json({ success: true, dashboard: data });
+  } catch (error: any) {
+    console.error("[OpsDashboard] Error:", error.message);
+    // Return empty dashboard instead of crashing
+    res.json({ 
+      success: true, 
+      dashboard: {
+        dealsBlockedByCompliance: [],
+        openCasesBreachingSla: [],
+        commissionEventsOverdue: [],
+        summary: { totalActive: 0, blocked: 0, overdue: 0 }
+      }
+    });
+  }
+});
+If the component itself crashes (Cause C):
+Add error boundary handling in the Ops component:
+typescript// In the Ops component, handle loading and error states properly
+const { data, isLoading, error } = useQuery({
+  queryKey: ['/api/ops/dashboard'],
+  queryFn: async () => {
+    const res = await apiRequest('GET', '/api/ops/dashboard');
+    return res.json();
+  },
+  retry: 1, // Don't retry endlessly
+  staleTime: 30000, // Cache for 30s
+});
+
+if (error) {
+  return (
+    <div className="p-6 text-center text-muted-foreground">
+      <p>Erro ao carregar painel operacional.</p>
+      <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/ops/dashboard'] })} variant="outline" className="mt-2">
+        Tentar novamente
+      </Button>
+    </div>
+  );
+}
+General fix — add error boundaries to ALL admin tabs
+This same infinite spinner issue can happen on any tab that has a slow or crashing query. Add a global error fallback:
+Search for ALL useQuery calls in admin components that don't have error handling. At minimum, add retry: 1 to prevent infinite retry loops, and render an error state instead of spinning forever.
+Key files to check:
+
+client/src/components/ops/ — all ops components
+client/src/components/dashboards/ — dashboard components
+client/src/pages/Admin.tsx — main admin page that renders tabs
+
+Files to modify
+
+server/routes.ts — ops dashboard endpoint (add timeout protection, pagination, error handling)
+server/storage.ts — if getOpsDashboardTasks() is doing heavy queries, optimize it
+client/src/components/ops/ — whichever component renders the Ops tab (add error handling, retry limit)
+client/src/pages/Admin.tsx — if the Ops tab rendering is inline here
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+Clicking "Ops" in the sidebar loads within 3 seconds or shows a clear error
+No infinite spinner — either data loads, empty state shows, or error message appears
+If the database has 854 deals, the page doesn't try to compute assembly status for all of them at once
+The page is usable with a large dataset (pagination or filtered view)
+
+After completing, summarize changes and wait for confirmation.

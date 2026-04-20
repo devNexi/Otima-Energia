@@ -102,12 +102,14 @@ export function OpsDashboardTab({ onNavigateToDeal }: OpsDashboardTabProps) {
     queryFn: async () => {
       const res = await fetch("/api/ops/tasks/today", { headers: authHeaders });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to fetch tasks");
       }
       return res.json();
     },
     enabled: !!sessionId,
+    retry: 1,
+    staleTime: 30000,
     refetchInterval: 60000,
   });
 

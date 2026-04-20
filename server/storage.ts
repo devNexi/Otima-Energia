@@ -118,7 +118,7 @@ import {
   DEAL_STATE_PRECEDENCE,
   supplierGdCoverage, type SupplierGdCoverage, type InsertSupplierGdCoverage
 } from "@shared/schema";
-import { eq, desc, and, sql, lte, gte, lt } from "drizzle-orm";
+import { eq, desc, and, sql, lte, gte, lt, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 export interface IStorage {
@@ -3063,27 +3063,54 @@ export class Storage implements IStorage {
     commissionEventsOverdue: DealCommissionEvent[];
     dealsWaitingOnSupplier: Deal[];
   }> {
-    // Get deals that need compliance check (in states that have requirements)
+    // Load active deals (capped at 200 for performance)
     const activeDeals = await db.select().from(deals)
-      .where(sql`${deals.status} NOT IN ('CLOSED', 'LOST', 'CONTRACT_ENDED')`);
-    
+      .where(sql`${deals.status} NOT IN ('CLOSED', 'LOST', 'CONTRACT_ENDED')`)
+      .orderBy(desc(deals.updatedAt))
+      .limit(200);
+
     const dealsBlockedByCompliance: Array<{ deal: Deal; missingCount: number }> = [];
-    
-    for (const deal of activeDeals) {
-      // Check if there are pending requirements for next possible transitions
-      const nextStates = DEAL_STATE_TRANSITIONS[deal.status as DealState] || [];
-      for (const nextState of nextStates) {
-        const validation = await this.validateTransitionCompliance(deal.id, deal.status, nextState);
-        if (validation.missingRequirements.length > 0) {
-          dealsBlockedByCompliance.push({
-            deal,
-            missingCount: validation.missingRequirements.length
-          });
-          break; // Only count deal once
+
+    if (activeDeals.length > 0) {
+      // Load ALL compliance requirements in one query
+      const allRequirements = await this.getAllComplianceRequirements();
+
+      // Build a map: fromState:toState → requirements[]
+      const reqByTransition = new Map<string, typeof allRequirements>();
+      for (const req of allRequirements) {
+        if (!req.isActive) continue;
+        const key = `${req.transitionFrom}:${req.transitionTo}`;
+        if (!reqByTransition.has(key)) reqByTransition.set(key, []);
+        reqByTransition.get(key)!.push(req);
+      }
+
+      // Load ALL checklist items for all active deals in ONE query
+      const dealIds = activeDeals.map(d => d.id);
+      const allChecklistItems = await db.select().from(dealChecklistItems)
+        .where(inArray(dealChecklistItems.dealId, dealIds));
+
+      // Build a map: dealId → Set<requirementId>
+      const completedByDeal = new Map<string, Set<number>>();
+      for (const item of allChecklistItems) {
+        if (!completedByDeal.has(item.dealId)) completedByDeal.set(item.dealId, new Set());
+        completedByDeal.get(item.dealId)!.add(item.requirementId);
+      }
+
+      // Evaluate compliance in memory — no more per-deal DB queries
+      for (const deal of activeDeals) {
+        const nextStates = DEAL_STATE_TRANSITIONS[deal.status as DealState] || [];
+        const completed = completedByDeal.get(deal.id) || new Set<number>();
+        for (const nextState of nextStates) {
+          const reqs = reqByTransition.get(`${deal.status}:${nextState}`) || [];
+          const missingCount = reqs.filter(r => r.isRequired && !completed.has(r.id)).length;
+          if (missingCount > 0) {
+            dealsBlockedByCompliance.push({ deal, missingCount });
+            break;
+          }
         }
       }
     }
-    
+
     // Get open cases breaching SLA
     const openCasesBreachingSla = await db.select().from(dealCases)
       .where(and(
@@ -3091,7 +3118,7 @@ export class Storage implements IStorage {
         sql`${dealCases.slaDueDate} < NOW()`
       ))
       .orderBy(dealCases.slaDueDate);
-    
+
     // Get overdue commission events (check expectedDate for past due items with PENDING status)
     const commissionEventsOverdue = await db.select().from(dealCommissionEvents)
       .where(and(
@@ -3099,7 +3126,7 @@ export class Storage implements IStorage {
         sql`${dealCommissionEvents.expectedDate} < NOW()`
       ))
       .orderBy(dealCommissionEvents.expectedDate);
-    
+
     // Get deals waiting on supplier (in RFQ_SENT state for more than 7 days)
     const dealsWaitingOnSupplier = await db.select().from(deals)
       .where(and(
@@ -3107,7 +3134,7 @@ export class Storage implements IStorage {
         sql`${deals.updatedAt} < NOW() - INTERVAL '7 days'`
       ))
       .orderBy(deals.updatedAt);
-    
+
     return {
       dealsBlockedByCompliance,
       openCasesBreachingSla,

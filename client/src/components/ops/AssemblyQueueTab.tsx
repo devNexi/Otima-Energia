@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { 
   Loader2, 
   AlertCircle, 
@@ -15,7 +16,8 @@ import {
   Filter,
   Target,
   Building2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,11 +58,14 @@ interface AssemblyQueueTabProps {
 export function AssemblyQueueTab({ onSelectDeal }: AssemblyQueueTabProps) {
   const { language } = useI18n();
   const isPt = language === "pt";
+  const { sessionId } = useAuth();
   
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [blockedOnly, setBlockedOnly] = useState(false);
   const [needsActionToday, setNeedsActionToday] = useState(false);
   const [myDealsOnly, setMyDealsOnly] = useState(false);
+
+  const authHeaders: Record<string, string> = sessionId ? { "x-session-id": sessionId } : {};
 
   const queryParams = new URLSearchParams();
   if (stageFilter && stageFilter !== "all") queryParams.set("stage", stageFilter);
@@ -68,12 +73,16 @@ export function AssemblyQueueTab({ onSelectDeal }: AssemblyQueueTabProps) {
   if (needsActionToday) queryParams.set("needsActionToday", "true");
   if (myDealsOnly) queryParams.set("myDeals", "true");
 
-  const { data: queueData, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ["/api/deals/assembly-queue", stageFilter, blockedOnly, needsActionToday, myDealsOnly],
+  const { data: queueData, isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/deals/assembly-queue", stageFilter, blockedOnly, needsActionToday, myDealsOnly, sessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/deals/assembly-queue?${queryParams.toString()}`);
+      const res = await fetch(`/api/deals/assembly-queue?${queryParams.toString()}`, { headers: authHeaders });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
+    enabled: !!sessionId,
+    retry: 1,
+    staleTime: 30000,
     refetchInterval: 60000
   });
 
@@ -182,6 +191,18 @@ export function AssemblyQueueTab({ onSelectDeal }: AssemblyQueueTabProps) {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
+      ) : isError ? (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="py-8 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+            <p className="text-red-700 font-medium mb-3">
+              {isPt ? "Erro ao carregar a fila" : "Failed to load queue"}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry-queue">
+              {isPt ? "Tentar novamente" : "Try again"}
+            </Button>
+          </CardContent>
+        </Card>
       ) : queue.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">

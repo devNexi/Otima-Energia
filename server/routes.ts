@@ -4723,18 +4723,27 @@ export async function registerRoutes(
       const userId = (req as any).session?.userId;
       const userRole = (req as any).session?.role;
       
-      const filters: any = {};
+      const limit = Math.min(parseInt(req.query.limit as string || '50', 10), 100);
+      const filters: any = { limit };
       if (req.query.stage) filters.stage = req.query.stage as string;
       if (req.query.blockedOnly === 'true') filters.blockedOnly = true;
       if (req.query.needsActionToday === 'true') filters.needsActionToday = true;
       if (req.query.myDeals === 'true' && userRole !== 'admin') {
         filters.userId = userId;
       }
-      
-      const queue = await assemblyEngine.getAssemblyQueue(filters);
+
+      const timeoutMs = 15000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Assembly queue timeout')), timeoutMs)
+      );
+      const queue = await Promise.race([assemblyEngine.getAssemblyQueue(filters), timeoutPromise]);
       res.json({ success: true, queue, total: queue.length });
     } catch (error: any) {
-      console.error("Error getting assembly queue:", error);
+      const isTimeout = error.message?.includes('timeout');
+      console.error("Error getting assembly queue:", error.message);
+      if (isTimeout) {
+        return res.json({ success: true, queue: [], total: 0, _warning: 'Queue load timed out. Try filtering by stage.' });
+      }
       res.status(500).json({ success: false, error: "Failed to get assembly queue" });
     }
   });
@@ -7028,10 +7037,25 @@ export async function registerRoutes(
   app.get("/api/ops/tasks/today", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
     try {
-      const tasks = await storage.getOpsDashboardTasks();
+      const timeoutMs = 12000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Dashboard query timeout')), timeoutMs)
+      );
+      const tasks = await Promise.race([storage.getOpsDashboardTasks(), timeoutPromise]);
       res.json({ success: true, ...tasks });
     } catch (error: any) {
-      console.error("Error fetching ops tasks:", error);
+      const isTimeout = error.message?.includes('timeout');
+      console.error("[OpsDashboard] Error:", error.message);
+      if (isTimeout) {
+        return res.json({
+          success: true,
+          dealsBlockedByCompliance: [],
+          openCasesBreachingSla: [],
+          commissionEventsOverdue: [],
+          dealsWaitingOnSupplier: [],
+          _warning: 'Dashboard data unavailable (timeout). Try refreshing.'
+        });
+      }
       res.status(500).json({ success: false, error: "Failed to fetch tasks" });
     }
   });
