@@ -81,6 +81,29 @@ interface AdminProps {
   initialDealTab?: string;
 }
 
+function formatCpf(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function formatCnpj(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+function isPessoaFisica(client: any): boolean {
+  if (client?.segment === 'PF') return true;
+  const doc = (client?.cnpj || '').replace(/\D/g, '');
+  return doc.length === 11;
+}
+
 export default function Admin({ defaultTab, initialDealId, initialDealTab }: AdminProps) {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
@@ -95,6 +118,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [rfoClient, setRfoClient] = useState<{ id: number; companyName: string; ucCode?: string | null; avgConsumptionKwh?: string | null; currentSupplier?: string | null } | null>(null);
   const [energyProfileClient, setEnergyProfileClient] = useState<{ id: number; companyName: string; segment?: string | null; region?: string | null; avgConsumptionKwh?: string | null } | null>(null);
+  const [personType, setPersonType] = useState<'PJ' | 'PF'>('PJ');
   const [newClientForm, setNewClientForm] = useState({
     companyName: "",
     cnpj: "",
@@ -164,7 +188,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
   });
 
   const createClientMutation = useMutation({
-    mutationFn: async (data: typeof newClientForm) => {
+    mutationFn: async (data: typeof newClientForm & { segment: string; contactPerson: string }) => {
       const res = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,6 +200,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setNewClientOpen(false);
       setNewClientForm({ companyName: "", cnpj: "", email: "", phone: "", contactPerson: "", ucCode: "" });
+      setPersonType('PJ');
       toast({ title: t("admin.toast.client_created") });
     }
   });
@@ -644,33 +669,81 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                       <DialogDescription>{t("admin.clients.dialog.description")}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
+                      {/* PF/PJ Toggle */}
                       <div>
-                        <Label htmlFor="companyName">{t("admin.clients.dialog.company")}</Label>
+                        <Label className="text-sm font-medium mb-2 block">Tipo de Pessoa</Label>
+                        <div className="flex gap-2" data-testid="person-type-toggle">
+                          <Button
+                            type="button"
+                            variant={personType === 'PJ' ? 'default' : 'outline'}
+                            className="flex-1"
+                            onClick={() => {
+                              setPersonType('PJ');
+                              setNewClientForm({ ...newClientForm, cnpj: "" });
+                            }}
+                            data-testid="button-person-type-pj"
+                          >
+                            Pessoa Jurídica (PJ)
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={personType === 'PF' ? 'default' : 'outline'}
+                            className="flex-1"
+                            onClick={() => {
+                              setPersonType('PF');
+                              setNewClientForm({ ...newClientForm, cnpj: "" });
+                            }}
+                            data-testid="button-person-type-pf"
+                          >
+                            Pessoa Física (PF)
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Name field — changes label based on type */}
+                      <div>
+                        <Label htmlFor="companyName">
+                          {personType === 'PF' ? 'Nome Completo *' : t("admin.clients.dialog.company")}
+                        </Label>
                         <Input
                           id="companyName"
                           value={newClientForm.companyName}
                           onChange={(e) => setNewClientForm({ ...newClientForm, companyName: e.target.value })}
+                          placeholder={personType === 'PF' ? 'Nome completo da pessoa' : 'Nome da empresa'}
                           data-testid="input-company-name"
                         />
                       </div>
+
+                      {/* Document field — CPF or CNPJ */}
                       <div>
-                        <Label htmlFor="cnpj">{t("admin.clients.dialog.cnpj")}</Label>
+                        <Label htmlFor="cnpj">
+                          {personType === 'PF' ? 'CPF' : t("admin.clients.dialog.cnpj")}
+                        </Label>
                         <Input
                           id="cnpj"
                           value={newClientForm.cnpj}
-                          onChange={(e) => setNewClientForm({ ...newClientForm, cnpj: e.target.value })}
+                          onChange={(e) => setNewClientForm({
+                            ...newClientForm,
+                            cnpj: personType === 'PF' ? formatCpf(e.target.value) : formatCnpj(e.target.value)
+                          })}
+                          placeholder={personType === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
                           data-testid="input-cnpj"
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="contactPerson">{t("admin.clients.dialog.contact")}</Label>
-                        <Input
-                          id="contactPerson"
-                          value={newClientForm.contactPerson}
-                          onChange={(e) => setNewClientForm({ ...newClientForm, contactPerson: e.target.value })}
-                          data-testid="input-contact-person"
-                        />
-                      </div>
+
+                      {/* Contact — PF only, PJ always shows it */}
+                      {personType === 'PJ' && (
+                        <div>
+                          <Label htmlFor="contactPerson">{t("admin.clients.dialog.contact")}</Label>
+                          <Input
+                            id="contactPerson"
+                            value={newClientForm.contactPerson}
+                            onChange={(e) => setNewClientForm({ ...newClientForm, contactPerson: e.target.value })}
+                            data-testid="input-contact-person"
+                          />
+                        </div>
+                      )}
+
                       <div>
                         <Label htmlFor="email">{t("admin.clients.dialog.email")}</Label>
                         <Input
@@ -699,13 +772,24 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                           data-testid="input-uc-code"
                         />
                       </div>
-                      <Button 
+                      <Button
                         className="w-full"
-                        onClick={() => createClientMutation.mutate(newClientForm)}
+                        onClick={() => {
+                          const payload = {
+                            ...newClientForm,
+                            segment: personType,
+                            contactPerson: personType === 'PF'
+                              ? (newClientForm.contactPerson || newClientForm.companyName)
+                              : newClientForm.contactPerson,
+                          };
+                          createClientMutation.mutate(payload);
+                        }}
                         disabled={!newClientForm.companyName || createClientMutation.isPending}
                         data-testid="button-save-client"
                       >
-                        {t("admin.clients.dialog.save")}
+                        {createClientMutation.isPending ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("admin.clients.dialog.save")}</>
+                        ) : t("admin.clients.dialog.save")}
                       </Button>
                     </div>
                   </DialogContent>

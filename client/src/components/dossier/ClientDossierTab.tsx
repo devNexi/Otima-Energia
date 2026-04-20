@@ -61,6 +61,11 @@ const CONFIDENCE_OPTIONS = [
   { value: 'HIGH', label: 'Alta' }
 ];
 
+function docLabel(cnpj?: string | null): string {
+  const digits = (cnpj || '').replace(/\D/g, '');
+  return digits.length === 11 ? 'CPF' : 'CNPJ';
+}
+
 export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -302,10 +307,11 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 />
               </div>
               <div>
-                <Label>CNPJ *</Label>
+                <Label>{docLabel(formData.cnpj)} *</Label>
                 <Input 
                   value={formData.cnpj || ''} 
                   onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
+                  placeholder={docLabel(formData.cnpj) === 'CPF' ? '000.000.000-00' : '00.000.000/0000-00'}
                   data-testid="input-cnpj"
                 />
               </div>
@@ -514,7 +520,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                     </tr>
                   )}
                   <tr className="border-b">
-                    <td className="px-4 py-2 font-medium text-muted-foreground">CNPJ</td>
+                    <td className="px-4 py-2 font-medium text-muted-foreground">{docLabel(dossier.cnpj)}</td>
                     <td className="px-4 py-2">{dossier.cnpj || '—'}</td>
                   </tr>
                   <tr className="border-b">

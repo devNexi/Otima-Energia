@@ -1,0 +1,178 @@
+FIX: CLIENT CREATION MUST SUPPORT INDIVIDUALS (PF) NOT JUST COMPANIES (PJ)
+What's wrong
+The "Adicionar Novo Cliente" modal only has company fields (Empresa, CNPJ). In Brazil's GD market especially, many clients are individuals (Pessoa Física / PF) who have a CPF instead of a CNPJ. There's no way to register them.
+What to build
+Add a PF/PJ toggle to the client creation modal. When PF is selected, show individual-specific fields. When PJ is selected, show the current company fields.
+UI Design
+┌──────────────────────────────────────────┐
+│  Adicionar Novo Cliente                  │
+│  Preencha os dados do cliente            │
+│                                          │
+│  Tipo de Pessoa                          │
+│  [● Pessoa Jurídica (PJ)]  [○ Pessoa Física (PF)]  │
+│                                          │
+│  ── If PJ selected (current behavior): ──│
+│  Empresa *          [________________]   │
+│  CNPJ               [________________]   │
+│  Contato            [________________]   │
+│  Email              [________________]   │
+│  Telefone           [________________]   │
+│  Código UC          [________________]   │
+│                                          │
+│  ── If PF selected (new): ──────────────│
+│  Nome Completo *    [________________]   │
+│  CPF                [________________]   │
+│  Email              [________________]   │
+│  Telefone           [________________]   │
+│  Código UC          [________________]   │
+│                                          │
+│  [         Salvar Cliente          ]     │
+└──────────────────────────────────────────┘
+Implementation
+Step 1 — Find the client creation modal.
+It's likely in client/src/pages/Admin.tsx or a component within client/src/components/admin/. Search for "Adicionar Novo Cliente" or "Salvar Cliente" or the POST /api/clients call.
+Step 2 — Add the PF/PJ toggle.
+typescriptconst [personType, setPersonType] = useState<'PJ' | 'PF'>('PJ');
+
+// In the form:
+<div className="flex gap-2 mb-4">
+  <Button
+    type="button"
+    variant={personType === 'PJ' ? 'default' : 'outline'}
+    onClick={() => setPersonType('PJ')}
+    className="flex-1"
+  >
+    Pessoa Jurídica (PJ)
+  </Button>
+  <Button
+    type="button"
+    variant={personType === 'PF' ? 'default' : 'outline'}
+    onClick={() => setPersonType('PF')}
+    className="flex-1"
+  >
+    Pessoa Física (PF)
+  </Button>
+</div>
+
+{personType === 'PJ' ? (
+  <>
+    <Label>Empresa *</Label>
+    <Input value={companyName} onChange={e => setCompanyName(e.target.value)} />
+    
+    <Label>CNPJ</Label>
+    <Input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+  </>
+) : (
+  <>
+    <Label>Nome Completo *</Label>
+    <Input value={companyName} onChange={e => setCompanyName(e.target.value)} />
+    
+    <Label>CPF</Label>
+    <Input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="000.000.000-00" />
+  </>
+)}
+
+{/* These fields are the same for both PF and PJ */}
+<Label>Contato</Label>
+<Input value={contactPerson} onChange={e => setContactPerson(e.target.value)} />
+
+<Label>Email</Label>
+<Input value={email} onChange={e => setEmail(e.target.value)} />
+
+<Label>Telefone</Label>
+<Input value={phone} onChange={e => setPhone(e.target.value)} />
+
+<Label>Código UC</Label>
+<Input value={ucCode} onChange={e => setUcCode(e.target.value)} />
+Step 3 — Map PF data to existing schema.
+The clients table already has companyName and cnpj fields. For PF clients:
+
+Store the person's full name in companyName (it's the main display name field)
+Store the CPF in cnpj (it handles both document types)
+Optionally store the person type somewhere
+
+The cleanest approach is to use the existing fields and add a personType indicator. Check if the clients table in shared/schema.ts has a field that could store this. If not, store it in the segment field as 'PF' or 'PJ', or pass it as part of the contact person field.
+Do NOT modify shared/schema.ts. Instead, use existing fields:
+typescript// When saving a PF client:
+const clientData = {
+  companyName: fullName,        // Person's name goes in companyName
+  cnpj: cpf,                   // CPF goes in cnpj field
+  contactPerson: fullName,     // Also set as contact person
+  email: email,
+  phone: phone,
+  ucCode: ucCode,
+  segment: 'PF',               // Use segment field to distinguish PF vs PJ
+};
+
+// When saving a PJ client (existing behavior):
+const clientData = {
+  companyName: companyName,
+  cnpj: cnpj,
+  contactPerson: contactPerson,
+  email: email,
+  phone: phone,
+  ucCode: ucCode,
+  segment: 'PJ',               // Explicitly mark as PJ
+};
+Step 4 — Add CPF formatting/validation.
+typescriptfunction formatCpf(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatCnpj(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+// Use in the input:
+<Input 
+  value={cnpj} 
+  onChange={e => setCnpj(personType === 'PF' ? formatCpf(e.target.value) : formatCnpj(e.target.value))} 
+  placeholder={personType === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'} 
+/>
+Step 5 — Update display throughout the portal.
+Wherever client info is displayed (deal cards, dossier, etc.), show the correct labels:
+typescript// Helper to detect PF vs PJ
+function isPessoaFisica(client: any): boolean {
+  if (client.segment === 'PF') return true;
+  // Fallback: check CNPJ/CPF format
+  const doc = (client.cnpj || '').replace(/\D/g, '');
+  return doc.length === 11; // CPF has 11 digits, CNPJ has 14
+}
+
+// In display:
+const docLabel = isPessoaFisica(client) ? 'CPF' : 'CNPJ';
+const nameLabel = isPessoaFisica(client) ? 'Nome' : 'Empresa';
+Files to modify
+
+client/src/pages/Admin.tsx or wherever the "Adicionar Novo Cliente" modal lives — add PF/PJ toggle
+client/src/components/deals/DealRegistry.tsx — if client creation is also accessible from here
+client/src/components/dossier/ClientDossierTab.tsx — display CPF vs CNPJ label correctly
+
+Files to NOT touch
+
+shared/schema.ts — no schema changes, reuse existing fields
+server/parser-client.ts
+server/jobs.ts
+server/routes.ts — the POST /api/clients endpoint already accepts companyName and cnpj, no changes needed server-side
+
+Acceptance criteria
+
+"Adicionar Novo Cliente" modal has a PF/PJ toggle, defaulting to PJ
+Selecting PF shows "Nome Completo" and "CPF" fields instead of "Empresa" and "CNPJ"
+CPF auto-formats as user types: 000.000.000-00
+CNPJ auto-formats as user types: 00.000.000/0000-00
+PF client saves successfully and appears in the clients list
+PF client's name displays correctly on deal cards and dossier
+Dossier shows "CPF" label instead of "CNPJ" for PF clients
+Existing PJ client creation still works exactly as before
+
+After completing, summarize changes and wait for confirmation.
