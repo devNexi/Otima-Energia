@@ -4,8 +4,12 @@ import {
   supplierGdCoverage,
   supplierRfqPlaybooks,
   supplierContacts,
+  deals,
+  dealTracks,
+  dealQuotes,
+  clients as clientsTable,
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, like, isNotNull } from "drizzle-orm";
 
 const SUPPLIERS = [
   { name: "Prime Energy", shortCode: "PRIME", category: "large", contactEmail: "contasapagar@primeenergy.com.br", website: "https://www.primeenergy.com.br", status: "active", isActive: true },
@@ -110,7 +114,125 @@ export async function runAutoSeed() {
     }
 
     console.log("[AutoSeed] Core suppliers seeded successfully.");
+    await runAutoSeedDeals(supplierIds);
   } catch (err: any) {
     console.error("[AutoSeed] Supplier seed failed (non-fatal):", err.message);
+  }
+}
+
+async function runAutoSeedDeals(supplierIds: Record<string, number>) {
+  try {
+    const existingConf = await db.select({ id: deals.id }).from(deals).where(like(deals.internalOwner, "conference_seed%")).limit(1);
+    if (existingConf.length > 0) {
+      console.log("[AutoSeed] Demo deals already exist, skipping.");
+      return;
+    }
+
+    const existingClients = await db.select().from(clientsTable).where(isNotNull(clientsTable.cnpj)).limit(4);
+    if (existingClients.length < 2) {
+      console.log("[AutoSeed] Not enough clients with CNPJ for demo deals, skipping.");
+      return;
+    }
+
+    const { PRIME: primeId, ATMO: atmoId, CEMIG: cemigId, DELANTIS: delantisId, GENIAL: genialId } = supplierIds;
+    if (!primeId || !atmoId || !cemigId || !delantisId || !genialId) {
+      console.log("[AutoSeed] Missing supplier IDs for demo deals, skipping.");
+      return;
+    }
+
+    const conferenceDeals = [
+      {
+        clientId: existingClients[0].id,
+        trackType: "GDL",
+        energyType: "gd_assinatura",
+        submarket: "SE_CO",
+        quotes: [
+          { supplierId: primeId, price: 285.50, term: 24, structure: "GD Assinatura BT" },
+          { supplierId: genialId, price: 278.00, term: 24, structure: "GD Assinatura BT" },
+          { supplierId: atmoId, price: 292.00, term: 12, structure: "GD Assinatura BT" },
+          { supplierId: delantisId, price: 305.00, term: 24, structure: "GD Compensação Nacional" },
+          { supplierId: primeId, price: 272.00, term: 36, structure: "GD Assinatura BT" },
+        ],
+      },
+      {
+        clientId: existingClients[1].id,
+        trackType: "GDL",
+        energyType: "gd_assinatura",
+        submarket: "SE_CO",
+        quotes: [
+          { supplierId: primeId, price: 268.00, term: 24, structure: "GD Assinatura BT" },
+          { supplierId: atmoId, price: 275.50, term: 24, structure: "GD Assinatura BT" },
+          { supplierId: delantisId, price: 298.00, term: 24, structure: "GD Compensação Nacional" },
+          { supplierId: primeId, price: 260.00, term: 36, structure: "GD Assinatura BT" },
+        ],
+      },
+      {
+        clientId: existingClients[2 % existingClients.length].id,
+        trackType: "ACL",
+        energyType: "Convencional",
+        submarket: "SE_CO",
+        quotes: [
+          { supplierId: primeId, price: 242.00, term: 24, structure: "Convencional" },
+          { supplierId: cemigId, price: 248.50, term: 24, structure: "Convencional" },
+          { supplierId: primeId, price: 235.00, term: 36, structure: "Convencional" },
+          { supplierId: cemigId, price: 258.00, term: 12, structure: "Convencional" },
+          { supplierId: genialId, price: 252.00, term: 24, structure: "Convencional" },
+        ],
+      },
+      {
+        clientId: existingClients[3 % existingClients.length].id,
+        trackType: "ACL",
+        energyType: "Incentivada 50%",
+        submarket: "S",
+        quotes: [
+          { supplierId: primeId, price: 218.00, term: 24, structure: "Incentivada 50%" },
+          { supplierId: cemigId, price: 225.00, term: 24, structure: "Incentivada 50%" },
+          { supplierId: primeId, price: 212.00, term: 36, structure: "Incentivada 50%" },
+          { supplierId: atmoId, price: 230.00, term: 12, structure: "Incentivada 50%" },
+        ],
+      },
+    ];
+
+    let dealsCreated = 0;
+    let quotesCreated = 0;
+
+    for (const dd of conferenceDeals) {
+      const [deal] = await db.insert(deals).values({
+        clientId: dd.clientId,
+        energyType: dd.energyType,
+        submarket: dd.submarket,
+        status: "QUOTES_RECEIVED",
+        internalOwner: "conference_seed",
+        isDemo: true,
+      }).returning();
+
+      await db.insert(dealTracks).values({
+        dealId: deal.id,
+        type: dd.trackType,
+        status: dd.trackType === "GDL" ? "GDL_NEW" : "ACL_NEW",
+        createdByUserId: null,
+      });
+
+      for (const q of dd.quotes) {
+        await db.insert(dealQuotes).values({
+          dealId: deal.id,
+          supplierId: q.supplierId,
+          baseEnergyPriceRmwh: String(q.price),
+          termMonths: q.term,
+          energyType: q.structure,
+          priceStructure: q.structure,
+          rawQuoteJson: { price: q.price, term: q.term, structure: q.structure, source: "conference_seed" },
+          isDemo: true,
+          isComplete: true,
+          isProposalEligible: true,
+        });
+        quotesCreated++;
+      }
+      dealsCreated++;
+    }
+
+    console.log(`[AutoSeed] Demo deals seeded: ${dealsCreated} deals, ${quotesCreated} quotes.`);
+  } catch (err: any) {
+    console.error("[AutoSeed] Demo deals seed failed (non-fatal):", err.message);
   }
 }
