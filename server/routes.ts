@@ -8001,6 +8001,12 @@ export async function registerRoutes(
       const suppliers = allFetched.filter(
         (s): s is NonNullable<typeof s> => !!s && !s.shortCode?.startsWith('DEMO_') && s.status !== 'prc_only'
       );
+
+      // Attach playbooks to each supplier for pre-quote comparison
+      const suppliersWithPlaybooks = suppliers.map(s => ({
+        ...s,
+        playbooks: allPlaybooks.filter(p => p.supplierId === s.id),
+      }));
       
       // Check dossier readiness
       const dossierReady = dossier?.status === 'READY' || dossier?.status === 'LOCKED';
@@ -8018,7 +8024,7 @@ export async function registerRoutes(
         dossier: dossier ? { id: dossier.id, status: dossier.status } : null,
         dossierReady,
         dispatches,
-        availableSuppliers: suppliers,
+        availableSuppliers: suppliersWithPlaybooks,
         stats: {
           totalSuppliers: suppliers.length,
           sent,

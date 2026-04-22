@@ -38,34 +38,44 @@ interface NextStep {
 const STAGE_NEXT_STEPS: Record<string, (checklistStatus: any) => NextStep[]> = {
   DRAFT: (status) => [
     {
+      id: "upload_bill",
+      label: "Upload Client Bill",
+      description: "Upload the client's energy bill (fatura) to start the Bill-First journey.",
+      required: true,
+      completed: status?.billComplete ?? false,
+      action: "open_dossier",
+      actionLabel: "Go to Assembly",
+      icon: FileText
+    },
+    {
+      id: "generate_ecos",
+      label: "Generate ECOS Analysis",
+      description: "Run the ECOS analysis to benchmark the client's current tariff against market prices.",
+      required: true,
+      completed: status?.ecosComplete ?? false,
+      action: "open_ecos",
+      actionLabel: "Generate ECOS",
+      icon: Zap
+    },
+    {
       id: "complete_dossier",
       label: "Complete Client Dossier",
-      description: "Fill in all required client information including consumption data, documents, and contact details.",
+      description: "Confirm client profile data (consumption, demand, tariff group) is ready for RFQ.",
       required: true,
       completed: status?.dossierComplete ?? false,
       action: "open_dossier",
       actionLabel: "Open Dossier",
-      icon: FileText
-    },
-    {
-      id: "select_suppliers",
-      label: "Select Suppliers for RFQ",
-      description: "Choose which suppliers to send the RFQ to based on client profile and market conditions.",
-      required: true,
-      completed: status?.suppliersSelected ?? false,
-      action: "select_suppliers",
-      actionLabel: "Select Suppliers",
-      icon: Building2
-    },
-    {
-      id: "review_checklist",
-      label: "Complete Pre-RFQ Checklist",
-      description: "Verify all required documents are uploaded and data is accurate before sending RFQ.",
-      required: true,
-      completed: status?.checklistComplete ?? false,
-      action: "open_checklist",
-      actionLabel: "View Checklist",
       icon: ClipboardCheck
+    },
+    {
+      id: "send_rfq",
+      label: "Send RFQ to Suppliers",
+      description: "Dispatch the Request for Quote to eligible suppliers to collect offers.",
+      required: true,
+      completed: status?.rfqSent ?? false,
+      action: "select_suppliers",
+      actionLabel: "Send RFQ",
+      icon: Send
     }
   ],
   RFQ_SENT: (status) => [
@@ -246,7 +256,7 @@ const STAGE_NEXT_STEPS: Record<string, (checklistStatus: any) => NextStep[]> = {
 };
 
 export function NextStepsWidget({ dealId, currentStage, onActionClick }: NextStepsWidgetProps) {
-  const { data: checklistData, isLoading } = useQuery({
+  const { data: checklistData, isLoading: checklistLoading } = useQuery({
     queryKey: [`/api/deals/${dealId}/checklist`],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/deals/${dealId}/checklist`);
@@ -254,40 +264,55 @@ export function NextStepsWidget({ dealId, currentStage, onActionClick }: NextSte
     }
   });
 
+  // For DRAFT deals, use real assembly-status to determine step completion
+  const { data: assemblyData, isLoading: assemblyLoading } = useQuery({
+    queryKey: [`/api/deals/${dealId}/assembly-status`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/deals/${dealId}/assembly-status`);
+      return res.json();
+    },
+    enabled: currentStage === "DRAFT",
+  });
+
+  const isLoading = checklistLoading || (currentStage === "DRAFT" && assemblyLoading);
+
   const getSteps = STAGE_NEXT_STEPS[currentStage];
   if (!getSteps) return null;
 
   const blockingItems = checklistData?.blockingItems || [];
-  const completions = checklistData?.completions || [];
-  const items = checklistData?.items || {};
-  const allItems = Object.values(items).flat() as any[];
-  const completedIds = new Set(completions.map((c: any) => c.itemId));
-  const requiredItems = allItems.filter((item: any) => item?.isBlocking);
-  const allRequiredComplete = requiredItems.length === 0 || 
-    requiredItems.every((item: any) => completedIds.has(item.id));
-  const completionRatio = allItems.length > 0 ? completions.length / allItems.length : 0;
 
-  const completionStatus: Record<string, boolean> = {
-    dossierComplete: completionRatio >= 0.25,
-    suppliersSelected: completionRatio >= 0.5,
-    checklistComplete: allRequiredComplete && blockingItems.length === 0,
-    allResponded: completionRatio >= 0.5,
-    followUpsDone: true,
-    quotesCompared: completionRatio >= 0.3,
-    termsVerified: completionRatio >= 0.6,
-    clientApproved: completionRatio >= 1.0 && blockingItems.length === 0,
-    contractFinalized: completionRatio >= 0.5,
-    docsCollected: completionRatio >= 0.7,
-    complianceComplete: blockingItems.length === 0,
-    cceeSubmitted: completionRatio >= 0.5,
-    supplyDateSet: completionRatio >= 1.0,
-    supplyVerified: completionRatio >= 0.5,
-    commissionSetup: completionRatio >= 1.0,
-    paymentsMonitored: true,
-    variancesHandled: true,
-    finalReconciled: completionRatio >= 1.0,
-    renewalAssessed: completionRatio >= 0.5
+  // Build DRAFT completion from actual assembly-status stage data
+  const assemblyStageDone = (key: string) => {
+    if (!assemblyData?.stages) return false;
+    const stage = (assemblyData.stages as any[]).find((s: any) => s.stage === key);
+    return stage?.status === "complete";
   };
+
+  const completionStatus: Record<string, boolean> = currentStage === "DRAFT"
+    ? {
+        billComplete: assemblyStageDone("BILL"),
+        ecosComplete: assemblyStageDone("ECOS"),
+        dossierComplete: assemblyStageDone("DOSSIER"),
+        rfqSent: assemblyStageDone("RFQ"),
+      }
+    : {
+        allResponded: false,
+        followUpsDone: true,
+        quotesCompared: false,
+        termsVerified: false,
+        clientApproved: false,
+        contractFinalized: false,
+        docsCollected: false,
+        complianceComplete: blockingItems.length === 0,
+        cceeSubmitted: false,
+        supplyDateSet: false,
+        supplyVerified: false,
+        commissionSetup: false,
+        paymentsMonitored: true,
+        variancesHandled: true,
+        finalReconciled: false,
+        renewalAssessed: false,
+      };
 
   const steps = getSteps(completionStatus);
   const requiredSteps = steps.filter(s => s.required);

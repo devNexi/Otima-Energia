@@ -24,6 +24,11 @@ import {
   BarChart2,
   Sparkles,
   AlertCircle,
+  Mail,
+  Globe,
+  Package,
+  MapPin,
+  FileText,
 } from "lucide-react";
 
 interface QuoteRow {
@@ -119,6 +124,14 @@ export function QuotesComparisonTab({ dealId, deal }: Props) {
     },
   });
 
+  const { data: auctionData } = useQuery({
+    queryKey: [`/api/deals/${dealId}/blind-auction`],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/deals/${dealId}/blind-auction`);
+      return res.json();
+    },
+  });
+
   const selectMutation = useMutation({
     mutationFn: async ({ quoteId, reason }: { quoteId: string; reason: string }) => {
       const res = await apiRequest("POST", `/api/deals/${dealId}/quotes/${quoteId}/select`, { reason });
@@ -208,18 +221,126 @@ export function QuotesComparisonTab({ dealId, deal }: Props) {
   }
 
   if (rankedQuotes.length === 0 && rejectedQuotes.length === 0) {
+    const suppliers: any[] = auctionData?.availableSuppliers || [];
+
+    const channelLabel = (ch: string) => {
+      const map: Record<string, string> = { EMAIL: "Email", WHATSAPP: "WhatsApp", PORTAL: "Portal" };
+      return map[ch] || ch;
+    };
+    const channelIcon = (ch: string) => {
+      if (ch === "WHATSAPP") return <Globe className="w-3 h-3" />;
+      if (ch === "EMAIL") return <Mail className="w-3 h-3" />;
+      return <Globe className="w-3 h-3" />;
+    };
+
     return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-          <p className="text-base font-medium text-muted-foreground">
-            {isPt ? "Nenhuma cotação recebida ainda" : "No quotes received yet"}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isPt ? "Envie RFQs para fornecedores elegíveis para iniciar a comparação." : "Send RFQs to eligible suppliers to start comparing offers."}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-sm">{isPt ? "Fornecedores Elegíveis" : "Eligible Suppliers"}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isPt ? "Perfil de fornecedores disponíveis para RFQ — nenhuma cotação recebida ainda." : "Available supplier profiles for RFQ — no quotes received yet."}
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            {isPt ? "Uso interno" : "Internal use"}
+          </Badge>
+        </div>
+
+        {suppliers.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Building2 className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">
+                {isPt ? "Nenhum fornecedor elegível encontrado" : "No eligible suppliers found"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isPt ? "Cadastre fornecedores e playbooks para iniciar RFQs." : "Add suppliers and playbooks to start sending RFQs."}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {suppliers.map((s: any) => {
+              const playbook = s.playbooks?.[0];
+              const productLines: string[] = playbook?.productLines || [];
+              const productsSupported: string[] = playbook?.productsSupported || [];
+              const channel: string = playbook?.preferredChannel || "";
+              const submarkets: string[] = playbook?.submarkets || [];
+              const notes: string = playbook?.publicNotes || playbook?.notes || "";
+
+              return (
+                <Card key={s.id} className="border shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-sm">{s.name}</p>
+                        {s.shortCode && (
+                          <p className="text-xs text-muted-foreground font-mono">{s.shortCode}</p>
+                        )}
+                      </div>
+                      {channel && (
+                        <Badge variant="secondary" className="text-xs flex items-center gap-1 shrink-0">
+                          {channelIcon(channel)}
+                          {channelLabel(channel)}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Product lines */}
+                    {productLines.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {productLines.map((pl: string) => (
+                          <Badge key={pl} variant="outline" className="text-xs px-1.5 py-0 font-medium text-violet-700 border-violet-200 bg-violet-50">
+                            {pl}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Products supported */}
+                    {productsSupported.length > 0 && (
+                      <div className="flex items-start gap-1.5">
+                        <Package className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          {productsSupported.join(", ")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Submarkets */}
+                    {submarkets.length > 0 && (
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          {submarkets.join(", ")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {notes && (
+                      <div className="flex items-start gap-1.5 border-t pt-2">
+                        <FileText className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground italic line-clamp-2">{notes}</p>
+                      </div>
+                    )}
+
+                    {/* No playbook fallback */}
+                    {!playbook && (
+                      <p className="text-xs text-muted-foreground italic">
+                        {isPt ? "Sem playbook configurado." : "No playbook configured."}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   }
 

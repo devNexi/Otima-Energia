@@ -651,6 +651,8 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             } else {
               setActiveTab("overview");
             }
+          } else if (action === "open_ecos") {
+            setActiveTab("ecos");
           } else if (action === "select_suppliers") {
             setActiveTab("rfq");
           } else if (action === "open_rfq" || action === "track_responses" || action === "send_followup" || action === "view_rfqs" || action === "compare_offers") {
