@@ -8,8 +8,8 @@ packages = ["alsa-lib", "at-spi2-atk", "cairo", "cups", "expat", "glib", "gtk3",
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+build = ["tsx", "script/build.ts"]
+run = ["node", "dist/index.cjs"]
 
 [[ports]]
 localPort = 3456
