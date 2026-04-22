@@ -2220,6 +2220,48 @@ export async function registerRoutes(
     }
   });
 
+  // Create a new supplier manually
+  app.post("/api/suppliers", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const { suppliers: suppliersTable } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const name = (req.body.name || "").trim();
+      if (!name) return res.status(400).json({ success: false, error: "Nome é obrigatório" });
+
+      // Auto-generate a unique shortCode from the name
+      const baseCode = name.toUpperCase().replace(/[^A-Z0-9]/g, "_").replace(/_+/g, "_").slice(0, 12).replace(/_$/, "");
+      let shortCode = baseCode;
+      let suffix = 1;
+      while (true) {
+        const conflict = await db.select({ id: suppliersTable.id }).from(suppliersTable).where(eq(suppliersTable.shortCode, shortCode)).limit(1);
+        if (conflict.length === 0) break;
+        shortCode = `${baseCode.slice(0, 9)}_${suffix++}`;
+      }
+
+      const [supplier] = await db.insert(suppliersTable).values({
+        name,
+        shortCode,
+        contactEmail: req.body.contactEmail || null,
+        contactPhone: req.body.contactPhone || null,
+        website: req.body.website || null,
+        isActive: true,
+        status: 'active',
+        source: 'manual',
+      }).returning();
+
+      res.json({ success: true, supplier });
+    } catch (error: any) {
+      console.error("Error creating supplier:", error);
+      if (error.code === '23505' && error.constraint?.includes('name')) {
+        return res.status(400).json({ success: false, error: "Já existe um fornecedor com esse nome." });
+      }
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ============== SUPPLIER PORTALS ENDPOINTS ==============
 
   // Get portals for a supplier
@@ -8230,6 +8272,145 @@ export async function registerRoutes(
       res.json({ success: true, checked, fixed });
     } catch (error: any) {
       console.error("[fix-consumption-units] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Seed conference deals — creates 4 deals with realistic quotes from the real 5 suppliers
+  app.post("/api/admin/seed-conference-deals", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    try {
+      const { deals, dealQuotes, dealTracks, clients: clientsTable, suppliers: suppliersTable } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, isNotNull } = await import("drizzle-orm");
+
+      const allSuppliers = await db.select().from(suppliersTable).where(eq(suppliersTable.isActive, true));
+      const supplierMap: Record<string, number> = {};
+      for (const s of allSuppliers) supplierMap[s.name] = s.id;
+
+      const primeId = supplierMap['Prime Energy'];
+      const atmoId = supplierMap['ATMO Energia'];
+      const cemigId = supplierMap['CEMIG'];
+      const delantisId = supplierMap['Delantis Energias Renováveis'];
+      const genialId = supplierMap['Genial Energia'];
+
+      if (!primeId || !atmoId || !cemigId || !delantisId || !genialId) {
+        return res.status(400).json({ success: false, error: 'Fornecedores não encontrados. Execute "Importar Fornecedores" primeiro.' });
+      }
+
+      // Check if conference deals already exist (tagged with conference_seed owner)
+      const { like } = await import("drizzle-orm");
+      const existingConf = await db.select({ id: deals.id }).from(deals).where(like(deals.internalOwner, 'conference_seed%')).limit(1);
+      if (existingConf.length > 0) {
+        return res.json({ success: true, message: 'Deals de conferência já existem.', skipped: true, results: { deals: 0, quotes: 0 } });
+      }
+
+      const existingClients = await db.select().from(clientsTable).where(isNotNull(clientsTable.cnpj)).limit(4);
+      if (existingClients.length < 2) {
+        return res.status(400).json({ success: false, error: 'Precisa de pelo menos 2 clientes cadastrados com CNPJ.' });
+      }
+
+      const conferenceDeals = [
+        {
+          clientId: existingClients[0].id,
+          trackType: 'GDL',
+          energyType: 'gd_assinatura',
+          submarket: 'SE_CO',
+          quotes: [
+            { supplierId: primeId, price: 285.50, term: 24, structure: 'GD Assinatura BT' },
+            { supplierId: genialId, price: 278.00, term: 24, structure: 'GD Assinatura BT' },
+            { supplierId: atmoId, price: 292.00, term: 12, structure: 'GD Assinatura BT' },
+            { supplierId: delantisId, price: 305.00, term: 24, structure: 'GD Compensação Nacional' },
+            { supplierId: primeId, price: 272.00, term: 36, structure: 'GD Assinatura BT' },
+          ],
+        },
+        {
+          clientId: existingClients[1].id,
+          trackType: 'GDL',
+          energyType: 'gd_assinatura',
+          submarket: 'SE_CO',
+          quotes: [
+            { supplierId: primeId, price: 268.00, term: 24, structure: 'GD Assinatura BT' },
+            { supplierId: atmoId, price: 275.50, term: 24, structure: 'GD Assinatura BT' },
+            { supplierId: delantisId, price: 298.00, term: 24, structure: 'GD Compensação Nacional' },
+            { supplierId: primeId, price: 260.00, term: 36, structure: 'GD Assinatura BT' },
+          ],
+        },
+        {
+          clientId: existingClients[2 % existingClients.length].id,
+          trackType: 'ACL',
+          energyType: 'Convencional',
+          submarket: 'SE_CO',
+          quotes: [
+            { supplierId: primeId, price: 242.00, term: 24, structure: 'Convencional' },
+            { supplierId: cemigId, price: 248.50, term: 24, structure: 'Convencional' },
+            { supplierId: primeId, price: 235.00, term: 36, structure: 'Convencional' },
+            { supplierId: cemigId, price: 258.00, term: 12, structure: 'Convencional' },
+            { supplierId: genialId, price: 252.00, term: 24, structure: 'Convencional' },
+          ],
+        },
+        {
+          clientId: existingClients[3 % existingClients.length].id,
+          trackType: 'ACL',
+          energyType: 'Incentivada 50%',
+          submarket: 'S',
+          quotes: [
+            { supplierId: primeId, price: 218.00, term: 24, structure: 'Incentivada 50%' },
+            { supplierId: cemigId, price: 225.00, term: 24, structure: 'Incentivada 50%' },
+            { supplierId: primeId, price: 212.00, term: 36, structure: 'Incentivada 50%' },
+            { supplierId: atmoId, price: 230.00, term: 12, structure: 'Incentivada 50%' },
+          ],
+        },
+      ];
+
+      let dealsCreated = 0;
+      let quotesCreated = 0;
+
+      for (const dd of conferenceDeals) {
+        const [deal] = await db.insert(deals).values({
+          clientId: dd.clientId,
+          energyType: dd.energyType,
+          submarket: dd.submarket,
+          status: 'QUOTES_RECEIVED',
+          internalOwner: 'conference_seed',
+          isDemo: true,
+        }).returning();
+
+        await db.insert(dealTracks).values({
+          dealId: deal.id,
+          type: dd.trackType,
+          status: dd.trackType === 'GDL' ? 'GDL_NEW' : 'ACL_NEW',
+          createdByUserId: user.id,
+        });
+
+        for (const q of dd.quotes) {
+          await db.insert(dealQuotes).values({
+            dealId: deal.id,
+            supplierId: q.supplierId,
+            baseEnergyPriceRmwh: String(q.price),
+            termMonths: q.term,
+            energyType: q.structure,
+            priceStructure: q.structure,
+            rawQuoteJson: { price: q.price, term: q.term, structure: q.structure, source: 'conference_seed' },
+            isDemo: true,
+            isComplete: true,
+            isProposalEligible: true,
+          });
+          quotesCreated++;
+        }
+        dealsCreated++;
+      }
+
+      await logAuditEvent({ actor: user.username, actorRole: user.role, actorIp: req.ip || null, userAgent: req.get("User-Agent") || null, action: "CONFERENCE_DEALS_SEEDED", entityType: "deals", entityId: null, detailsJson: { dealsCreated, quotesCreated } });
+      res.json({ success: true, results: { deals: dealsCreated, quotes: quotesCreated } });
+    } catch (error: any) {
+      console.error('[SeedConferenceDeals] Error:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

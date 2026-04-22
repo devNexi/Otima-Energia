@@ -20,6 +20,8 @@ export default function AdminSettings() {
   const [seedResult, setSeedResult] = useState<{ suppliers: number; playbooks: number; coverage: number; contacts: number } | null>(null);
   const [fixingUnits, setFixingUnits] = useState(false);
   const [fixUnitsResult, setFixUnitsResult] = useState<{ checked: number; fixed: number } | null>(null);
+  const [seedingConf, setSeedingConf] = useState(false);
+  const [confResult, setConfResult] = useState<{ deals: number; quotes: number; skipped?: boolean; message?: string } | null>(null);
 
   const seedSuppliers = async () => {
     setSeeding(true);
@@ -40,6 +42,27 @@ export default function AdminSettings() {
       toast({ title: "Erro", description: "Falha ao importar fornecedores", variant: "destructive" });
     }
     setSeeding(false);
+  };
+
+  const seedConferenceDeals = async () => {
+    setSeedingConf(true);
+    setConfResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/seed-conference-deals");
+      const data = await res.json();
+      if (data.success) {
+        setConfResult(data.results || { deals: 0, quotes: 0, skipped: data.skipped, message: data.message });
+        toast({
+          title: data.skipped ? "Deals já existem" : "Deals criados!",
+          description: data.skipped ? data.message : `${data.results?.deals} deals, ${data.results?.quotes} cotações criadas`,
+        });
+      } else {
+        toast({ title: "Erro", description: data.error || "Falha ao criar deals", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro", description: "Falha ao criar deals de conferência", variant: "destructive" });
+    }
+    setSeedingConf(false);
   };
 
   const fixUnits = async () => {
@@ -218,6 +241,48 @@ export default function AdminSettings() {
                     <>
                       <Database className="h-4 w-4 mr-2" />
                       Corrigir unidades de consumo (kWh → MWh)
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Dados para Conferência
+                </CardTitle>
+                <CardDescription>
+                  Cria 4 deals (2 GD + 2 ACL) com cotações reais dos 5 fornecedores cadastrados (Prime, ATMO, CEMIG, Delantis, Genial) para demonstração do painel de comparação. Execute "Importar Fornecedores" antes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {confResult && (
+                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg" data-testid="conf-result">
+                    <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+                    <div className="text-sm text-green-800">
+                      {confResult.skipped
+                        ? confResult.message
+                        : <><span className="font-medium">{confResult.deals}</span> deals e <span className="font-medium">{confResult.quotes}</span> cotações criadas.</>
+                      }
+                    </div>
+                  </div>
+                )}
+                <Button
+                  onClick={seedConferenceDeals}
+                  disabled={seedingConf}
+                  data-testid="button-seed-conference-deals"
+                >
+                  {seedingConf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Criando deals...
+                    </>
+                  ) : (
+                    <>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Criar Deals para Conferência
                     </>
                   )}
                 </Button>

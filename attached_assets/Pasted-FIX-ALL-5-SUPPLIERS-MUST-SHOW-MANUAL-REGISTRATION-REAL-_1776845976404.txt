@@ -1,0 +1,303 @@
+FIX: ALL 5 SUPPLIERS MUST SHOW + MANUAL REGISTRATION + REAL COMPARISON DATA
+Issue 1 — Only 2 of 5 suppliers showing
+Step A — Run this diagnostic first:
+sqlSELECT id, name, short_code, status, is_active FROM suppliers ORDER BY id;
+Log the output. We need to know which 2 are there and which 3 are missing.
+Step B — Check why the seed failed for the missing suppliers.
+Look at the POST /api/admin/seed-suppliers endpoint in server/routes.ts. Add console.log before and after each supplier insert. Then check what columns actually exist on the suppliers table:
+bashgrep -A 40 "suppliers = pgTable" shared/schema.ts
+The insert is probably failing because it's setting columns that don't exist in the schema (like shortCode, category, website). Fix the seed to ONLY use columns that exist in the actual table definition.
+Step C — Rewrite the seed with schema-safe inserts:
+typescript// First, check what columns exist by reading the schema
+// Then only insert the fields that match
+
+for (const s of SUPPLIERS) {
+  try {
+    // Search by name since shortCode might not exist as a column
+    const existing = await db.select().from(suppliersTable)
+      .where(eq(suppliersTable.name, s.name))
+      .limit(1);
+
+    if (existing.length > 0) {
+      supplierIds[s.shortCode] = existing[0].id;
+      console.log(`[Seed] Found existing supplier: ${s.name} (id=${existing[0].id})`);
+    } else {
+      // Minimal insert — only required fields
+      const [inserted] = await db.insert(suppliersTable).values({
+        name: s.name,
+        isActive: true,
+        // Only add other fields if they exist in schema:
+        // contactEmail: s.contactEmail,
+        // website: s.website,
+      }).returning();
+      supplierIds[s.shortCode] = inserted.id;
+      console.log(`[Seed] Created supplier: ${s.name} (id=${inserted.id})`);
+    }
+  } catch (err: any) {
+    console.error(`[Seed] FAILED for ${s.name}:`, err.message);
+    // Log the FULL error so we can see exactly which column is the problem
+  }
+}
+Step D — After fixing, run the seed again from Admin Settings and verify all 5 appear.
+The 5 suppliers that MUST exist:
+
+Prime Energy
+ATMO Energia
+CEMIG
+Delantis Energias Renováveis
+Genial Energia
+
+Issue 2 — Can't manually register suppliers
+Add a "Novo Fornecedor" button to the supplier list page.
+Find the supplier list component — likely client/src/pages/SupplierManager.tsx. Add a creation modal:
+typescript<Dialog open={showAddSupplier} onOpenChange={setShowAddSupplier}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Adicionar Fornecedor</DialogTitle>
+      <DialogDescription>Cadastre um novo fornecedor no sistema</DialogDescription>
+    </DialogHeader>
+    <div className="space-y-4">
+      <div>
+        <Label>Nome do Fornecedor *</Label>
+        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Prime Energy" />
+      </div>
+      <div>
+        <Label>Email de Contato</Label>
+        <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@fornecedor.com.br" />
+      </div>
+      <div>
+        <Label>Telefone</Label>
+        <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(21) 99999-9999" />
+      </div>
+      <div>
+        <Label>Notas</Label>
+        <Textarea value={notes} onChange={e => setNotes(e.target.value)} />
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setShowAddSupplier(false)}>Cancelar</Button>
+      <Button onClick={createSupplier} disabled={!name.trim()}>Salvar Fornecedor</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+Check if POST /api/suppliers exists in server/routes.ts. If not, create it:
+typescriptapp.post("/api/suppliers", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    const [supplier] = await db.insert(suppliersTable).values({
+      name: req.body.name,
+      contactEmail: req.body.contactEmail || null,
+      isActive: true,
+    }).returning();
+    res.json({ success: true, supplier });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+Issue 3 — Comparison data for conference using REAL suppliers
+The team needs to show the comparison panel working at the conference. Seed deals with quotes from the REAL suppliers using realistic Brazilian energy market pricing.
+Add endpoint POST /api/admin/seed-conference-deals:
+This creates deals for EXISTING clients already in the system (pick 4 from the 853 clients) with quotes from the REAL 5 suppliers. The pricing reflects actual Brazilian market rates.
+typescriptapp.post("/api/admin/seed-conference-deals", async (req, res) => {
+  if (!await validateDealOsSession(req, res)) return;
+  try {
+    const { deals, dealQuotes, dealTracks, clients: clientsTable } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, ne, isNotNull } = await import("drizzle-orm");
+
+    // Get REAL suppliers from the database
+    const allSuppliers = await db.select().from(suppliersTable).where(eq(suppliersTable.isActive, true));
+    if (allSuppliers.length < 3) {
+      return res.status(400).json({ success: false, error: 'Precisa de pelo menos 3 fornecedores. Execute "Importar Fornecedores" primeiro.' });
+    }
+
+    // Build a name → id map
+    const supplierMap: Record<string, number> = {};
+    for (const s of allSuppliers) {
+      supplierMap[s.name] = s.id;
+    }
+
+    const primeId = supplierMap['Prime Energy'];
+    const atmoId = supplierMap['ATMO Energia'];
+    const cemigId = supplierMap['CEMIG'];
+    const delantisId = supplierMap['Delantis Energias Renováveis'];
+    const genialId = supplierMap['Genial Energia'];
+
+    // Pick 4 REAL existing clients (ones with CNPJs, not demo)
+    const existingClients = await db.select().from(clientsTable)
+      .where(isNotNull(clientsTable.cnpj))
+      .limit(4);
+
+    if (existingClients.length < 2) {
+      return res.status(400).json({ success: false, error: 'Precisa de pelo menos 2 clientes cadastrados com CNPJ.' });
+    }
+
+    // Check if conference deals already exist
+    const existingConf = await db.select().from(deals).where(eq(deals.isDemo, true)).limit(1);
+    if (existingConf.length > 0) {
+      return res.json({ success: true, message: 'Deals de conferência já existem.', skipped: true });
+    }
+
+    // Conference deals — realistic Brazilian energy pricing
+    // GD BT prices: R$270-330/MWh range (discount off distributor tariff)
+    // ACL Convencional: R$220-280/MWh range
+    // ACL Incentivada 50%: R$200-250/MWh range
+    const conferenceDeals = [
+      {
+        // GD deal — client on Light RJ (Genial + Prime territory)
+        clientId: existingClients[0].id,
+        trackType: 'GDL',
+        energyType: 'gd_assinatura',
+        submarket: 'SE_CO',
+        status: 'QUOTES_RECEIVED',
+        quotes: [
+          { supplierId: primeId, name: 'Prime Energy', price: 285.50, term: 24, structure: 'GD Assinatura BT', responseDays: 1 },
+          { supplierId: genialId, name: 'Genial Energia', price: 278.00, term: 24, structure: 'GD Assinatura BT', responseDays: 2 },
+          { supplierId: atmoId, name: 'ATMO Energia', price: 292.00, term: 12, structure: 'GD Assinatura BT', responseDays: 3 },
+          { supplierId: delantisId, name: 'Delantis Energias Renováveis', price: 305.00, term: 24, structure: 'GD Compensação Nacional', responseDays: 2 },
+          { supplierId: primeId, name: 'Prime Energy', price: 272.00, term: 36, structure: 'GD Assinatura BT', responseDays: 1 },
+        ],
+      },
+      {
+        // GD deal — client on CEMIG (Prime + ATMO territory)
+        clientId: existingClients[1].id,
+        trackType: 'GDL',
+        energyType: 'gd_assinatura',
+        submarket: 'SE_CO',
+        status: 'QUOTES_RECEIVED',
+        quotes: [
+          { supplierId: primeId, name: 'Prime Energy', price: 268.00, term: 24, structure: 'GD Assinatura BT', responseDays: 1 },
+          { supplierId: atmoId, name: 'ATMO Energia', price: 275.50, term: 24, structure: 'GD Assinatura BT', responseDays: 1 },
+          { supplierId: delantisId, name: 'Delantis Energias Renováveis', price: 298.00, term: 24, structure: 'GD Compensação Nacional', responseDays: 4 },
+          { supplierId: primeId, name: 'Prime Energy', price: 260.00, term: 36, structure: 'GD Assinatura BT', responseDays: 2 },
+        ],
+      },
+      {
+        // ACL Convencional — large consumer
+        clientId: existingClients[2 % existingClients.length].id,
+        trackType: 'ACL',
+        energyType: 'Convencional',
+        submarket: 'SE_CO',
+        status: 'QUOTES_RECEIVED',
+        quotes: [
+          { supplierId: primeId, name: 'Prime Energy', price: 242.00, term: 24, structure: 'Convencional', responseDays: 2 },
+          { supplierId: cemigId, name: 'CEMIG', price: 248.50, term: 24, structure: 'Convencional', responseDays: 1 },
+          { supplierId: primeId, name: 'Prime Energy', price: 235.00, term: 36, structure: 'Convencional', responseDays: 2 },
+          { supplierId: cemigId, name: 'CEMIG', price: 258.00, term: 12, structure: 'Convencional', responseDays: 3 },
+          { supplierId: genialId, name: 'Genial Energia', price: 252.00, term: 24, structure: 'Convencional', responseDays: 5 },
+        ],
+      },
+      {
+        // ACL Incentivada — medium consumer
+        clientId: existingClients[3 % existingClients.length].id,
+        trackType: 'ACL',
+        energyType: 'Incentivada 50%',
+        submarket: 'S',
+        status: 'QUOTES_RECEIVED',
+        quotes: [
+          { supplierId: primeId, name: 'Prime Energy', price: 218.00, term: 24, structure: 'Incentivada 50%', responseDays: 1 },
+          { supplierId: cemigId, name: 'CEMIG', price: 225.00, term: 24, structure: 'Incentivada 50%', responseDays: 2 },
+          { supplierId: primeId, name: 'Prime Energy', price: 212.00, term: 36, structure: 'Incentivada 50%', responseDays: 3 },
+          { supplierId: atmoId, name: 'ATMO Energia', price: 230.00, term: 12, structure: 'Incentivada 50%', responseDays: 1 },
+        ],
+      },
+    ];
+
+    let dealsCreated = 0;
+    let quotesCreated = 0;
+
+    for (const dd of conferenceDeals) {
+      const [deal] = await db.insert(deals).values({
+        clientId: dd.clientId,
+        energyType: dd.energyType,
+        submarket: dd.submarket,
+        status: dd.status,
+        isDemo: true,
+        owner: 'admin',
+      }).returning();
+
+      // Create track
+      await db.insert(dealTracks).values({
+        dealId: deal.id,
+        type: dd.trackType,
+        status: dd.trackType === 'GDL' ? 'GDL_NEW' : 'ACL_NEW',
+      });
+
+      // Create quotes using REAL supplier IDs and names
+      for (const q of dd.quotes) {
+        if (!q.supplierId) continue; // Skip if supplier doesn't exist
+
+        const respondedAt = new Date();
+        respondedAt.setDate(respondedAt.getDate() - q.responseDays);
+        const createdAt = new Date(respondedAt.getTime() - (q.responseDays * 86400000));
+
+        await db.insert(dealQuotes).values({
+          dealId: deal.id,
+          supplierId: q.supplierId,
+          supplierName: q.name,
+          baseEnergyPriceRmwh: String(q.price),
+          contractTermMonths: q.term,
+          energyType: q.structure,
+          status: 'ACTIVE',
+          respondedAt,
+          createdAt,
+        });
+        quotesCreated++;
+      }
+      dealsCreated++;
+    }
+
+    res.json({ success: true, results: { deals: dealsCreated, quotes: quotesCreated } });
+  } catch (error: any) {
+    console.error('[SeedConferenceDeals] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+Add button in Admin Settings:
+typescript<Card>
+  <CardHeader>
+    <CardTitle>Dados para Conferência</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <p className="text-sm text-muted-foreground mb-4">
+      Cria 4 deals (2 GD + 2 ACL) com cotações reais dos fornecedores cadastrados (Prime, ATMO, CEMIG, Delantis, Genial) para demonstração do painel de comparação.
+    </p>
+    <Button onClick={seedConferenceDeals} disabled={seedingConf}>
+      {seedingConf ? 'Criando...' : 'Criar Deals para Conferência'}
+    </Button>
+    {confResult && (
+      <div className="mt-2 text-sm text-green-600">
+        {confResult.results?.deals} deals, {confResult.results?.quotes} cotações criadas
+      </div>
+    )}
+  </CardContent>
+</Card>
+Files to modify
+
+server/routes.ts — fix supplier seed, add POST /api/suppliers, add conference deals seed
+client/src/pages/SupplierManager.tsx — add "Novo Fornecedor" button + modal
+client/src/pages/AdminSettings.tsx — add "Criar Deals para Conferência" button
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+All 5 real suppliers visible on /admin/suppliers
+"Novo Fornecedor" button works — can manually add a supplier
+After running "Criar Deals para Conferência":
+
+4 deals appear in the deals list with real client names
+Each deal has 4-5 quotes from real suppliers (Prime Energy, ATMO, CEMIG, etc.)
+Opening any → Comparison tab shows the recommendation panel with real supplier names and realistic pricing
+Price spread is 5-15% between min and max per deal
+At least one quote per deal has a slow response (4-5 days) to show SLA scoring
+
+
+Running it twice doesn't create duplicates
+Comparison panel clearly shows which supplier is recommended and why
+
+After completing, summarize changes and wait for confirmation.

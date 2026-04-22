@@ -91,6 +91,8 @@ export default function SupplierManager() {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<SupplierContact | null>(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
+  const [addSupplierOpen, setAddSupplierOpen] = useState(false);
+  const [newSupplierForm, setNewSupplierForm] = useState({ name: "", contactEmail: "", contactPhone: "", website: "" });
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -204,6 +206,26 @@ export default function SupplierManager() {
     setEditingContact(null);
   };
 
+  const createSupplierMutation = useMutation({
+    mutationFn: async (data: typeof newSupplierForm) => {
+      const res = await apiRequest("POST", "/api/suppliers", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/suppliers-with-contacts"] });
+        setAddSupplierOpen(false);
+        setNewSupplierForm({ name: "", contactEmail: "", contactPhone: "", website: "" });
+        toast({ title: language === "pt" ? "Fornecedor criado!" : "Supplier created!" });
+      } else {
+        toast({ title: language === "pt" ? "Erro" : "Error", description: data.error, variant: "destructive" });
+      }
+    },
+    onError: () => {
+      toast({ title: language === "pt" ? "Erro ao criar fornecedor" : "Failed to create supplier", variant: "destructive" });
+    }
+  });
+
   const seedSuppliersMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/seed-suppliers");
@@ -300,16 +322,92 @@ export default function SupplierManager() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLanguage(language === "pt" ? "en" : "pt")}
-            data-testid="button-language-toggle"
-          >
-            <Languages className="h-4 w-4 mr-2" />
-            {t("language.toggle")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setAddSupplierOpen(true)}
+              data-testid="button-new-supplier"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {language === "pt" ? "Novo Fornecedor" : "New Supplier"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLanguage(language === "pt" ? "en" : "pt")}
+              data-testid="button-language-toggle"
+            >
+              <Languages className="h-4 w-4 mr-2" />
+              {t("language.toggle")}
+            </Button>
+          </div>
         </div>
+
+        {/* New Supplier Dialog */}
+        <Dialog open={addSupplierOpen} onOpenChange={setAddSupplierOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{language === "pt" ? "Adicionar Fornecedor" : "Add Supplier"}</DialogTitle>
+              <DialogDescription>
+                {language === "pt" ? "Cadastre um novo fornecedor no sistema" : "Register a new supplier in the system"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>{language === "pt" ? "Nome do Fornecedor *" : "Supplier Name *"}</Label>
+                <Input
+                  value={newSupplierForm.name}
+                  onChange={e => setNewSupplierForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder={language === "pt" ? "Ex: Nova Energia Ltda" : "Ex: Nova Energy Ltd"}
+                  data-testid="input-new-supplier-name"
+                />
+              </div>
+              <div>
+                <Label>{language === "pt" ? "Email de Contato" : "Contact Email"}</Label>
+                <Input
+                  value={newSupplierForm.contactEmail}
+                  onChange={e => setNewSupplierForm(f => ({ ...f, contactEmail: e.target.value }))}
+                  placeholder="comercial@fornecedor.com.br"
+                  data-testid="input-new-supplier-email"
+                />
+              </div>
+              <div>
+                <Label>{language === "pt" ? "Telefone" : "Phone"}</Label>
+                <Input
+                  value={newSupplierForm.contactPhone}
+                  onChange={e => setNewSupplierForm(f => ({ ...f, contactPhone: e.target.value }))}
+                  placeholder="(21) 99999-9999"
+                  data-testid="input-new-supplier-phone"
+                />
+              </div>
+              <div>
+                <Label>Website</Label>
+                <Input
+                  value={newSupplierForm.website}
+                  onChange={e => setNewSupplierForm(f => ({ ...f, website: e.target.value }))}
+                  placeholder="https://www.fornecedor.com.br"
+                  data-testid="input-new-supplier-website"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddSupplierOpen(false)} data-testid="button-cancel-new-supplier">
+                {language === "pt" ? "Cancelar" : "Cancel"}
+              </Button>
+              <Button
+                onClick={() => createSupplierMutation.mutate(newSupplierForm)}
+                disabled={!newSupplierForm.name.trim() || createSupplierMutation.isPending}
+                data-testid="button-save-new-supplier"
+              >
+                {createSupplierMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{language === "pt" ? "Salvando..." : "Saving..."}</>
+                ) : (
+                  language === "pt" ? "Salvar Fornecedor" : "Save Supplier"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Ações Pendentes Dashboard */}
         {pendingActions && (pendingActions.overdueQuotes?.length > 0 || pendingActions.noRecentContact?.length > 0) && (
