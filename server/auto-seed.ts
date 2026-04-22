@@ -51,12 +51,15 @@ export async function runAutoSeed() {
     const supplierIds: Record<string, number> = {};
 
     for (const s of SUPPLIERS) {
-      const existing = await db.select().from(suppliersTable).where(eq(suppliersTable.shortCode, s.shortCode)).limit(1);
-      if (existing.length > 0) {
+      let found = await db.select().from(suppliersTable).where(eq(suppliersTable.shortCode, s.shortCode)).limit(1);
+      if (found.length === 0) {
+        found = await db.select().from(suppliersTable).where(eq(suppliersTable.name, s.name)).limit(1);
+      }
+      if (found.length > 0) {
         await db.update(suppliersTable)
-          .set({ name: s.name, status: s.status, isActive: s.isActive, contactEmail: s.contactEmail, website: s.website })
-          .where(eq(suppliersTable.id, existing[0].id));
-        supplierIds[s.shortCode] = existing[0].id;
+          .set({ shortCode: s.shortCode, status: s.status, isActive: s.isActive, contactEmail: s.contactEmail, website: s.website })
+          .where(eq(suppliersTable.id, found[0].id));
+        supplierIds[s.shortCode] = found[0].id;
       } else {
         const [inserted] = await db.insert(suppliersTable).values(s).returning();
         supplierIds[s.shortCode] = inserted.id;
