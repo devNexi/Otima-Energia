@@ -8195,14 +8195,21 @@ export async function registerRoutes(
         { shortCode: 'DELANTIS', preferredChannel: 'EMAIL', productLines: ['GD'], productsSupported: ['GD_COMPENSACAO'], submarketsCovered: ['SE_CO','S','NE','N'], internalNotes: 'GD Compensação Nacional.' },
         { shortCode: 'GENIAL', preferredChannel: 'EMAIL', productLines: ['GD'], productsSupported: ['GD_ASSINATURA_BT'], submarketsCovered: ['SE_CO'], internalNotes: 'GD BT — Light + Enel RJ (Rio de Janeiro).' },
       ];
-      for (const shortCode of Object.keys(supplierIds)) {
-        await db.delete(supplierRfqPlaybooks).where(eq(supplierRfqPlaybooks.supplierId, supplierIds[shortCode]));
-      }
       for (const pb of PLAYBOOKS) {
         const supplierId = supplierIds[pb.shortCode];
         if (!supplierId) continue;
-        await db.insert(supplierRfqPlaybooks).values({ supplierId, version: 1, status: 'ACTIVE', preferredChannel: pb.preferredChannel, productLines: pb.productLines, productsSupported: pb.productsSupported, submarketsCovered: pb.submarketsCovered, internalNotes: pb.internalNotes });
-        results.playbooks++;
+        // Check if a matching playbook already exists to avoid FK conflicts on delete
+        const existingPbs = await db.select().from(supplierRfqPlaybooks)
+          .where(eq(supplierRfqPlaybooks.supplierId, supplierId));
+        const alreadyHasMatchingPb = existingPbs.some(
+          (e: any) => e.preferredChannel === pb.preferredChannel &&
+            JSON.stringify(e.productLines) === JSON.stringify(pb.productLines) &&
+            JSON.stringify(e.productsSupported) === JSON.stringify(pb.productsSupported)
+        );
+        if (!alreadyHasMatchingPb) {
+          await db.insert(supplierRfqPlaybooks).values({ supplierId, version: 1, status: 'ACTIVE', preferredChannel: pb.preferredChannel, productLines: pb.productLines, productsSupported: pb.productsSupported, submarketsCovered: pb.submarketsCovered, internalNotes: pb.internalNotes });
+          results.playbooks++;
+        }
       }
 
       const CONTACTS = [
