@@ -25,6 +25,7 @@ import { DealProposalsTab } from "@/components/deals/DealProposalsTab";
 import { DealAssemblyTab } from "@/components/deals/DealAssemblyTab";
 import { DealReadinessCard } from "@/components/deals/DealReadinessCard";
 import { DealTracksTab } from "@/components/deals/DealTracksTab";
+import { QuotesComparisonTab } from "@/components/deals/QuotesComparisonTab";
 import { SalesMirrorPanel, SalesSnapshotCompactCard } from "@/components/deals/SalesMirrorPanel";
 import { SetClientPriceModal } from "@/components/deals/SetClientPriceModal";
 import { ContextualTooltip } from "@/components/ops/ContextualTooltip";
@@ -1177,110 +1178,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         </TabsContent>
 
         <TabsContent value="quotes">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{language === "pt" ? "Ofertas de Fornecedores" : "Supplier Offers"}</CardTitle>
-                  <CardDescription>
-                    {language === "pt" 
-                      ? "Compare ofertas recebidas e selecione a melhor opção"
-                      : "Compare received offers and select the best fit"}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1">
-                  <Shield className="h-3 w-3" />
-                  {language === "pt" ? "Uso interno" : "Internal use"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!deal.quotes || deal.quotes.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Receipt className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>{language === "pt" ? "Nenhuma oferta recebida ainda" : "No offers received yet"}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {deal.quotes.map((quote: any) => (
-                    <div 
-                      key={quote.id}
-                      className={`border rounded-lg p-4 ${quote.isSelected ? "border-green-500 bg-green-50" : quote.isRejected ? "border-red-300 bg-red-50" : ""}`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{quote.supplier?.name || `Supplier #${quote.supplierId}`}</h4>
-                        <div className="flex items-center gap-2">
-                          {quote.isSelected && (
-                            <Badge className="bg-green-100 text-green-800">
-                              <Check className="w-3 h-3 mr-1" />
-                              {language === "pt" ? "Selecionada" : "Selected"}
-                            </Badge>
-                          )}
-                          {quote.isRejected && (
-                            <Badge className="bg-red-100 text-red-800">
-                              <X className="w-3 h-3 mr-1" />
-                              {language === "pt" ? "Rejeitada" : "Rejected"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Preço da Oferta" : "Offer Price"}</p>
-                          <p className="font-medium text-gray-600">
-                            {quote.baseEnergyPriceRmwh 
-                              ? `R$ ${parseFloat(quote.baseEnergyPriceRmwh).toFixed(2)}/MWh`
-                              : "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Tipo" : "Type"}</p>
-                          <p className="font-medium">
-                            {quote.energyType || quote.priceStructure || "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Validade" : "Valid Until"}</p>
-                          <p className="font-medium">
-                            {quote.validUntil 
-                              ? new Date(quote.validUntil).toLocaleDateString("pt-BR")
-                              : "-"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">{language === "pt" ? "Status" : "Status"}</p>
-                          {quote.isSelected ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              {language === "pt" ? "Selecionada" : "Selected"}
-                            </Badge>
-                          ) : quote.isRejected ? (
-                            <Badge className="bg-red-100 text-red-800 text-xs">
-                              {language === "pt" ? "Rejeitada" : "Rejected"}
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs">
-                              {language === "pt" ? "Ativa" : "Active"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {quote.selectionReason && (
-                        <p className="text-sm text-green-600 mt-2">
-                          <strong>{language === "pt" ? "Motivo seleção:" : "Selection reason:"}</strong> {quote.selectionReason}
-                        </p>
-                      )}
-                      {quote.rejectionReason && (
-                        <p className="text-sm text-red-600 mt-2">
-                          <strong>{language === "pt" ? "Motivo rejeição:" : "Rejection reason:"}</strong> {quote.rejectionReason}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <QuotesComparisonTab dealId={dealId} deal={deal} />
         </TabsContent>
 
         <TabsContent value="proposals">
