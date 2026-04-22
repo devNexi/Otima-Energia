@@ -639,6 +639,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
         dealId={dealId} 
         currentStage={deal.status} 
         onActionClick={(action) => {
+          document.getElementById("deal-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
           if (action === "open_checklist") {
             const checklistBtn = document.querySelector('[data-testid="checklist-drawer-trigger"]');
             if (checklistBtn) (checklistBtn as HTMLButtonElement).click();
@@ -669,7 +670,7 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
 
       <DealReadinessCard dealId={dealId} onTabChange={setActiveTab} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4" id="deal-tabs">
         <TabsList className="flex flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="assembly" className="flex items-center gap-2" data-testid="tab-assembly">
             <Zap className="w-4 h-4" />
@@ -679,38 +680,36 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <FileText className="w-4 h-4" />
             {language === "pt" ? "Visão Geral" : "Overview"}
           </TabsTrigger>
-          <ContextualTooltip
-            tooltipKey="tab_rfq_overview"
-            title={language === "pt" ? "Solicitação de Cotação (RFQ)" : "Request for Quote (RFQ)"}
-            content={language === "pt" 
-              ? "Gerencie o envio de RFQs aos fornecedores. Cada fornecedor recebe uma solicitação cega - eles não veem ofertas concorrentes."
-              : "Manage RFQ dispatches to suppliers. Each supplier receives a blind request - they don't see competing offers."}
-            whyMatters={language === "pt"
-              ? "RFQs cegos garantem preços competitivos sem colusão entre fornecedores."
-              : "Blind RFQs ensure competitive pricing without supplier collusion."}
-            mode="hover"
-          >
-            <TabsTrigger value="rfq" className="flex items-center gap-2" data-testid="tab-rfq">
-              <Send className="w-4 h-4" />
-              {language === "pt" ? "RFQ" : "RFQ"}
-            </TabsTrigger>
-          </ContextualTooltip>
-          <ContextualTooltip
-            tooltipKey="tab_quotes_overview"
-            title={language === "pt" ? "Comparar Ofertas" : "Compare Offers"}
-            content={language === "pt" 
-              ? "Compare ofertas recebidas e identifique a melhor opção comercial. Considere preço, termos e qualidade do fornecedor."
-              : "Compare received offers and identify the best commercial fit. Consider price, terms, and supplier quality."}
-            whyMatters={language === "pt"
-              ? "A escolha da oferta impacta diretamente a economia do cliente e a relação de longo prazo."
-              : "Offer choice directly impacts client savings and long-term relationship."}
-            mode="hover"
-          >
-            <TabsTrigger value="quotes" className="flex items-center gap-2">
-              <Receipt className="w-4 h-4" />
-              {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
-            </TabsTrigger>
-          </ContextualTooltip>
+          <TabsTrigger value="rfq" className="flex items-center gap-2" data-testid="tab-rfq">
+            <Send className="w-4 h-4" />
+            {language === "pt" ? "RFQ" : "RFQ"}
+            <ContextualTooltip
+              tooltipKey="tab_rfq_overview"
+              title={language === "pt" ? "Solicitação de Cotação (RFQ)" : "Request for Quote (RFQ)"}
+              content={language === "pt" 
+                ? "Gerencie o envio de RFQs aos fornecedores. Cada fornecedor recebe uma solicitação cega - eles não veem ofertas concorrentes."
+                : "Manage RFQ dispatches to suppliers. Each supplier receives a blind request - they don't see competing offers."}
+              whyMatters={language === "pt"
+                ? "RFQs cegos garantem preços competitivos sem colusão entre fornecedores."
+                : "Blind RFQs ensure competitive pricing without supplier collusion."}
+              mode="hover"
+            />
+          </TabsTrigger>
+          <TabsTrigger value="quotes" className="flex items-center gap-2">
+            <Receipt className="w-4 h-4" />
+            {language === "pt" ? "Cotações" : "Quotes"} ({deal.quotes?.length || 0})
+            <ContextualTooltip
+              tooltipKey="tab_quotes_overview"
+              title={language === "pt" ? "Comparar Ofertas" : "Compare Offers"}
+              content={language === "pt" 
+                ? "Compare ofertas recebidas e identifique a melhor opção comercial. Considere preço, termos e qualidade do fornecedor."
+                : "Compare received offers and identify the best commercial fit. Consider price, terms, and supplier quality."}
+              whyMatters={language === "pt"
+                ? "A escolha da oferta impacta diretamente a economia do cliente e a relação de longo prazo."
+                : "Offer choice directly impacts client savings and long-term relationship."}
+              mode="hover"
+            />
+          </TabsTrigger>
           <TabsTrigger value="proposals" className="flex items-center gap-2" data-testid="tab-proposals">
             <FileText className="w-4 h-4" />
             {language === "pt" ? "Propostas" : "Proposals"}
@@ -739,38 +738,36 @@ export function DealDetail({ dealId, onBack }: DealDetailProps) {
             <Phone className="w-4 h-4" />
             {language === "pt" ? "Vendas" : "Sales"}
           </TabsTrigger>
-          <ContextualTooltip
-            tooltipKey="tab_compliance_overview"
-            title={language === "pt" ? "Verificação de Conformidade" : "Compliance Check"}
-            content={language === "pt" 
-              ? "Valide que todos os documentos e requisitos regulatórios estão em ordem antes de avançar o deal."
-              : "Validate that all documents and regulatory requirements are in order before advancing the deal."}
-            whyMatters={language === "pt"
-              ? "Falhas de compliance podem invalidar contratos e bloquear comissões."
-              : "Compliance failures can invalidate contracts and block commissions."}
-            mode="hover"
-          >
-            <TabsTrigger value="compliance" className="flex items-center gap-2" data-testid="tab-compliance">
-              <ShieldCheck className="w-4 h-4" />
-              {language === "pt" ? "Conformidade" : "Compliance"}
-            </TabsTrigger>
-          </ContextualTooltip>
-          <ContextualTooltip
-            tooltipKey="tab_ecos_overview"
-            title={language === "pt" ? "Análise ECOS" : "ECOS Analysis"}
-            content={language === "pt" 
-              ? "Veja a análise de mercado e compare o preço do cliente com benchmarks atuais."
-              : "View market analysis and compare client pricing against current benchmarks."}
-            whyMatters={language === "pt"
-              ? "ECOS ajuda a identificar oportunidades de economia e preparar a argumentação comercial."
-              : "ECOS helps identify savings opportunities and prepare sales talk tracks."}
-            mode="hover"
-          >
-            <TabsTrigger value="ecos" className="flex items-center gap-2" data-testid="tab-ecos">
-              <BarChart3 className="w-4 h-4" />
-              {language === "pt" ? "ECOS" : "ECOS"}
-            </TabsTrigger>
-          </ContextualTooltip>
+          <TabsTrigger value="compliance" className="flex items-center gap-2" data-testid="tab-compliance">
+            <ShieldCheck className="w-4 h-4" />
+            {language === "pt" ? "Conformidade" : "Compliance"}
+            <ContextualTooltip
+              tooltipKey="tab_compliance_overview"
+              title={language === "pt" ? "Verificação de Conformidade" : "Compliance Check"}
+              content={language === "pt" 
+                ? "Valide que todos os documentos e requisitos regulatórios estão em ordem antes de avançar o deal."
+                : "Validate that all documents and regulatory requirements are in order before advancing the deal."}
+              whyMatters={language === "pt"
+                ? "Falhas de compliance podem invalidar contratos e bloquear comissões."
+                : "Compliance failures can invalidate contracts and block commissions."}
+              mode="hover"
+            />
+          </TabsTrigger>
+          <TabsTrigger value="ecos" className="flex items-center gap-2" data-testid="tab-ecos">
+            <BarChart3 className="w-4 h-4" />
+            {language === "pt" ? "ECOS" : "ECOS"}
+            <ContextualTooltip
+              tooltipKey="tab_ecos_overview"
+              title={language === "pt" ? "Análise ECOS" : "ECOS Analysis"}
+              content={language === "pt" 
+                ? "Veja a análise de mercado e compare o preço do cliente com benchmarks atuais."
+                : "View market analysis and compare client pricing against current benchmarks."}
+              whyMatters={language === "pt"
+                ? "ECOS ajuda a identificar oportunidades de economia e preparar a argumentação comercial."
+                : "ECOS helps identify savings opportunities and prepare sales talk tracks."}
+              mode="hover"
+            />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="assembly">
