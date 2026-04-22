@@ -297,14 +297,8 @@ Best regards,
             <CardDescription>Select eligible suppliers to compare offers</CardDescription>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <ContextualTooltip
-                tooltipKey="rfq_prepare_dispatch"
-                title="Preparar Envio de RFQs"
-                content="Selecione os fornecedores e configure a mensagem antes de enviar. Cada fornecedor receberá uma cópia da mensagem pelo canal escolhido."
-                whyMatters="Enviar RFQs incompletos ou incorretos atrasa o processo e pode prejudicar relações com fornecedores."
-                mode="hover"
-              >
+            <div className="flex items-center gap-2">
+              <DialogTrigger asChild>
                 <Button 
                   disabled={selectedSuppliers.length === 0 || !dossierReady}
                   data-testid="button-prepare-rfqs"
@@ -312,8 +306,15 @@ Best regards,
                   <Send className="h-4 w-4 mr-2" />
                   Prepare RFQs ({selectedSuppliers.length})
                 </Button>
-              </ContextualTooltip>
-            </DialogTrigger>
+              </DialogTrigger>
+              <ContextualTooltip
+                tooltipKey="rfq_prepare_dispatch"
+                title="Preparar Envio de RFQs"
+                content="Selecione os fornecedores e configure a mensagem antes de enviar. Cada fornecedor receberá uma cópia da mensagem pelo canal escolhido."
+                whyMatters="Enviar RFQs incompletos ou incorretos atrasa o processo e pode prejudicar relações com fornecedores."
+                mode="hover"
+              />
+            </div>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Prepare RFQ Dispatches</DialogTitle>
