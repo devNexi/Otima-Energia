@@ -1,0 +1,240 @@
+FIX: DOSSIER LOCKING + MISSING ELIGIBLE SUPPLIER + RFQ TEMPLATE
+Bug 1 — Dossier locked, can't edit or go back
+What's wrong: Once a dossier reaches "Pronto" status, the client can't edit it or go back a step. The system locks it and shows "Cannot advance stage — Complete all required steps." But the client needs to correct information in the dossier after it's been marked ready.
+What to fix:
+The dossier should ALWAYS be editable, regardless of deal stage. A locked dossier only matters for the final RFQ send — but even then, there should be an "Unlock" option.
+Find the dossier edit logic. Search for where the "Editar" button is disabled or hidden:
+
+client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx — look for conditions that disable the edit button based on dossier status or deal stage
+server/routes.ts — look for the PATCH dossier endpoint and check if it rejects updates when status is "READY" or "LOCKED"
+
+Fix the frontend:
+typescript// WRONG — hiding edit when dossier is ready:
+{dossier.status !== 'READY' && dossier.status !== 'LOCKED' && (
+  <Button onClick={() => setEditing(true)}>Editar</Button>
+)}
+
+// RIGHT — always show edit, with a warning for locked dossiers:
+<Button onClick={() => {
+  if (dossier.status === 'LOCKED') {
+    // Show confirmation: "O dossiê está travado. Editar vai destravá-lo e pode exigir nova aprovação."
+    if (confirm('O dossiê está travado. Editar vai destravá-lo. Deseja continuar?')) {
+      setEditing(true);
+    }
+  } else {
+    setEditing(true);
+  }
+}}>
+  Editar
+</Button>
+Fix the backend:
+typescript// In the PATCH dossier endpoint, allow edits on READY/LOCKED dossiers
+// but automatically change status back to DRAFT when edited:
+
+app.patch("/api/clients/:clientId/dossier", async (req, res) => {
+  // ... existing validation ...
+
+  // If dossier was LOCKED and is being edited, unlock it
+  if (existingDossier.status === 'LOCKED' || existingDossier.status === 'READY') {
+    req.body.status = 'DRAFT'; // Reset to draft so it can be re-locked after correction
+  }
+
+  // Allow the update — do NOT reject based on status
+  // ... existing update logic ...
+});
+Also add an "Unlock Dossier" button in the dossier view when status is LOCKED:
+typescript{dossier.status === 'LOCKED' && (
+  <Button variant="outline" size="sm" onClick={unlockDossier}>
+    Destravar dossiê
+  </Button>
+)}
+Acceptance criteria:
+
+Dossier can be edited at any stage — DRAFT, READY, or LOCKED
+Editing a LOCKED dossier automatically unlocks it (sets status back to DRAFT)
+A confirmation dialog appears before unlocking a LOCKED dossier
+After editing, the dossier can be re-locked
+
+Bug 2 — Genial Energia not showing as eligible supplier
+What's wrong: The "Request Quotes" panel shows Prime Energy, ATMO Energia, CEMIG, Delantis Energias Renováveis — but NOT Genial Energia. The client is ASSOCIAÇÃO MAIS VIDA with distributor LIGHT RJ. According to the playbook data, Genial Energia covers Light + Enel RJ. So Genial should appear as eligible.
+Root cause: The supplier eligibility query is not matching Genial's GD coverage to this client.
+How to diagnose:
+Step 1 — Check Genial's GD coverage in the database:
+sqlSELECT s.name, gc.covered_states, gc.covered_distributors, gc.is_active
+FROM supplier_gd_coverage gc
+JOIN suppliers s ON s.id = gc.supplier_id
+WHERE s.name LIKE '%Genial%';
+Step 2 — Check the client's distributor value:
+sqlSELECT distributor FROM client_dossiers WHERE client_id = <clientId>;
+Step 3 — The problem is almost certainly a string mismatch. The dossier stores "LIGHT RJ" but the GD coverage stores "Light" or "Light RJ" (different case or format).
+Fix — make distributor matching case-insensitive and partial:
+Find the supplier eligibility query in server/routes.ts. Search for gd-eligible or gd_coverage or wherever eligible suppliers are filtered.
+The matching logic should be:
+typescript// WRONG — exact match:
+coveredDistributors.includes(clientDistributor)
+
+// RIGHT — case-insensitive partial match:
+function distributorMatches(covered: string[], clientDist: string): boolean {
+  if (!clientDist) return false;
+  const normalized = clientDist.toLowerCase().trim();
+  return covered.some(d => {
+    const norm = d.toLowerCase().trim();
+    // Check both directions — "Light" matches "LIGHT RJ" and vice versa
+    return normalized.includes(norm) || norm.includes(normalized);
+  });
+}
+Apply this in the eligibility filter:
+typescript// When filtering suppliers for RFQ:
+const eligibleSuppliers = allSuppliers.filter(supplier => {
+  // Check if supplier has a playbook matching the deal's product line
+  const matchingPlaybook = playbooks.find(pb =>
+    pb.supplierId === supplier.id &&
+    pb.status === 'ACTIVE' &&
+    pb.productLines.some(pl => {
+      if (dealTrackType === 'GDL') return pl === 'GD';
+      if (dealTrackType === 'ACL') return pl === 'ACL';
+      return false;
+    })
+  );
+  if (!matchingPlaybook) return false;
+
+  // For GD deals, also check distributor coverage
+  if (dealTrackType === 'GDL') {
+    const coverage = gdCoverages.find(gc =>
+      gc.supplierId === supplier.id && gc.isActive
+    );
+    if (!coverage) return false;
+
+    // Delantis has national coverage — always eligible
+    if (coverage.coveredStates?.includes('ALL')) return true;
+
+    // Check distributor match (case-insensitive, partial)
+    return distributorMatches(coverage.coveredDistributors || [], clientDistributor);
+  }
+
+  return true; // ACL — if playbook matches, supplier is eligible
+});
+Also make sure the coveredDistributors for Genial includes both "Light" and "Enel RJ" — check and update if needed:
+sqlUPDATE supplier_gd_coverage
+SET covered_distributors = ARRAY['Light', 'Enel RJ', 'LIGHT RJ']
+WHERE supplier_id = (SELECT id FROM suppliers WHERE name = 'Genial Energia');
+Acceptance criteria:
+
+Client with distributor "LIGHT RJ" sees Genial Energia as eligible
+Client with distributor "CEMIG" sees Prime Energy AND ATMO Energia as eligible
+Client with any distributor sees Delantis as eligible (national coverage)
+Matching is case-insensitive — "LIGHT RJ", "Light RJ", "light rj" all work
+
+Bug 3 — RFQ message template in English with missing data
+What's wrong: The "Prepare RFQ Dispatches" modal shows:
+Client Details:
+- Company: ASSOCIAÇÃO MAIS VIDA
+- Estimated Consumption: TBD MWh/month
+- Contract Start: Flexible
+- Contract Term: 12 months
+
+Please provide your best offer including:
+1. Price per MWh (R$)
+2. Price structure (fixed/indexed)
+3. Contract terms and conditions
+4. Validity period of the quote
+Two problems:
+
+Template is in English — must be in Portuguese
+"Estimated Consumption: TBD" — should pull real consumption from the dossier
+
+Fix — find the RFQ template.
+Search client/src/components/ for "Client Details" or "TBD MWh" or "Please provide your best offer". Also check server/routes.ts for where the RFQ message is generated.
+Replace the template with Portuguese and pull real data:
+typescriptfunction buildRfqMessage(client: any, dossier: any, deal: any, supplier: any): string {
+  const consumption = dossier?.averageMonthlyMWh
+    ? `${Number(dossier.averageMonthlyMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/mês`
+    : dossier?.annualConsumptionMWh
+      ? `${Number(dossier.annualConsumptionMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/ano`
+      : 'A confirmar';
+
+  const distributor = dossier?.distributor || 'A confirmar';
+  const submarket = deal?.submarket || 'A confirmar';
+  const connectionType = dossier?.connectionType === 'GROUP_A'
+    ? 'Grupo A (Alta Tensão)'
+    : dossier?.connectionType === 'GROUP_B'
+      ? 'Grupo B (Baixa Tensão)'
+      : dossier?.connectionType || 'A confirmar';
+  const demand = dossier?.peakDemandKW
+    ? `${Number(dossier.peakDemandKW).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kW`
+    : 'A confirmar';
+  const ucCount = dossier?.numberOfUCs || 1;
+
+  return `Prezado(a) ${supplier?.name || 'Fornecedor'},
+
+Gostaríamos de solicitar uma cotação de energia para o seguinte cliente:
+
+Dados do Cliente:
+- Razão Social: ${client?.companyName || 'N/A'}
+- CNPJ/CPF: ${client?.cnpj || 'N/A'}
+- Distribuidora: ${distributor}
+- Submercado: ${submarket}
+- Tipo de Conexão: ${connectionType}
+- Consumo Estimado: ${consumption}
+- Demanda de Pico: ${demand}
+- Número de UCs: ${ucCount}
+- Início do Contrato: Flexível
+- Prazo: 12 a 36 meses
+
+Favor enviar proposta contendo:
+1. Preço por MWh (R$)
+2. Estrutura de preço (fixo/indexado)
+3. Prazo e condições contratuais
+4. Validade da proposta
+5. Desconto aplicável (se GD)
+
+Atenciosamente,
+Equipe Ótima Energia
+renan@otimaenergia.com`;
+}
+Where to apply this:
+Find where the RFQ dispatch modal generates its message content. It's probably in:
+
+client/src/components/deals/BlindAuctionPanel.tsx
+client/src/components/rfo/RfoDispatchModal.tsx
+Or wherever "Prepare RFQ Dispatches" is rendered
+
+Replace the hardcoded English template with the function above. Make sure it pulls the client and dossier data from the current deal context:
+typescript// When opening the RFQ dispatch modal:
+const message = buildRfqMessage(client, dossier, deal, selectedSupplier);
+setTemplateMessage(message);
+If the dossier data isn't available in the modal's context, fetch it:
+typescript// Fetch dossier when modal opens
+const { data: dossier } = useQuery({
+  queryKey: [`/api/clients/${deal.clientId}/dossier`],
+  enabled: !!deal.clientId,
+});
+Acceptance criteria:
+
+RFQ template is entirely in Portuguese
+"Consumo Estimado" shows actual value from dossier (e.g., "1,51 MWh/mês"), not "TBD"
+All dossier fields are populated in the template (distributor, demand, connection type, UC count)
+Supplier name appears in the greeting ("Prezado(a) Prime Energy")
+Template includes GD-specific field (desconto) when deal is GD
+Email sign-off uses Ótima Energia branding
+
+Files to modify
+
+server/routes.ts — dossier PATCH (allow edits on READY/LOCKED), supplier eligibility query (case-insensitive distributor matching)
+client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx — always show edit button, unlock functionality
+client/src/components/deals/BlindAuctionPanel.tsx or RFQ dispatch component — fix eligibility filter, replace English template
+Supplier GD coverage data — update Genial to include "LIGHT RJ" variant
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Execution order
+
+Bug 2 first (supplier eligibility) — most impactful for demo
+Bug 3 (RFQ template) — visual fix, quick win
+Bug 1 (dossier unlock) — workflow fix
+
+After each fix, summarize what changed and wait for confirmation.

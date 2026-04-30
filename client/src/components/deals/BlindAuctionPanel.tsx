@@ -170,26 +170,55 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   };
 
   const generateRfqMessage = (supplier: any) => {
-    return `Dear ${supplier?.name || 'Supplier'},
+    const consumptionMonthly = dossier?.averageMonthlyMWh
+      ? `${Number(dossier.averageMonthlyMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/mês`
+      : dossier?.annualConsumptionMWh
+        ? `${(Number(dossier.annualConsumptionMWh) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/mês (estimado)`
+        : 'A confirmar';
 
-We are requesting a quote for energy supply on behalf of our client.
+    const distributor = dossier?.distributor || 'A confirmar';
+    const submarket = deal?.submarket || dossier?.submarket || 'A confirmar';
 
-Client Details:
-- Company: ${client?.companyName || 'N/A'}
-- Estimated Consumption: ${dossier?.consumptionMwh || 'TBD'} MWh/month
-- Contract Start: ${deal?.contractStartDate || 'Flexible'}
-- Contract Term: ${deal?.contractMonths || 12} months
+    const connectionType = dossier?.connectionType === 'GROUP_A'
+      ? 'Grupo A (Alta Tensão)'
+      : dossier?.connectionType === 'GROUP_B'
+        ? 'Grupo B (Baixa Tensão)'
+        : dossier?.connectionType || 'A confirmar';
 
-Please provide your best offer including:
-1. Price per MWh (R$)
-2. Price structure (fixed/indexed)
-3. Contract terms and conditions
-4. Validity period of the quote
+    const demand = dossier?.peakDemandKW
+      ? `${Number(dossier.peakDemandKW).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kW`
+      : dossier?.demandContratadaKW
+        ? `${Number(dossier.demandContratadaKW).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kW`
+        : 'A confirmar';
 
-Response Deadline: Within 3 business days
+    const ucCount = dossier?.numberOfUCs || dossier?.ucCount || 1;
+    const isGd = (deal?.tracks?.[0]?.type === 'GDL') || (dossier?.eligibilityType === 'GD_ELIGIBLE');
 
-Best regards,
-Ótima Energia Team`;
+    return `Prezado(a) ${supplier?.name || 'Fornecedor'},
+
+Gostaríamos de solicitar uma cotação de energia para o seguinte cliente:
+
+Dados do Cliente:
+- Razão Social: ${client?.companyName || 'N/A'}
+- CNPJ: ${client?.cnpj || 'A confirmar'}
+- Distribuidora: ${distributor}
+- Submercado: ${submarket}
+- Tipo de Conexão: ${connectionType}
+- Consumo Estimado: ${consumptionMonthly}
+- Demanda Contratada: ${demand}
+- Número de UCs: ${ucCount}
+- Início do Contrato: Flexível
+- Prazo: 12 a 36 meses
+
+Favor enviar proposta contendo:
+1. Preço por MWh (R$)
+2. Estrutura de preço (fixo/indexado)
+3. Prazo e condições contratuais
+4. Validade da proposta${isGd ? '\n5. Desconto aplicável (GD)' : ''}
+
+Atenciosamente,
+Equipe Ótima Energia
+renan@otimaenergia.com`;
   };
 
   const alreadySentSupplierIds = dispatches?.map((d: any) => d.supplierId) || [];

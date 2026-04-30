@@ -606,37 +606,41 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
-                {!isLocked && (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => startEditing(dossier)}
-                      data-testid="button-edit-dossier"
-                    >
-                      Editar
-                    </Button>
-                    {dossier.status === 'DRAFT' && missingFields.length === 0 && (
-                      <Button 
-                        onClick={() => markReadyMutation.mutate(dossier.id)}
-                        disabled={markReadyMutation.isPending}
-                        data-testid="button-mark-ready"
-                      >
-                        {markReadyMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                        )}
-                        Marcar como Pronto
-                      </Button>
-                    )}
-                  </>
-                )}
+              <div className="flex gap-2 items-center">
                 {isLocked && (
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <Lock className="w-4 h-4 mr-1" />
-                    Dossiê bloqueado (vinculado a RFQ)
+                  <p className="text-xs text-muted-foreground flex items-center mr-2">
+                    <Lock className="w-3 h-3 mr-1" />
+                    Vinculado a RFQ
                   </p>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (isLocked) {
+                      if (window.confirm('O dossiê está bloqueado (vinculado a RFQ). Editar vai desbloqueá-lo e retornar ao status Rascunho. Deseja continuar?')) {
+                        startEditing(dossier);
+                      }
+                    } else {
+                      startEditing(dossier);
+                    }
+                  }}
+                  data-testid="button-edit-dossier"
+                >
+                  {isLocked ? <><Lock className="w-3 h-3 mr-1" />Editar (destravar)</> : 'Editar'}
+                </Button>
+                {dossier.status === 'DRAFT' && missingFields.length === 0 && (
+                  <Button 
+                    onClick={() => markReadyMutation.mutate(dossier.id)}
+                    disabled={markReadyMutation.isPending}
+                    data-testid="button-mark-ready"
+                  >
+                    {markReadyMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    )}
+                    Marcar como Pronto
+                  </Button>
                 )}
               </div>
             </div>

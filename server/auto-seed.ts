@@ -23,7 +23,7 @@ const GD_COVERAGE = [
   { shortCode: "PRIME", coveredStates: ["SP","MG","MT","MS","GO","BA","PI","PR"], coveredDistributors: ["CPFL Paulista","CEMIG","CPFL Santa Cruz","Energisa MT","Energisa MS","Equatorial GO","COELBA","Equatorial PI","Elektro (Neoenergia)","COPEL"], notes: "GD Assinatura BT. Partner code: 241254." },
   { shortCode: "ATMO", coveredStates: ["MG","PR"], coveredDistributors: ["CEMIG","COPEL"], notes: "GD Assinatura BT. CEMIG (MG) + COPEL (PR)." },
   { shortCode: "DELANTIS", coveredStates: ["ALL"], coveredDistributors: ["Nacional - Compensação"], notes: "GD Compensação Nacional." },
-  { shortCode: "GENIAL", coveredStates: ["RJ"], coveredDistributors: ["Light","Enel RJ"], notes: "GD BT. Light + Enel RJ (Rio de Janeiro)." },
+  { shortCode: "GENIAL", coveredStates: ["RJ"], coveredDistributors: ["Light","Light RJ","LIGHT RJ","Enel RJ","ENEL RJ"], notes: "GD BT. Light + Enel RJ (Rio de Janeiro)." },
 ];
 
 const PLAYBOOKS = [

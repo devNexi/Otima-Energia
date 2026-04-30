@@ -4344,10 +4344,9 @@ export async function registerRoutes(
         return res.status(404).json({ success: false, error: "Dossier not found" });
       }
       
-      if (dossier.status === 'LOCKED') {
-        return res.status(400).json({ success: false, error: "Cannot edit a locked dossier" });
-      }
-      
+      // If dossier was LOCKED or READY, editing resets it to DRAFT so it can be re-reviewed
+      const wasLockedOrReady = dossier.status === 'LOCKED' || dossier.status === 'READY';
+
       // Extract allowed fields
       const allowedFields = [
         'legalName', 'tradeName', 'cnpj', 'distributor', 'submarket', 
@@ -4391,6 +4390,11 @@ export async function registerRoutes(
       if (updateData.confidenceScore === undefined) {
         const mergedForConfidence = { ...dossier, ...updateData };
         updateData.confidenceScore = calculateDossierConfidence(mergedForConfidence);
+      }
+
+      // Reset to DRAFT when editing a LOCKED or READY dossier (so it can be re-reviewed/re-locked)
+      if (wasLockedOrReady) {
+        updateData.status = 'DRAFT';
       }
 
       const updated = await storage.updateClientDossier(dossierId, updateData, userId);
@@ -8181,7 +8185,7 @@ export async function registerRoutes(
         { shortCode: 'PRIME', coveredStates: ['SP','MG','MT','MS','GO','BA','PI','PR'], coveredDistributors: ['CPFL Paulista','CEMIG','CPFL Santa Cruz','Energisa MT','Energisa MS','Equatorial GO','COELBA','Equatorial PI','Elektro (Neoenergia)','COPEL'], notes: 'GD Assinatura BT. Partner code: 241254.' },
         { shortCode: 'ATMO', coveredStates: ['MG','PR'], coveredDistributors: ['CEMIG','COPEL'], notes: 'GD Assinatura BT. CEMIG (MG) + COPEL (PR).' },
         { shortCode: 'DELANTIS', coveredStates: ['ALL'], coveredDistributors: ['Nacional - Compensação'], notes: 'GD Compensação Nacional.' },
-        { shortCode: 'GENIAL', coveredStates: ['RJ'], coveredDistributors: ['Light','Enel RJ'], notes: 'GD BT. Light + Enel RJ (Rio de Janeiro).' },
+        { shortCode: 'GENIAL', coveredStates: ['RJ'], coveredDistributors: ['Light','Light RJ','LIGHT RJ','Enel RJ','ENEL RJ'], notes: 'GD BT. Light + Enel RJ (Rio de Janeiro).' },
       ];
       for (const gc of GD_COVERAGE) {
         const supplierId = supplierIds[gc.shortCode];

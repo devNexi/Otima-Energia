@@ -3345,7 +3345,7 @@ export class Storage implements IStorage {
   
   async updateClientDossier(id: number, data: Partial<InsertClientDossier>, userId: string): Promise<ClientDossier | undefined> {
     const dossier = await this.getDossierById(id);
-    if (!dossier || dossier.status === 'LOCKED') {
+    if (!dossier) {
       return undefined;
     }
     const result = await db.update(clientDossiers)
@@ -5040,12 +5040,24 @@ export class Storage implements IStorage {
       .innerJoin(suppliers, eq(supplierGdCoverage.supplierId, suppliers.id))
       .where(and(...conditions));
 
+    const distributorMatches = (covered: string[], clientDist: string): boolean => {
+      if (!clientDist) return false;
+      const normalized = clientDist.toLowerCase().trim();
+      return covered.some(d => {
+        const norm = d.toLowerCase().trim();
+        return normalized.includes(norm) || norm.includes(normalized);
+      });
+    };
+
     return rows.filter(row => {
       if (filters.state && row.coveredStates && row.coveredStates.length > 0) {
-        if (!row.coveredStates.includes(filters.state)) return false;
+        const stateNorm = filters.state.toUpperCase().trim();
+        const hasAll = row.coveredStates.some(s => s.toUpperCase() === 'ALL');
+        if (!hasAll && !row.coveredStates.map(s => s.toUpperCase()).includes(stateNorm)) return false;
       }
       if (filters.distributor && row.coveredDistributors && row.coveredDistributors.length > 0) {
-        if (!row.coveredDistributors.includes(filters.distributor)) return false;
+        const hasNational = row.coveredDistributors.some(d => d.toUpperCase().includes('NACIONAL') || d.toUpperCase() === 'ALL');
+        if (!hasNational && !distributorMatches(row.coveredDistributors, filters.distributor)) return false;
       }
       return true;
     });
