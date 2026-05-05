@@ -183,8 +183,8 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
       submarket: dossier.submarket || '',
       connectionType: dossier.connectionType || '',
       eligibilityType: dossier.eligibilityType || 'NOT_ELIGIBLE_YET',
-      annualConsumptionMWh: dossier.annualConsumptionMWh || '',
-      averageMonthlyMWh: dossier.averageMonthlyMWh || '',
+      annualConsumptionMWh: dossier.annualConsumptionMWh ? String(parseFloat(dossier.annualConsumptionMWh) * 1000) : '',
+      averageMonthlyMWh: dossier.averageMonthlyMWh ? String(parseFloat(dossier.averageMonthlyMWh) * 1000) : '',
       peakDemandKW: dossier.peakDemandKW || '',
       numberOfUCs: dossier.numberOfUCs || 1,
       tariffClass: dossier.tariffClass || '',
@@ -194,10 +194,16 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
   };
 
   const saveChanges = () => {
+    const kwhToMwh = (val: string) => val ? String(parseFloat(val) / 1000) : '';
+    const saveData = {
+      ...formData,
+      annualConsumptionMWh: kwhToMwh(String(formData.annualConsumptionMWh)),
+      averageMonthlyMWh: kwhToMwh(String(formData.averageMonthlyMWh)),
+    };
     if (data?.dossier) {
-      updateMutation.mutate({ id: data.dossier.id, data: formData });
+      updateMutation.mutate({ id: data.dossier.id, data: saveData });
     } else {
-      createMutation.mutate({ ...formData, legalName: formData.legalName || clientName });
+      createMutation.mutate({ ...saveData, legalName: saveData.legalName || clientName });
     }
   };
 
@@ -372,21 +378,23 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 </Select>
               </div>
               <div>
-                <Label className="flex items-center gap-1">Consumo Anual (MWh) * <DictionaryTooltip termKey="consumo" /></Label>
+                <Label className="flex items-center gap-1">Consumo Anual (kWh) * <DictionaryTooltip termKey="consumo" /></Label>
                 <Input 
                   type="number"
                   value={formData.annualConsumptionMWh || ''} 
                   onChange={(e) => setFormData({...formData, annualConsumptionMWh: e.target.value})}
+                  placeholder="Ex: 120000"
                   data-testid="input-annual-consumption"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Valor em MWh. Para converter de kWh, divida por 1.000</p>
+                <p className="text-xs text-muted-foreground mt-1">Insira o valor em kWh (ex: 120.000 kWh/ano)</p>
               </div>
               <div>
-                <Label className="flex items-center gap-1">Consumo Médio Mensal (MWh) <DictionaryTooltip termKey="consumo" /></Label>
+                <Label className="flex items-center gap-1">Consumo Médio Mensal (kWh) <DictionaryTooltip termKey="consumo" /></Label>
                 <Input 
                   type="number"
                   value={formData.averageMonthlyMWh || ''} 
                   onChange={(e) => setFormData({...formData, averageMonthlyMWh: e.target.value})}
+                  placeholder="Ex: 10000"
                   data-testid="input-monthly-consumption"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Deixe em branco — será calculado automaticamente a partir do anual</p>
@@ -499,7 +507,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                   <div className="text-sm text-muted-foreground">Consumo Anual</div>
                   <div className="text-2xl font-bold" data-testid="value-annual-consumption">
                     {dossier.annualConsumptionMWh 
-                      ? `${parseFloat(dossier.annualConsumptionMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`
+                      ? `${(parseFloat(dossier.annualConsumptionMWh) * 1000).toLocaleString('pt-BR', { minimumFractionDigits: 0 })} kWh`
                       : '—'
                     }
                   </div>
@@ -557,7 +565,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                     <td className="px-4 py-2 font-medium text-muted-foreground">Consumo Médio Mensal</td>
                     <td className="px-4 py-2">
                       {dossier.averageMonthlyMWh 
-                        ? `${parseFloat(dossier.averageMonthlyMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh`
+                        ? `${(parseFloat(dossier.averageMonthlyMWh) * 1000).toLocaleString('pt-BR', { minimumFractionDigits: 0 })} kWh`
                         : '—'
                       }
                     </td>

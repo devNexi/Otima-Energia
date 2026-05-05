@@ -127,6 +127,8 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
     contactPerson: "",
     ucCode: ""
   });
+  const [ucCodeList, setUcCodeList] = useState<string[]>([]);
+  const [ucCodeInput, setUcCodeInput] = useState("");
   const [selectedDealId, setSelectedDealId] = useState<string | null>(initialDealId || null);
   const [selectedRfo, setSelectedRfo] = useState<{
     id: number;
@@ -200,6 +202,8 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       setNewClientOpen(false);
       setNewClientForm({ companyName: "", cnpj: "", email: "", phone: "", contactPerson: "", ucCode: "" });
+      setUcCodeList([]);
+      setUcCodeInput("");
       setPersonType('PJ');
       toast({ title: t("admin.toast.client_created") });
     }
@@ -764,19 +768,64 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                         />
                       </div>
                       <div>
-                        <Label htmlFor="ucCode">{t("admin.clients.dialog.uc_code")}</Label>
-                        <Input
-                          id="ucCode"
-                          value={newClientForm.ucCode}
-                          onChange={(e) => setNewClientForm({ ...newClientForm, ucCode: e.target.value })}
-                          data-testid="input-uc-code"
-                        />
+                        <Label>{t("admin.clients.dialog.uc_code")}</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            value={ucCodeInput}
+                            onChange={(e) => setUcCodeInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && ucCodeInput.trim()) {
+                                e.preventDefault();
+                                setUcCodeList(prev => [...prev, ucCodeInput.trim()]);
+                                setUcCodeInput("");
+                              }
+                            }}
+                            placeholder="Ex: 7004221-5"
+                            data-testid="input-uc-code"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (ucCodeInput.trim()) {
+                                setUcCodeList(prev => [...prev, ucCodeInput.trim()]);
+                                setUcCodeInput("");
+                              }
+                            }}
+                            data-testid="button-add-uc-code"
+                          >
+                            +
+                          </Button>
+                        </div>
+                        {ucCodeList.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {ucCodeList.map((uc, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 bg-muted text-sm px-2 py-0.5 rounded" data-testid={`badge-uc-${i}`}>
+                                {uc}
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  onClick={() => setUcCodeList(prev => prev.filter((_, idx) => idx !== i))}
+                                  data-testid={`button-remove-uc-${i}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">Pressione Enter ou + para adicionar múltiplos UCs</p>
                       </div>
                       <Button
                         className="w-full"
                         onClick={() => {
+                          const allUcs = ucCodeList.length > 0
+                            ? ucCodeList.join(",")
+                            : ucCodeInput.trim() || newClientForm.ucCode;
                           const payload = {
                             ...newClientForm,
+                            ucCode: allUcs,
                             segment: personType,
                             contactPerson: personType === 'PF'
                               ? (newClientForm.contactPerson || newClientForm.companyName)

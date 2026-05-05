@@ -211,6 +211,7 @@ export interface IStorage {
   updateSupplierContact(id: number, data: Partial<InsertSupplierContact>): Promise<SupplierContact | undefined>;
   deleteSupplierContact(id: number): Promise<void>;
   markContactContacted(id: number): Promise<void>;
+  updateSupplier(id: number, data: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   getSupplier(id: number): Promise<Supplier | undefined>;
   getSuppliersWithContacts(): Promise<(Supplier & { contacts: SupplierContact[] })[]>;
   
@@ -1252,6 +1253,11 @@ export class Storage implements IStorage {
 
   async updateSupplierContact(id: number, data: Partial<InsertSupplierContact>): Promise<SupplierContact | undefined> {
     const result = await db.update(supplierContacts).set({ ...data, updatedAt: new Date() }).where(eq(supplierContacts.id, id)).returning();
+    return result[0];
+  }
+
+  async updateSupplier(id: number, data: Partial<InsertSupplier>): Promise<Supplier | undefined> {
+    const result = await db.update(suppliers).set(data).where(eq(suppliers.id, id)).returning();
     return result[0];
   }
 

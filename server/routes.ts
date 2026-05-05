@@ -2262,6 +2262,25 @@ export async function registerRoutes(
     }
   });
 
+  // Update supplier profile
+  app.patch("/api/suppliers/:id", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const supplierId = parseInt(req.params.id);
+      const allowed = ['name', 'contactEmail', 'contactPhone', 'financeEmail', 'financeWhatsapp', 'website', 'commissionTerms', 'category', 'status', 'isActive'];
+      const updateData: Record<string, any> = {};
+      for (const key of allowed) {
+        if (key in req.body) updateData[key] = req.body[key];
+      }
+      const supplier = await storage.updateSupplier(supplierId, updateData);
+      if (!supplier) return res.status(404).json({ success: false, error: "Supplier not found" });
+      res.json({ success: true, supplier });
+    } catch (error: any) {
+      console.error("Error updating supplier:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to update supplier" });
+    }
+  });
+
   // ============== SUPPLIER PORTALS ENDPOINTS ==============
 
   // Get portals for a supplier
@@ -8025,7 +8044,7 @@ export async function registerRoutes(
         success: true,
         deal,
         client,
-        dossier: dossier ? { id: dossier.id, status: dossier.status } : null,
+        dossier: dossier || null,
         dossierReady,
         dispatches,
         availableSuppliers: suppliersWithPlaybooks,

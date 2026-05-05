@@ -91,10 +91,11 @@ export class BlockerEngine {
     }
 
     const dossier = await this.storage.getClientDossier(deal.clientId);
-    if (!dossier || dossier.status === 'DRAFT') {
+    const dossierHasFields = dossier?.legalName && dossier?.cnpj && dossier?.distributor && dossier?.annualConsumptionMWh && dossier?.connectionType;
+    if (!dossierHasFields) {
       blockers.push({
         code: 'DOSSIER_NOT_READY',
-        message: 'Client dossier is not ready. Complete and mark as READY before sending RFQ.',
+        message: 'Client dossier is incomplete. Fill in legal name, CNPJ, distributor, consumption, and connection type.',
         cta: 'Complete Dossier',
         deepLink: `/admin/sales/clients?action=dossier&clientId=${deal.clientId}`,
         severity: 'error'

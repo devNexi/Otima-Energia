@@ -93,6 +93,12 @@ export default function SupplierManager() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [addSupplierOpen, setAddSupplierOpen] = useState(false);
   const [newSupplierForm, setNewSupplierForm] = useState({ name: "", contactEmail: "", contactPhone: "", website: "" });
+  const [editSupplierOpen, setEditSupplierOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [editSupplierForm, setEditSupplierForm] = useState({
+    name: "", contactEmail: "", contactPhone: "", financeEmail: "", financeWhatsapp: "",
+    website: "", commissionTerms: "", category: "", status: "active", isActive: true
+  });
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -247,6 +253,43 @@ export default function SupplierManager() {
       });
     }
   });
+
+  const updateSupplierMutation = useMutation({
+    mutationFn: async (data: { id: number; form: typeof editSupplierForm }) => {
+      const res = await apiRequest("PATCH", `/api/suppliers/${data.id}`, data.form);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/suppliers-with-contacts"] });
+        setEditSupplierOpen(false);
+        setEditingSupplier(null);
+        toast({ title: language === "pt" ? "Fornecedor atualizado!" : "Supplier updated!" });
+      } else {
+        toast({ title: language === "pt" ? "Erro" : "Error", description: data.error, variant: "destructive" });
+      }
+    },
+    onError: () => {
+      toast({ title: language === "pt" ? "Erro ao atualizar" : "Failed to update", variant: "destructive" });
+    }
+  });
+
+  const openEditSupplier = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setEditSupplierForm({
+      name: supplier.name || "",
+      contactEmail: supplier.contactEmail || "",
+      contactPhone: supplier.contactPhone || "",
+      financeEmail: (supplier as any).financeEmail || "",
+      financeWhatsapp: (supplier as any).financeWhatsapp || "",
+      website: supplier.website || "",
+      commissionTerms: (supplier as any).commissionTerms || "",
+      category: supplier.category || "",
+      status: (supplier as any).status || "active",
+      isActive: supplier.isActive !== false,
+    });
+    setEditSupplierOpen(true);
+  };
 
   const openAddContact = (supplierId: number) => {
     resetContactForm();
@@ -538,6 +581,15 @@ export default function SupplierManager() {
                           <ExternalLink className="h-3 w-3" />
                         </Button>
                       </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => openEditSupplier(supplier)}
+                        data-testid={`button-edit-supplier-${supplier.id}`}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -671,6 +723,89 @@ export default function SupplierManager() {
             })}
           </div>
         )}
+
+        {/* Edit Supplier Dialog */}
+        <Dialog open={editSupplierOpen} onOpenChange={setEditSupplierOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{language === "pt" ? "Editar Fornecedor" : "Edit Supplier"}</DialogTitle>
+              <DialogDescription>{editingSupplier?.name}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>{language === "pt" ? "Nome" : "Name"} *</Label>
+                <Input value={editSupplierForm.name} onChange={(e) => setEditSupplierForm(f => ({ ...f, name: e.target.value }))} data-testid="input-edit-supplier-name" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>{language === "pt" ? "E-mail principal" : "Main email"}</Label>
+                  <Input type="email" value={editSupplierForm.contactEmail} onChange={(e) => setEditSupplierForm(f => ({ ...f, contactEmail: e.target.value }))} data-testid="input-edit-supplier-email" />
+                </div>
+                <div>
+                  <Label>{language === "pt" ? "Telefone" : "Phone"}</Label>
+                  <Input value={editSupplierForm.contactPhone} onChange={(e) => setEditSupplierForm(f => ({ ...f, contactPhone: e.target.value }))} data-testid="input-edit-supplier-phone" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>{language === "pt" ? "E-mail financeiro" : "Finance email"}</Label>
+                  <Input type="email" value={editSupplierForm.financeEmail} onChange={(e) => setEditSupplierForm(f => ({ ...f, financeEmail: e.target.value }))} data-testid="input-edit-supplier-finance-email" />
+                </div>
+                <div>
+                  <Label>{language === "pt" ? "WhatsApp financeiro" : "Finance WhatsApp"}</Label>
+                  <Input value={editSupplierForm.financeWhatsapp} onChange={(e) => setEditSupplierForm(f => ({ ...f, financeWhatsapp: e.target.value }))} data-testid="input-edit-supplier-finance-wa" />
+                </div>
+              </div>
+              <div>
+                <Label>Website</Label>
+                <Input value={editSupplierForm.website} onChange={(e) => setEditSupplierForm(f => ({ ...f, website: e.target.value }))} data-testid="input-edit-supplier-website" />
+              </div>
+              <div>
+                <Label>{language === "pt" ? "Categoria" : "Category"}</Label>
+                <Select value={editSupplierForm.category || ""} onValueChange={(v) => setEditSupplierForm(f => ({ ...f, category: v }))}>
+                  <SelectTrigger data-testid="select-edit-supplier-category"><SelectValue placeholder={language === "pt" ? "Selecionar..." : "Select..."} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="large">{language === "pt" ? "Grande" : "Large"}</SelectItem>
+                    <SelectItem value="medium">{language === "pt" ? "Médio" : "Medium"}</SelectItem>
+                    <SelectItem value="small">{language === "pt" ? "Pequeno" : "Small"}</SelectItem>
+                    <SelectItem value="renewable">{language === "pt" ? "Renovável" : "Renewable"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{language === "pt" ? "Condições de comissão" : "Commission terms"}</Label>
+                <Textarea value={editSupplierForm.commissionTerms} onChange={(e) => setEditSupplierForm(f => ({ ...f, commissionTerms: e.target.value }))} placeholder={language === "pt" ? "Ex: 1% do contrato anual, pago em 2x (50/50)" : "Ex: 1% of annual contract, paid 50/50"} data-testid="input-edit-supplier-commission" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Label>{language === "pt" ? "Status" : "Status"}</Label>
+                  <Select value={editSupplierForm.status} onValueChange={(v) => setEditSupplierForm(f => ({ ...f, status: v }))}>
+                    <SelectTrigger data-testid="select-edit-supplier-status"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">{language === "pt" ? "Ativo" : "Active"}</SelectItem>
+                      <SelectItem value="inactive">{language === "pt" ? "Inativo" : "Inactive"}</SelectItem>
+                      <SelectItem value="prc_only">PRC only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 mt-5">
+                  <Switch checked={editSupplierForm.isActive} onCheckedChange={(v) => setEditSupplierForm(f => ({ ...f, isActive: v }))} data-testid="switch-edit-supplier-active" />
+                  <Label className="text-sm">{language === "pt" ? "Ativo no sistema" : "Active in system"}</Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEditSupplierOpen(false)}>{language === "pt" ? "Cancelar" : "Cancel"}</Button>
+              <Button
+                onClick={() => editingSupplier && updateSupplierMutation.mutate({ id: editingSupplier.id, form: editSupplierForm })}
+                disabled={!editSupplierForm.name || updateSupplierMutation.isPending}
+                data-testid="button-save-edit-supplier"
+              >
+                {updateSupplierMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{language === "pt" ? "Salvando..." : "Saving..."}</> : language === "pt" ? "Salvar" : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

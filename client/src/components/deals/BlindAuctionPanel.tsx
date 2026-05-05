@@ -170,11 +170,11 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   };
 
   const generateRfqMessage = (supplier: any) => {
-    const consumptionMonthly = dossier?.averageMonthlyMWh
-      ? `${Number(dossier.averageMonthlyMWh).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/mês`
-      : dossier?.annualConsumptionMWh
-        ? `${(Number(dossier.annualConsumptionMWh) / 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} MWh/mês (estimado)`
-        : 'A confirmar';
+    const toKwh = (mwh: any) => mwh ? Number(mwh) * 1000 : null;
+    const monthlyKwh = toKwh(dossier?.averageMonthlyMWh) || (dossier?.annualConsumptionMWh ? toKwh(dossier.annualConsumptionMWh)! / 12 : null);
+    const consumptionMonthly = monthlyKwh
+      ? `${monthlyKwh.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} kWh/mês${!dossier?.averageMonthlyMWh ? ' (estimado)' : ''}`
+      : 'A confirmar';
 
     const distributor = dossier?.distributor || 'A confirmar';
     const submarket = deal?.submarket || dossier?.submarket || 'A confirmar';

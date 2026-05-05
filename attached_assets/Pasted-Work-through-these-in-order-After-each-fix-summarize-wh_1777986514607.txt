@@ -1,0 +1,97 @@
+Work through these in order. After each fix, summarize what changed and wait for confirmation.
+Bug 1 — Display consumption in kWh, not MWh
+The client wants consumption displayed in kWh throughout the portal because it's what employees and clients see on their energy bills and it simplifies payment calculations. The internal storage can stay in MWh, but every user-facing display should convert to kWh (multiply by 1000).
+Where to change:
+
+Dossier summary cards ("Consumo Anual" and "Consumo Médio Mensal") — multiply the stored MWh value by 1000 and display with "kWh" label
+Dossier detail table rows — same conversion
+Dossier edit form — field labels should say "kWh", input values should be in kWh, convert back to MWh (divide by 1000) before saving to the database
+RFQ message template — show consumption in kWh
+Any other place consumption appears in the UI (deal cards, assembly tab, ECOS)
+
+Example: A dossier storing 18.09 MWh should display as 18.090 kWh. A dossier storing 1.51 MWh monthly should display as 1.510 kWh/mês.
+Important: Do NOT change the database storage — keep MWh internally. Only change the display layer and form inputs. Convert on read (×1000 for display) and on write (÷1000 for storage).
+Bug 2 — Dossier showing "blocked" even when complete
+The client says the dossier shows as blocked even when all fields are filled and the process has been completed. This was partially fixed before but is still happening.
+Diagnose: Find every place in the assembly pipeline, blocker engine, and deal progression logic that checks dossier status or completeness. The issue is likely one of:
+
+The dossier status is stuck on "DRAFT" after editing (from the unlock fix we did) and the blocker engine requires "READY" or "LOCKED"
+The assembly engine checks a specific field that's null or in an unexpected format
+The blocker engine is checking confidence level even though we made it advisory
+
+Search server/blockerEngine.ts, server/deal-assembly-engine.ts, and server/routes.ts for all dossier-related blocker checks. For each one, verify that a fully filled dossier passes the check. If a check requires status "LOCKED" or "READY", change it to also accept "DRAFT" when all required fields are present.
+The rule should be: if the dossier has all required fields filled (legal name, CNPJ, distributor, consumption, connection type), it should NOT be a blocker regardless of status or confidence level.
+Bug 3 — RFQ template showing "to be confirmed" for filled fields
+The RFQ message template was rewritten in Portuguese but is still showing "A confirmar" for distributor, connection type, consumption, and demand — even though these values exist in the dossier.
+Root cause: The template function is not receiving the dossier data, or it's reading from the wrong fields. The dossier data might not be fetched when the RFQ dispatch modal opens.
+Fix: In the component that generates the RFQ message (BlindAuctionPanel or RFQ dispatch modal), verify that:
+
+The dossier is fetched using the deal's client ID before generating the message
+The field names in the template match the actual dossier field names from the API response (check for camelCase vs snake_case mismatches — e.g., averageMonthlyMWh vs average_monthly_mwh)
+The dossier object is not null/undefined when the template is built
+Add console.log of the dossier object when the modal opens to see exactly what data is available
+
+If the dossier fetch isn't happening, add a query that loads the dossier when the RFQ modal opens. If the fetch is happening but fields are undefined, check the API response shape against what the template expects.
+Bug 4 — Can't fully register or edit suppliers
+The supplier management page only allows adding contact information but not the full supplier profile (name, email, website, operational preferences, playbook config). And once registered, mistakes can't be corrected.
+Fix — add full CRUD for suppliers:
+
+The supplier detail/edit page needs editable fields for: name, contact email, phone, website, notes, operational preferences, status
+Add a "Salvar" button that calls PATCH on the supplier endpoint to update any field
+If a PATCH endpoint for suppliers doesn't exist in server/routes.ts, create one
+The supplier list page needs an edit icon/button on each supplier row that opens the edit view
+All fields that are currently read-only should become editable
+
+Check client/src/pages/SupplierManager.tsx and any supplier detail components. Make sure every field has an edit mode, not just contacts.
+Bug 5 — Can't change operational preferences for suppliers
+This is related to Bug 4. The supplier's operational preferences (preferred channel, RFQ intake method, SLA config, portal config) are stored in the supplier_rfq_playbooks table. The UI needs to allow editing these.
+On the supplier detail page, add an "Operational Preferences" section that allows editing:
+
+Preferred channel (Email, Portal, WhatsApp)
+RFQ intake method
+Quote response SLA (hours)
+Portal URL and login notes (for suppliers like Prime that use a partner portal)
+Internal notes
+
+These should save to the supplier's playbook record via a PATCH endpoint.
+Bug 6 — Clients need multiple UC codes
+Currently the client registration only allows one "Código UC" field. But many clients have multiple utility connection points (UCs). The client needs to be able to register more than one UC per client.
+Fix — add multi-UC support to client registration and dossier:
+
+In the "Adicionar Novo Cliente" modal, change the single UC field to a dynamic list where the user can add multiple UCs with a "+" button
+In the dossier, the "Número de UCs" field already exists — make sure it reflects the actual count of registered UCs
+Store multiple UCs either as a JSON array in the client record (e.g., ucCodes: ["UC001", "UC002", "UC003"]) or as comma-separated values in the existing ucCode field
+Display all UCs in the client detail and dossier views
+The dossier edit form should also allow adding/removing UCs
+
+For the UI, use a simple pattern:
+
+Show each UC as a row with the code and a remove button
+An "Adicionar UC" button at the bottom adds a new empty row
+On save, collect all UC values and store them
+
+Do NOT modify shared/schema.ts. Use the existing ucCode field as a comma-separated string, or use any existing JSON field on the clients table.
+Files to modify
+
+client/src/components/dossier/ClientDossierTab.tsx or client/src/pages/DossierPage.tsx — kWh display, blocked status
+client/src/components/deals/BlindAuctionPanel.tsx — RFQ template data fetching
+client/src/pages/SupplierManager.tsx — full supplier CRUD, operational preferences
+server/routes.ts — supplier PATCH endpoint, dossier blocker logic
+server/blockerEngine.ts — dossier blocker check
+client/src/pages/Admin.tsx or wherever client creation modal lives — multi-UC support
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts
+
+Acceptance criteria
+
+Consumption displays in kWh everywhere in the UI (18.090 kWh not 18,09 MWh)
+Dossier with all fields filled does not show as blocked
+RFQ template shows real distributor, consumption, demand, connection type — not "A confirmar"
+Suppliers can be fully edited — name, email, phone, website, notes, preferences
+Operational preferences (channel, SLA, portal config) are editable per supplier
+Clients can have multiple UC codes registered
+All UCs display in the client detail and dossier

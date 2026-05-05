@@ -284,55 +284,58 @@ export class DealAssemblyEngine {
 
   private async buildDossierLockedStage(deal: any, dossier: any): Promise<AssemblyStageStatus> {
     const blockers: AssemblyBlocker[] = [];
-    
-    if (!dossier || dossier.status === 'DRAFT') {
+
+    const hasRequiredFields = dossier?.legalName && dossier?.cnpj && dossier?.distributor && dossier?.annualConsumptionMWh && dossier?.connectionType;
+
+    if (!dossier) {
       blockers.push({
-        code: 'DOSSIER_NOT_READY',
-        titlePt: 'Dossiê não está pronto',
-        titleEn: 'Dossier not ready',
-        descriptionPt: 'Complete o dossiê antes de travar.',
-        descriptionEn: 'Complete the dossier before locking.',
+        code: 'DOSSIER_NOT_CREATED',
+        titlePt: 'Dossiê não criado',
+        titleEn: 'Dossier not created',
+        descriptionPt: 'Crie o dossiê energético do cliente.',
+        descriptionEn: 'Create the client energy dossier.',
         deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
-    } else if (dossier.status === 'READY') {
+    } else if (!hasRequiredFields) {
       blockers.push({
-        code: 'DOSSIER_NOT_LOCKED',
-        titlePt: 'Dossiê não travado',
-        titleEn: 'Dossier not locked',
-        descriptionPt: 'Trave o dossiê para enviar RFQ.',
-        descriptionEn: 'Lock the dossier to send RFQ.',
-        deepLink: `/admin/dossier/${deal.clientId}?action=lock`,
+        code: 'DOSSIER_INCOMPLETE',
+        titlePt: 'Dossiê incompleto',
+        titleEn: 'Dossier incomplete',
+        descriptionPt: 'Preencha todos os campos obrigatórios: razão social, CNPJ, distribuidora, consumo e tipo de conexão.',
+        descriptionEn: 'Fill all required fields: legal name, CNPJ, distributor, consumption, and connection type.',
+        deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
     }
 
-    const status = dossier?.status === 'LOCKED' ? 'complete' 
-      : dossier?.status === 'READY' ? 'in_progress'
-      : 'not_started';
+    const status = !dossier ? 'not_started'
+      : hasRequiredFields ? 'complete'
+      : 'in_progress';
 
     return {
       stage: 'DOSSIER_LOCKED',
       status: blockers.length > 0 ? 'blocked' : status,
       blockers,
-      actionButtonPt: status !== 'complete' ? 'Travar Dossiê' : null,
-      actionButtonEn: status !== 'complete' ? 'Lock Dossier' : null,
-      actionDeepLink: `/admin/dossier/${deal.clientId}?action=lock`,
-      evidenceLinks: [],
-      completedAt: dossier?.lockedAt?.toISOString() || null
+      actionButtonPt: status !== 'complete' ? 'Completar Dossiê' : null,
+      actionButtonEn: status !== 'complete' ? 'Complete Dossier' : null,
+      actionDeepLink: `/admin/dossier/${deal.clientId}`,
+      evidenceLinks: dossier ? [{ label: 'Dossiê', url: `/admin/dossier/${deal.clientId}` }] : [],
+      completedAt: hasRequiredFields ? (dossier?.updatedAt?.toISOString() || null) : null
     };
   }
 
   private async buildRfqSentStage(deal: any, dossier: any, rfqDispatches: any[]): Promise<AssemblyStageStatus> {
     const blockers: AssemblyBlocker[] = [];
     
-    if (!dossier || dossier.status !== 'LOCKED') {
+    const dossierHasFields = dossier?.legalName && dossier?.cnpj && dossier?.distributor && dossier?.annualConsumptionMWh && dossier?.connectionType;
+    if (!dossier || !dossierHasFields) {
       blockers.push({
-        code: 'DOSSIER_NOT_LOCKED',
-        titlePt: 'Dossiê não travado',
-        titleEn: 'Dossier not locked',
-        descriptionPt: 'O dossiê deve estar travado antes de enviar RFQ.',
-        descriptionEn: 'Dossier must be locked before sending RFQ.',
+        code: 'DOSSIER_NOT_READY',
+        titlePt: 'Dossiê incompleto',
+        titleEn: 'Dossier incomplete',
+        descriptionPt: 'Complete o dossiê do cliente antes de enviar RFQ.',
+        descriptionEn: 'Complete the client dossier before sending RFQ.',
         deepLink: `/admin/dossier/${deal.clientId}`,
         severity: 'error'
       });
