@@ -1,0 +1,64 @@
+FIX: RFQ DISPATCH NOT ACTUALLY SENDING EMAILS TO SUPPLIERS
+What's wrong
+The bill-first journey reaches 100% and shows "Ready for proposal" with RFQ marked as Complete. But the supplier never received the RFQ email. The system is marking the RFQ as sent in the database without actually delivering the message.
+How to diagnose
+
+Find the RFQ dispatch endpoint in server/routes.ts — search for rfq/send, rfq/dispatch, send-rfq, dispatch-rfq, or blind-auction
+Trace what happens after the RFQ record is saved to the database — is there any email send call or is it just updating the status to "SENT"?
+Check server/notifications.ts — does it have a working email transport or is it stubbed?
+Check if nodemailer is already used anywhere in the codebase — it should be in server/jobs.ts for other notifications. Use the same transport configuration.
+Check Replit Secrets / environment variables for any SMTP or email credentials already configured
+
+What to fix
+Wire up actual email delivery in the RFQ dispatch flow using nodemailer (already available in the codebase). After saving the RFQ record to the database, send the email to the supplier's registered contact email address.
+The email should use:
+
+From: "Ótima Energia" with whatever SMTP user is configured in env vars
+Reply-To: renan@otimaenergia.com (or whatever the dispatch modal specifies)
+To: the supplier's contact email from their record in the database
+Subject: "Solicitação de Cotação — [Client Company Name]"
+Body: the Portuguese RFQ template message that was already generated in the dispatch modal (the one we fixed to include real dossier data)
+HTML version: same content but wrapped in a simple styled div with line breaks
+
+For each supplier in the dispatch, track the result — SENT, FAILED, or NO_EMAIL (if the supplier has no email address on file).
+If no SMTP credentials are configured
+If there are no email environment variables, the send will fail. Handle this gracefully:
+
+Show a clear warning in the UI after dispatch: "Email não configurado. O RFQ foi salvo mas não foi enviado por email."
+Return the full message text in the API response so the frontend can show it in a copyable format
+Alexandre can then manually copy/paste the message into email or WhatsApp
+Log a clear message in the server console
+
+Show dispatch status in the UI
+In the RFQ tab of the deal, after dispatching, each supplier row should show:
+
+Green checkmark + "Enviado" if email was sent successfully
+Red X + "Falhou" with a "Reenviar" (Resend) button if email failed
+Yellow warning + "Pendente" if saved but not sent (no email configured)
+A copy button always available on every dispatch to grab the full message text for manual sending
+
+Also add a "Reenviar" (Resend) capability
+For any dispatch that failed or wasn't sent, add a button to retry sending the email. This calls the same send logic for that single dispatch.
+Files to modify
+
+server/routes.ts — RFQ dispatch endpoint, add actual email sending after database save
+client/src/components/deals/BlindAuctionPanel.tsx — show dispatch status per supplier, add copy and resend buttons
+server/notifications.ts — if this is where email transport lives, fix it or create a shared transport utility
+
+Files to NOT touch
+
+shared/schema.ts
+server/parser-client.ts
+server/jobs.ts (read it for reference on how nodemailer is configured, but don't modify)
+
+Acceptance criteria
+
+If SMTP is configured: RFQ email arrives at the supplier's registered email address with the full Portuguese template and real client data
+If SMTP is not configured: clear warning shown to the user, full message available to copy for manual sending
+Dispatch status (SENT / FAILED / PENDING) visible on each supplier in the RFQ view
+Failed dispatches have a "Reenviar" button
+All dispatches have a copy button regardless of send status
+The email subject includes the client company name
+Reply-to is set to renan@otimaenergia.com
+
+After completing, summarize changes and wait for confirmation.

@@ -7701,6 +7701,43 @@ export async function registerRoutes(
     }
   });
   
+  // --- RFQ Email Helper ---
+  const sendRfqEmail = async (
+    to: string | null | undefined,
+    subject: string,
+    messageBody: string
+  ): Promise<{ status: 'SENT' | 'FAILED' | 'NO_EMAIL' | 'NO_SMTP'; error?: string }> => {
+    if (!to) return { status: 'NO_EMAIL' };
+    const smtpPass = process.env.SMTP_PASS;
+    if (!smtpPass) {
+      console.warn('[RFQ] SMTP_PASS not configured — RFQ email not sent');
+      return { status: 'NO_SMTP' };
+    }
+    try {
+      const nodemailer = await import('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: "smtp.zoho.com",
+        port: 465,
+        secure: true,
+        auth: { user: "notificacoes@otimaenergia.com", pass: smtpPass },
+      });
+      const htmlBody = `<div style="font-family:sans-serif;max-width:620px;margin:0 auto;line-height:1.6">${messageBody.replace(/\n/g, '<br>')}</div>`;
+      await transporter.sendMail({
+        from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
+        replyTo: 'renan@otimaenergia.com',
+        to,
+        subject,
+        text: messageBody,
+        html: htmlBody,
+      });
+      console.log(`[RFQ] Email sent to ${to}`);
+      return { status: 'SENT' };
+    } catch (err: any) {
+      console.error('[RFQ] Email send failed:', err.message);
+      return { status: 'FAILED', error: err.message };
+    }
+  };
+
   // --- RFQ Dispatches ---
   app.get("/api/deals/:dealId/rfq-dispatches", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;
@@ -7748,17 +7785,20 @@ export async function registerRoutes(
       const dossier = await storage.getClientDossier(deal.clientId);
       let snapshotId = null;
       
-      // HARD GATE: Dossier must exist and be at least READY (not DRAFT)
-      if (!dossier || dossier.status === 'DRAFT') {
+      // HARD GATE: Dossier must exist and have minimum required fields filled
+      const dossierFieldsOk = dossier &&
+        dossier.legalName && dossier.cnpj && dossier.distributor &&
+        dossier.annualConsumptionMWh && dossier.connectionType;
+      if (!dossierFieldsOk) {
         return res.status(400).json({ 
           success: false, 
-          error: "O dossiê deve estar completo (READY ou LOCKED) antes de enviar RFQ",
+          error: "O dossiê deve estar completo (nome, CNPJ, distribuidora, consumo e tipo de conexão) antes de enviar RFQ",
           code: "DOSSIER_NOT_READY"
         });
       }
       
-      // If dossier is READY, auto-lock it and create snapshot before sending RFQ
-      if (dossier && dossier.status === 'READY') {
+      // Auto-lock dossier and create snapshot before sending RFQ (for any non-LOCKED status)
+      if (dossier.status !== 'LOCKED') {
         await storage.lockDossier(dossier.id, user?.id || 'system');
         const snapshot = await storage.createDossierSnapshot({
           clientDossierId: dossier.id,
@@ -7770,14 +7810,20 @@ export async function registerRoutes(
           createdBy: user?.id || null,
         });
         snapshotId = snapshot.id;
-      } else if (dossier && dossier.status === 'LOCKED') {
-        // Get latest snapshot
+      } else {
+        // Already LOCKED — get latest snapshot
         const snapshots = await storage.getDossierSnapshots(dossier.id);
         if (snapshots.length > 0) {
           snapshotId = snapshots[0].id;
         }
       }
-      
+
+      // Get supplier and client for email
+      const supplier = await storage.getSupplier(supplierId);
+      const client = await storage.getClient(deal.clientId);
+      const emailSubject = messageSubject || `Solicitação de Cotação — ${client?.companyName || 'Cliente'}`;
+      const emailBody = messageBody || '';
+
       const dispatch = await storage.createRfqDispatch({
         dealId: req.params.dealId,
         supplierId,
@@ -7786,16 +7832,31 @@ export async function registerRoutes(
         dossierSnapshotId: snapshotId,
         channelUsed,
         status: 'DRAFT',
-        messageSubject: messageSubject || null,
-        messageBody: messageBody || null,
+        messageSubject: emailSubject,
+        messageBody: emailBody,
         attachments: attachments || [],
         localOverrides: localOverrides || null,
         overrideReason: overrideReason || null,
         createdBy: user?.id || null,
         assignedToUserId: user?.id || null
       });
+
+      // Attempt email delivery immediately for EMAIL channel
+      let emailResult: { status: string; error?: string } = { status: 'SKIPPED' };
+      if (channelUsed === 'EMAIL') {
+        emailResult = await sendRfqEmail(supplier?.contactEmail, emailSubject, emailBody);
+        if (emailResult.status === 'SENT') {
+          const slaConfig = playbook?.slaConfig as { responseDaysDefault?: number } | null;
+          const daysUntilDue = slaConfig?.responseDaysDefault || 3;
+          const dueAt = new Date();
+          dueAt.setDate(dueAt.getDate() + daysUntilDue);
+          await storage.markRfqDispatchSent(dispatch.id, dueAt);
+          dispatch.status = 'SENT';
+          dispatch.sentAt = new Date();
+        }
+      }
       
-      res.json({ success: true, dispatch });
+      res.json({ success: true, dispatch, emailResult, supplierEmail: supplier?.contactEmail || null });
     } catch (error: any) {
       console.error("Error creating dispatch:", error);
       res.status(500).json({ success: false, error: "Failed to create dispatch" });
@@ -7872,6 +7933,41 @@ export async function registerRoutes(
     }
   });
   
+  // Resend RFQ email for an existing dispatch
+  app.post("/api/rfq-dispatches/:id/resend", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    try {
+      const id = parseInt(req.params.id);
+      const dispatch = await storage.getRfqDispatch(id);
+      if (!dispatch) return res.status(404).json({ success: false, error: "Dispatch not found" });
+
+      const supplier = await storage.getSupplier(dispatch.supplierId);
+      const deal = await storage.getDeal(dispatch.dealId);
+      const client = deal ? await storage.getClient(deal.clientId) : null;
+
+      const subject = dispatch.messageSubject || `Solicitação de Cotação — ${client?.companyName || 'Cliente'}`;
+      const emailBody = dispatch.messageBody || '';
+      const emailResult = await sendRfqEmail(supplier?.contactEmail, subject, emailBody);
+
+      let updatedDispatch = dispatch;
+      if (emailResult.status === 'SENT') {
+        const playbook = dispatch.supplierRfqPlaybookId
+          ? await storage.getSupplierRfqPlaybook(dispatch.supplierRfqPlaybookId)
+          : null;
+        const slaConfig = playbook?.slaConfig as { responseDaysDefault?: number } | null;
+        const daysUntilDue = slaConfig?.responseDaysDefault || 3;
+        const dueAt = new Date();
+        dueAt.setDate(dueAt.getDate() + daysUntilDue);
+        updatedDispatch = (await storage.markRfqDispatchSent(id, dueAt)) || dispatch;
+      }
+
+      res.json({ success: true, dispatch: updatedDispatch, emailResult, supplierEmail: supplier?.contactEmail || null });
+    } catch (error: any) {
+      console.error("Error resending RFQ email:", error);
+      res.status(500).json({ success: false, error: "Failed to resend email" });
+    }
+  });
+
   // Get overdue dispatches (for Ops dashboard)
   app.get("/api/rfq-dispatches/overdue", async (req, res) => {
     if (!await validateDealOsSession(req, res)) return;

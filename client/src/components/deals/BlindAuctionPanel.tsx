@@ -49,6 +49,21 @@ const DISPATCH_STATUS_COLORS: Record<string, string> = {
   NO_RESPONSE: "bg-red-100 text-red-800"
 };
 
+// Per-dispatch email delivery result (transient, not persisted)
+interface EmailResult {
+  status: 'SENT' | 'FAILED' | 'NO_EMAIL' | 'NO_SMTP' | 'SKIPPED';
+  error?: string;
+  supplierEmail?: string | null;
+  messageText?: string;
+}
+
+const EMAIL_RESULT_CONFIG: Record<string, { label: string; className: string }> = {
+  SENT:     { label: 'Enviado',  className: 'bg-green-100 text-green-800' },
+  FAILED:   { label: 'Falhou',   className: 'bg-red-100 text-red-800' },
+  NO_EMAIL: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
+  NO_SMTP:  { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
+};
+
 export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -58,6 +73,10 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   const [customMessage, setCustomMessage] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string>("EMAIL");
   const [quoteIntakeDispatch, setQuoteIntakeDispatch] = useState<any>(null);
+  // Track per-dispatch email delivery results (keyed by dispatch id)
+  const [dispatchEmailResults, setDispatchEmailResults] = useState<Record<number, EmailResult>>({});
+  // Show a banner if any dispatch had NO_SMTP + message text to copy
+  const [smtpWarningMessage, setSmtpWarningMessage] = useState<string | null>(null);
   const [quoteForm, setQuoteForm] = useState({
     pricePerMwh: "",
     priceStructure: "FIXED",
@@ -71,18 +90,59 @@ export function BlindAuctionPanel({ dealId }: BlindAuctionPanelProps) {
   });
 
   const createDispatchMutation = useMutation({
-    mutationFn: async (data: { supplierId: number; channelUsed: string; messageBody?: string }) => {
+    mutationFn: async (data: { supplierId: number; channelUsed: string; messageBody?: string; messageSubject?: string }) => {
       const res = await apiRequest("POST", `/api/deals/${dealId}/rfq-dispatches`, data);
       return res.json();
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({ title: "RFQ draft created", description: "Dispatch prepared for sending" });
         queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/blind-auction`] });
-        setCreateDialogOpen(false);
-        setSelectedSuppliers([]);
+        // Store email delivery result for this dispatch
+        if (data.dispatch && data.emailResult) {
+          const result: EmailResult = {
+            ...data.emailResult,
+            supplierEmail: data.supplierEmail,
+            messageText: data.dispatch.messageBody,
+          };
+          setDispatchEmailResults(prev => ({ ...prev, [data.dispatch.id]: result }));
+          if (data.emailResult.status === 'NO_SMTP') {
+            setSmtpWarningMessage(data.dispatch.messageBody || null);
+          }
+        }
       } else {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+      }
+    }
+  });
+
+  const resendDispatchMutation = useMutation({
+    mutationFn: async (dispatchId: number) => {
+      const res = await apiRequest("POST", `/api/rfq-dispatches/${dispatchId}/resend`, {});
+      return res.json();
+    },
+    onSuccess: (data, dispatchId) => {
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/blind-auction`] });
+        if (data.emailResult) {
+          const result: EmailResult = {
+            ...data.emailResult,
+            supplierEmail: data.supplierEmail,
+            messageText: data.dispatch?.messageBody,
+          };
+          setDispatchEmailResults(prev => ({ ...prev, [dispatchId]: result }));
+          if (data.emailResult.status === 'SENT') {
+            toast({ title: "Email reenviado", description: `Mensagem enviada com sucesso` });
+          } else if (data.emailResult.status === 'FAILED') {
+            toast({ title: "Falha no reenvio", description: data.emailResult.error || "Erro ao enviar email", variant: "destructive" });
+          } else if (data.emailResult.status === 'NO_EMAIL') {
+            toast({ title: "Sem email cadastrado", description: "O fornecedor não tem email cadastrado", variant: "destructive" });
+          } else if (data.emailResult.status === 'NO_SMTP') {
+            setSmtpWarningMessage(data.dispatch?.messageBody || null);
+            toast({ title: "Email não configurado", description: "Copie a mensagem para envio manual", variant: "destructive" });
+          }
+        }
+      } else {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
       }
     }
   });
@@ -225,12 +285,39 @@ renan@otimaenergia.com`;
   const availableToSend = availableSuppliers?.filter((s: any) => !alreadySentSupplierIds.includes(s.id)) || [];
 
   const handleCreateDispatches = async () => {
+    const messageBody = customMessage || generateRfqMessage(availableSuppliers?.[0]);
+    const messageSubject = `Solicitação de Cotação — ${client?.companyName || 'Cliente'}`;
+    let sentCount = 0;
+    let failedCount = 0;
+    let pendingCount = 0;
+
     for (const supplierId of selectedSuppliers) {
-      await createDispatchMutation.mutateAsync({
+      const result = await createDispatchMutation.mutateAsync({
         supplierId,
         channelUsed: selectedChannel,
-        messageBody: customMessage || undefined
+        messageBody,
+        messageSubject,
       });
+      if (result?.emailResult?.status === 'SENT') sentCount++;
+      else if (result?.emailResult?.status === 'FAILED') failedCount++;
+      else if (result?.emailResult?.status === 'NO_EMAIL' || result?.emailResult?.status === 'NO_SMTP') pendingCount++;
+    }
+
+    setCreateDialogOpen(false);
+    setSelectedSuppliers([]);
+
+    if (selectedChannel === 'EMAIL') {
+      const parts = [];
+      if (sentCount > 0) parts.push(`${sentCount} enviado(s) com sucesso`);
+      if (failedCount > 0) parts.push(`${failedCount} falhou`);
+      if (pendingCount > 0) parts.push(`${pendingCount} pendente(s) — copie e envie manualmente`);
+      toast({
+        title: "RFQs despachados",
+        description: parts.join(', ') || "Processado",
+        variant: failedCount > 0 ? "destructive" : "default",
+      });
+    } else {
+      toast({ title: "RFQs criados", description: `${selectedSuppliers.length} dispatch(es) preparados` });
     }
   };
 
@@ -253,6 +340,40 @@ renan@otimaenergia.com`;
           Refresh
         </Button>
       </div>
+
+      {smtpWarningMessage && (
+        <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-300 rounded-lg" data-testid="smtp-warning-banner">
+          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-medium text-yellow-800">
+              Email não configurado — RFQ salvo mas não enviado
+            </p>
+            <p className="text-xs text-yellow-700">
+              Copie a mensagem abaixo e envie manualmente por email ou WhatsApp.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
+                onClick={() => copyToClipboard(smtpWarningMessage)}
+                data-testid="button-copy-smtp-message"
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                Copiar mensagem
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-yellow-700"
+                onClick={() => setSmtpWarningMessage(null)}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
@@ -401,8 +522,12 @@ renan@otimaenergia.com`;
                   disabled={createDispatchMutation.isPending}
                   data-testid="button-create-dispatches"
                 >
-                  {createDispatchMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create Dispatches
+                  {createDispatchMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {selectedChannel === 'EMAIL' ? 'Enviar RFQs por Email' : 'Criar RFQs'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -464,101 +589,163 @@ renan@otimaenergia.com`;
                 const hoursRemaining = dispatch.dueAt 
                   ? Math.round((new Date(dispatch.dueAt).getTime() - Date.now()) / (1000 * 60 * 60))
                   : null;
+                const emailResult = dispatchEmailResults[dispatch.id];
+                const emailBadge = emailResult ? EMAIL_RESULT_CONFIG[emailResult.status] : null;
+                const msgText = dispatch.messageBody || '';
                 
                 return (
                   <div 
                     key={dispatch.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg ${
+                    className={`p-4 border rounded-lg space-y-2 ${
                       isOverdue ? 'border-red-300 bg-red-50' : ''
                     }`}
                     data-testid={`dispatch-row-${dispatch.id}`}
                   >
-                    <div className="flex items-center gap-4">
-                      <ChannelIcon className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium">{dispatch.supplier?.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Badge className={DISPATCH_STATUS_COLORS[dispatch.status]}>
-                            {dispatch.status}
-                          </Badge>
-                          {dispatch.sentAt && (
-                            <span>Sent: {new Date(dispatch.sentAt).toLocaleDateString()}</span>
-                          )}
-                          {dispatch.followupCount > 0 && (
-                            <span className="text-amber-600">+{dispatch.followupCount} follow-ups</span>
-                          )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <ChannelIcon className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="font-medium">{dispatch.supplier?.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                            <Badge className={DISPATCH_STATUS_COLORS[dispatch.status]}>
+                              {dispatch.status}
+                            </Badge>
+                            {/* Email delivery result badge */}
+                            {emailBadge && (
+                              <Badge className={emailBadge.className} data-testid={`email-status-${dispatch.id}`}>
+                                {emailResult?.status === 'SENT' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                {emailResult?.status === 'FAILED' && <AlertCircle className="h-3 w-3 mr-1" />}
+                                {(emailResult?.status === 'NO_EMAIL' || emailResult?.status === 'NO_SMTP') && <AlertTriangle className="h-3 w-3 mr-1" />}
+                                {emailBadge.label}
+                              </Badge>
+                            )}
+                            {dispatch.sentAt && (
+                              <span>Enviado: {new Date(dispatch.sentAt).toLocaleDateString('pt-BR')}</span>
+                            )}
+                            {dispatch.followupCount > 0 && (
+                              <span className="text-amber-600">+{dispatch.followupCount} follow-up(s)</span>
+                            )}
+                            {/* Show supplier email address if known */}
+                            {emailResult?.supplierEmail && dispatch.channelUsed === 'EMAIL' && (
+                              <span className="text-gray-400">→ {emailResult.supplierEmail}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {dispatch.status === 'SENT' && hoursRemaining !== null && (
+                          <div className={`flex items-center gap-1 text-sm ${
+                            isOverdue ? 'text-red-600' : hoursRemaining < 24 ? 'text-amber-600' : 'text-gray-600'
+                          }`}>
+                            <Timer className="h-4 w-4" />
+                            {isOverdue ? (
+                              <span>Vencido há {Math.abs(hoursRemaining)}h</span>
+                            ) : (
+                              <span>{hoursRemaining}h restantes</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Copy button — always visible */}
+                        {msgText && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(msgText)}
+                            title="Copiar mensagem"
+                            data-testid={`button-copy-dispatch-${dispatch.id}`}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {dispatch.status === 'DRAFT' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setPreviewDispatch(dispatch)}
+                              data-testid={`button-preview-${dispatch.id}`}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver
+                            </Button>
+                            {/* Reenviar button for EMAIL channel DRAFT dispatches */}
+                            {dispatch.channelUsed === 'EMAIL' && (
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => resendDispatchMutation.mutate(dispatch.id)}
+                                disabled={resendDispatchMutation.isPending}
+                                data-testid={`button-resend-${dispatch.id}`}
+                              >
+                                {resendDispatchMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4 mr-1" />
+                                )}
+                                Reenviar
+                              </Button>
+                            )}
+                            <Button 
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => markSentMutation.mutate(dispatch.id)}
+                              disabled={markSentMutation.isPending}
+                              data-testid={`button-mark-sent-${dispatch.id}`}
+                              className="text-gray-500 text-xs"
+                            >
+                              Marcar enviado
+                            </Button>
+                          </>
+                        )}
+                        
+                        {dispatch.status === 'SENT' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => followupMutation.mutate(dispatch.id)}
+                              disabled={followupMutation.isPending}
+                              data-testid={`button-followup-${dispatch.id}`}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-1" />
+                              Follow-up
+                            </Button>
+                            <Button 
+                              size="sm"
+                              variant="default"
+                              onClick={() => setQuoteIntakeDispatch(dispatch)}
+                              data-testid={`button-record-quote-${dispatch.id}`}
+                            >
+                              <DollarSign className="h-4 w-4 mr-1" />
+                              Registrar Cotação
+                            </Button>
+                          </>
+                        )}
+                        
+                        {dispatch.status === 'RESPONDED' && (
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Concluído
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {dispatch.status === 'SENT' && hoursRemaining !== null && (
-                        <div className={`flex items-center gap-1 text-sm ${
-                          isOverdue ? 'text-red-600' : hoursRemaining < 24 ? 'text-amber-600' : 'text-gray-600'
-                        }`}>
-                          <Timer className="h-4 w-4" />
-                          {isOverdue ? (
-                            <span>Overdue by {Math.abs(hoursRemaining)}h</span>
-                          ) : (
-                            <span>{hoursRemaining}h left</span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {dispatch.status === 'DRAFT' && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setPreviewDispatch(dispatch)}
-                            data-testid={`button-preview-${dispatch.id}`}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Preview
-                          </Button>
-                          <Button 
-                            size="sm"
-                            onClick={() => markSentMutation.mutate(dispatch.id)}
-                            disabled={markSentMutation.isPending}
-                            data-testid={`button-mark-sent-${dispatch.id}`}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Mark Sent
-                          </Button>
-                        </>
-                      )}
-                      
-                      {dispatch.status === 'SENT' && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => followupMutation.mutate(dispatch.id)}
-                            disabled={followupMutation.isPending}
-                            data-testid={`button-followup-${dispatch.id}`}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-1" />
-                            Log Follow-up
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="default"
-                            onClick={() => setQuoteIntakeDispatch(dispatch)}
-                            data-testid={`button-record-quote-${dispatch.id}`}
-                          >
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            Record Quote
-                          </Button>
-                        </>
-                      )}
-                      
-                      {dispatch.status === 'RESPONDED' && (
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Completed
-                        </Badge>
-                      )}
-                    </div>
+
+                    {/* Inline error detail for FAILED email */}
+                    {emailResult?.status === 'FAILED' && emailResult.error && (
+                      <p className="text-xs text-red-600 pl-9" data-testid={`email-error-${dispatch.id}`}>
+                        Erro: {emailResult.error}
+                      </p>
+                    )}
+                    {/* Inline hint for NO_EMAIL */}
+                    {emailResult?.status === 'NO_EMAIL' && (
+                      <p className="text-xs text-yellow-700 pl-9">
+                        Fornecedor sem email cadastrado — copie a mensagem para envio manual.
+                      </p>
+                    )}
                   </div>
                 );
               })}
