@@ -697,7 +697,7 @@ export async function registerRoutes(
         NEXT_PUBLIC_GTM_ID: check("NEXT_PUBLIC_GTM_ID") || check("VITE_GTM_ID"),
         NEXT_PUBLIC_GA_MEASUREMENT_ID: check("NEXT_PUBLIC_GA_MEASUREMENT_ID") || check("VITE_GA_MEASUREMENT_ID"),
       },
-      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_SHEETS_CLIENT_EMAIL") && check("GOOGLE_SHEETS_PRIVATE_KEY"),
+      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_SHEETS_CLIENT_EMAIL") && check("GOOGLE_SHEETS_PRIVATE_KEY") && check("GOOGLE_DRIVE_FOLDER_ID"),
     });
   });
 
@@ -751,10 +751,18 @@ export async function registerRoutes(
         if (billFile.size > 10 * 1024 * 1024) {
           return res.status(400).json({ success: false, error: "Arquivo muito grande. Máximo 10MB." });
         }
-        // Upload to Google Drive (non-blocking on failure)
-        const ext = billFile.originalname.split(".").pop() || "pdf";
-        const filename = `conta-${empresa?.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
-        billFileUrl = await uploadToDrive(billFile.buffer, filename, billFile.mimetype);
+        // Upload to Google Drive — if this fails the file would be lost, so fail the request
+        try {
+          const ext = billFile.originalname.split(".").pop() || "pdf";
+          const filename = `conta-${empresa?.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
+          billFileUrl = await uploadToDrive(billFile.buffer, filename, billFile.mimetype);
+        } catch (driveErr: any) {
+          console.error("[Landing] Drive upload failed — rejecting submission to avoid losing file:", driveErr.message);
+          return res.status(500).json({
+            success: false,
+            error: "Não foi possível salvar sua conta de energia. Verifique sua conexão e tente novamente, ou envie o arquivo por email para contato@otimaenergia.com.",
+          });
+        }
       }
 
       const leadId = generateLeadId();
@@ -794,21 +802,45 @@ export async function registerRoutes(
         "Next Action Date": "",
       };
 
-      // Await both integrations — errors are logged but don't fail the user response
-      const [sheetResult, emailResult] = await Promise.allSettled([
-        appendToGoogleSheet(sheetRow),
-        sendLandingEmails({
+      // Step 1: Append to Google Sheets — this is the primary record; failure = hard stop
+      try {
+        await appendToGoogleSheet(sheetRow);
+        console.log(`[Landing] Lead ${leadId} saved to Google Sheets`);
+      } catch (sheetErr: any) {
+        console.error(`[Landing] CRITICAL: Sheet append failed for lead ${leadId} (${empresa} / ${email}):`, sheetErr);
+        // Still attempt email so Callum gets notified even if Sheets failed
+        try {
+          await sendLandingEmails({
+            nome, empresa, email, phone, cidade, estado,
+            valorConta, tipoImovel, mensagem,
+            billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+            gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
+            submittedAt, leadId,
+          });
+        } catch (emailErr: any) {
+          console.error(`[Landing] Email also failed for lead ${leadId}:`, emailErr);
+        }
+        return res.status(500).json({
+          success: false,
+          error: "Erro ao registrar seus dados. Por favor, tente novamente em alguns instantes.",
+        });
+      }
+
+      // Step 2: Send emails — lead is already in Sheets so email failure is non-fatal
+      try {
+        await sendLandingEmails({
           nome, empresa, email, phone, cidade, estado,
           valorConta, tipoImovel, mensagem,
           billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
           gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
           submittedAt, leadId,
-        }),
-      ]);
-      if (sheetResult.status === "rejected") console.error("[Landing] Sheet failed:", sheetResult.reason);
-      if (emailResult.status === "rejected") console.error("[Landing] Email failed:", emailResult.reason);
+        });
+        console.log(`[Landing] Emails sent for lead ${leadId}`);
+      } catch (emailErr: any) {
+        console.error(`[Landing] Email failed for lead ${leadId} (lead IS saved in Sheets):`, emailErr);
+      }
 
-      console.log(`[Landing] Lead ${leadId} from ${empresa} (${email}) submitted`);
+      console.log(`[Landing] Lead ${leadId} from ${empresa} (${email}) fully processed`);
       res.json({ success: true, leadId });
     } catch (error: any) {
       console.error("[Landing] Submit error:", error);

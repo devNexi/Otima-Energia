@@ -7,8 +7,9 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
   const privateKey = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
   if (!spreadsheetId || !clientEmail || !privateKey) {
-    console.error("[Landing] Google Sheets credentials not configured — lead NOT saved to sheet. Set GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY.");
-    return;
+    const msg = "[Landing] CRITICAL: Google Sheets credentials not configured — lead NOT saved to sheet. Set GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY.";
+    console.error(msg);
+    throw new Error(msg);
   }
 
   try {
@@ -56,8 +57,9 @@ export async function uploadToDrive(
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   if (!clientEmail || !privateKey || !folderId) {
-    console.error("[Landing] Google Drive credentials not configured — bill NOT uploaded. Set GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_DRIVE_FOLDER_ID.");
-    return null;
+    const msg = "[Landing] CRITICAL: Google Drive credentials not configured — bill NOT uploaded. Set GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_DRIVE_FOLDER_ID.";
+    console.error(msg);
+    throw new Error(msg);
   }
 
   try {
