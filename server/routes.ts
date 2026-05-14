@@ -690,14 +690,15 @@ export async function registerRoutes(
     res.json({
       integrations: {
         GOOGLE_SHEETS_SPREADSHEET_ID: check("GOOGLE_SHEETS_SPREADSHEET_ID"),
-        GOOGLE_SHEETS_CLIENT_EMAIL: check("GOOGLE_SHEETS_CLIENT_EMAIL"),
-        GOOGLE_SHEETS_PRIVATE_KEY: check("GOOGLE_SHEETS_PRIVATE_KEY"),
         GOOGLE_DRIVE_FOLDER_ID: check("GOOGLE_DRIVE_FOLDER_ID"),
+        GOOGLE_CLIENT_ID: check("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET: check("GOOGLE_CLIENT_SECRET"),
+        GOOGLE_REFRESH_TOKEN: check("GOOGLE_REFRESH_TOKEN"),
         SMTP_PASS: check("SMTP_PASS"),
         NEXT_PUBLIC_GTM_ID: check("NEXT_PUBLIC_GTM_ID") || check("VITE_GTM_ID"),
         NEXT_PUBLIC_GA_MEASUREMENT_ID: check("NEXT_PUBLIC_GA_MEASUREMENT_ID") || check("VITE_GA_MEASUREMENT_ID"),
       },
-      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_SHEETS_CLIENT_EMAIL") && check("GOOGLE_SHEETS_PRIVATE_KEY") && check("GOOGLE_DRIVE_FOLDER_ID"),
+      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_DRIVE_FOLDER_ID") && check("GOOGLE_CLIENT_ID") && check("GOOGLE_CLIENT_SECRET") && check("GOOGLE_REFRESH_TOKEN"),
     });
   });
 

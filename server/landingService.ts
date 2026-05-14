@@ -1,22 +1,35 @@
 import { randomUUID } from "crypto";
 
+// ── Shared OAuth2 client ───────────────────────────────────────────────────────
+async function getGoogleAuth() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    const msg = "[Landing] CRITICAL: Google OAuth credentials not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.";
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  const { google } = await import("googleapis");
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+  return { google, auth: oauth2Client };
+}
+
 // ── Google Sheets ──────────────────────────────────────────────────────────────
 export async function appendToGoogleSheet(row: Record<string, any>): Promise<void> {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-  const privateKey = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
-  if (!spreadsheetId || !clientEmail || !privateKey) {
-    const msg = "[Landing] CRITICAL: Google Sheets credentials not configured — lead NOT saved to sheet. Set GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY.";
+  if (!spreadsheetId) {
+    const msg = "[Landing] CRITICAL: GOOGLE_SHEETS_SPREADSHEET_ID not configured — lead NOT saved to sheet.";
     console.error(msg);
     throw new Error(msg);
   }
 
   try {
-    const { google } = await import("googleapis");
-    const auth = new google.auth.JWT(clientEmail, undefined, privateKey, [
-      "https://www.googleapis.com/auth/spreadsheets",
-    ]);
+    const { google, auth } = await getGoogleAuth();
     const sheets = google.sheets({ version: "v4", auth });
 
     const COLUMNS = [
@@ -52,22 +65,17 @@ export async function uploadToDrive(
   filename: string,
   mimeType: string
 ): Promise<string | null> {
-  const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-  const privateKey = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "").replace(/\\n/g, "\n");
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  if (!clientEmail || !privateKey || !folderId) {
-    const msg = "[Landing] CRITICAL: Google Drive credentials not configured — bill NOT uploaded. Set GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_DRIVE_FOLDER_ID.";
+  if (!folderId) {
+    const msg = "[Landing] CRITICAL: GOOGLE_DRIVE_FOLDER_ID not configured — bill NOT uploaded.";
     console.error(msg);
     throw new Error(msg);
   }
 
   try {
-    const { google } = await import("googleapis");
+    const { google, auth } = await getGoogleAuth();
     const { Readable } = await import("stream");
-    const auth = new google.auth.JWT(clientEmail, undefined, privateKey, [
-      "https://www.googleapis.com/auth/drive.file",
-    ]);
     const drive = google.drive({ version: "v3", auth });
 
     const res = await drive.files.create({
@@ -94,7 +102,7 @@ export async function uploadToDrive(
     return res.data.webViewLink || null;
   } catch (err: any) {
     console.error("[Landing] Google Drive error:", err.message);
-    return null;
+    throw err;
   }
 }
 

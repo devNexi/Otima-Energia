@@ -2,6 +2,8 @@
 
 This guide walks through every step required to put the Google Ads landing page fully into production, including Google Sheets, Google Drive, email, and tracking.
 
+Authentication uses **OAuth2 with a refresh token** — no service account JSON keys required.
+
 ---
 
 ## 1. Create the Google Sheet
@@ -31,7 +33,11 @@ Lead Status | Assigned To | Sales Notes | Qualified? | Monthly Bill Confirmed | 
 
 ---
 
-## 3. Create a Google Cloud Service Account
+## 3. Create a Google Cloud OAuth2 App and Get a Refresh Token
+
+Authentication is done via OAuth2 refresh token. The token grants the app access to Sheets and Drive on behalf of the Google account that authorizes it — no service account keys needed.
+
+### 3a. Set up the Google Cloud project
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com).
 2. Create a new project (or use an existing one).
@@ -39,43 +45,52 @@ Lead Status | Assigned To | Sales Notes | Qualified? | Monthly Bill Confirmed | 
    APIs & Services → Library → search "Google Sheets API" → Enable.
 4. Enable the **Google Drive API**:  
    APIs & Services → Library → search "Google Drive API" → Enable.
-5. Create a service account:  
-   APIs & Services → Credentials → Create Credentials → Service Account.  
-   Give it any name (e.g. `otima-landing-sheet`). No roles needed.
-6. Open the service account → Keys tab → Add Key → JSON.  
-   Download the JSON key file.
-7. From the JSON file, you need:
-   - `client_email` — looks like `otima-landing-sheet@your-project.iam.gserviceaccount.com`
-   - `private_key` — long string starting with `-----BEGIN RSA PRIVATE KEY-----`
+
+### 3b. Create OAuth2 credentials
+
+1. APIs & Services → Credentials → Create Credentials → **OAuth client ID**.
+2. Application type: **Web application** (or Desktop app for testing).
+3. Add an authorized redirect URI. For token generation you can use:  
+   `https://developers.google.com/oauthplayground`
+4. Click Create. Note the **Client ID** and **Client Secret**.
+5. Go to **OAuth consent screen** → add the Google account you'll authorize as a test user (if the app is in "Testing" mode).
+
+### 3c. Generate the refresh token using OAuth Playground
+
+1. Go to [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground).
+2. Click the gear icon (top right) → check **"Use your own OAuth credentials"**.
+3. Enter your **Client ID** and **Client Secret**.
+4. In Step 1, add these scopes:
+   - `https://www.googleapis.com/auth/spreadsheets`
+   - `https://www.googleapis.com/auth/drive`
+5. Click **Authorize APIs** → sign in with the Google account that owns the Sheet and Drive folder.
+6. In Step 2, click **Exchange authorization code for tokens**.
+7. Copy the **Refresh token** from the response. Keep it safe — it does not expire unless revoked.
+
+> **Note on Drive scope:** `drive.file` limits access to files created by the app. `drive` gives broader access and is more reliable when uploading to a pre-existing folder. Use `drive` unless you have a specific reason to restrict scope.
 
 ---
 
-## 4. Share the Sheet and Drive Folder with the Service Account
-
-1. Open your Google Sheet → Share → paste the `client_email` → give **Editor** access.
-2. Open your Google Drive folder → Share → paste the `client_email` → give **Editor** access.
-
----
-
-## 5. Add Replit Secrets
+## 4. Add Replit Secrets
 
 Go to your Replit project → Secrets (lock icon) and add:
 
 | Secret Name | Value |
 |---|---|
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | The spreadsheet ID from step 1 |
-| `GOOGLE_SHEETS_CLIENT_EMAIL` | The `client_email` from the JSON key |
-| `GOOGLE_SHEETS_PRIVATE_KEY` | The full `private_key` string (including `\n` characters) |
 | `GOOGLE_DRIVE_FOLDER_ID` | The folder ID from step 2 |
+| `GOOGLE_CLIENT_ID` | OAuth2 Client ID from step 3b |
+| `GOOGLE_CLIENT_SECRET` | OAuth2 Client Secret from step 3b |
+| `GOOGLE_REFRESH_TOKEN` | Refresh token from step 3c |
 | `SMTP_PASS` | Zoho SMTP password for `notificacoes@otimaenergia.com` (already set) |
-| `VITE_GTM_ID` | Your Google Tag Manager container ID, e.g. `GTM-XXXXXX` (optional) |
-| `VITE_GA_MEASUREMENT_ID` | Your GA4 Measurement ID, e.g. `G-XXXXXXXXXX` (optional, used if no GTM) |
+| `VITE_GTM_ID` | Google Tag Manager container ID, e.g. `GTM-XXXXXX` (optional) |
+| `VITE_GA_MEASUREMENT_ID` | GA4 Measurement ID, e.g. `G-XXXXXXXXXX` (optional, used if no GTM) |
 
 > **Note on GTM/GA:** Both `VITE_GTM_ID` and `NEXT_PUBLIC_GTM_ID` are supported (same for GA). Use whichever name you prefer — both are checked.
 
 ---
 
-## 6. Verify the Setup
+## 5. Verify the Setup
 
 ### Check configuration status
 
@@ -90,9 +105,10 @@ Example response when fully configured:
 {
   "integrations": {
     "GOOGLE_SHEETS_SPREADSHEET_ID": true,
-    "GOOGLE_SHEETS_CLIENT_EMAIL": true,
-    "GOOGLE_SHEETS_PRIVATE_KEY": true,
     "GOOGLE_DRIVE_FOLDER_ID": true,
+    "GOOGLE_CLIENT_ID": true,
+    "GOOGLE_CLIENT_SECRET": true,
+    "GOOGLE_REFRESH_TOKEN": true,
     "SMTP_PASS": true,
     "NEXT_PUBLIC_GTM_ID": false,
     "NEXT_PUBLIC_GA_MEASUREMENT_ID": false
@@ -101,11 +117,11 @@ Example response when fully configured:
 }
 ```
 
-`"ready": true` means the three critical integrations (SMTP, Sheets credentials) are all set.
+`"ready": true` means all 6 required integrations are configured. GTM/GA are shown but do not block readiness.
 
 ---
 
-## 7. Test a Form Submission
+## 6. Test a Form Submission
 
 1. Go to `/reduza` in your browser.
 2. Fill in all required fields with test data.
@@ -129,7 +145,7 @@ Open your Google Drive folder and verify the uploaded file is present with the n
 
 ---
 
-## 8. GTM / GA4 Event Reference
+## 7. GTM / GA4 Event Reference
 
 The following events are pushed to `dataLayer` (and forwarded to GTM/GA4 if configured):
 
@@ -142,11 +158,22 @@ The following events are pushed to `dataLayer` (and forwarded to GTM/GA4 if conf
 
 ---
 
-## 9. File Upload Limits
+## 8. File Upload Limits
 
 - **Accepted formats:** PDF, JPG, JPEG, PNG
 - **Maximum size:** 10 MB
 - Files are uploaded to Google Drive and the link is stored in the Sheet and included in the internal notification email.
+- If Drive upload fails, the form submission is **rejected** — the file is never silently discarded.
+
+---
+
+## 9. Failure Behaviour
+
+| Step | Failure behaviour |
+|---|---|
+| Drive upload fails | Form returns an error to the user — file not lost silently |
+| Sheets append fails | Form returns an error; email to Callum is still attempted as a fallback |
+| Email fails (after Sheets succeeds) | Logged as an error; user still gets success (lead is safely in Sheets) |
 
 ---
 
