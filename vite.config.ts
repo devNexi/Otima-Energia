@@ -23,6 +23,10 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    __GTM_ID__: JSON.stringify(process.env.VITE_GTM_ID || process.env.NEXT_PUBLIC_GTM_ID || ""),
+    __GA_MEASUREMENT_ID__: JSON.stringify(process.env.VITE_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

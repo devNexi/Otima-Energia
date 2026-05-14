@@ -1,4 +1,5 @@
 import { Switch, Route, Redirect, useParams } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -128,7 +129,40 @@ function Router() {
   );
 }
 
+declare const __GTM_ID__: string;
+declare const __GA_MEASUREMENT_ID__: string;
+
+function useTrackingInit() {
+  useEffect(() => {
+    const gtmId: string = typeof __GTM_ID__ !== "undefined" ? __GTM_ID__ : "";
+    const gaId: string = typeof __GA_MEASUREMENT_ID__ !== "undefined" ? __GA_MEASUREMENT_ID__ : "";
+
+    if (gtmId) {
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtm.js?id=${gtmId}`;
+      document.head.appendChild(script);
+
+      const noscript = document.createElement("noscript");
+      noscript.innerHTML = `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+      document.body.insertBefore(noscript, document.body.firstChild);
+    } else if (gaId) {
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+      document.head.appendChild(script);
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).gtag = function (...args: any[]) { (window as any).dataLayer.push(args); };
+      (window as any).gtag("js", new Date());
+      (window as any).gtag("config", gaId);
+    }
+  }, []);
+}
+
 function App() {
+  useTrackingInit();
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

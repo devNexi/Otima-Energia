@@ -21,7 +21,7 @@ const formSchema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
   empresa: z.string().min(2, "Empresa obrigatória"),
   email: z.string().email("Email inválido"),
-  whatsapp: z.string().min(10, "WhatsApp obrigatório"),
+  phone: z.string().min(10, "Telefone obrigatório"),
   cidade: z.string().min(2, "Cidade obrigatória"),
   estado: z.string().min(2, "Estado obrigatório"),
   valorConta: z.string().min(1, "Valor da conta obrigatório"),
@@ -71,10 +71,6 @@ export default function Reduza() {
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
-
-  useEffect(() => {
-    fireEvent("thank_you_page_view", { page: "reduza" });
-  }, []);
 
   const handleFormFocus = () => {
     if (!formStarted) {
@@ -253,14 +249,14 @@ export default function Reduza() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
                   <input
-                    {...register("whatsapp")}
+                    {...register("phone")}
                     placeholder="(11) 99999-9999"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-whatsapp"
+                    data-testid="input-phone"
                   />
-                  {errors.whatsapp && <p className="text-red-500 text-xs mt-1">{errors.whatsapp.message}</p>}
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
                 </div>
 
                 <div>

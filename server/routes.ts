@@ -684,6 +684,23 @@ export async function registerRoutes(
     }
   });
 
+  // ── Setup Check (public, no secrets exposed) ─────────────────────────────────
+  app.get("/api/setup-check", (_req, res) => {
+    const check = (key: string) => !!(process.env[key] && process.env[key]!.trim().length > 0);
+    res.json({
+      integrations: {
+        GOOGLE_SHEETS_SPREADSHEET_ID: check("GOOGLE_SHEETS_SPREADSHEET_ID"),
+        GOOGLE_SHEETS_CLIENT_EMAIL: check("GOOGLE_SHEETS_CLIENT_EMAIL"),
+        GOOGLE_SHEETS_PRIVATE_KEY: check("GOOGLE_SHEETS_PRIVATE_KEY"),
+        GOOGLE_DRIVE_FOLDER_ID: check("GOOGLE_DRIVE_FOLDER_ID"),
+        SMTP_PASS: check("SMTP_PASS"),
+        NEXT_PUBLIC_GTM_ID: check("NEXT_PUBLIC_GTM_ID") || check("VITE_GTM_ID"),
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: check("NEXT_PUBLIC_GA_MEASUREMENT_ID") || check("VITE_GA_MEASUREMENT_ID"),
+      },
+      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_SHEETS_CLIENT_EMAIL") && check("GOOGLE_SHEETS_PRIVATE_KEY"),
+    });
+  });
+
   // ============== LEAD ENDPOINTS ==============
   
   // Submit lead from website contact form
@@ -698,7 +715,7 @@ export async function registerRoutes(
       }
 
       const {
-        nome, empresa, email, whatsapp, cidade, estado,
+        nome, empresa, email, phone, cidade, estado,
         valorConta, tipoImovel, mensagem, honeypot,
         utm_source, utm_medium, utm_campaign, utm_term, utm_content,
         gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
@@ -714,7 +731,7 @@ export async function registerRoutes(
       if (!nome?.trim()) missing.push("nome");
       if (!empresa?.trim()) missing.push("empresa");
       if (!email?.trim()) missing.push("email");
-      if (!whatsapp?.trim()) missing.push("whatsapp");
+      if (!phone?.trim()) missing.push("phone");
       if (!cidade?.trim()) missing.push("cidade");
       if (!estado?.trim()) missing.push("estado");
       if (!valorConta?.trim()) missing.push("valorConta");
@@ -749,7 +766,7 @@ export async function registerRoutes(
         "Name": nome,
         "Company": empresa,
         "Email": email,
-        "WhatsApp": whatsapp,
+        "Phone": phone,
         "City": cidade,
         "State": estado,
         "Average Energy Bill": valorConta,
@@ -777,15 +794,19 @@ export async function registerRoutes(
         "Next Action Date": "",
       };
 
-      // Fire-and-forget: sheet + email (don't block the response)
-      appendToGoogleSheet(sheetRow).catch(err => console.error("[Landing] Sheet error:", err));
-      sendLandingEmails({
-        nome, empresa, email, whatsapp, cidade, estado,
-        valorConta, tipoImovel, mensagem,
-        billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-        gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
-        leadId,
-      }).catch(err => console.error("[Landing] Email error:", err));
+      // Await both integrations — errors are logged but don't fail the user response
+      const [sheetResult, emailResult] = await Promise.allSettled([
+        appendToGoogleSheet(sheetRow),
+        sendLandingEmails({
+          nome, empresa, email, phone, cidade, estado,
+          valorConta, tipoImovel, mensagem,
+          billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+          gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
+          submittedAt, leadId,
+        }),
+      ]);
+      if (sheetResult.status === "rejected") console.error("[Landing] Sheet failed:", sheetResult.reason);
+      if (emailResult.status === "rejected") console.error("[Landing] Email failed:", emailResult.reason);
 
       console.log(`[Landing] Lead ${leadId} from ${empresa} (${email}) submitted`);
       res.json({ success: true, leadId });

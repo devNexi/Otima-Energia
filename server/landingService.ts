@@ -7,7 +7,7 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
   const privateKey = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
   if (!spreadsheetId || !clientEmail || !privateKey) {
-    console.warn("[Landing] Google Sheets not configured — skipping sheet append");
+    console.error("[Landing] Google Sheets credentials not configured — lead NOT saved to sheet. Set GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY.");
     return;
   }
 
@@ -19,11 +19,11 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
     const sheets = google.sheets({ version: "v4", auth });
 
     const COLUMNS = [
-      "Submitted At","Lead ID","Name","Company","Email","WhatsApp","City","State",
-      "Average Energy Bill","Property Type","Bill Uploaded?","Bill File URL","Message",
-      "UTM Source","UTM Medium","UTM Campaign","UTM Term","UTM Content",
-      "GCLID","GBRAID","WBRAID","Landing Page URL","Referrer","User Agent","IP Address",
-      "Lead Status","Assigned To","Sales Notes","Qualified?","Monthly Bill Confirmed","Next Action Date",
+      "Submitted At", "Lead ID", "Name", "Company", "Email", "Phone", "City", "State",
+      "Average Energy Bill", "Property Type", "Bill Uploaded?", "Bill File URL", "Message",
+      "UTM Source", "UTM Medium", "UTM Campaign", "UTM Term", "UTM Content",
+      "GCLID", "GBRAID", "WBRAID", "Landing Page URL", "Referrer", "User Agent", "IP Address",
+      "Lead Status", "Assigned To", "Sales Notes", "Qualified?", "Monthly Bill Confirmed", "Next Action Date",
     ];
 
     const values = COLUMNS.map(col => {
@@ -41,6 +41,7 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
     console.log("[Landing] Row appended to Google Sheet");
   } catch (err: any) {
     console.error("[Landing] Google Sheets error:", err.message);
+    throw err;
   }
 }
 
@@ -55,7 +56,7 @@ export async function uploadToDrive(
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
   if (!clientEmail || !privateKey || !folderId) {
-    console.warn("[Landing] Google Drive not configured — skipping file upload");
+    console.error("[Landing] Google Drive credentials not configured — bill NOT uploaded. Set GOOGLE_SHEETS_CLIENT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_DRIVE_FOLDER_ID.");
     return null;
   }
 
@@ -100,7 +101,7 @@ export async function sendLandingEmails(params: {
   nome: string;
   empresa: string;
   email: string;
-  whatsapp: string;
+  phone: string;
   cidade: string;
   estado: string;
   valorConta: string;
@@ -118,11 +119,12 @@ export async function sendLandingEmails(params: {
   landingPageUrl?: string;
   referrer?: string;
   userAgent?: string;
+  submittedAt: string;
   leadId: string;
 }): Promise<void> {
   const smtpPass = process.env.SMTP_PASS;
   if (!smtpPass) {
-    console.warn("[Landing] SMTP_PASS not set — skipping email");
+    console.error("[Landing] SMTP_PASS not set — internal notification NOT sent. Lead may be lost if Sheet is also not configured.");
     return;
   }
 
@@ -137,15 +139,15 @@ export async function sendLandingEmails(params: {
       auth: { user: fromEmail, pass: smtpPass },
     });
 
-    // Internal notification
     const internalBody = `
 Novo lead do Google Ads — ID: ${params.leadId}
+Enviado em: ${params.submittedAt}
 
 DADOS DO LEAD
 Nome: ${params.nome}
 Empresa: ${params.empresa}
 Email: ${params.email}
-WhatsApp: ${params.whatsapp}
+Telefone: ${params.phone}
 Cidade: ${params.cidade} / ${params.estado}
 Valor médio da conta: ${params.valorConta}
 Tipo de imóvel: ${params.tipoImovel}
@@ -175,7 +177,6 @@ User Agent: ${params.userAgent || "—"}
       text: internalBody,
     });
 
-    // Confirmation to lead
     const confirmBody = `Olá ${params.nome},
 
 Recebemos sua solicitação de auditoria gratuita de economia de energia.
@@ -199,12 +200,13 @@ www.otimaenergia.com`;
     console.log(`[Landing] Emails sent for lead ${params.leadId}`);
   } catch (err: any) {
     console.error("[Landing] Email error:", err.message);
+    throw err;
   }
 }
 
 // ── Rate limiter (simple in-memory, per IP) ────────────────────────────────────
 const submissionLog = new Map<string, number[]>();
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_WINDOW_MS = 60 * 60 * 1000;
 const MAX_PER_HOUR = 5;
 
 export function checkLandingRateLimit(ip: string): boolean {

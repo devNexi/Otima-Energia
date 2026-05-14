@@ -1,0 +1,188 @@
+Good. Do not rebuild the landing page from scratch.
+
+Now please add/verify the production integrations and setup checks for the existing Otima Energia landing page at /reduza.
+
+Current requirements:
+
+1. Form submission
+The form should continue to be the only CTA. Do not add WhatsApp links back.
+
+2. Google Sheets integration
+When a lead submits the form, append the lead to Google Sheets using:
+- GOOGLE_SHEETS_SPREADSHEET_ID
+- GOOGLE_SHEETS_CLIENT_EMAIL
+- GOOGLE_SHEETS_PRIVATE_KEY
+
+Use the following Google Sheet columns:
+Submitted At
+Lead ID
+Name
+Company
+Email
+Phone
+City
+State
+Average Energy Bill
+Property Type
+Bill Uploaded?
+Bill File URL
+Message
+UTM Source
+UTM Medium
+UTM Campaign
+UTM Term
+UTM Content
+GCLID
+GBRAID
+WBRAID
+Landing Page URL
+Referrer
+User Agent
+IP Address
+Lead Status
+Assigned To
+Sales Notes
+Qualified?
+Monthly Bill Confirmed
+Next Action Date
+
+3. Google Drive upload
+If the user uploads an electricity bill, upload it to the configured Google Drive folder:
+- GOOGLE_DRIVE_FOLDER_ID
+
+Use the same Google service account credentials as Sheets.
+
+Accept only:
+- PDF
+- JPG
+- JPEG
+- PNG
+
+Add a sensible file size limit, ideally 10MB.
+
+Store the Drive file URL in the Google Sheet.
+
+4. Email notification
+After every successful lead submission, send an internal notification email to:
+callum@otimaenergia.com
+
+Use the existing SMTP setup. SMTP_PASS is already set.
+
+The email subject should be:
+Novo lead Google Ads - {{company}} - {{average_energy_bill}}
+
+The email body should include:
+- Name
+- Company
+- Email
+- Phone
+- City/State
+- Average Energy Bill
+- Property Type
+- Uploaded bill link
+- Message
+- UTM source
+- UTM medium
+- UTM campaign
+- UTM term
+- UTM content
+- GCLID
+- GBRAID
+- WBRAID
+- Landing page URL
+- Referrer
+- Submitted at
+
+5. Confirmation email to lead
+Send the lead a confirmation email.
+
+Subject:
+Recebemos sua solicitação de auditoria gratuita | Otima Energia
+
+Body:
+Olá {{name}},
+
+Recebemos sua solicitação de auditoria gratuita de economia de energia.
+
+Nossa equipe irá analisar as informações enviadas e um Especialista em Energia da Otima entrará em contato com sua comparação personalizada.
+
+Se você ainda não enviou sua conta de energia, pode responder este email com o arquivo para agilizar a análise.
+
+Obrigado,
+Equipe Otima Energia
+
+6. Tracking
+Keep support for:
+- NEXT_PUBLIC_GTM_ID
+- NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+Capture and persist:
+- utm_source
+- utm_medium
+- utm_campaign
+- utm_term
+- utm_content
+- gclid
+- gbraid
+- wbraid
+- landing_page_url
+- referrer
+- user_agent
+- submitted_at
+
+Store these in the Google Sheet and include them in the internal email.
+
+7. Events
+Push these events to dataLayer when GTM is present:
+- lead_form_start
+- bill_upload_added
+- lead_form_submit
+- thank_you_page_view
+
+Do not include whatsapp_click because WhatsApp has been removed.
+
+Important:
+lead_form_submit should only fire after the backend confirms the lead has been successfully processed.
+
+8. Setup checker
+Create or verify an admin/debug endpoint:
+
+GET /api/setup-check
+
+It should show true/false status for:
+- GOOGLE_SHEETS_SPREADSHEET_ID
+- GOOGLE_SHEETS_CLIENT_EMAIL
+- GOOGLE_SHEETS_PRIVATE_KEY
+- GOOGLE_DRIVE_FOLDER_ID
+- SMTP_PASS
+- NEXT_PUBLIC_GTM_ID
+- NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+Do not expose secret values.
+
+9. Graceful failure
+If Google Sheets or Drive credentials are missing, the frontend should not pretend everything is fully working.
+
+For production, a form submission should only be considered successful if:
+- the lead notification email to Callum is attempted, and
+- the lead is either saved to Google Sheets or a clear server-side error is logged.
+
+Do not lose leads silently.
+
+10. Documentation
+Update or create SETUP.md with exact steps for:
+- creating the Google Sheet
+- creating the Google Drive folder
+- creating the Google Cloud service account
+- enabling Google Sheets API
+- enabling Google Drive API
+- sharing the Sheet with the service account email
+- sharing the Drive folder with the service account email
+- adding the Replit Secrets
+- testing /api/setup-check
+- testing a form submission
+- confirming the row appears in Sheets
+- confirming the bill appears in Drive
+- confirming the emails are sent
+
+Please inspect the existing code first and modify only what is needed.
