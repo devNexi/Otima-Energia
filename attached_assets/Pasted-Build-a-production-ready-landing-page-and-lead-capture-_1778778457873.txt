@@ -1,0 +1,169 @@
+Build a production-ready landing page and lead capture app for Otima Energia in Brazil.
+
+Business context:
+Otima Energia helps Brazilian businesses, commercial properties, industries, and condominiums reduce electricity costs. The landing page is for Google Search Ads traffic. The core offer is: upload your latest electricity bill and receive a complimentary savings audit from an Otima Energy Specialist.
+
+Language:
+Brazilian Portuguese.
+
+Tech stack:
+Use Next.js or React with a Node/Express backend. Use a clean, responsive design. The app must be deployable on Replit.
+
+Pages:
+1. Landing page at /
+2. Thank-you page at /obrigado
+
+Landing page content:
+Headline:
+"Reduza a Conta de Energia da Sua Empresa"
+
+Subheadline:
+"Envie sua última conta de luz e receba uma análise gratuita de economia feita por um especialista da Otima Energia."
+
+Supporting copy:
+"Sem compromisso. Sem obra. Sem instalação de placas solares. Apenas uma avaliação clara para descobrir se sua empresa pode economizar."
+
+CTA:
+"Enviar Minha Conta de Energia"
+
+How it works section:
+1. Você envia sua última conta de energia
+2. Nossa equipe analisa seu perfil de consumo
+3. Um Especialista em Energia envia sua auditoria gratuita
+4. Se houver oportunidade, mostramos quanto sua empresa pode economizar
+
+Form fields:
+Required:
+- Nome
+- Empresa
+- Email
+- WhatsApp
+- Cidade
+- Estado
+- Valor médio da conta de energia
+- Tipo de imóvel: Empresa, Comércio, Indústria, Condomínio, Outro
+
+Optional:
+- Upload da última conta de energia, accepting PDF, JPG, JPEG, PNG
+- Mensagem / observações
+
+Hidden tracking fields to capture from URL/cookies/browser:
+- utm_source
+- utm_medium
+- utm_campaign
+- utm_term
+- utm_content
+- gclid
+- gbraid
+- wbraid
+- landing_page_url
+- referrer
+- user_agent
+- submitted_at
+
+Behaviour:
+On form submission:
+1. Validate required fields.
+2. Upload the bill file to a safe persistent storage location. Prefer Google Drive if credentials are provided; otherwise create a storage abstraction so Google Drive can be added later.
+3. Append the lead data to a Google Sheet using the Google Sheets API.
+4. Send an internal notification email to callum@otimaenergia.com.
+5. Send a confirmation email to the lead.
+6. Fire a GA4/Google Ads conversion event only after successful submission.
+7. Redirect user to /obrigado.
+
+Google Sheet columns:
+Submitted At
+Lead ID
+Name
+Company
+Email
+WhatsApp
+City
+State
+Average Energy Bill
+Property Type
+Bill Uploaded?
+Bill File URL
+Message
+UTM Source
+UTM Medium
+UTM Campaign
+UTM Term
+UTM Content
+GCLID
+GBRAID
+WBRAID
+Landing Page URL
+Referrer
+User Agent
+IP Address
+Lead Status
+Assigned To
+Sales Notes
+Qualified?
+Monthly Bill Confirmed
+Next Action Date
+
+Email notification to Callum:
+To: callum@otimaenergia.com
+Subject: Novo lead Google Ads - {{empresa}} - {{valor_conta}}
+
+Body should include all form fields, the bill file link if uploaded, and all UTM/GCLID tracking fields.
+
+Confirmation email to user:
+Subject:
+Recebemos sua solicitação de auditoria gratuita | Otima Energia
+
+Body:
+Olá {{nome}},
+
+Recebemos sua solicitação de auditoria gratuita de economia de energia.
+
+Nossa equipe irá analisar as informações enviadas e um Especialista em Energia da Otima entrará em contato com sua comparação personalizada.
+
+Se você ainda não enviou sua conta de energia, pode responder este email com o arquivo para agilizar a análise.
+
+Obrigado,
+Equipe Otima Energia
+
+Tracking:
+Add support for Google Tag Manager container ID via environment variable:
+NEXT_PUBLIC_GTM_ID
+
+Add support for GA4 Measurement ID if GTM is not used:
+NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+Track these events:
+- lead_form_start
+- bill_upload_added
+- lead_form_submit
+- thank_you_page_view
+- whatsapp_click
+
+Important:
+The lead_form_submit event must only fire after the backend confirms that the lead was saved and the notification was sent.
+
+Security:
+- Do not expose API keys in frontend code.
+- Use environment variables.
+- Add file size limit, e.g. 10MB.
+- Validate file extensions and MIME types.
+- Add basic anti-spam protection using a honeypot field and submission rate limiting.
+- Include a privacy note near the form explaining that the uploaded bill will only be used to prepare the savings audit.
+
+Design:
+Modern, clean, trustworthy B2B energy brand.
+Use white background, strong headline, simple form, clear benefit copy.
+Mobile-first.
+Fast loading.
+No unnecessary animations.
+
+Environment variables needed:
+GOOGLE_SHEETS_SPREADSHEET_ID
+GOOGLE_SHEETS_CLIENT_EMAIL
+GOOGLE_SHEETS_PRIVATE_KEY
+GOOGLE_DRIVE_FOLDER_ID
+EMAIL_PROVIDER_API_KEY
+EMAIL_FROM
+NEXT_PUBLIC_GTM_ID
+NEXT_PUBLIC_GA_MEASUREMENT_ID
