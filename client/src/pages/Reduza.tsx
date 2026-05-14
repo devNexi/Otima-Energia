@@ -153,15 +153,6 @@ export default function Reduza() {
             <Zap className="h-6 w-6 text-purple-600" />
             <span className="font-bold text-lg text-gray-900">Ótima Energia</span>
           </div>
-          <a
-            href="https://wa.me/5511999999999"
-            className="text-sm text-purple-600 font-medium hover:underline"
-            onClick={() => fireEvent("whatsapp_click", { location: "header" })}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Falar no WhatsApp
-          </a>
         </div>
       </header>
 

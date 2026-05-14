@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CheckCircle, Zap, MessageCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, Zap, ArrowRight } from "lucide-react";
 
 declare global {
   interface Window {
@@ -68,18 +68,7 @@ export default function Obrigado() {
             Se você ainda não enviou sua conta de energia, pode responder o email de confirmação com o arquivo para agilizar a análise.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="https://wa.me/5511999999999"
-              className="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
-              onClick={() => fireEvent("whatsapp_click", { location: "obrigado" })}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="button-whatsapp"
-            >
-              <MessageCircle className="h-5 w-5" />
-              Falar no WhatsApp
-            </a>
+          <div className="flex justify-center">
             <a
               href="/reduza"
               className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium py-3 px-6 rounded-xl transition-colors"
