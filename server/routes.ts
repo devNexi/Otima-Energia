@@ -72,6 +72,7 @@ import { seedOpsPlaybooks } from "./opsPlaybooksSeeder";
 import { seedDictionaryTerms } from "./dictionarySeeder";
 import { enqueueJobIfNotExists, enqueueJob, getLastJobForDeal } from "./jobs";
 import { getZohoLeadDeepLink, getZohoStatus } from "./zohoClient";
+import { appendToGoogleSheet, uploadToDrive, sendLandingEmails, checkLandingRateLimit, generateLeadId } from "./landingService";
 
 declare module 'express-serve-static-core' {
   interface Request {
@@ -686,6 +687,114 @@ export async function registerRoutes(
   // ============== LEAD ENDPOINTS ==============
   
   // Submit lead from website contact form
+  // ── Google Ads Landing Page Submit ──────────────────────────────────────────
+  app.post("/api/landing/submit", upload.single("bill"), async (req, res) => {
+    try {
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+
+      // Rate limit: max 5 submissions per IP per hour
+      if (!checkLandingRateLimit(ip)) {
+        return res.status(429).json({ success: false, error: "Muitas solicitações. Tente novamente em alguns minutos." });
+      }
+
+      const {
+        nome, empresa, email, whatsapp, cidade, estado,
+        valorConta, tipoImovel, mensagem, honeypot,
+        utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+        gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
+      } = req.body;
+
+      // Honeypot anti-spam
+      if (honeypot && honeypot.length > 0) {
+        return res.json({ success: true, leadId: "SPAM" });
+      }
+
+      // Required field validation
+      const missing = [];
+      if (!nome?.trim()) missing.push("nome");
+      if (!empresa?.trim()) missing.push("empresa");
+      if (!email?.trim()) missing.push("email");
+      if (!whatsapp?.trim()) missing.push("whatsapp");
+      if (!cidade?.trim()) missing.push("cidade");
+      if (!estado?.trim()) missing.push("estado");
+      if (!valorConta?.trim()) missing.push("valorConta");
+      if (!tipoImovel?.trim()) missing.push("tipoImovel");
+      if (missing.length > 0) {
+        return res.status(400).json({ success: false, error: `Campos obrigatórios faltando: ${missing.join(", ")}` });
+      }
+
+      // File validation
+      let billFileUrl: string | null = null;
+      const billFile = req.file;
+      if (billFile) {
+        const allowedMimes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+        if (!allowedMimes.includes(billFile.mimetype)) {
+          return res.status(400).json({ success: false, error: "Tipo de arquivo inválido. Use PDF, JPG ou PNG." });
+        }
+        if (billFile.size > 10 * 1024 * 1024) {
+          return res.status(400).json({ success: false, error: "Arquivo muito grande. Máximo 10MB." });
+        }
+        // Upload to Google Drive (non-blocking on failure)
+        const ext = billFile.originalname.split(".").pop() || "pdf";
+        const filename = `conta-${empresa?.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
+        billFileUrl = await uploadToDrive(billFile.buffer, filename, billFile.mimetype);
+      }
+
+      const leadId = generateLeadId();
+      const submittedAt = new Date().toISOString();
+
+      const sheetRow = {
+        "Submitted At": submittedAt,
+        "Lead ID": leadId,
+        "Name": nome,
+        "Company": empresa,
+        "Email": email,
+        "WhatsApp": whatsapp,
+        "City": cidade,
+        "State": estado,
+        "Average Energy Bill": valorConta,
+        "Property Type": tipoImovel,
+        "Bill Uploaded?": billFile ? "Sim" : "Não",
+        "Bill File URL": billFileUrl || "",
+        "Message": mensagem || "",
+        "UTM Source": utm_source || "",
+        "UTM Medium": utm_medium || "",
+        "UTM Campaign": utm_campaign || "",
+        "UTM Term": utm_term || "",
+        "UTM Content": utm_content || "",
+        "GCLID": gclid || "",
+        "GBRAID": gbraid || "",
+        "WBRAID": wbraid || "",
+        "Landing Page URL": landingPageUrl || "",
+        "Referrer": referrer || "",
+        "User Agent": userAgent || "",
+        "IP Address": ip,
+        "Lead Status": "Novo",
+        "Assigned To": "",
+        "Sales Notes": "",
+        "Qualified?": "",
+        "Monthly Bill Confirmed": "",
+        "Next Action Date": "",
+      };
+
+      // Fire-and-forget: sheet + email (don't block the response)
+      appendToGoogleSheet(sheetRow).catch(err => console.error("[Landing] Sheet error:", err));
+      sendLandingEmails({
+        nome, empresa, email, whatsapp, cidade, estado,
+        valorConta, tipoImovel, mensagem,
+        billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+        gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
+        leadId,
+      }).catch(err => console.error("[Landing] Email error:", err));
+
+      console.log(`[Landing] Lead ${leadId} from ${empresa} (${email}) submitted`);
+      res.json({ success: true, leadId });
+    } catch (error: any) {
+      console.error("[Landing] Submit error:", error);
+      res.status(500).json({ success: false, error: "Erro ao processar formulário. Tente novamente." });
+    }
+  });
+
   app.post("/api/leads", async (req, res) => {
     try {
       const validatedData = insertLeadSchema.parse(req.body);

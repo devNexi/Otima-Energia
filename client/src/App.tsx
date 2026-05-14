@@ -46,6 +46,8 @@ import DiagnosticoForm from "@/pages/DiagnosticoForm";
 import TracksQueue from "@/pages/TracksQueue";
 import VerificationPage from "@/pages/VerificationPage";
 import DossierPage from "@/pages/DossierPage";
+import Reduza from "@/pages/Reduza";
+import Obrigado from "@/pages/Obrigado";
 
 const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
 
@@ -119,6 +121,8 @@ function Router() {
       <Route path="/admin/quote-inbox" component={QuoteInbox} />
       <Route path="/admin/verify" component={VerificationPage} />
       <Route path="/admin/dossier/:clientId" component={DossierPage} />
+      <Route path="/reduza" component={Reduza} />
+      <Route path="/obrigado" component={Obrigado} />
       <Route component={NotFound} />
     </Switch>
   );
