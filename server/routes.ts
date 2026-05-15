@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { runKeywordResearch, checkGoogleAdsReadiness } from "./keywordResearchService";
+import { runKeywordResearch, checkGoogleAdsReadiness, runDiagnostics } from "./keywordResearchService";
 import { db } from "./db";
 import { sql, eq, and, or, ilike, desc } from "drizzle-orm";
 import { 
@@ -706,6 +706,19 @@ export async function registerRoutes(
   });
 
   // ============== KEYWORD RESEARCH ==============
+
+  app.get("/api/admin/google-ads-diagnostics", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+      const testMode = req.query.test === "1";
+      const result = await runDiagnostics(testMode);
+      res.json(result);
+    } catch (err: any) {
+      console.error("[google-ads-diagnostics]", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   app.post("/api/admin/keyword-research", async (req, res) => {
     try {

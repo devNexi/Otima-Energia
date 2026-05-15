@@ -157,8 +157,22 @@ function downloadCsv(filename: string, rows: string[][], headers: string[]) {
   URL.revokeObjectURL(url);
 }
 
-function exportRaw(data: ResearchResult) {
+function slugifyBatch(name: string): string {
+  if (!name.trim()) return "";
+  return (
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "")
+      .slice(0, 40) + "_"
+  );
+}
+
+function exportRaw(data: ResearchResult, batchName: string) {
+  const prefix = slugifyBatch(batchName);
   const headers = [
+    "batch_name",
     "keyword",
     "avg_monthly_searches",
     "competition",
@@ -167,6 +181,7 @@ function exportRaw(data: ResearchResult) {
     "high_top_of_page_bid_micros",
   ];
   const rows = data.raw.map((r) => [
+    batchName,
     r.keyword,
     r.avg_monthly_searches,
     r.competition,
@@ -174,11 +189,13 @@ function exportRaw(data: ResearchResult) {
     r.low_top_of_page_bid_micros,
     r.high_top_of_page_bid_micros,
   ]);
-  downloadCsv("raw_results.csv", rows, headers);
+  downloadCsv(`${prefix}raw_results.csv`, rows, headers);
 }
 
-function exportClassified(data: ResearchResult) {
+function exportClassified(data: ResearchResult, batchName: string) {
+  const prefix = slugifyBatch(batchName);
   const headers = [
+    "batch_name",
     "keyword",
     "campaign",
     "ad_group",
@@ -195,6 +212,7 @@ function exportClassified(data: ResearchResult) {
   const rows = data.classified
     .filter((c) => c.recommended_match_type !== "reject")
     .map((c) => [
+      batchName,
       c.keyword,
       c.campaign,
       c.ad_group,
@@ -208,15 +226,16 @@ function exportClassified(data: ResearchResult) {
       c.reason,
       c.negative_keyword_warnings.join("; "),
     ]);
-  downloadCsv("classified_keywords.csv", rows, headers);
+  downloadCsv(`${prefix}classified_keywords.csv`, rows, headers);
 }
 
-function exportNegatives(data: ResearchResult) {
-  const headers = ["keyword", "reason"];
+function exportNegatives(data: ResearchResult, batchName: string) {
+  const prefix = slugifyBatch(batchName);
+  const headers = ["batch_name", "keyword", "reason"];
   const rows = data.classified
     .filter((c) => c.recommended_match_type === "reject")
-    .map((c) => [c.keyword, c.reason]);
-  downloadCsv("negatives.csv", rows, headers);
+    .map((c) => [batchName, c.keyword, c.reason]);
+  downloadCsv(`${prefix}negatives.csv`, rows, headers);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -225,6 +244,7 @@ export default function KeywordResearch() {
   const { user, sessionId, isLoading } = useAuth();
   const { toast } = useToast();
 
+  const [batchName, setBatchName] = useState("");
   const [seedText, setSeedText] = useState(
     "reduzir conta de luz empresa\nmercado livre de energia para empresas\neconomizar energia empresa\nfornecedor de energia elétrica"
   );
@@ -339,6 +359,17 @@ export default function KeywordResearch() {
             <CardDescription>One keyword per line · max 20 · Brazil / Portuguese / Google Search</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-600">Batch Name <span className="text-slate-400 font-normal">(optional — used in filenames and exports)</span></label>
+              <input
+                data-testid="input-batch-name"
+                type="text"
+                value={batchName}
+                onChange={(e) => setBatchName(e.target.value)}
+                placeholder="e.g. batch_01_mercado_livre"
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              />
+            </div>
             <Textarea
               data-testid="input-seed-keywords"
               value={seedText}
@@ -373,9 +404,24 @@ export default function KeywordResearch() {
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-4 flex gap-3 items-start">
               <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-              <div>
+              <div className="space-y-1.5 min-w-0">
                 <p className="font-medium text-red-800 text-sm">Research failed</p>
-                <p className="text-red-700 text-xs mt-1">{(mutation.error as Error).message}</p>
+                <p className="text-red-700 text-xs whitespace-pre-wrap break-words">{(mutation.error as Error).message}</p>
+                {(mutation.error as Error).message.includes("404") || (mutation.error as Error).message.includes("sunset") || (mutation.error as Error).message.includes("HTML") ? (
+                  <p className="text-red-600 text-xs mt-2 border-t border-red-200 pt-2">
+                    <strong>Next step:</strong> Visit{" "}
+                    <a
+                      href="/api/admin/google-ads-diagnostics?test=1"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline font-medium"
+                    >
+                      /api/admin/google-ads-diagnostics?test=1
+                    </a>{" "}
+                    to diagnose. If the API version is sunset, set the{" "}
+                    <code className="bg-red-100 px-1 rounded">GOOGLE_ADS_API_VERSION</code> secret to a supported version (e.g. <code className="bg-red-100 px-1 rounded">v19</code>, <code className="bg-red-100 px-1 rounded">v20</code>, <code className="bg-red-100 px-1 rounded">v21</code>).
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -462,7 +508,7 @@ export default function KeywordResearch() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs"
-                  onClick={() => exportRaw(result)}
+                  onClick={() => exportRaw(result, batchName)}
                 >
                   <Download className="w-3.5 h-3.5" /> raw_results.csv
                 </Button>
@@ -471,7 +517,7 @@ export default function KeywordResearch() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs"
-                  onClick={() => exportClassified(result)}
+                  onClick={() => exportClassified(result, batchName)}
                 >
                   <Download className="w-3.5 h-3.5" /> classified_keywords.csv
                 </Button>
@@ -480,7 +526,7 @@ export default function KeywordResearch() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={() => exportNegatives(result)}
+                  onClick={() => exportNegatives(result, batchName)}
                 >
                   <Download className="w-3.5 h-3.5" /> negatives.csv
                 </Button>

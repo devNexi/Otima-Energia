@@ -1,0 +1,154 @@
+The /admin/keyword-research tool is not working. It returned:
+
+"Google Ads API error (HTTP 404): <!DOCTYPE html> ... Error 404 (Not Found)"
+
+This looks like the backend is calling the wrong Google Ads API endpoint or using an unsupported REST path. Please fix this today.
+
+Do not change the public landing page.
+
+Tasks:
+
+1. Fix the Google Ads API endpoint
+
+Inspect server/keywordResearchService.ts.
+
+The current call appears to be hitting a 404 HTML page, which means the URL is probably wrong.
+
+Use the official Google Ads API REST endpoint for KeywordPlanIdeaService generateKeywordIdeas.
+
+The URL should be in this form:
+
+POST https://googleads.googleapis.com/v17/customers/{CUSTOMER_ID}:generateKeywordIdeas
+
+But verify the correct API version and method path from Google Ads API docs.
+
+Important:
+- CUSTOMER_ID must be digits only, no dashes.
+- Do not include "googleAds:" or an incorrect service path.
+- Do not use www.googleapis.com.
+- Use https://googleads.googleapis.com.
+- Add developer-token header.
+- Add Authorization: Bearer <access_token>.
+- Add login-customer-id header only if GOOGLE_ADS_LOGIN_CUSTOMER_ID exists.
+- Set Content-Type: application/json.
+
+2. Add proper Google Ads API error handling
+
+If the API returns an error:
+- Parse JSON errors if response is JSON.
+- If response is HTML, show a concise error:
+  "Google Ads API returned HTML/404. Likely wrong endpoint or API version."
+- Log the full URL, status code, response content-type, and first 500 characters of response body server-side.
+- Do not dump raw HTML into the frontend UI.
+
+3. Verify request payload
+
+The request body should include keywordSeed with the seed keywords, and should target:
+- Brazil
+- Portuguese
+- Google Search only
+
+Use correct resource names:
+- geoTargetConstants/2076 for Brazil
+- languageConstants/1014 for Portuguese
+
+Use keywordPlanNetwork:
+GOOGLE_SEARCH
+
+Example body shape should be similar to:
+
+{
+  "language": "languageConstants/1014",
+  "geoTargetConstants": ["geoTargetConstants/2076"],
+  "includeAdultKeywords": false,
+  "keywordPlanNetwork": "GOOGLE_SEARCH",
+  "keywordSeed": {
+    "keywords": ["mercado livre de energia", "mercado livre energia empresa"]
+  }
+}
+
+Verify exact field names for v17.
+
+4. Add API version environment variable
+
+Add optional env var:
+
+GOOGLE_ADS_API_VERSION
+
+Default to v17 or current supported version if not set.
+
+Use it to build:
+https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:generateKeywordIdeas
+
+5. Add a backend diagnostic endpoint
+
+Create an admin-only endpoint:
+
+GET /api/admin/google-ads-diagnostics
+
+It should verify:
+- GOOGLE_ADS_DEVELOPER_TOKEN present
+- GOOGLE_ADS_CUSTOMER_ID present and digits only
+- OAuth client ID present
+- OAuth client secret present
+- refresh token present
+- access token can be generated
+- Google Ads API endpoint URL being used
+- API version being used
+
+Do not expose secret values.
+
+Also include a lightweight test mode:
+If query param ?test=1 is present, call generateKeywordIdeas with one seed:
+mercado livre de energia
+
+Return:
+- success true/false
+- status code
+- parsed Google Ads error if any
+- concise message
+
+6. Add Batch Name field to /admin/keyword-research
+
+Add optional field above seed keywords:
+
+Batch Name
+
+Use it only for exports and display.
+
+When downloading CSVs:
+- Include batch_name column in every row of raw_results.csv, classified_keywords.csv, and negatives.csv.
+- Use the batch name in filenames.
+
+Example:
+batch_01_mercado_livre_raw_results.csv
+batch_01_mercado_livre_classified_keywords.csv
+batch_01_mercado_livre_negatives.csv
+
+Keep field optional.
+
+7. Preserve current UI but improve frontend error display
+
+Instead of showing raw HTML from Google Ads:
+- Show short readable errors.
+- Include:
+  - status code
+  - likely cause
+  - next action
+- Example:
+  "Google Ads API returned 404. The endpoint path or API version is likely incorrect. Check /api/admin/google-ads-diagnostics?test=1."
+
+8. After fixing, run these checks
+
+- Restart server
+- Visit /api/setup-check
+- Visit /api/admin/google-ads-diagnostics
+- Visit /api/admin/google-ads-diagnostics?test=1
+- Run /admin/keyword-research with:
+mercado livre de energia
+mercado livre energia empresa
+
+Report the exact result.
+
+Important:
+This tool must work today. If REST continues to fail, switch to the official google-ads-api Node client library if available, or install/use the correct Google Ads client package. Do not leave the system calling an endpoint that returns HTML 404.

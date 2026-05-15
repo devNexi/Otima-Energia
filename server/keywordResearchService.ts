@@ -70,7 +70,45 @@ async function getAdsAccessToken(): Promise<string> {
 // Portuguese language constant: 1014
 const GEO_BRAZIL = "geoTargetConstants/2076";
 const LANG_PORTUGUESE = "languageConstants/1014";
-const ADS_API_VERSION = "v17";
+
+// Default: v19 (Feb 2025). Override via GOOGLE_ADS_API_VERSION env var if
+// Google has sunset v19 — check https://developers.google.com/google-ads/api/docs/sunset-dates
+function getApiVersion(): string {
+  return process.env.GOOGLE_ADS_API_VERSION?.trim() || "v19";
+}
+
+function buildKeywordIdeasUrl(customerId: string): string {
+  return `https://googleads.googleapis.com/${getApiVersion()}/customers/${customerId}:generateKeywordIdeas`;
+}
+
+function parseAdsError(status: number, contentType: string, body: string): string {
+  const isHtml = contentType.includes("text/html") || body.trimStart().startsWith("<!DOCTYPE") || body.trimStart().startsWith("<html");
+
+  if (isHtml || status === 404) {
+    return (
+      `Google Ads API returned ${status} (HTML/Not Found). ` +
+      `The API version "${getApiVersion()}" is likely sunset or the endpoint path is wrong. ` +
+      `Set GOOGLE_ADS_API_VERSION to a supported version (e.g. v19, v20, v21) and check ` +
+      `https://developers.google.com/google-ads/api/docs/sunset-dates. ` +
+      `Run /api/admin/google-ads-diagnostics?test=1 for details.`
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(body);
+    const err = parsed?.error;
+    if (err) {
+      const parts: string[] = [`Google Ads API error ${status}`];
+      if (err.status) parts.push(err.status);
+      if (err.message) parts.push(err.message);
+      const details = err.details?.[0];
+      if (details?.errors?.[0]?.message) parts.push(details.errors[0].message);
+      return parts.join(" — ");
+    }
+  } catch { /* not JSON */ }
+
+  return `Google Ads API error (HTTP ${status}): ${body.slice(0, 300)}`;
+}
 
 export async function fetchKeywordIdeas(params: {
   seedKeywords: string[];
@@ -86,6 +124,9 @@ export async function fetchKeywordIdeas(params: {
     throw new Error("GOOGLE_ADS_CUSTOMER_ID not configured.");
 
   const customerId = rawCustomerId.replace(/-/g, "");
+  if (!/^\d+$/.test(customerId))
+    throw new Error(`GOOGLE_ADS_CUSTOMER_ID must be digits only. Got: "${rawCustomerId}"`);
+
   const accessToken = await getAdsAccessToken();
 
   const headers: Record<string, string> = {
@@ -105,7 +146,8 @@ export async function fetchKeywordIdeas(params: {
     includeAdultKeywords: params.includeAdultKeywords ?? false,
   };
 
-  const url = `https://googleads.googleapis.com/${ADS_API_VERSION}/customers/${customerId}:generateKeywordIdeas`;
+  const url = buildKeywordIdeasUrl(customerId);
+  console.log(`[keyword-research] POST ${url} — seeds: ${params.seedKeywords.join(", ")}`);
 
   const res = await fetch(url, {
     method: "POST",
@@ -115,16 +157,10 @@ export async function fetchKeywordIdeas(params: {
   });
 
   if (!res.ok) {
+    const contentType = res.headers.get("content-type") || "";
     const errText = await res.text();
-    let message = `Google Ads API error (HTTP ${res.status})`;
-    try {
-      const parsed = JSON.parse(errText);
-      const detail = parsed?.error?.message || parsed?.error?.status;
-      if (detail) message += `: ${detail}`;
-    } catch {
-      message += `: ${errText.slice(0, 400)}`;
-    }
-    throw new Error(message);
+    console.error(`[keyword-research] Error — status: ${res.status}, content-type: ${contentType}, url: ${url}, body[0:500]: ${errText.slice(0, 500)}`);
+    throw new Error(parseAdsError(res.status, contentType, errText));
   }
 
   const data = await res.json();
@@ -476,4 +512,100 @@ export function checkGoogleAdsReadiness(): {
       GOOGLE_ADS_LOGIN_CUSTOMER_ID: has("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
     },
   };
+}
+
+// ─── Diagnostics ─────────────────────────────────────────────────────────────
+
+export async function runDiagnostics(testMode: boolean): Promise<Record<string, unknown>> {
+  const has = (k: string) =>
+    !!(process.env[k] && process.env[k]!.trim().length > 0);
+
+  const rawCustomerId = process.env.GOOGLE_ADS_CUSTOMER_ID || "";
+  const customerId = rawCustomerId.replace(/-/g, "");
+  const customerIdDigitsOnly = /^\d+$/.test(customerId);
+  const apiVersion = getApiVersion();
+  const endpointUrl = customerIdDigitsOnly && customerId
+    ? buildKeywordIdeasUrl(customerId)
+    : `https://googleads.googleapis.com/${apiVersion}/customers/{CUSTOMER_ID}:generateKeywordIdeas`;
+
+  const diag: Record<string, unknown> = {
+    secrets: {
+      GOOGLE_ADS_DEVELOPER_TOKEN: has("GOOGLE_ADS_DEVELOPER_TOKEN"),
+      "GOOGLE_ADS_CUSTOMER_ID (present)": has("GOOGLE_ADS_CUSTOMER_ID"),
+      "GOOGLE_ADS_CUSTOMER_ID (digits only)": customerIdDigitsOnly,
+      "OAuth client ID (ADS or GOOGLE)": has("GOOGLE_ADS_CLIENT_ID") || has("GOOGLE_CLIENT_ID"),
+      "OAuth client secret (ADS or GOOGLE)": has("GOOGLE_ADS_CLIENT_SECRET") || has("GOOGLE_CLIENT_SECRET"),
+      "Refresh token (ADS or GOOGLE)": has("GOOGLE_ADS_REFRESH_TOKEN") || has("GOOGLE_REFRESH_TOKEN"),
+      GOOGLE_ADS_LOGIN_CUSTOMER_ID: has("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
+    },
+    api_version: apiVersion,
+    endpoint_url: endpointUrl,
+  };
+
+  // Try to get an access token
+  try {
+    await getAdsAccessToken();
+    diag.access_token_generation = "success";
+  } catch (e: any) {
+    diag.access_token_generation = `failed: ${e.message}`;
+  }
+
+  if (!testMode) return diag;
+
+  // Test mode: call the API with one seed keyword
+  if (!has("GOOGLE_ADS_DEVELOPER_TOKEN") || !customerIdDigitsOnly || !customerId) {
+    diag.test = { success: false, message: "Cannot test — missing GOOGLE_ADS_DEVELOPER_TOKEN or valid GOOGLE_ADS_CUSTOMER_ID." };
+    return diag;
+  }
+
+  try {
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN!;
+    const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID;
+    const accessToken = await getAdsAccessToken();
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${accessToken}`,
+      "developer-token": developerToken,
+      "Content-Type": "application/json",
+    };
+    if (loginCustomerId) headers["login-customer-id"] = loginCustomerId.replace(/-/g, "");
+
+    const body = {
+      keywordSeed: { keywords: ["mercado livre de energia"] },
+      geoTargetConstants: [GEO_BRAZIL],
+      language: LANG_PORTUGUESE,
+      keywordPlanNetwork: "GOOGLE_SEARCH",
+      includeAdultKeywords: false,
+    };
+
+    const url = buildKeywordIdeasUrl(customerId);
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    const contentType = res.headers.get("content-type") || "";
+    const bodyText = await res.text();
+
+    if (res.ok) {
+      let resultCount = 0;
+      try { resultCount = JSON.parse(bodyText)?.results?.length ?? 0; } catch { /* */ }
+      diag.test = { success: true, status: res.status, keyword_ideas_returned: resultCount };
+    } else {
+      const errMsg = parseAdsError(res.status, contentType, bodyText);
+      diag.test = {
+        success: false,
+        status: res.status,
+        content_type: contentType,
+        error: errMsg,
+        body_preview: bodyText.slice(0, 300),
+      };
+    }
+  } catch (e: any) {
+    diag.test = { success: false, message: e.message };
+  }
+
+  return diag;
 }
