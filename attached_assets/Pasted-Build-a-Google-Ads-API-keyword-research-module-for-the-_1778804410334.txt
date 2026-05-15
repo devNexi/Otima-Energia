@@ -1,0 +1,118 @@
+Build a Google Ads API keyword research module for the Otima Energia project.
+
+Do not change the public landing page.
+
+Goal:
+I do not want to use Google Keyword Planner manually. I want an internal/admin keyword research tool that uses the Google Ads API to fetch keyword ideas, volume, competition and CPC estimates for Brazil/Portuguese search campaigns.
+
+Add Google Ads API support using environment variables:
+
+Required:
+- GOOGLE_ADS_DEVELOPER_TOKEN
+- GOOGLE_ADS_CLIENT_ID
+- GOOGLE_ADS_CLIENT_SECRET
+- GOOGLE_ADS_REFRESH_TOKEN
+- GOOGLE_ADS_CUSTOMER_ID
+
+Optional:
+- GOOGLE_ADS_LOGIN_CUSTOMER_ID
+
+OAuth scope required:
+- https://www.googleapis.com/auth/adwords
+
+If possible, support using the existing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN only if the token includes the Google Ads scope. Otherwise use the GOOGLE_ADS_* variables.
+
+Build:
+
+1. Admin endpoint:
+POST /api/admin/keyword-research
+
+Input JSON:
+{
+  "seedKeywords": ["reduzir conta de luz empresa", "mercado livre de energia para empresas"],
+  "location": "Brazil",
+  "language": "Portuguese",
+  "includeAdultKeywords": false
+}
+
+2. Use Google Ads API KeywordPlanIdeaService / keyword ideas equivalent to fetch keyword ideas.
+
+Settings:
+- Geo target: Brazil
+- Language: Portuguese
+- Network: Google Search only if supported
+- Seed type: keyword seeds
+
+3. Return structured JSON with:
+- keyword
+- avg_monthly_searches
+- competition
+- competition_index
+- low_top_of_page_bid_micros
+- high_top_of_page_bid_micros
+- monthly_search_volumes if available
+- source_seed_keyword if available
+
+4. Add Otima-specific classification:
+For each returned keyword, classify:
+- campaign: one of:
+  - Alta Conta de Energia
+  - Mercado Livre de Energia
+  - ACR ACL GDL
+  - Redução de Custos Empresariais
+  - Condomínios
+  - Indústria e Comércio
+  - Reject
+- ad_group
+- commercial_intent_score from 1 to 5
+- recommended_match_type: exact, phrase, reject
+- reason
+- negative_keyword_warnings
+
+5. Add filtering:
+Reject or flag terms related to:
+- segunda via
+- boleto
+- utility customer service
+- residential users
+- jobs
+- courses
+- academic content
+- PDF/template searches
+- solar equipment only
+- free tools
+- generic business advice not related to energy
+
+6. Admin UI:
+Create a simple protected admin page:
+/admin/keyword-research
+
+It should allow me to paste seed keywords, run research, and download:
+- raw_results.csv
+- classified_keywords.csv
+- negatives.csv
+
+7. Setup check:
+Update /api/setup-check to include Google Ads API readiness:
+- GOOGLE_ADS_DEVELOPER_TOKEN
+- GOOGLE_ADS_CLIENT_ID or GOOGLE_CLIENT_ID
+- GOOGLE_ADS_CLIENT_SECRET or GOOGLE_CLIENT_SECRET
+- GOOGLE_ADS_REFRESH_TOKEN or GOOGLE_REFRESH_TOKEN
+- GOOGLE_ADS_CUSTOMER_ID
+
+Do not make Google Ads API readiness block the landing page readiness.
+
+8. Documentation:
+Update SETUP.md with exact steps for:
+- finding the Google Ads Customer ID
+- applying for a developer token
+- creating OAuth credentials
+- generating a refresh token with the adwords scope
+- adding Replit secrets
+- testing /api/admin/keyword-research
+
+Important:
+This should only perform keyword research. Do not create campaigns, budgets, ads, or keywords in Google Ads yet.
+No spend-related actions.
+No campaign changes.
+Research only.

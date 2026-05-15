@@ -49,6 +49,7 @@ import VerificationPage from "@/pages/VerificationPage";
 import DossierPage from "@/pages/DossierPage";
 import Reduza from "@/pages/Reduza";
 import Obrigado from "@/pages/Obrigado";
+import KeywordResearch from "@/pages/KeywordResearch";
 
 const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
 
@@ -115,6 +116,7 @@ function Router() {
       <Route path="/admin/prc/review/:id" component={PrcReviewPage} />
       <Route path="/admin/ecos/validation" component={EcosValidationPage} />
       <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/keyword-research" component={KeywordResearch} />
       <Route path="/admin/qa" component={QaConsole} />
       <Route path="/admin/qa/history" component={QaHistory} />
       <Route path="/admin/walkthrough" component={RenanWalkthrough} />

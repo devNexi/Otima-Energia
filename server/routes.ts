@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { runKeywordResearch, checkGoogleAdsReadiness } from "./keywordResearchService";
 import { db } from "./db";
 import { sql, eq, and, or, ilike, desc } from "drizzle-orm";
 import { 
@@ -687,6 +688,7 @@ export async function registerRoutes(
   // ── Setup Check (public, no secrets exposed) ─────────────────────────────────
   app.get("/api/setup-check", (_req, res) => {
     const check = (key: string) => !!(process.env[key] && process.env[key]!.trim().length > 0);
+    const adsReadiness = checkGoogleAdsReadiness();
     res.json({
       integrations: {
         GOOGLE_SHEETS_SPREADSHEET_ID: check("GOOGLE_SHEETS_SPREADSHEET_ID"),
@@ -698,8 +700,52 @@ export async function registerRoutes(
         NEXT_PUBLIC_GTM_ID: check("NEXT_PUBLIC_GTM_ID") || check("VITE_GTM_ID"),
         NEXT_PUBLIC_GA_MEASUREMENT_ID: check("NEXT_PUBLIC_GA_MEASUREMENT_ID") || check("VITE_GA_MEASUREMENT_ID"),
       },
+      google_ads: adsReadiness,
       ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_DRIVE_FOLDER_ID") && check("GOOGLE_CLIENT_ID") && check("GOOGLE_CLIENT_SECRET") && check("GOOGLE_REFRESH_TOKEN"),
     });
+  });
+
+  // ============== KEYWORD RESEARCH ==============
+
+  app.post("/api/admin/keyword-research", async (req, res) => {
+    try {
+      const admin = await requireAdminSession(req, res);
+      if (!admin) return;
+
+      const { seedKeywords, includeAdultKeywords } = req.body as {
+        seedKeywords?: unknown;
+        includeAdultKeywords?: boolean;
+      };
+
+      if (!Array.isArray(seedKeywords) || seedKeywords.length === 0) {
+        return res.status(400).json({ error: "seedKeywords must be a non-empty array of strings." });
+      }
+      if (seedKeywords.length > 20) {
+        return res.status(400).json({ error: "Maximum 20 seed keywords per request." });
+      }
+      const seeds = seedKeywords.map((k) => String(k).trim()).filter(Boolean);
+      if (seeds.length === 0) {
+        return res.status(400).json({ error: "All seed keywords were empty after trimming." });
+      }
+
+      const adsReadiness = checkGoogleAdsReadiness();
+      if (!adsReadiness.ready) {
+        const missing = Object.entries(adsReadiness.fields)
+          .filter(([, v]) => !v)
+          .map(([k]) => k)
+          .join(", ");
+        return res.status(503).json({
+          error: `Google Ads API not fully configured. Missing: ${missing}`,
+          google_ads: adsReadiness,
+        });
+      }
+
+      const result = await runKeywordResearch({ seedKeywords: seeds, includeAdultKeywords });
+      res.json(result);
+    } catch (err: any) {
+      console.error("[keyword-research]", err);
+      res.status(500).json({ error: err.message || "Keyword research failed." });
+    }
   });
 
   // ============== LEAD ENDPOINTS ==============

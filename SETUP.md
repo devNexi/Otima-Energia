@@ -180,3 +180,166 @@ The following events are pushed to `dataLayer` (and forwarded to GTM/GA4 if conf
 ## 10. Rate Limiting
 
 The `/api/landing/submit` endpoint is limited to **5 submissions per IP address per hour** to prevent spam. Legitimate test submissions count toward this limit — restart the server to reset the in-memory counter during testing.
+
+---
+
+## 11. Google Ads API — Keyword Research Module
+
+The internal keyword research tool at `/admin/keyword-research` uses the **Google Ads API** (KeywordPlanIdeaService) to fetch keyword ideas, search volumes, competition, and CPC estimates for Brazil/Portuguese campaigns.
+
+> **Read-only only.** The module performs keyword research exclusively. It does not create campaigns, budgets, ads, or keywords in Google Ads — no spend-related actions are possible.
+
+### 11a. Find your Google Ads Customer ID
+
+1. Log in to [ads.google.com](https://ads.google.com).
+2. The **Customer ID** is the 10-digit number displayed in the top-right corner, formatted as `XXX-XXX-XXXX`.
+3. If you use a **Manager Account (MCC)**, note both:
+   - The **Client Account ID** — the account where keyword data is pulled from (becomes `GOOGLE_ADS_CUSTOMER_ID`)
+   - The **Manager Account ID** — becomes `GOOGLE_ADS_LOGIN_CUSTOMER_ID` (optional but required if the client account is under an MCC)
+
+### 11b. Apply for a Google Ads Developer Token
+
+1. Go to [Google Ads API Center](https://developers.google.com/google-ads/api/docs/get-started/dev-token).
+2. Sign in with the Google account that manages your Google Ads MCC (or standard account).
+3. In Google Ads, navigate to: **Tools → API Center**.
+4. Apply for a **Basic Access** developer token. Basic access allows up to 15,000 operations/day and is sufficient for keyword research.
+5. Once approved (can take a few days), copy the **Developer Token** string.
+
+> **Test token:** While waiting for approval, Google issues a test token that works only with test accounts. You can generate keyword ideas from a test account to verify the integration.
+
+### 11c. Create OAuth2 Credentials with the Ads scope
+
+If you want to use **dedicated** Google Ads credentials (recommended for production), create a separate OAuth2 client with the `adwords` scope. If your existing `GOOGLE_REFRESH_TOKEN` already includes `https://www.googleapis.com/auth/adwords`, you can skip this step and the system will fall back to `GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN` automatically.
+
+**To create dedicated Ads credentials:**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → your project.
+2. Enable the **Google Ads API**:  
+   APIs & Services → Library → search "Google Ads API" → Enable.
+3. APIs & Services → Credentials → Create Credentials → **OAuth client ID**.
+4. Application type: **Web application** (add `https://developers.google.com/oauthplayground` as redirect URI).
+5. Note the new **Client ID** and **Client Secret**.
+
+### 11d. Generate a Refresh Token with the Ads scope
+
+Using [OAuth Playground](https://developers.google.com/oauthplayground):
+
+1. Click the gear icon → check **"Use your own OAuth credentials"**.
+2. Enter the Client ID and Client Secret from step 11c.
+3. In Step 1, add the scope:
+   ```
+   https://www.googleapis.com/auth/adwords
+   ```
+4. Click **Authorize APIs** → sign in with the Google account linked to your Ads account.
+5. In Step 2, click **Exchange authorization code for tokens**.
+6. Copy the **Refresh token**.
+
+Alternatively, run the existing helper script which already handles the adwords scope:
+```bash
+node scripts/get-google-refresh-token.js
+```
+When prompted, add `https://www.googleapis.com/auth/adwords` to the scope list before authorizing.
+
+### 11e. Add Replit Secrets for Google Ads
+
+Go to your Replit project → Secrets (lock icon) and add:
+
+| Secret Name | Value | Required |
+|---|---|---|
+| `GOOGLE_ADS_DEVELOPER_TOKEN` | Developer token from step 11b | Yes |
+| `GOOGLE_ADS_CUSTOMER_ID` | Client account ID (digits only, e.g. `1234567890`) | Yes |
+| `GOOGLE_ADS_CLIENT_ID` | OAuth Client ID for Ads (from 11c) — or omit if using `GOOGLE_CLIENT_ID` | If dedicated |
+| `GOOGLE_ADS_CLIENT_SECRET` | OAuth Client Secret for Ads — or omit if using `GOOGLE_CLIENT_SECRET` | If dedicated |
+| `GOOGLE_ADS_REFRESH_TOKEN` | Refresh token with adwords scope — or omit if using `GOOGLE_REFRESH_TOKEN` | If dedicated |
+| `GOOGLE_ADS_LOGIN_CUSTOMER_ID` | MCC/Manager Account ID (digits only) — only needed if using a manager account | Optional |
+
+**Fallback behavior:** If `GOOGLE_ADS_CLIENT_ID` / `GOOGLE_ADS_CLIENT_SECRET` / `GOOGLE_ADS_REFRESH_TOKEN` are not set, the system automatically uses `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN`. This works only if those credentials were authorized with the `adwords` scope.
+
+### 11f. Verify Google Ads Readiness
+
+Check the setup endpoint:
+```
+GET /api/setup-check
+```
+
+Look for the `google_ads` block in the response:
+```json
+{
+  "google_ads": {
+    "ready": true,
+    "fields": {
+      "GOOGLE_ADS_DEVELOPER_TOKEN": true,
+      "GOOGLE_ADS_CLIENT_ID (or GOOGLE_CLIENT_ID)": true,
+      "GOOGLE_ADS_CLIENT_SECRET (or GOOGLE_CLIENT_SECRET)": true,
+      "GOOGLE_ADS_REFRESH_TOKEN (or GOOGLE_REFRESH_TOKEN)": true,
+      "GOOGLE_ADS_CUSTOMER_ID": true,
+      "GOOGLE_ADS_LOGIN_CUSTOMER_ID": false
+    }
+  }
+}
+```
+
+`ready: true` means all required credentials are present. `GOOGLE_ADS_LOGIN_CUSTOMER_ID` is optional.
+
+> **Note:** `google_ads.ready` does **not** affect the landing page `"ready"` field. The landing page and keyword research module are fully independent.
+
+### 11g. Test the Keyword Research Endpoint
+
+Log in as admin and navigate to `/admin/keyword-research` — or test directly via the API:
+
+```bash
+curl -X POST https://your-app.replit.app/api/admin/keyword-research \
+  -H "Content-Type: application/json" \
+  -H "x-session-id: YOUR_ADMIN_SESSION_ID" \
+  -d '{
+    "seedKeywords": [
+      "reduzir conta de luz empresa",
+      "mercado livre de energia para empresas"
+    ]
+  }'
+```
+
+A successful response will look like:
+```json
+{
+  "raw": [...],
+  "classified": [
+    {
+      "keyword": "reduzir conta de energia empresa",
+      "avg_monthly_searches": 1000,
+      "competition": "MEDIUM",
+      "competition_index": 45,
+      "low_top_of_page_bid_micros": 500000,
+      "high_top_of_page_bid_micros": 2000000,
+      "campaign": "Alta Conta de Energia",
+      "ad_group": "Redução de Conta de Energia",
+      "commercial_intent_score": 4,
+      "recommended_match_type": "exact",
+      "reason": "Matched: \"Alta Conta de Energia\" › \"Redução de Conta de Energia\"",
+      "negative_keyword_warnings": []
+    }
+  ],
+  "summary": {
+    "total": 50,
+    "byCampaign": { "Alta Conta de Energia": 12, "Reject": 5 },
+    "rejected": 5,
+    "exact": 20,
+    "phrase": 25
+  }
+}
+```
+
+### 11h. Common Errors
+
+| Error | Cause | Fix |
+|---|---|---|
+| `GOOGLE_ADS_DEVELOPER_TOKEN not configured` | Secret not set | Add `GOOGLE_ADS_DEVELOPER_TOKEN` to Replit Secrets |
+| `Google Ads API error (HTTP 403)` | Developer token not approved or wrong account | Verify token status in Google Ads API Center |
+| `Google Ads API error (HTTP 401)` | Invalid or expired refresh token | Regenerate refresh token with adwords scope (step 11d) |
+| `Google Ads API error (HTTP 400): Customer not found` | Wrong Customer ID format | Strip dashes — use `1234567890` not `123-456-7890` |
+| `Google Ads API error: The developer token is not approved` | Token in test mode with live account | Use a test account, or wait for basic access approval |
+| `Google Ads API not fully configured` | One or more secrets missing | Check `/api/setup-check` → `google_ads.fields` for which ones are missing |
+
+### 11i. API Version
+
+The module uses Google Ads API **v17**. If you encounter version-related errors after Google sunsets v17, update the `ADS_API_VERSION` constant in `server/keywordResearchService.ts` to the current stable version (check [developers.google.com/google-ads/api/docs/sunset-dates](https://developers.google.com/google-ads/api/docs/sunset-dates)).
