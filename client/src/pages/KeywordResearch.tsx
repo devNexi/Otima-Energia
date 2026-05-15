@@ -222,7 +222,7 @@ function exportNegatives(data: ResearchResult) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function KeywordResearch() {
-  const { user } = useAuth();
+  const { user, sessionId, isLoading } = useAuth();
   const { toast } = useToast();
 
   const [seedText, setSeedText] = useState(
@@ -244,7 +244,6 @@ export default function KeywordResearch() {
       if (seedKeywords.length > 20)
         throw new Error("Maximum 20 seed keywords per request.");
 
-      const sessionId = localStorage.getItem("sessionId");
       const res = await fetch("/api/admin/keyword-research", {
         method: "POST",
         headers: {
@@ -272,7 +271,7 @@ export default function KeywordResearch() {
     },
   });
 
-  const { isLoading } = useAuth();
+  // ── Auth guards — checked AFTER all hooks ──────────────────────────────────
 
   if (isLoading) {
     return (
@@ -283,7 +282,6 @@ export default function KeywordResearch() {
   }
 
   if (!user) {
-    // Not logged in — send to the admin login page
     window.location.replace("/admin");
     return null;
   }
