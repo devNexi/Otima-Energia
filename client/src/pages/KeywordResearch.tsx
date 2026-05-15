@@ -272,13 +272,30 @@ export default function KeywordResearch() {
     },
   });
 
-  if (!user || user.role !== "admin") {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    // Not logged in — send to the admin login page
+    window.location.replace("/admin");
+    return null;
+  }
+
+  if (user.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-96">
           <CardContent className="pt-6 text-center">
             <XCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-            <p className="font-medium">Admin access required</p>
+            <p className="font-medium">Admin role required</p>
+            <p className="text-sm text-slate-500 mt-1">Your account ({user.username}) does not have admin access.</p>
           </CardContent>
         </Card>
       </div>
