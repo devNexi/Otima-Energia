@@ -2,9 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Zap, MapPin, BarChart2, Users, TrendingUp, CheckCircle2, XCircle, ChevronRight, ArrowRight, Database, Target, FileText, Award, Star, Shield, Clock, DollarSign, Building2, Layers } from "lucide-react";
 import logoIcon from "../assets/branding/logo-icon-transparent.png";
-import imgSolEstrategias from "../assets/homepage/sol-estrategias.png";
-import imgCompare from "../assets/homepage/compare.png";
-import imgMigrate from "../assets/homepage/migrate.png";
 
 // ─── Scroll reveal hook ────────────────────────────────────────────────────────
 function useReveal() {
@@ -420,8 +417,9 @@ export default function Parceiros() {
       {/* ── 3. SOLUTION ── */}
       <section className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src={imgSolEstrategias} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.7) 40%, rgba(22,22,63,0.7) 60%, #16163f 100%)" }} />
+          {/* Dot-matrix circuit texture */}
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(200,143,245,0.22) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 70% 60% at 15% 50%, rgba(158,63,253,0.09) 0%, transparent 65%), linear-gradient(to bottom, #16163f 0%, transparent 20%, transparent 80%, #16163f 100%)" }} />
         </div>
         <div className="max-w-5xl mx-auto">
           <Reveal>
@@ -497,8 +495,9 @@ export default function Parceiros() {
       {/* ── 5. IMPACT ── */}
       <section className="relative px-5 py-24 text-center overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src={imgCompare} aria-hidden="true" className="w-full h-full object-cover opacity-15" style={{ objectPosition: "center 30%" }} />
-          <div className="absolute inset-0" style={{ background: "rgba(22,22,63,0.82)" }} />
+          {/* Horizontal scan-line + central pulse texture */}
+          <div className="absolute inset-0" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(158,63,253,0.028) 3px, rgba(158,63,253,0.028) 4px)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 70% at 50% 50%, rgba(158,63,253,0.13) 0%, transparent 70%)" }} />
         </div>
         <div className="max-w-3xl mx-auto">
           <Reveal>
@@ -864,8 +863,9 @@ export default function Parceiros() {
       {/* ── 16. FINAL CTA + FORM ── */}
       <section id="candidatura" className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src={imgMigrate} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.8) 30%, rgba(22,22,63,0.8) 70%, #16163f 100%)" }} />
+          {/* Diagonal electric-stripe texture */}
+          <div className="absolute inset-0" style={{ backgroundImage: "repeating-linear-gradient(-45deg, transparent 0px, transparent 18px, rgba(158,63,253,0.04) 18px, rgba(158,63,253,0.04) 19px)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 110%, rgba(158,63,253,0.15) 0%, transparent 55%), linear-gradient(to bottom, #16163f 0%, transparent 15%, transparent 85%, #16163f 100%)" }} />
         </div>
         <div className="max-w-2xl mx-auto">
           <Reveal>
