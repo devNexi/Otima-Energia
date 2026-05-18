@@ -46,7 +46,7 @@ function CtaButton({ text = "Aplicar para minha região", className = "", onClic
     <button
       onClick={scrollToForm}
       className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 ${className}`}
-      style={{ background: "linear-gradient(135deg, #00c896 0%, #00a8ff 100%)", color: "#fff", boxShadow: "0 4px 24px rgba(0,200,150,0.35)" }}
+      style={{ background: "linear-gradient(135deg, #9e3ffd 0%, #c88ff5 100%)", color: "#fff", boxShadow: "0 4px 24px rgba(158,63,253,0.35)" }}
     >
       {text} <ArrowRight className="w-4 h-4" />
     </button>
@@ -56,7 +56,7 @@ function CtaButton({ text = "Aplicar para minha região", className = "", onClic
 // ─── Section heading ───────────────────────────────────────────────────────────
 function SectionTag({ text }: { text: string }) {
   return (
-    <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full mb-4" style={{ background: "rgba(0,200,150,0.12)", color: "#00c896", border: "1px solid rgba(0,200,150,0.25)" }}>
+    <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full mb-4" style={{ background: "rgba(158,63,253,0.12)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.25)" }}>
       {text}
     </span>
   );
@@ -67,7 +67,7 @@ const LEVELS = [
   {
     num: 1, name: "Consultor de Economia de Energia", subtitle: "Iniciando a operação",
     leads: "25 leads/semana", faixa: "R$ 10k–R$ 30k/mês", comissao: "20%", reserva: "7 dias",
-    foco: "Negócios locais com boa chance de qualificação", color: "#00c896",
+    foco: "Negócios locais com boa chance de qualificação", color: "#9e3ffd",
   },
   {
     num: 2, name: "Estrategista de Energia", subtitle: "Contas qualificadas comprovadas",
@@ -77,7 +77,7 @@ const LEVELS = [
   {
     num: 3, name: "Executivo de Contas", subtitle: "Alta performance",
     leads: "75 leads/semana", faixa: "R$ 50k–R$ 150k/mês", comissao: "30%", reserva: "14 dias",
-    foco: "Oportunidades estratégicas e contas de maior valor", color: "#a855f7",
+    foco: "Oportunidades estratégicas e contas de maior valor", color: "#9e3ffd",
   },
   {
     num: 4, name: "Parceiro Regional", subtitle: "Comprovado regionalmente",
@@ -116,9 +116,9 @@ function PartnerForm() {
         <button key={o.val} type="button" onClick={() => onChange(o.val)}
           className="rounded-xl px-3 py-2.5 text-xs font-medium text-left transition-all duration-200"
           style={{
-            background: value === o.val ? "rgba(0,200,150,0.18)" : "rgba(255,255,255,0.05)",
-            border: value === o.val ? "1px solid #00c896" : "1px solid rgba(255,255,255,0.1)",
-            color: value === o.val ? "#00c896" : "rgba(255,255,255,0.7)"
+            background: value === o.val ? "rgba(158,63,253,0.18)" : "rgba(255,255,255,0.05)",
+            border: value === o.val ? "1px solid #9e3ffd" : "1px solid rgba(255,255,255,0.1)",
+            color: value === o.val ? "#9e3ffd" : "rgba(255,255,255,0.7)"
           }}
         >
           {o.label}
@@ -149,8 +149,8 @@ function PartnerForm() {
   if (submitted) {
     return (
       <div className="text-center py-12 px-4 space-y-4">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: "rgba(0,200,150,0.15)", border: "1px solid rgba(0,200,150,0.3)" }}>
-          <CheckCircle2 className="w-8 h-8" style={{ color: "#00c896" }} />
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: "rgba(158,63,253,0.15)", border: "1px solid rgba(158,63,253,0.3)" }}>
+          <CheckCircle2 className="w-8 h-8" style={{ color: "#9e3ffd" }} />
         </div>
         <h3 className="text-2xl font-bold text-white">Candidatura recebida.</h3>
         <p className="text-sm max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.6)" }}>
@@ -166,7 +166,7 @@ function PartnerForm() {
       <div className="flex gap-2 mb-8">
         {[1, 2, 3].map(n => (
           <div key={n} className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: step >= n ? "100%" : "0%", background: "linear-gradient(90deg, #00c896, #00a8ff)" }} />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: step >= n ? "100%" : "0%", background: "linear-gradient(90deg, #9e3ffd, #c88ff5)" }} />
           </div>
         ))}
       </div>
@@ -198,7 +198,7 @@ function PartnerForm() {
           <button onClick={() => {
             if (!f1.nome || !f1.whatsapp || !f1.email || !f1.estado || !f1.cidade) return;
             setStep(2);
-          }} className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all" style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", color: "#fff" }}>
+          }} className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all" style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
             Continuar <ChevronRight className="inline w-4 h-4" />
           </button>
         </div>
@@ -230,7 +230,7 @@ function PartnerForm() {
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>Voltar</button>
             <button onClick={() => { if (!f2.vendeuB2b || !f2.experiencia || !f2.horas || !f2.rede) return; setStep(3); }}
-              className="flex-[2] py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", color: "#fff" }}>
+              className="flex-[2] py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
               Continuar candidatura <ChevronRight className="inline w-4 h-4" />
             </button>
           </div>
@@ -247,8 +247,8 @@ function PartnerForm() {
           ].map(item => (
             <button key={item.key} type="button" onClick={() => setF3({ ...f3, [item.key]: !(f3 as any)[item.key] })}
               className="w-full flex items-start gap-3 p-4 rounded-xl text-left transition-all"
-              style={{ background: (f3 as any)[item.key] ? "rgba(0,200,150,0.12)" : "rgba(255,255,255,0.04)", border: `1px solid ${(f3 as any)[item.key] ? "rgba(0,200,150,0.4)" : "rgba(255,255,255,0.1)"}` }}>
-              <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: (f3 as any)[item.key] ? "#00c896" : "rgba(255,255,255,0.08)", border: `1px solid ${(f3 as any)[item.key] ? "#00c896" : "rgba(255,255,255,0.2)"}` }}>
+              style={{ background: (f3 as any)[item.key] ? "rgba(158,63,253,0.12)" : "rgba(255,255,255,0.04)", border: `1px solid ${(f3 as any)[item.key] ? "rgba(158,63,253,0.4)" : "rgba(255,255,255,0.1)"}` }}>
+              <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: (f3 as any)[item.key] ? "#9e3ffd" : "rgba(255,255,255,0.08)", border: `1px solid ${(f3 as any)[item.key] ? "#9e3ffd" : "rgba(255,255,255,0.2)"}` }}>
                 {(f3 as any)[item.key] && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
               <span className="text-sm" style={{ color: (f3 as any)[item.key] ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.6)" }}>{item.label}</span>
@@ -264,7 +264,7 @@ function PartnerForm() {
             <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }}>Voltar</button>
             <button onClick={submit} disabled={loading}
               className="flex-[2] py-3 rounded-xl text-sm font-semibold disabled:opacity-60 transition-all"
-              style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", color: "#fff" }}>
+              style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
               {loading ? "Enviando…" : "Enviar candidatura"}
             </button>
           </div>
@@ -279,40 +279,40 @@ export default function Parceiros() {
   const [activeLevel, setActiveLevel] = useState(0);
   const [activeRegion, setActiveRegion] = useState(0);
 
-  const dark = "#0b0f1a";
+  const dark = "#16163f";
   const cardBg = "rgba(255,255,255,0.04)";
   const cardBorder = "1px solid rgba(255,255,255,0.09)";
 
   return (
-    <div style={{ background: dark, color: "#fff", fontFamily: "system-ui, sans-serif", overflowX: "hidden" }}>
+    <div style={{ background: dark, color: "#fff", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
 
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 px-5 py-3 flex items-center justify-between" style={{ background: "rgba(11,15,26,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
-            <Zap className="w-5 h-5" style={{ color: "#00c896" }} />
+            <Zap className="w-5 h-5" style={{ color: "#9e3ffd" }} />
             <span className="font-bold text-white text-sm">Ótima Energia</span>
           </div>
         </Link>
         <button onClick={() => document.getElementById("candidatura")?.scrollIntoView({ behavior: "smooth" })}
-          className="px-4 py-2 rounded-lg text-xs font-semibold transition-all" style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", color: "#fff" }}>
+          className="px-4 py-2 rounded-lg text-xs font-semibold transition-all" style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
           Candidatar-se
         </button>
       </header>
 
       {/* ── 1. HERO ── */}
-      <section className="relative px-5 pt-20 pb-24 text-center overflow-hidden" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 0%, rgba(0,200,150,0.12) 0%, transparent 70%)" }}>
+      <section className="relative px-5 pt-20 pb-24 text-center overflow-hidden" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 0%, rgba(158,63,253,0.12) 0%, transparent 70%)" }}>
         {/* Animated background grid */}
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(rgba(0,200,150,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,200,150,0.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(rgba(158,63,253,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(158,63,253,0.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
 
         <div className="relative max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: "rgba(0,200,150,0.12)", border: "1px solid rgba(0,200,150,0.3)", color: "#00c896" }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: "rgba(158,63,253,0.12)", border: "1px solid rgba(158,63,253,0.3)", color: "#9e3ffd" }}>
             <Zap className="w-3.5 h-3.5" /> Programa Nacional de Parceiros — Todos os estados do Brasil
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
             Receba empresas com potencial<br className="hidden sm:block" />
-            <span style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}> em energia.</span>
+            <span style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}> em energia.</span>
           </h1>
 
           <p className="text-lg sm:text-xl mb-4 max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.65)" }}>
@@ -327,7 +327,7 @@ export default function Parceiros() {
           <div className="flex flex-wrap justify-center gap-3 mb-10">
             {["Dados reais", "Processo comercial", "Treinamento", "Suporte da Otima", "Zero ganho por recrutamento"].map(p => (
               <span key={p} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.06)", border: cardBorder, color: "rgba(255,255,255,0.7)" }}>
-                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#00c896" }} /> {p}
+                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#9e3ffd" }} /> {p}
               </span>
             ))}
           </div>
@@ -348,9 +348,9 @@ export default function Parceiros() {
         {/* Floating cards */}
         <div className="relative max-w-5xl mx-auto mt-16 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { icon: MapPin, text: "Rio de Janeiro — 30 empresas liberadas", color: "#00c896" },
+            { icon: MapPin, text: "Rio de Janeiro — 30 empresas liberadas", color: "#9e3ffd" },
             { icon: Building2, text: "Supermercado — conta estimada R$ 10k–R$ 30k/mês", color: "#3b82f6" },
-            { icon: FileText, text: "Conta enviada — oportunidade em análise", color: "#a855f7" },
+            { icon: FileText, text: "Conta enviada — oportunidade em análise", color: "#9e3ffd" },
             { icon: DollarSign, text: "Cliente convertido — comissão recorrente elegível", color: "#f59e0b" },
           ].map((c, i) => (
             <div key={i} className="rounded-xl p-4 text-left" style={{ background: cardBg, border: cardBorder, backdropFilter: "blur(8px)" }}>
@@ -365,7 +365,7 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="O problema" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">Vender energia sem dados é <span style={{ color: "#00c896" }}>começar no escuro.</span></h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-6">Vender energia sem dados é <span style={{ color: "#9e3ffd" }}>começar no escuro.</span></h2>
           <p className="text-base mb-12 max-w-2xl" style={{ color: "rgba(255,255,255,0.6)" }}>
             Você pode ser ótimo em vendas e ainda assim perder semanas abordando as empresas erradas. Sem dados, sem lista, sem processo — sem saber quem realmente gasta energia suficiente para valer uma conversa.
           </p>
@@ -377,7 +377,7 @@ export default function Parceiros() {
               <thead>
                 <tr style={{ background: "rgba(255,255,255,0.04)" }}>
                   <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "rgba(255,255,255,0.4)", width: "50%" }}>Antes da Otima</th>
-                  <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "#00c896", width: "50%" }}>Com a Otima</th>
+                  <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "#9e3ffd", width: "50%" }}>Com a Otima</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,7 +397,7 @@ export default function Parceiros() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#00c896" }} />
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#9e3ffd" }} />
                         <span style={{ color: "rgba(255,255,255,0.8)" }}>{after}</span>
                       </span>
                     </td>
@@ -410,11 +410,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 3. SOLUTION ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(0,200,150,0.03)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "rgba(158,63,253,0.03)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <SectionTag text="O que você recebe" />
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">A Otima te entrega uma <span style={{ color: "#00c896" }}>base comercial para executar.</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">A Otima te entrega uma <span style={{ color: "#9e3ffd" }}>base comercial para executar.</span></h2>
             <p className="text-base mb-12 max-w-2xl" style={{ color: "rgba(255,255,255,0.55)" }}>
               Parceiros aprovados recebem listas semanais de empresas segmentadas por região, cidade, tipo de negócio e faixa estimada de conta de energia. Você não começa do zero. Você começa com direção.
             </p>
@@ -422,12 +422,12 @@ export default function Parceiros() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Database, color: "#00c896", title: "Leads semanais", desc: "Novas listas de empresas locais para trabalhar toda semana." },
+              { icon: Database, color: "#9e3ffd", title: "Leads semanais", desc: "Novas listas de empresas locais para trabalhar toda semana." },
               { icon: MapPin, color: "#3b82f6", title: "Segmentação regional", desc: "Estado, cidade, região e território comercial aprovado." },
-              { icon: Building2, color: "#a855f7", title: "Tipo de negócio", desc: "Segmentação por categoria, segmento e perfil provável de consumo." },
+              { icon: Building2, color: "#9e3ffd", title: "Tipo de negócio", desc: "Segmentação por categoria, segmento e perfil provável de consumo." },
               { icon: BarChart2, color: "#f59e0b", title: "Faixa estimada de conta", desc: "Foco em empresas com potencial de conta relevante." },
               { icon: Target, color: "#ef4444", title: "Scripts e treinamento", desc: "Abordagem, qualificação, pedido da conta e processo de envio." },
-              { icon: Award, color: "#00c896", title: "Análise da Otima", desc: "A Otima avalia a conta, valida a oportunidade e define a melhor rota." },
+              { icon: Award, color: "#9e3ffd", title: "Análise da Otima", desc: "A Otima avalia a conta, valida a oportunidade e define a melhor rota." },
               { icon: DollarSign, color: "#3b82f6", title: "Comissão recorrente", desc: "Você ganha quando o cliente converte e a Otima recebe." },
             ].map((card, i) => (
               <Reveal key={i} delay={i * 60}>
@@ -448,7 +448,7 @@ export default function Parceiros() {
       <section id="como-funciona" className="px-5 py-20 max-w-4xl mx-auto">
         <Reveal>
           <SectionTag text="Como funciona" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-12">Como funciona o <span style={{ color: "#00c896" }}>Programa de Parceiros Otima</span></h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-12">Como funciona o <span style={{ color: "#9e3ffd" }}>Programa de Parceiros Otima</span></h2>
         </Reveal>
 
         <div className="space-y-0">
@@ -464,10 +464,10 @@ export default function Parceiros() {
             <Reveal key={step.num} delay={i * 50}>
               <div className="flex gap-5 pb-8 relative">
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10" style={{ background: "linear-gradient(135deg,#00c896,#00a8ff)", color: "#fff" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 z-10" style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
                     {step.num}
                   </div>
-                  {i < 6 && <div className="w-0.5 flex-1 mt-2" style={{ background: "rgba(0,200,150,0.2)" }} />}
+                  {i < 6 && <div className="w-0.5 flex-1 mt-2" style={{ background: "rgba(158,63,253,0.2)" }} />}
                 </div>
                 <div className="pb-2">
                   <h3 className="font-semibold text-white mb-1">{step.title}</h3>
@@ -482,12 +482,12 @@ export default function Parceiros() {
       </section>
 
       {/* ── 5. IMPACT ── */}
-      <section className="px-5 py-24 text-center" style={{ background: "linear-gradient(135deg, rgba(0,200,150,0.08) 0%, rgba(59,130,246,0.08) 100%)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <section className="px-5 py-24 text-center" style={{ background: "linear-gradient(135deg, rgba(158,63,253,0.08) 0%, rgba(200,143,245,0.08) 100%)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="max-w-3xl mx-auto">
           <Reveal>
             <p className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-10" style={{ color: "rgba(255,255,255,0.95)" }}>
               A Otima mostra onde mirar.<br />
-              <span style={{ color: "#00c896" }}>Você abre a conversa.</span><br />
+              <span style={{ color: "#9e3ffd" }}>Você abre a conversa.</span><br />
               A conta valida a oportunidade.<br />
               <span style={{ color: "#3b82f6" }}>A comissão vem do cliente convertido.</span>
             </p>
@@ -500,7 +500,7 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Modelo B2B real" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Isto não é pirâmide. <span style={{ color: "#00c896" }}>E nunca será.</span></h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Isto não é pirâmide. <span style={{ color: "#9e3ffd" }}>E nunca será.</span></h2>
           <p className="text-base mb-4 max-w-2xl" style={{ color: "rgba(255,255,255,0.6)" }}>
             Vamos ser directos. Na Otima, você não ganha dinheiro recrutando pessoas. Você não precisa montar equipe. Você não ganha por trazer novos parceiros para o programa.
           </p>
@@ -515,7 +515,7 @@ export default function Parceiros() {
               <thead>
                 <tr style={{ background: "rgba(255,255,255,0.04)" }}>
                   <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "rgba(255,100,100,0.8)", width: "50%" }}>Modelos comuns no mercado</th>
-                  <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "#00c896", width: "50%" }}>Otima</th>
+                  <th className="text-left px-5 py-3.5 font-semibold" style={{ color: "#9e3ffd", width: "50%" }}>Otima</th>
                 </tr>
               </thead>
               <tbody>
@@ -542,11 +542,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 7. ENERGY BILL ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(0,168,255,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "rgba(200,143,245,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-4xl mx-auto text-center">
           <Reveal>
             <SectionTag text="O ponto de validação" />
-            <h2 className="text-3xl sm:text-4xl font-bold mb-6">A conta de energia é <span style={{ color: "#00c896" }}>o que importa.</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-6">A conta de energia é <span style={{ color: "#9e3ffd" }}>o que importa.</span></h2>
             <p className="text-base mb-6 max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.6)" }}>
               No mercado de energia, conversa não paga comissão. O que transforma uma abordagem em oportunidade é uma conta de energia válida. Quando você coleta e envia para a Otima, conseguimos analisar, validar e avançar para a proposta.
             </p>
@@ -559,8 +559,8 @@ export default function Parceiros() {
                 <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>é contacto.</p>
               </div>
               <ArrowRight className="w-6 h-6 rotate-90 sm:rotate-0" style={{ color: "rgba(255,255,255,0.2)" }} />
-              <div className="rounded-2xl px-8 py-6" style={{ background: "rgba(0,200,150,0.1)", border: "1px solid rgba(0,200,150,0.3)" }}>
-                <p className="text-lg font-bold" style={{ color: "#00c896" }}>Com conta,</p>
+              <div className="rounded-2xl px-8 py-6" style={{ background: "rgba(158,63,253,0.1)", border: "1px solid rgba(158,63,253,0.3)" }}>
+                <p className="text-lg font-bold" style={{ color: "#9e3ffd" }}>Com conta,</p>
                 <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>vira oportunidade.</p>
               </div>
             </div>
@@ -572,7 +572,7 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Exemplo de lista de leads" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Veja o tipo de informação que <span style={{ color: "#00c896" }}>orienta sua prospecção.</span></h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Veja o tipo de informação que <span style={{ color: "#9e3ffd" }}>orienta sua prospecção.</span></h2>
           <p className="text-base mb-10 max-w-2xl" style={{ color: "rgba(255,255,255,0.55)" }}>
             Parceiros aprovados recebem listas organizadas para ajudar a priorizar a execução comercial.
           </p>
@@ -600,9 +600,9 @@ export default function Parceiros() {
                     <td className="px-4 py-3 font-medium text-white">{row[0]}</td>
                     <td className="px-4 py-3" style={{ color: "rgba(255,255,255,0.6)" }}>{row[1]}</td>
                     <td className="px-4 py-3" style={{ color: "rgba(255,255,255,0.6)" }}>{row[2]}</td>
-                    <td className="px-4 py-3" style={{ color: "#00c896" }}>{row[3]}</td>
+                    <td className="px-4 py-3" style={{ color: "#9e3ffd" }}>{row[3]}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: row[4] === "Alta" ? "rgba(0,200,150,0.15)" : "rgba(59,130,246,0.15)", color: row[4] === "Alta" ? "#00c896" : "#3b82f6" }}>{row[4]}</span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: row[4] === "Alta" ? "rgba(158,63,253,0.15)" : "rgba(200,143,245,0.15)", color: row[4] === "Alta" ? "#9e3ffd" : "#3b82f6" }}>{row[4]}</span>
                     </td>
                   </tr>
                 ))}
@@ -616,7 +616,7 @@ export default function Parceiros() {
       </section>
 
       {/* ── 9. BRAZIL MAP / REGIONS ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(59,130,246,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "rgba(200,143,245,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <SectionTag text="Operação nacional" />
@@ -631,9 +631,9 @@ export default function Parceiros() {
               <button key={r.key} onClick={() => setActiveRegion(i)}
                 className="px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
                 style={{
-                  background: activeRegion === i ? "rgba(0,200,150,0.15)" : cardBg,
-                  border: activeRegion === i ? "1px solid rgba(0,200,150,0.4)" : cardBorder,
-                  color: activeRegion === i ? "#00c896" : "rgba(255,255,255,0.6)",
+                  background: activeRegion === i ? "rgba(158,63,253,0.15)" : cardBg,
+                  border: activeRegion === i ? "1px solid rgba(158,63,253,0.4)" : cardBorder,
+                  color: activeRegion === i ? "#9e3ffd" : "rgba(255,255,255,0.6)",
                 }}>
                 {r.emoji} {r.label}
               </button>
@@ -643,12 +643,12 @@ export default function Parceiros() {
           <Reveal>
             <div className="rounded-2xl p-6" style={{ background: cardBg, border: cardBorder }}>
               <div className="flex items-center gap-2 mb-5">
-                <MapPin className="w-4 h-4" style={{ color: "#00c896" }} />
+                <MapPin className="w-4 h-4" style={{ color: "#9e3ffd" }} />
                 <span className="font-semibold text-white">Segmentos prioritários — {REGIONS[activeRegion].label}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {REGIONS[activeRegion].items.map(item => (
-                  <span key={item} className="px-3 py-1.5 rounded-lg text-xs" style={{ background: "rgba(0,200,150,0.08)", border: "1px solid rgba(0,200,150,0.2)", color: "rgba(255,255,255,0.75)" }}>
+                  <span key={item} className="px-3 py-1.5 rounded-lg text-xs" style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)", color: "rgba(255,255,255,0.75)" }}>
                     {item}
                   </span>
                 ))}
@@ -662,7 +662,7 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Níveis de parceiro" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3">Quanto melhor você performa, <span style={{ color: "#00c896" }}>melhores ficam suas oportunidades.</span></h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">Quanto melhor você performa, <span style={{ color: "#9e3ffd" }}>melhores ficam suas oportunidades.</span></h2>
           <p className="text-base mb-10 max-w-2xl" style={{ color: "rgba(255,255,255,0.55)" }}>
             Na Otima, você não cresce por discurso. Você cresce por resultado. A progressão acontece com base em execução comercial, contas enviadas e clientes convertidos.
           </p>
@@ -708,11 +708,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 11. PROGRESSION ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(168,85,247,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "rgba(158,63,253,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-4xl mx-auto">
           <Reveal>
             <SectionTag text="Progressão" />
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Mais acesso vem de <span style={{ color: "#a855f7" }}>resultado, não de conversa.</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Mais acesso vem de <span style={{ color: "#9e3ffd" }}>resultado, não de conversa.</span></h2>
             <p className="text-base mb-12 max-w-2xl" style={{ color: "rgba(255,255,255,0.55)" }}>
               Na Otima, listas melhores não são liberadas porque alguém diz que "ligou bastante". Atividade importa. Mas o que aumenta seu acesso é produção verificável.
             </p>
@@ -722,7 +722,7 @@ export default function Parceiros() {
             {["Trabalha os leads", "Coleta contas", "Envia oportunidades", "A Otima analisa", "Clientes convertem", "O parceiro ganha comissão", "O acesso pode aumentar"].map((step, i) => (
               <Reveal key={i} delay={i * 50}>
                 <div className="flex items-center gap-4 p-4 rounded-xl transition-all" style={{ background: cardBg, border: cardBorder }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ background: `rgba(168,85,247,${0.15 + i * 0.08})`, color: "#a855f7" }}>{i + 1}</div>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ background: `rgba(158,63,253,${0.15 + i * 0.08})`, color: "#9e3ffd" }}>{i + 1}</div>
                   <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>{step}</span>
                   {i < 6 && <ChevronRight className="ml-auto w-4 h-4" style={{ color: "rgba(255,255,255,0.2)" }} />}
                   {i === 6 && <Star className="ml-auto w-4 h-4" style={{ color: "#f59e0b" }} />}
@@ -733,7 +733,7 @@ export default function Parceiros() {
 
           <Reveal delay={200}>
             <p className="text-2xl font-bold mt-10 text-center" style={{ color: "rgba(255,255,255,0.9)" }}>
-              Traga contas. Gere oportunidades. <span style={{ color: "#a855f7" }}>Cresça por performance.</span>
+              Traga contas. Gere oportunidades. <span style={{ color: "#9e3ffd" }}>Cresça por performance.</span>
             </p>
           </Reveal>
         </div>
@@ -743,14 +743,14 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-5xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Reveal>
-            <div className="rounded-2xl p-7 h-full" style={{ background: "rgba(0,200,150,0.05)", border: "1px solid rgba(0,200,150,0.15)" }}>
+            <div className="rounded-2xl p-7 h-full" style={{ background: "rgba(158,63,253,0.05)", border: "1px solid rgba(158,63,253,0.15)" }}>
               <SectionTag text="Para quem é" />
-              <h3 className="text-2xl font-bold mb-4 text-white">Este programa é para quem <span style={{ color: "#00c896" }}>sabe executar.</span></h3>
+              <h3 className="text-2xl font-bold mb-4 text-white">Este programa é para quem <span style={{ color: "#9e3ffd" }}>sabe executar.</span></h3>
               <p className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.55)" }}>Você pode ser um bom perfil se já fala com empresários, síndicos, lojistas, administradores, gestores ou donos de negócios.</p>
               <ul className="space-y-2">
                 {["Consultores comerciais", "Vendedores autônomos", "Representantes comerciais", "Corretores", "Empreendedores locais", "Ex-gerentes comerciais", "Profissionais com rede empresarial", "Quem já vende B2B ou quer vender com processo"].map(item => (
                   <li key={item} className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: "#00c896" }} /> {item}
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: "#9e3ffd" }} /> {item}
                   </li>
                 ))}
               </ul>
@@ -786,11 +786,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 14. OFFER ── */}
-      <section className="px-5 py-20" style={{ background: "linear-gradient(135deg,rgba(0,200,150,0.07) 0%,rgba(59,130,246,0.07) 100%)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "linear-gradient(135deg,rgba(158,63,253,0.07) 0%,rgba(200,143,245,0.07) 100%)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-3xl mx-auto text-center">
           <Reveal>
             <SectionTag text="A oferta" />
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Torne-se Parceiro <span style={{ color: "#00c896" }}>Comercial Otima</span></h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Torne-se Parceiro <span style={{ color: "#9e3ffd" }}>Comercial Otima</span></h2>
             <p className="text-base mb-8 max-w-xl mx-auto" style={{ color: "rgba(255,255,255,0.55)" }}>
               Acesse uma estrutura de prospecção B2B para trabalhar empresas com potencial de economia em energia.
             </p>
@@ -806,7 +806,7 @@ export default function Parceiros() {
               <div className="space-y-2 mb-8">
                 {["Listas semanais de empresas locais", "Segmentação por cidade e estado", "Segmentação por tipo de negócio", "Estimativa de faixa de conta de energia", "Prioridade comercial", "Scripts de abordagem", "Treinamento inicial", "Processo de envio de contas", "Análise da Otima", "Elegibilidade para comissão recorrente", "Progressão por performance", "Suporte comercial da Otima"].map(item => (
                   <div key={item} className="flex items-center gap-2.5 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
-                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#00c896" }} /> {item}
+                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#9e3ffd" }} /> {item}
                   </div>
                 ))}
               </div>
@@ -822,7 +822,7 @@ export default function Parceiros() {
       <section className="px-5 py-20 max-w-3xl mx-auto text-center">
         <Reveal>
           <SectionTag text="Por que existe mensalidade" />
-          <h2 className="text-2xl sm:text-3xl font-bold mb-6">Você não está pagando por motivação. <span style={{ color: "#00c896" }}>Está acessando um sistema comercial.</span></h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-6">Você não está pagando por motivação. <span style={{ color: "#9e3ffd" }}>Está acessando um sistema comercial.</span></h2>
           <p className="text-base mb-6 max-w-xl mx-auto" style={{ color: "rgba(255,255,255,0.55)" }}>
             Dados bons custam dinheiro. A Otima investe em tecnologia, segmentação, enriquecimento de dados, organização regional, distribuição semanal, treinamento e análise de oportunidades.
           </p>
@@ -835,12 +835,12 @@ export default function Parceiros() {
       </section>
 
       {/* ── 16. FINAL CTA + FORM ── */}
-      <section id="candidatura" className="px-5 py-20" style={{ background: "rgba(0,200,150,0.04)", borderTop: "1px solid rgba(0,200,150,0.12)" }}>
+      <section id="candidatura" className="px-5 py-20" style={{ background: "rgba(158,63,253,0.04)", borderTop: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="max-w-2xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
               <SectionTag text="Candidatura" />
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Pronto para trabalhar oportunidades <span style={{ color: "#00c896" }}>reais de energia?</span></h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Pronto para trabalhar oportunidades <span style={{ color: "#9e3ffd" }}>reais de energia?</span></h2>
               <p className="text-sm max-w-lg mx-auto" style={{ color: "rgba(255,255,255,0.5)" }}>
                 Sem pirâmide. Sem promessa falsa. Sem começar do zero.
               </p>
@@ -858,7 +858,7 @@ export default function Parceiros() {
       {/* Footer */}
       <footer className="px-5 py-8 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center justify-center gap-2 mb-3">
-          <Zap className="w-4 h-4" style={{ color: "#00c896" }} />
+          <Zap className="w-4 h-4" style={{ color: "#9e3ffd" }} />
           <span className="font-bold text-white text-sm">Ótima Energia</span>
         </div>
         <div className="flex items-center justify-center gap-4 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
