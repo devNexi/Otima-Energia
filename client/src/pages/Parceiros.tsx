@@ -305,8 +305,6 @@ export default function Parceiros() {
       <section className="relative px-5 pt-20 pb-24 text-center overflow-hidden" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 0%, rgba(158,63,253,0.12) 0%, transparent 70%)" }}>
         {/* Animated background grid */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(rgba(158,63,253,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(158,63,253,0.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
-        {/* Logo watermark */}
-        <img src={logoIcon} aria-hidden="true" className="absolute right-[-80px] top-[-40px] w-[420px] opacity-[0.05] pointer-events-none select-none" style={{ filter: "brightness(2)" }} />
 
         <div className="relative max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: "rgba(158,63,253,0.12)", border: "1px solid rgba(158,63,253,0.3)", color: "#9e3ffd" }}>
@@ -417,8 +415,8 @@ export default function Parceiros() {
       {/* ── 3. SOLUTION ── */}
       <section className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-electric.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.22 }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.78) 20%, rgba(22,22,63,0.78) 80%, #16163f 100%)" }} />
+          <img src="/texture-electric.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.55, mixBlendMode: "screen" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
         </div>
         <div className="max-w-5xl mx-auto">
           <Reveal>
@@ -494,8 +492,8 @@ export default function Parceiros() {
       {/* ── 5. IMPACT ── */}
       <section className="relative px-5 py-24 text-center overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-wave1.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.14 }} />
-          <div className="absolute inset-0" style={{ background: "rgba(22,22,63,0.88)" }} />
+          <img src="/texture-wave1.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.07 }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
         </div>
         <div className="max-w-3xl mx-auto">
           <Reveal>
@@ -861,8 +859,8 @@ export default function Parceiros() {
       {/* ── 16. FINAL CTA + FORM ── */}
       <section id="candidatura" className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-wave2.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.10 }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.90) 15%, rgba(22,22,63,0.90) 85%, #16163f 100%)" }} />
+          <img src="/texture-wave2.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.06 }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
         </div>
         <div className="max-w-2xl mx-auto">
           <Reveal>
