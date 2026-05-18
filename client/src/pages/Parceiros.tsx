@@ -316,7 +316,7 @@ export default function Parceiros() {
           </h1>
 
           <p className="text-lg sm:text-xl mb-4 max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Trabalhe contas reais. Ganhe comissão por clientes convertidos.
+            Trabalhe contas reais. Ganhe <span style={{ color: "#c88ff5", fontWeight: 700 }}>até 35% de comissão</span> por clientes convertidos.
           </p>
 
           <p className="text-sm max-w-xl mx-auto mb-10 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -346,10 +346,10 @@ export default function Parceiros() {
         </div>
 
         {/* Floating cards */}
-        <div className="relative max-w-5xl mx-auto mt-16 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="relative max-w-3xl mx-auto mt-16 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { icon: MapPin, text: "Rio de Janeiro — 30 empresas liberadas", color: "#9e3ffd" },
-            { icon: Building2, text: "Supermercado — conta estimada R$ 10k–R$ 30k/mês", color: "#3b82f6" },
+            { icon: Building2, text: "Supermercado — conta estimada R$ 10k–R$ 30k/mês", color: "#c88ff5" },
             { icon: FileText, text: "Conta enviada — oportunidade em análise", color: "#9e3ffd" },
             { icon: DollarSign, text: "Cliente convertido — comissão recorrente elegível", color: "#f59e0b" },
           ].map((c, i) => (
@@ -489,7 +489,7 @@ export default function Parceiros() {
               A Otima mostra onde mirar.<br />
               <span style={{ color: "#9e3ffd" }}>Você abre a conversa.</span><br />
               A conta valida a oportunidade.<br />
-              <span style={{ color: "#3b82f6" }}>A comissão vem do cliente convertido.</span>
+              <span style={{ color: "#c88ff5" }}>A comissão vem do cliente convertido.</span>
             </p>
             <CtaButton text="Aplicar para minha região" />
           </Reveal>
