@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Zap, MapPin, BarChart2, Users, TrendingUp, CheckCircle2, XCircle, ChevronRight, ArrowRight, Database, Target, FileText, Award, Star, Shield, Clock, DollarSign, Building2, Layers } from "lucide-react";
+import logoIcon from "../assets/branding/logo-icon-transparent.png";
+import imgSolEstrategias from "../assets/homepage/sol-estrategias.png";
+import imgCompare from "../assets/homepage/compare.png";
+import imgSolMigracao from "../assets/homepage/sol-migracao.png";
 
 // ─── Scroll reveal hook ────────────────────────────────────────────────────────
 function useReveal() {
@@ -287,10 +291,10 @@ export default function Parceiros() {
     <div style={{ background: dark, color: "#fff", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
 
       {/* ── Sticky header ── */}
-      <header className="sticky top-0 z-50 px-5 py-3 flex items-center justify-between" style={{ background: "rgba(11,15,26,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      <header className="sticky top-0 z-50 px-5 py-3 flex items-center justify-between" style={{ background: "rgba(22,22,63,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
-            <Zap className="w-5 h-5" style={{ color: "#9e3ffd" }} />
+            <img src={logoIcon} alt="Ótima Energia" className="h-7 w-auto" />
             <span className="font-bold text-white text-sm">Ótima Energia</span>
           </div>
         </Link>
@@ -304,6 +308,8 @@ export default function Parceiros() {
       <section className="relative px-5 pt-20 pb-24 text-center overflow-hidden" style={{ background: "radial-gradient(ellipse 90% 70% at 50% 0%, rgba(158,63,253,0.12) 0%, transparent 70%)" }}>
         {/* Animated background grid */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(rgba(158,63,253,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(158,63,253,0.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+        {/* Logo watermark */}
+        <img src={logoIcon} aria-hidden="true" className="absolute right-[-80px] top-[-40px] w-[420px] opacity-[0.05] pointer-events-none select-none" style={{ filter: "brightness(2)" }} />
 
         <div className="relative max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: "rgba(158,63,253,0.12)", border: "1px solid rgba(158,63,253,0.3)", color: "#9e3ffd" }}>
@@ -410,7 +416,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 3. SOLUTION ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(158,63,253,0.03)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <img src={imgSolEstrategias} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.7) 40%, rgba(22,22,63,0.7) 60%, #16163f 100%)" }} />
+        </div>
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <SectionTag text="O que você recebe" />
@@ -481,7 +491,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 5. IMPACT ── */}
-      <section className="px-5 py-24 text-center" style={{ background: "linear-gradient(135deg, rgba(158,63,253,0.08) 0%, rgba(200,143,245,0.08) 100%)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <section className="relative px-5 py-24 text-center overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <img src={imgCompare} aria-hidden="true" className="w-full h-full object-cover opacity-15" style={{ objectPosition: "center 30%" }} />
+          <div className="absolute inset-0" style={{ background: "rgba(22,22,63,0.82)" }} />
+        </div>
         <div className="max-w-3xl mx-auto">
           <Reveal>
             <p className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-10" style={{ color: "rgba(255,255,255,0.95)" }}>
@@ -834,7 +848,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 16. FINAL CTA + FORM ── */}
-      <section id="candidatura" className="px-5 py-20" style={{ background: "rgba(158,63,253,0.04)", borderTop: "1px solid rgba(158,63,253,0.12)" }}>
+      <section id="candidatura" className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(158,63,253,0.12)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <img src={imgSolMigracao} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.8) 30%, rgba(22,22,63,0.8) 70%, #16163f 100%)" }} />
+        </div>
         <div className="max-w-2xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
@@ -857,7 +875,7 @@ export default function Parceiros() {
       {/* Footer */}
       <footer className="px-5 py-8 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center justify-center gap-2 mb-3">
-          <Zap className="w-4 h-4" style={{ color: "#9e3ffd" }} />
+          <img src={logoIcon} alt="Ótima Energia" className="h-6 w-auto" />
           <span className="font-bold text-white text-sm">Ótima Energia</span>
         </div>
         <div className="flex items-center justify-center gap-4 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
