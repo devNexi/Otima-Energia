@@ -368,7 +368,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 2. PROBLEM ── */}
-      <section className="px-5 py-20 max-w-5xl mx-auto">
+      <section className="px-5 py-20" style={{ background: "#1c1b4e" }}>
+      <div className="max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="O problema" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-6">Vender energia sem dados é <span style={{ color: "#9e3ffd" }}>começar no escuro.</span></h2>
@@ -413,6 +414,7 @@ export default function Parceiros() {
             </table>
           </div>
         </Reveal>
+      </div>
       </section>
 
       {/* ── 3. SOLUTION ── */}
@@ -454,7 +456,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 4. HOW IT WORKS ── */}
-      <section id="como-funciona" className="px-5 py-20 max-w-4xl mx-auto">
+      <section id="como-funciona" className="px-5 py-20" style={{ background: "#16163f" }}>
+      <div className="max-w-4xl mx-auto">
         <Reveal>
           <SectionTag text="Como funciona" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-12">Como funciona o <span style={{ color: "#9e3ffd" }}>Programa de Parceiros Otima</span></h2>
@@ -488,6 +491,7 @@ export default function Parceiros() {
         </div>
 
         <Reveal delay={100}><div className="mt-4"><CtaButton text="Começar candidatura" /></div></Reveal>
+      </div>
       </section>
 
       {/* ── 5. IMPACT ── */}
@@ -510,7 +514,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 6. NOT A PYRAMID ── */}
-      <section className="px-5 py-20 max-w-5xl mx-auto">
+      <section className="px-5 py-20" style={{ background: "#1c1b4e" }}>
+      <div className="max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Modelo B2B real" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Isto não é pirâmide. <span style={{ color: "#9e3ffd" }}>E nunca será.</span></h2>
@@ -552,10 +557,11 @@ export default function Parceiros() {
         </Reveal>
 
         <Reveal delay={150}><div className="mt-10"><CtaButton text="Quero uma oportunidade séria" /></div></Reveal>
+      </div>
       </section>
 
       {/* ── 7. ENERGY BILL ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(200,143,245,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "rgba(200,143,245,0.07)", borderTop: "1px solid rgba(200,143,245,0.12)", borderBottom: "1px solid rgba(200,143,245,0.12)" }}>
         <div className="max-w-4xl mx-auto text-center">
           <Reveal>
             <SectionTag text="O ponto de validação" />
@@ -582,7 +588,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 8. LEAD MOCKUP ── */}
-      <section className="px-5 py-20 max-w-5xl mx-auto">
+      <section className="px-5 py-20" style={{ background: "#16163f" }}>
+      <div className="max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Exemplo de lista de leads" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Veja o tipo de informação que <span style={{ color: "#9e3ffd" }}>orienta sua prospecção.</span></h2>
@@ -626,10 +633,11 @@ export default function Parceiros() {
             Exemplo visual. Dados reais são liberados apenas para parceiros aprovados.
           </p>
         </Reveal>
+      </div>
       </section>
 
       {/* ── 9. BRAZIL MAP / REGIONS ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(200,143,245,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "#1c1b4e", borderTop: "1px solid rgba(200,143,245,0.1)", borderBottom: "1px solid rgba(200,143,245,0.1)" }}>
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <SectionTag text="Operação nacional" />
@@ -672,7 +680,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 10. PARTNER LEVELS ── */}
-      <section className="px-5 py-20 max-w-5xl mx-auto">
+      <section className="px-5 py-20" style={{ background: "#16163f" }}>
+      <div className="max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Níveis de parceiro" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-3">Quanto melhor você performa, <span style={{ color: "#9e3ffd" }}>melhores ficam suas oportunidades.</span></h2>
@@ -718,10 +727,11 @@ export default function Parceiros() {
             </div>
           </div>
         </Reveal>
+      </div>
       </section>
 
       {/* ── 11. PROGRESSION ── */}
-      <section className="px-5 py-20" style={{ background: "rgba(158,63,253,0.04)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <section className="px-5 py-20" style={{ background: "#1c1b4e", borderTop: "1px solid rgba(158,63,253,0.12)", borderBottom: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="max-w-4xl mx-auto">
           <Reveal>
             <SectionTag text="Progressão" />
@@ -753,7 +763,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 12 & 13. FOR WHO / NOT FOR ── */}
-      <section className="px-5 py-20 max-w-5xl mx-auto">
+      <section className="px-5 py-20" style={{ background: "#16163f" }}>
+      <div className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Reveal>
             <div className="rounded-2xl p-7 h-full" style={{ background: "rgba(158,63,253,0.05)", border: "1px solid rgba(158,63,253,0.15)" }}>
@@ -796,6 +807,7 @@ export default function Parceiros() {
             </div>
           </Reveal>
         </div>
+      </div>
       </section>
 
       {/* ── 14. OFFER ── */}
@@ -832,7 +844,8 @@ export default function Parceiros() {
       </section>
 
       {/* ── 15. WHY SUBSCRIPTION ── */}
-      <section className="px-5 py-20 max-w-3xl mx-auto text-center">
+      <section className="px-5 py-20" style={{ background: "#1c1b4e" }}>
+      <div className="max-w-3xl mx-auto text-center">
         <Reveal>
           <SectionTag text="Por que existe mensalidade" />
           <h2 className="text-2xl sm:text-3xl font-bold mb-6">Você não está pagando por motivação. <span style={{ color: "#9e3ffd" }}>Está acessando um sistema comercial.</span></h2>
@@ -845,6 +858,7 @@ export default function Parceiros() {
             ))}
           </div>
         </Reveal>
+      </div>
       </section>
 
       {/* ── 16. FINAL CTA + FORM ── */}
