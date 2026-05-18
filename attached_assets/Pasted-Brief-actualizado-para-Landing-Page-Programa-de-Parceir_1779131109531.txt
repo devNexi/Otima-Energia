@@ -1,0 +1,1021 @@
+Brief actualizado para Landing Page
+Programa de Parceiros Otima
+Objetivo da página
+
+Criar uma landing page de alta conversão para recrutar parceiros comerciais da Otima Energia.
+
+A página deve vender uma oportunidade clara, séria e selectiva:
+
+A Otima entrega dados, listas semanais de empresas locais, treinamento e processo comercial. O parceiro trabalha os leads, coleta contas de energia e ganha comissão recorrente quando a Otima converte e recebe do cliente.
+
+A página deve deixar claro que a Otima não é pirâmide, não paga por recrutamento, não vende sonho e não promete renda fácil.
+
+O modelo é uma operação comercial B2B no mercado de energia:
+
+lead real → conta real → análise real → cliente real → comissão real
+
+A página deve ser visual, dinâmica, confiante, aspiracional e profissional. O tom deve ser forte, directo, comercial e brasileiro.
+
+Público-alvo
+
+A landing page deve atrair pessoas com perfil comercial real, especialmente:
+
+vendedores autônomos
+representantes comerciais
+consultores comerciais
+corretores
+empreendedores locais
+pessoas com rede empresarial
+ex-gerentes comerciais
+profissionais que falam com donos de negócios
+pessoas com acesso a empresários, síndicos, lojistas, administradores e gestores
+profissionais que conseguem abrir portas em empresas locais
+
+Não queremos atrair:
+
+curiosos
+pessoas procurando renda fácil
+pessoas que querem ganhar recrutando outras pessoas
+pessoas sem disposição para executar
+pessoas que querem receber leads e não trabalhar
+perfis interessados em marketing multinível ou “downline”
+Posicionamento central
+Mensagem principal
+
+A Otima te entrega empresas com potencial. Você coleta contas reais. A comissão vem de clientes reais convertidos.
+
+Ou, de forma mais comercial:
+
+Receba listas semanais de empresas com potencial em energia. Trabalhe os leads. Colete a conta. Ganhe comissão recorrente quando o cliente converte.
+
+Diferença contra outros modelos do mercado
+
+Outros modelos vendem motivação e mandam você “ir vender”.
+
+A Otima entrega:
+
+dados
+listas semanais
+segmentação por cidade
+segmentação por tipo de negócio
+faixa estimada de conta de energia
+scripts
+treinamento
+processo comercial
+suporte da Otima
+progressão por performance
+Mensagem anti-pirâmide
+
+Na Otima, você não ganha recrutando pessoas.
+
+Você ganha ajudando a gerar clientes reais, com contas reais, economia real, receita real e comissão real.
+
+A mensagem não deve soar defensiva no início da página. O hero deve vender a oportunidade. A explicação anti-pirâmide deve aparecer depois, em uma secção própria, forte e clara.
+
+Estilo visual desejado
+
+A página deve parecer:
+
+moderna
+premium
+energética
+B2B
+brasileira
+tecnológica
+confiável
+ambiciosa
+selectiva
+nacional, mas sem parecer pirâmide ou marketing multinível
+Direção visual
+
+Usar elementos como:
+
+fundo escuro premium
+detalhes em verde, azul e energia
+gradientes modernos
+cards com glassmorphism ou sombras suaves
+animações leves ao rolar
+números grandes
+ícones de energia, mapa, dados, negócios, comissão e crescimento
+mapa estilizado do Brasil
+cards por nível de parceiro
+timeline de “como funciona”
+comparativo visual “modelos comuns vs Otima”
+CTAs recorrentes
+CTA fixo opcional no mobile
+formulário limpo, directo e multi-step
+mockup visual de lista de leads
+Evitar visual de:
+pirâmide
+marketing multinível
+promessa de riqueza
+renda passiva milagrosa
+excesso de dourado
+diamantes
+fotos genéricas de aperto de mãos
+layout antigo de franquia
+linguagem de infoproduto agressivo
+visual com cara de “esquema”
+Estrutura actualizada da página
+1. Hero section
+Headline
+
+Receba empresas com potencial em energia. Trabalhe contas reais. Ganhe comissão por clientes convertidos.
+
+Subheadline
+
+A Otima opera um programa nacional de parceiros comerciais com foco regional. Nós entregamos listas semanais de empresas locais com potencial de gasto relevante em energia. Você aborda os leads, coleta a conta de energia e a Otima analisa a oportunidade.
+
+Quando o cliente converte e a Otima recebe, você ganha comissão recorrente conforme seu nível.
+
+Texto de apoio
+
+Dados reais.
+Processo comercial.
+Treinamento.
+Suporte da Otima.
+Zero ganho por recrutamento.
+
+CTA principal
+
+Aplicar para minha região
+
+CTA secundário
+
+Ver como funciona
+
+Microcopy abaixo do CTA
+
+Candidaturas sujeitas à aprovação por perfil comercial e disponibilidade regional.
+
+Elementos visuais do hero
+
+O hero deve ter:
+
+mapa do Brasil estilizado
+pontos conectando estados e cidades
+linhas de energia/dados ligando regiões
+cards flutuantes com exemplos visuais
+
+Exemplos de cards:
+
+“Rio de Janeiro — 30 empresas liberadas”
+“Supermercado — conta estimada R$ 10 mil–R$ 30 mil/mês”
+“Conta enviada — oportunidade em análise”
+“Cliente convertido — comissão recorrente elegível”
+
+Evitar no hero:
+
+excesso de “não é pirâmide”
+promessa de renda
+linguagem de urgência falsa
+símbolos de riqueza fácil
+2. Problema
+Headline
+
+Vender energia sem dados é começar no escuro.
+
+Copy
+
+Você pode ser ótimo em vendas e ainda assim perder semanas abordando as empresas erradas.
+
+Sem dados.
+Sem lista.
+Sem processo.
+Sem saber quem realmente gasta energia suficiente para valer uma conversa.
+
+O resultado é previsível:
+
+ligações para negócios pequenos demais
+contactos sem potencial
+empresas que nunca deveriam ter sido priorizadas
+tempo perdido com leads frios
+dificuldade para saber onde colocar energia comercial
+
+A Otima resolve o primeiro grande problema da venda B2B em energia:
+
+saber quem chamar primeiro.
+
+Visual
+
+Criar bloco comparativo:
+
+Antes da Otima	Com a Otima
+Procurar empresas manualmente	Listas semanais de empresas locais
+Ligar para qualquer negócio	Segmentação por cidade e segmento
+Perder tempo com contas pequenas	Foco em empresas com potencial relevante
+Não saber o potencial	Faixa estimada de conta de energia
+Trabalhar sem processo	Scripts, treinamento e fluxo comercial
+Depender só da própria rede	Dados + execução local
+Conversas soltas	Conta enviada para análise da Otima
+3. Solução Otima
+Headline
+
+A Otima te entrega uma base comercial para executar.
+
+Copy
+
+Parceiros aprovados recebem listas semanais de empresas segmentadas por região, cidade, tipo de negócio e faixa estimada de conta de energia.
+
+Não são nomes soltos.
+
+São empresas locais seleccionadas para ajudar você a priorizar melhor o seu tempo comercial.
+
+Você não começa do zero.
+Você começa com direção.
+
+Card visual: O que você recebe
+
+Criar cards com ícones.
+
+Leads semanais
+
+Novas listas de empresas locais para trabalhar toda semana.
+
+Segmentação regional
+
+Estado, cidade, região e território comercial aprovado.
+
+Tipo de negócio
+
+Segmentação por categoria, segmento e perfil provável de consumo.
+
+Faixa estimada de conta
+
+Foco em empresas com potencial de conta relevante.
+
+Scripts e treinamento
+
+Abordagem, qualificação, pedido da conta e processo de envio.
+
+Análise da Otima
+
+A Otima avalia a conta, valida a oportunidade e define a melhor rota comercial.
+
+Comissão recorrente
+
+Você ganha quando o cliente converte e a Otima recebe.
+
+4. Como funciona
+
+Criar uma secção em formato de timeline ou steps animados.
+
+Headline
+
+Como funciona o Programa de Parceiros Otima
+
+Step 1 — Escolha sua área
+
+Você trabalha uma cidade, região, estado ou território comercial aprovado.
+
+A Otima opera nacionalmente, com foco regional, cobrindo todos os estados do Brasil.
+
+Step 2 — Receba empresas toda semana
+
+Parceiros aprovados recebem uma nova lista de empresas para trabalhar.
+
+As listas podem incluir informações como:
+
+cidade
+segmento
+categoria
+faixa estimada de conta
+prioridade comercial
+perfil provável de consumo
+Step 3 — Fale com as empresas
+
+Você liga, manda mensagem, visita ou usa sua rede local.
+
+Seu objectivo é abrir conversa com o decisor e identificar se a empresa tem conta de energia relevante.
+
+Step 4 — Colete a conta de energia
+
+A conta é o ponto-chave.
+
+Nome não basta.
+Telefone não basta.
+“Conheço o dono” não basta.
+
+A conta de energia é o documento que transforma um contacto em oportunidade real.
+
+Step 5 — A Otima analisa
+
+A Otima analisa a conta, valida o potencial e identifica a melhor rota comercial.
+
+O parceiro não precisa ser engenheiro de energia.
+
+Precisa saber abrir portas, pedir a conta e seguir o processo.
+
+Step 6 — O cliente recebe uma proposta
+
+Quando faz sentido, a Otima avança com a proposta comercial.
+
+Step 7 — Você ganha comissão recorrente
+
+Se o cliente assina, converte e a Otima recebe, você ganha comissão conforme seu nível.
+
+5. Secção de impacto
+
+Criar uma secção com fundo escuro, tipografia grande e visual forte.
+
+Texto principal
+
+A Otima mostra onde mirar.
+Você abre a conversa.
+A conta valida a oportunidade.
+A comissão vem do cliente convertido.
+
+Versão alternativa
+
+A Otima te dá os alvos.
+Você traz a conta.
+Nós ajudamos a converter.
+Você ganha quando a Otima ganha.
+
+CTA
+
+Aplicar para minha região
+
+6. Modelo B2B: não é pirâmide
+
+Esta secção deve ser forte, clara e visualmente memorável.
+
+Headline
+
+Isto não é pirâmide. E nunca será.
+
+Copy
+
+Vamos ser directos.
+
+Na Otima, você não ganha dinheiro recrutando pessoas.
+
+Você não precisa montar equipe.
+Você não precisa vender licença para amigos.
+Você não ganha por trazer novos parceiros para o programa.
+Você não constrói linha de recrutamento.
+
+A Otima rejeita esse modelo.
+
+Aqui, a remuneração vem de resultado comercial real:
+
+empresas qualificadas
+contas de energia válidas
+oportunidades analisadas
+clientes convertidos
+receita recebida
+
+O foco é prospecção B2B.
+
+O activo é a conta de energia.
+
+A comissão vem da conversão de clientes reais.
+
+Comparativo visual
+Modelos comuns no mercado	Otima
+Ganho por recrutar pessoas	Ganho por clientes reais convertidos
+Promessa de renda fácil	Processo comercial B2B
+“Monte sua rede”	Trabalhe empresas com potencial
+Motivação sem ferramenta	Dados, scripts e treinamento
+Vende sonho	Entrega operação
+Foco em novos membros	Foco em contas de energia
+Discurso de oportunidade	Execução comercial mensurável
+CTA
+
+Quero uma oportunidade séria
+
+7. A conta de energia é o ponto de validação
+Headline
+
+A conta de energia é o que importa.
+
+Copy
+
+No mercado de energia, conversa não paga comissão.
+
+O que transforma uma abordagem em oportunidade é uma conta de energia válida.
+
+Quando você coleta a conta e envia para a Otima, conseguimos analisar o cliente, validar o potencial e avançar para a proposta.
+
+Texto visual
+
+Sem conta, é contacto.
+Com conta, vira oportunidade.
+
+Lista
+
+O parceiro evolui quando entrega:
+
+contas reais
+empresas qualificadas
+oportunidades aceitas
+clientes convertidos
+volume de contas mensais qualificadas
+execução consistente
+8. Prova visual do produto
+
+Criar uma secção com mockup de uma lista de leads, sem dados reais.
+
+Headline
+
+Veja o tipo de informação que orienta sua prospecção.
+
+Copy
+
+Parceiros aprovados recebem listas organizadas para ajudar a priorizar a execução comercial.
+
+A ideia é simples: trabalhar empresas com maior chance de ter gasto relevante em energia.
+
+Tabela mockup
+Empresa	Cidade	Segmento	Conta estimada	Prioridade
+Supermercado Exemplo	Niterói	Mercado	R$ 10 mil–R$ 30 mil/mês	Alta
+Hotel Exemplo	Cabo Frio	Hotel	R$ 30 mil–R$ 75 mil/mês	Média
+Clínica Exemplo	Petrópolis	Clínica	R$ 10 mil–R$ 30 mil/mês	Alta
+Escola Exemplo	Campinas	Escola privada	R$ 30 mil–R$ 75 mil/mês	Alta
+Condomínio Exemplo	Curitiba	Condomínio	R$ 10 mil–R$ 30 mil/mês	Média
+Microcopy
+
+Exemplo visual. Dados reais são liberados apenas para parceiros aprovados.
+
+9. Mapa dinâmico do Brasil
+
+Criar uma secção visual com mapa do Brasil.
+
+Ao passar o mouse ou clicar em uma região, mostrar exemplos de segmentos locais.
+
+Headline
+
+Uma operação nacional com execução regional.
+
+Copy
+
+A Otima opera em todos os estados do Brasil, mas a prospecção acontece onde a confiança comercial nasce: na região, na cidade, no contacto local e na conversa com o decisor.
+
+Exemplos por região
+Sudeste
+supermercados médios
+clínicas
+condomínios
+escolas privadas
+eventos
+oficinas grandes
+hotéis urbanos
+Sul
+pousadas
+padarias
+distribuidores locais
+oficinas
+escolas
+turismo regional
+mercados
+Nordeste
+pousadas
+beach clubs pequenos e médios
+restaurantes
+eventos
+mercados
+turismo local
+hotéis regionais
+Centro-Oeste
+churrascarias
+mercados
+oficinas
+escolas privadas
+distribuidores
+negócios agro-adjacentes pequenos
+clínicas
+Norte
+hotéis locais
+mercados
+clínicas
+distribuidores
+oficinas
+serviços fluviais pequenos
+negócios regionais de alto consumo
+10. Níveis de Parceiro
+
+Seção visual em cards, com progressão horizontal no desktop e empilhada no mobile.
+
+Headline
+
+Quanto melhor você performa, melhores ficam suas oportunidades.
+
+Subheadline
+
+Na Otima, você não cresce por discurso.
+Você cresce por resultado.
+
+A progressão acontece com base em execução comercial, contas enviadas, oportunidades qualificadas e clientes convertidos.
+
+Nível 1
+Consultor de Economia de Energia Otima
+
+Para parceiros iniciando a operação comercial.
+
+Leads semanais: 25
+Faixa estimada de conta: R$ 10 mil–R$ 30 mil/mês
+Reserva do lead: 7 dias
+Comissão: 20%
+
+Foco: negócios locais com boa chance de qualificação.
+
+Nível 2
+Estrategista de Energia Otima
+
+Para parceiros que já provaram que conseguem trazer contas qualificadas.
+
+Leads semanais: 50
+Faixa estimada de conta: R$ 30 mil–R$ 75 mil/mês
+Reserva do lead: 10 dias
+Comissão: 25%
+
+Foco: empresas maiores, melhores segmentos e maior potencial comercial.
+
+Nível 3
+Executivo de Contas Otima
+
+Para parceiros de alta performance.
+
+Leads semanais: 75
+Faixa estimada de conta: R$ 50 mil–R$ 150 mil/mês
+Reserva do lead: 14 dias
+Comissão: 30%
+
+Foco: oportunidades mais estratégicas e contas de maior valor.
+
+Nível 4
+Parceiro Regional Otima
+
+Para parceiros regionais comprovados.
+
+Leads semanais: 100–150
+Faixa estimada de conta: R$ 75 mil–R$ 250 mil+/mês
+Reserva do lead: 21–30 dias
+Comissão: 35%
+
+Foco: campanhas regionais, segmentos estratégicos e oportunidades mais robustas.
+
+11. Progressão por performance
+Headline
+
+Mais acesso vem de resultado, não de conversa.
+
+Copy
+
+Na Otima, listas melhores não são liberadas porque alguém diz que “ligou bastante”.
+
+Atividade importa. Mas o que aumenta seu acesso é produção verificável.
+
+A progressão considera sinais como:
+
+leads trabalhados
+contas coletadas
+oportunidades aceitas
+velocidade de execução
+qualidade das informações enviadas
+clientes convertidos
+consistência mensal
+Visual
+
+Criar escada visual:
+
+Trabalha os leads
+Coleta contas
+Envia oportunidades
+A Otima analisa
+Clientes convertem
+O parceiro ganha comissão
+O acesso pode aumentar
+Frase grande
+
+Traga contas. Gere oportunidades. Cresça por performance.
+
+12. Para quem é
+Headline
+
+Este programa é para quem sabe executar.
+
+Copy
+
+Você pode ser um bom perfil se já fala com empresários, síndicos, lojistas, administradores, gestores ou donos de negócios.
+
+Funciona bem para:
+
+consultores comerciais
+vendedores autônomos
+representantes comerciais
+corretores
+empreendedores locais
+ex-gerentes comerciais
+profissionais com rede empresarial
+pessoas que sabem conversar com decisores
+profissionais com presença regional
+quem já vende B2B ou quer vender com processo
+
+Você não precisa ser especialista em energia.
+
+Mas precisa saber abrir conversa, pedir a conta e seguir um processo comercial.
+
+13. Para quem não é
+Headline
+
+Este programa não é para todo mundo.
+
+Copy
+
+Não é para quem quer renda passiva sem trabalhar.
+
+Não é para quem quer ganhar recrutando pessoas.
+
+Não é para quem quer receber leads e não executar.
+
+Não é para quem procura dinheiro fácil.
+
+Não é para quem não consegue seguir processo.
+
+Não é para quem espera resultado sem actividade comercial.
+
+A Otima entrega a estrutura.
+
+Você coloca o processo em movimento.
+
+14. Oferta
+Headline
+
+Torne-se Parceiro Comercial Otima
+
+Subheadline
+
+Acesse uma estrutura de prospecção B2B para trabalhar empresas com potencial de economia em energia.
+
+O que está incluído
+listas semanais de empresas locais
+segmentação por cidade e estado
+segmentação por tipo de negócio
+estimativa de faixa de conta de energia
+prioridade comercial
+scripts de abordagem
+treinamento inicial
+processo de envio de contas
+análise da Otima
+elegibilidade para comissão recorrente
+progressão por performance
+suporte comercial da Otima
+Assinatura
+
+R$ 297/mês
+
+Compromisso mínimo
+
+6 meses
+
+CTA
+
+Aplicar para ser Parceiro Otima
+
+Microcopy abaixo do botão
+
+Candidaturas sujeitas à aprovação por região, perfil comercial e disponibilidade de território.
+
+15. Por que existe mensalidade
+Headline
+
+Você não está pagando por motivação. Está acessando um sistema comercial.
+
+Copy
+
+Dados bons custam dinheiro.
+
+A Otima investe em tecnologia, segmentação, enriquecimento de dados, organização regional, distribuição semanal, treinamento e análise de oportunidades.
+
+A mensalidade ajuda a manter a estrutura que dá ao parceiro uma base real para prospectar.
+
+Você não paga para recrutar pessoas.
+
+Você não paga por uma promessa de renda.
+
+Você acessa uma operação comercial com dados, processo e suporte.
+
+A Otima entrega a estrutura.
+Você executa.
+
+16. CTA final
+Headline
+
+Pronto para trabalhar oportunidades reais de energia?
+
+Copy
+
+A Otima opera um programa nacional de parceiros comerciais com foco regional em todos os estados do Brasil.
+
+Estamos procurando pessoas comerciais sérias que querem trabalhar clientes empresariais reais, com contas reais e processo real.
+
+Sem pirâmide.
+Sem promessa falsa.
+Sem começar do zero.
+
+CTA
+
+Quero me candidatar agora
+
+Microcopy
+
+A candidatura não garante aprovação. A Otima analisa perfil, região e disponibilidade comercial antes de liberar acesso ao programa.
+
+Formulário de candidatura
+
+O formulário deve ser simples, bonito e multi-step para não parecer pesado.
+
+Deve funcionar perfeitamente no mobile.
+
+Step 1 — Dados básicos
+
+Campos:
+
+Nome completo
+WhatsApp
+E-mail
+Estado
+Cidade
+Região onde pretende atuar
+
+CTA do step:
+
+Continuar
+
+Step 2 — Perfil comercial
+
+Campos:
+
+Você já vendeu B2B?
+Sim
+Não
+Qual sua experiência comercial?
+Vendas externas
+Consultoria
+Representação comercial
+Corretagem
+Empreendedorismo
+Energia
+Outro
+Quantas horas por semana pode dedicar?
+5–10h
+10–20h
+20h+
+Você tem rede local com empresários?
+Sim
+Parcialmente
+Ainda não
+
+CTA do step:
+
+Continuar candidatura
+
+Step 3 — Compromisso
+
+Campos obrigatórios:
+
+Você entende que a Otima não paga por recrutamento de novos parceiros?
+Sim
+Você entende que o foco é coletar contas de energia de empresas reais?
+Sim
+Você entende que existe mensalidade de R$ 297/mês e compromisso mínimo de 6 meses?
+Sim
+Por que você quer ser Parceiro Otima?
+
+Campo de texto aberto.
+
+CTA final:
+
+Enviar candidatura
+
+Mensagem após envio
+
+Candidatura recebida.
+
+A equipe Otima analisará seu perfil, sua região e sua disponibilidade comercial. Se houver aderência, entraremos em contacto com os próximos passos.
+
+UX e requisitos funcionais
+1. Página mobile-first
+
+A maioria dos candidatos provavelmente abrirá pelo celular. A página precisa ser perfeita no mobile.
+
+Requisitos:
+
+CTAs grandes
+texto com espaçamento confortável
+seções curtas
+cards empilhados no mobile
+formulário fácil de preencher no celular
+carregamento rápido
+CTA fixo opcional na parte inferior da tela
+botões com linguagem clara
+contraste forte entre texto e fundo
+mockups simples e legíveis
+2. CTA recorrente
+
+Inserir CTA após seções importantes:
+
+Hero
+Como funciona
+Não é pirâmide
+Níveis
+Oferta
+Final
+
+Textos de botão recomendados:
+
+Aplicar para minha região
+Começar candidatura
+Aplicar para ser Parceiro Otima
+Ver disponibilidade na minha cidade
+Quero uma oportunidade séria
+Quero me candidatar agora
+
+Evitar CTAs como:
+
+Quero ficar rico
+Quero renda passiva
+Quero liberdade financeira
+Entrar no movimento
+Montar minha equipe
+3. Animações
+
+Usar animações leves, sem deixar a página lenta.
+
+Permitido:
+
+cards aparecendo no scroll
+números animados
+mapa do Brasil com pontos pulsando
+timeline animada
+progressão de níveis
+hover nos cards
+transições suaves
+
+Evitar:
+
+animações exageradas
+excesso de brilho
+efeitos de “dinheiro”
+visual de casino
+elementos que pareçam infoproduto ou MLM
+4. Secção dinâmica de níveis
+
+Criar cards interativos para os quatro níveis:
+
+Consultor de Economia de Energia Otima
+Estrategista de Energia Otima
+Executivo de Contas Otima
+Parceiro Regional Otima
+
+Ao clicar em cada nível, mostrar:
+
+leads semanais
+faixa estimada de conta
+comissão
+reserva do lead
+tipo de oportunidade
+foco comercial
+5. Mapa dinâmico do Brasil
+
+Criar uma secção visual com mapa do Brasil.
+
+Ao passar o mouse ou clicar em uma região:
+
+Sudeste
+Sul
+Nordeste
+Centro-Oeste
+Norte
+
+Mostrar exemplos de segmentos locais, com linguagem de oportunidade regional.
+
+6. Prova visual do produto
+
+Criar uma secção com mockup da lista de leads.
+
+Importante:
+
+não usar dados reais
+deixar claro que é exemplo visual
+mostrar como a lista ajuda o parceiro a priorizar
+reforçar que dados reais só são liberados para parceiros aprovados
+
+Microcopy obrigatória:
+
+Exemplo visual. Dados reais são liberados apenas para parceiros aprovados.
+
+Tom de voz
+
+A linguagem deve ser:
+
+directa
+confiante
+ambiciosa
+brasileira
+comercial
+B2B
+simples
+clara
+selectiva
+sem juridiquês
+sem exageros falsos
+sem prometer renda garantida
+sem parecer MLM
+sem parecer infoproduto
+
+A página deve soar como:
+
+uma operação comercial séria procurando parceiros fortes.
+
+Não deve soar como:
+
+uma oportunidade milagrosa tentando convencer qualquer pessoa a entrar.
+
+Frases boas para usar
+A Otima te entrega empresas com potencial.
+Você trabalha os leads.
+A conta valida a oportunidade.
+A comissão vem do cliente convertido.
+Dados reais. Processo real. Comissão real.
+Sem pirâmide. Sem ganho por recrutamento. Sem promessa vazia.
+A Otima mostra onde mirar. Você abre a conversa.
+Você não está pagando por motivação. Está acessando um sistema comercial.
+Na Otima, você cresce por performance.
+Sem conta, é contacto. Com conta, vira oportunidade.
+A Otima entrega a estrutura. Você executa.
+Quanto melhor você performa, melhores ficam suas oportunidades.
+Frases a evitar
+
+Evitar:
+
+renda passiva
+liberdade financeira
+fique rico
+ganhe dinheiro fácil
+oportunidade imperdível
+entre no movimento
+construa sua equipe
+forme sua rede
+downline no hero
+desbloqueie riqueza
+comissão garantida
+retorno garantido
+ganhe sem vender
+trabalhe pouco e ganhe muito
+
+Também evitar frases agressivas como:
+
+A Otima te entrega munição. Você precisa puxar o gatilho.
+
+Substituir por:
+
+A Otima entrega a estrutura. Você coloca o processo em movimento.
+
+Conteúdos que devem ficar fora da landing page
+
+Criar um documento separado de Termos e Condições para:
+
+regras detalhadas de atribuição
+definição legal de conta válida
+regras exactas de pagamento de comissão
+datas de pagamento
+política de cancelamento
+inadimplência
+uso indevido de dados
+confidencialidade
+propriedade da base de leads
+LGPD
+não-circunvenção
+lead expiry detalhado
+disputas entre parceiros
+condição de autônomo/independente
+ausência de vínculo empregatício
+downgrade ou suspensão
+canary leads / watermarks
+regras de duplicidade
+responsabilidade do parceiro
+regras de reserva do lead
+critérios internos de qualificação
+critérios completos de progressão de nível
+
+Na landing page, manter apenas a comunicação comercial simples, forte e clara.
+
+Resultado esperado
+
+Criar uma landing page que faça o candidato certo sentir:
+
+Isso é sério.
+Isso é diferente de pirâmide.
+A Otima realmente entrega ferramentas.
+Eu não vou começar do zero.
+Existe processo.
+Existe filtro.
+Existe caminho de progressão.
+Se eu executar bem, posso ganhar mais acesso e melhores oportunidades.
+Preciso aplicar agora.
+
+A página deve vender com força, mas sem prometer renda garantida.
+
+O objectivo é atrair candidatos comerciais sérios e repelir curiosos, preguiçosos e pessoas procurando esquema de recrutamento.

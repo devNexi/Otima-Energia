@@ -51,6 +51,7 @@ import Reduza from "@/pages/Reduza";
 import Obrigado from "@/pages/Obrigado";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
+import Parceiros from "@/pages/Parceiros";
 
 const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
 
@@ -74,7 +75,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/sobre" component={About} />
       <Route path="/equipe" component={Team} />
-      <Route path="/parceiros" component={Partners} />
+      <Route path="/parceiros" component={Parceiros} />
       <Route path="/solucoes" component={Solutions} />
       <Route path="/faq" component={FAQ} />
       <Route path="/seja-cliente" component={BecomeClient} />

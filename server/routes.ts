@@ -685,6 +685,60 @@ export async function registerRoutes(
     }
   });
 
+  // ── Partner Applications (public) ────────────────────────────────────────────
+  app.post("/api/partner-applications", async (req, res) => {
+    try {
+      const { nome, whatsapp, email, estado, cidade, regiao, vendeuB2b, experiencia, horas, rede, motivo } = req.body as Record<string, string>;
+      if (!nome || !whatsapp || !email || !estado || !cidade) {
+        return res.status(400).json({ error: "Campos obrigatórios faltando." });
+      }
+
+      const summary = [
+        `Nova candidatura — Programa de Parceiros Otima`,
+        ``,
+        `Nome: ${nome}`,
+        `WhatsApp: ${whatsapp}`,
+        `E-mail: ${email}`,
+        `Estado: ${estado}`,
+        `Cidade: ${cidade}`,
+        `Região de atuação: ${regiao || "—"}`,
+        ``,
+        `Vendeu B2B: ${vendeuB2b || "—"}`,
+        `Experiência: ${experiencia || "—"}`,
+        `Horas/semana: ${horas || "—"}`,
+        `Rede local: ${rede || "—"}`,
+        ``,
+        `Motivação: ${motivo || "—"}`,
+      ].join("\n");
+
+      console.log("[partner-application] received:\n" + summary);
+
+      const smtpPass = process.env.SMTP_PASS;
+      if (smtpPass) {
+        try {
+          const nodemailer = await import("nodemailer");
+          const transporter = nodemailer.default.createTransport({
+            host: "smtp.zoho.com", port: 465, secure: true,
+            auth: { user: "callum@otimaenergia.com", pass: smtpPass },
+          });
+          await transporter.sendMail({
+            from: "Ótima Energia <callum@otimaenergia.com>",
+            to: "callum@otimaenergia.com",
+            subject: `Candidatura Parceiro — ${nome} (${estado})`,
+            text: summary,
+          });
+        } catch (emailErr: any) {
+          console.warn("[partner-application] email failed:", emailErr.message);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[partner-application]", err);
+      res.status(500).json({ error: "Erro interno." });
+    }
+  });
+
   // ── Setup Check (public, no secrets exposed) ─────────────────────────────────
   app.get("/api/setup-check", (_req, res) => {
     const check = (key: string) => !!(process.env[key] && process.env[key]!.trim().length > 0);
