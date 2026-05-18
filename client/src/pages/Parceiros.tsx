@@ -4,7 +4,7 @@ import { Zap, MapPin, BarChart2, Users, TrendingUp, CheckCircle2, XCircle, Chevr
 import logoIcon from "../assets/branding/logo-icon-transparent.png";
 import imgSolEstrategias from "../assets/homepage/sol-estrategias.png";
 import imgCompare from "../assets/homepage/compare.png";
-import imgSolMigracao from "../assets/homepage/sol-migracao.png";
+import imgMigrate from "../assets/homepage/migrate.png";
 
 // ─── Scroll reveal hook ────────────────────────────────────────────────────────
 function useReveal() {
@@ -864,7 +864,7 @@ export default function Parceiros() {
       {/* ── 16. FINAL CTA + FORM ── */}
       <section id="candidatura" className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src={imgSolMigracao} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
+          <img src={imgMigrate} aria-hidden="true" className="w-full h-full object-cover opacity-10" style={{ objectPosition: "center" }} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, rgba(22,22,63,0.8) 30%, rgba(22,22,63,0.8) 70%, #16163f 100%)" }} />
         </div>
         <div className="max-w-2xl mx-auto">
