@@ -425,7 +425,6 @@ export default function Parceiros() {
               { icon: Database, color: "#9e3ffd", title: "Leads semanais", desc: "Novas listas de empresas locais para trabalhar toda semana." },
               { icon: MapPin, color: "#3b82f6", title: "Segmentação regional", desc: "Estado, cidade, região e território comercial aprovado." },
               { icon: Building2, color: "#9e3ffd", title: "Tipo de negócio", desc: "Segmentação por categoria, segmento e perfil provável de consumo." },
-              { icon: BarChart2, color: "#f59e0b", title: "Faixa estimada de conta", desc: "Foco em empresas com potencial de conta relevante." },
               { icon: Target, color: "#ef4444", title: "Scripts e treinamento", desc: "Abordagem, qualificação, pedido da conta e processo de envio." },
               { icon: Award, color: "#9e3ffd", title: "Análise da Otima", desc: "A Otima avalia a conta, valida a oportunidade e define a melhor rota." },
               { icon: DollarSign, color: "#3b82f6", title: "Comissão recorrente", desc: "Você ganha quando o cliente converte e a Otima recebe." },
