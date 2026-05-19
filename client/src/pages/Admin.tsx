@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +116,8 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
   const [editingClient, setEditingClient] = useState<any | null>(null);
   const [billUploadClient, setBillUploadClient] = useState<{ id: number; name: string } | null>(null);
   const [quotesClient, setQuotesClient] = useState<{ id: number; companyName: string; currentPriceRmwh?: string | null; avgConsumptionKwh?: string | null } | null>(null);
+  const billUploadRef = useRef<HTMLDivElement>(null);
+  const quotesRef = useRef<HTMLDivElement>(null);
   const [rfoClient, setRfoClient] = useState<{ id: number; companyName: string; ucCode?: string | null; avgConsumptionKwh?: string | null; currentSupplier?: string | null } | null>(null);
   const [energyProfileClient, setEnergyProfileClient] = useState<{ id: number; companyName: string; segment?: string | null; region?: string | null; avgConsumptionKwh?: string | null } | null>(null);
   const [personType, setPersonType] = useState<'PJ' | 'PF'>('PJ');
@@ -906,12 +908,15 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                               size="sm" 
                               variant="default"
                               className="bg-green-600 hover:bg-green-700"
-                              onClick={() => setQuotesClient({ 
-                                id: client.id, 
-                                companyName: client.companyName,
-                                currentPriceRmwh: client.currentPriceRmwh,
-                                avgConsumptionKwh: client.avgConsumptionKwh
-                              })}
+                              onClick={() => {
+                                setQuotesClient({ 
+                                  id: client.id, 
+                                  companyName: client.companyName,
+                                  currentPriceRmwh: client.currentPriceRmwh,
+                                  avgConsumptionKwh: client.avgConsumptionKwh
+                                });
+                                setTimeout(() => quotesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                              }}
                               data-testid={`button-quotes-${client.id}`}
                             >
                               <DollarSign className="w-4 h-4 mr-1" />
@@ -937,7 +942,10 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                               size="sm" 
                               variant="default"
                               className="bg-violet-600 hover:bg-violet-700"
-                              onClick={() => setBillUploadClient({ id: client.id, name: client.companyName })}
+                              onClick={() => {
+                                setBillUploadClient({ id: client.id, name: client.companyName });
+                                setTimeout(() => billUploadRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                              }}
                               data-testid={`button-upload-bill-${client.id}`}
                             >
                               <Upload className="w-4 h-4 mr-1" />
@@ -961,7 +969,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                 )}
 
                 {billUploadClient && (
-                  <div className="mt-6">
+                  <div className="mt-6" ref={billUploadRef}>
                     <BillUploadSection 
                       clientId={billUploadClient.id}
                       clientName={billUploadClient.name}
@@ -971,7 +979,7 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                 )}
 
                 {quotesClient && (
-                  <div className="mt-6">
+                  <div className="mt-6" ref={quotesRef}>
                     <SupplierQuoteManager 
                       client={quotesClient}
                       onClose={() => setQuotesClient(null)}
