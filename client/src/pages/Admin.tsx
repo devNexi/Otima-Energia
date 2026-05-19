@@ -859,22 +859,22 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                         className="border rounded-lg p-4"
                         data-testid={`client-row-${client.id}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{client.companyName}</h3>
-                              <Badge className={statusColors[client.status] || "bg-gray-100"}>
-                                {statusLabels[client.status] || client.status}
-                              </Badge>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium">{client.companyName}</h3>
+                                <Badge className={statusColors[client.status] || "bg-gray-100"}>
+                                  {statusLabels[client.status] || client.status}
+                                </Badge>
+                              </div>
+                              <div className="text-sm text-gray-500 space-x-4 mt-1">
+                                {client.contactPerson && <span>{client.contactPerson}</span>}
+                                {client.email && <span><Mail className="w-3 h-3 inline mr-1" />{client.email}</span>}
+                                {client.phone && <span><Phone className="w-3 h-3 inline mr-1" />{client.phone}</span>}
+                              </div>
+                              {client.cnpj && <p className="text-xs text-gray-400 mt-1">CNPJ: {client.cnpj}</p>}
                             </div>
-                            <div className="text-sm text-gray-500 space-x-4 mt-1">
-                              {client.contactPerson && <span>{client.contactPerson}</span>}
-                              {client.email && <span><Mail className="w-3 h-3 inline mr-1" />{client.email}</span>}
-                              {client.phone && <span><Phone className="w-3 h-3 inline mr-1" />{client.phone}</span>}
-                            </div>
-                            {client.cnpj && <p className="text-xs text-gray-400 mt-1">CNPJ: {client.cnpj}</p>}
-                          </div>
-                          <div className="flex items-center gap-2">
                             <Button 
                               size="sm" 
                               variant="outline"
@@ -884,6 +884,8 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
                               <Pencil className="w-3.5 h-3.5 mr-1" />
                               Edit
                             </Button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
                             <Button 
                               size="sm" 
                               variant="default"
