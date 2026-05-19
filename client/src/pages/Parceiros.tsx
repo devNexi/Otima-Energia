@@ -414,10 +414,6 @@ export default function Parceiros() {
 
       {/* ── 3. SOLUTION ── */}
       <section className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-electric.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.55, mixBlendMode: "screen" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
-        </div>
         <div className="max-w-5xl mx-auto">
           <Reveal>
             <SectionTag text="O que você recebe" />
@@ -492,7 +488,7 @@ export default function Parceiros() {
       {/* ── 5. IMPACT ── */}
       <section className="relative px-5 py-24 text-center overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-wave1.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.07 }} />
+          <img src="/texture-wave1.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.09 }} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
         </div>
         <div className="max-w-3xl mx-auto">
@@ -675,7 +671,11 @@ export default function Parceiros() {
       </section>
 
       {/* ── 10. PARTNER LEVELS ── */}
-      <section className="px-5 py-20" style={{ background: "#16163f" }}>
+      <section className="relative px-5 py-20 overflow-hidden" style={{ background: "#16163f" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <img src="/texture-electric.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.28, mixBlendMode: "screen", filter: "brightness(0.55)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 12%, transparent 88%, #16163f 100%)" }} />
+        </div>
       <div className="max-w-5xl mx-auto">
         <Reveal>
           <SectionTag text="Níveis de parceiro" />
@@ -859,7 +859,7 @@ export default function Parceiros() {
       {/* ── 16. FINAL CTA + FORM ── */}
       <section id="candidatura" className="relative px-5 py-20 overflow-hidden" style={{ borderTop: "1px solid rgba(158,63,253,0.12)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/texture-wave2.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.06 }} />
+          <img src="/texture-wave2.png" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.08 }} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, #16163f 0%, transparent 10%, transparent 90%, #16163f 100%)" }} />
         </div>
         <div className="max-w-2xl mx-auto">
