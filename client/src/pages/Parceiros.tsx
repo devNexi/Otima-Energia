@@ -82,7 +82,7 @@ const LEVELS = [
   },
   {
     num: 4, name: "Parceiro Regional", subtitle: "Comprovado regionalmente",
-    leads: "100–150 leads/semana", faixa: "R$ 75k–R$ 250k+/mês", comissao: "35%", reserva: "21–30 dias",
+    leads: "100–150 leads/semana", faixa: "R$ 75k–R$ 250k+/mês", comissao: "30%", reserva: "21–30 dias",
     foco: "Campanhas regionais, segmentos estratégicos, oportunidades robustas", color: "#f59e0b",
   },
 ];
@@ -277,7 +277,7 @@ function PartnerForm() {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function Parceiros() {
-  const [activeLevel, setActiveLevel] = useState(0);
+  const [activeLevel, setActiveLevel] = useState(3);
   const [activeRegion, setActiveRegion] = useState(0);
 
   const dark = "#16163f";
@@ -317,7 +317,7 @@ export default function Parceiros() {
           </h1>
 
           <p className="text-lg sm:text-xl mb-4 max-w-2xl mx-auto" style={{ color: "#736d77" }}>
-            Trabalhe contas reais. Ganhe <span style={{ color: "#c88ff5", fontWeight: 700 }}>até 35% de comissão</span> por clientes convertidos.
+            Trabalhe contas reais. Ganhe <span style={{ color: "#c88ff5", fontWeight: 700 }}>até 30% de comissão</span> por clientes convertidos.
           </p>
 
           <p className="text-sm max-w-xl mx-auto mb-10 leading-relaxed" style={{ color: "#736d77" }}>
