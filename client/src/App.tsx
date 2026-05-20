@@ -52,6 +52,10 @@ import Obrigado from "@/pages/Obrigado";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
 import Parceiros from "@/pages/Parceiros";
+import GdParaEmpresas from "@/pages/GdParaEmpresas";
+import MercadoLivreAcl from "@/pages/MercadoLivreAcl";
+import GestaoDeEnergia from "@/pages/GestaoDeEnergia";
+import OtimizacaoEnergetica from "@/pages/OtimizacaoEnergetica";
 
 const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
 
@@ -74,6 +78,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/sobre" component={About} />
+      {/* /equipe kept as route but not linked in nav/footer */}
       <Route path="/equipe" component={Team} />
       <Route path="/parceiros" component={Parceiros} />
       <Route path="/solucoes" component={Solutions} />
@@ -85,18 +90,28 @@ function Router() {
       <Route path="/portal-cliente" component={ClientPortal} />
       <Route path="/lei-mercado-livre" component={LeiMercadoLivre} />
       <Route path="/renovacao-contrato" component={RenovacaoContrato} />
-      <Route path="/energia-por-assinatura-gdl" component={EnergiaAssinatura} />
       <Route path="/diagnostico" component={DiagnosticoForm} />
       <Route path="/insights" component={Insights} />
-      <Route path="/rede-de-lucros-otima" component={RedeLucros} />
       <Route path="/termos-parcerias" component={TermosParcerias} />
+
+      {/* New service pages */}
+      <Route path="/gd-para-empresas" component={GdParaEmpresas} />
+      <Route path="/mercado-livre-acl" component={MercadoLivreAcl} />
+      <Route path="/gestao-de-energia" component={GestaoDeEnergia} />
+      <Route path="/otimizacao-energetica" component={OtimizacaoEnergetica} />
+
+      {/* Legacy redirects */}
+      <Route path="/energia-por-assinatura-gdl">{() => <Redirect to="/gd-para-empresas" />}</Route>
+      <Route path="/rede-de-lucros-otima">{() => <Redirect to="/parceiros" />}</Route>
+
+      {/* Portal routes */}
       <Route path="/portal/upload/:token" component={Portal} />
       <Route path="/client/intake/:token" component={Portal} />
       <Route path="/proposta/:publicId" component={PublicProposal} />
       <Route path="/proposta-preview" component={ProposalPreview} />
       <Route path="/proposal/view/:token" component={ProposalView} />
-      
-      {/* Admin routes - redirect /admin to /admin/deals */}
+
+      {/* Admin routes */}
       <Route path="/admin">{() => <Redirect to="/admin/deals" />}</Route>
       <Route path="/admin/suppliers/:id" component={SupplierDetail} />
       <Route path="/admin/suppliers" component={SupplierManager} />

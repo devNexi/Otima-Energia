@@ -4,61 +4,175 @@ import { Hero } from "@/components/sections/Hero";
 import { Process } from "@/components/sections/Process";
 import { Business } from "@/components/sections/Business";
 import { Contact } from "@/components/sections/Contact";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
-function EcosSection() {
+function DifferentiationSection() {
+  const points = [
+    {
+      title: "Trabalhamos com os principais players nacionais",
+      desc: "Só colocamos na mesa comercializadoras e geradores com capacidade financeira sólida, histórico comprovado e contratos transparentes. Nenhum player duvidoso, nenhuma oferta sem sustentação.",
+    },
+    {
+      title: "Mostramos o quadro completo — não uma solução empurrada",
+      desc: "Analisamos GD, ACL, Gestão de Energia e otimização no local. Você vê todas as opções viáveis e escolhe com clareza. Nunca com pressão.",
+    },
+    {
+      title: "Para sua empresa, o serviço é gratuito",
+      desc: "O diagnóstico não tem custo. Somos remunerados pelos fornecedores quando nossa recomendação gera valor real — e você sempre sabe exatamente como e por quem somos pagos.",
+    },
+    {
+      title: "Você decide com informação, não com urgência",
+      desc: "Nossa metodologia é construída para eliminar a assimetria de informação que o mercado de energia usa contra você. Decisão boa é decisão com dados.",
+    },
+  ];
+
   return (
     <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           <div>
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
-              Como garantimos economia contínua
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-6">
+              O que torna a Ótima diferente
             </h2>
-            <div className="space-y-4 text-lg text-[#736d77] leading-relaxed">
+            <p className="text-lg text-[#736d77] leading-relaxed">
+              O mercado de energia é opaco por design. Fornecedores, distribuidoras e comercializadoras operam com informações assimétricas. A maioria das empresas não tem acesso à comparação, aos dados e à visibilidade que a Ótima tem.
+            </p>
+            <p className="text-lg text-[#736d77] leading-relaxed mt-4">
+              Nós existimos para nivelar esse campo.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {points.map((p, i) => (
+              <div key={i} className="flex items-start gap-4">
+                <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-medium text-[#16163f] mb-1">{p.title}</h3>
+                  <p className="text-[#736d77] text-sm leading-relaxed">{p.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WhyOtimaSection() {
+  const cards = [
+    {
+      label: "Independência",
+      title: "Independência real",
+      desc: "Não temos vínculo com nenhuma comercializadora, geradora ou usina. Somos remunerados apenas quando nossa recomendação gera valor real para o cliente.",
+    },
+    {
+      label: "Transparência",
+      title: "Transparência radical",
+      desc: "Você sabe exatamente como ganhamos, quando ganhamos e por que recomendamos cada solução. Nada fica escondido.",
+    },
+    {
+      label: "Tecnologia",
+      title: "ECOS™ como inteligência",
+      desc: "Nosso sistema proprietário analisa consumo, compara ofertas e monitora oportunidades de mercado com IA e automação — sem viés, sem conflito.",
+    },
+    {
+      label: "Execução",
+      title: "Do diagnóstico à implementação",
+      desc: "Não entregamos só um relatório. Cuidamos de toda a execução — migração, contratos, créditos, renovação — em qualquer frente.",
+    },
+  ];
+
+  return (
+    <section className="bg-[#eee7f1] py-16 lg:py-20 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <h2 className="dcvc-section-title mb-16 text-center">Por que a Ótima Energia</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {cards.map((card, i) => (
+            <div key={i} className="bg-white p-6 rounded-xl">
+              <p className="text-xs tracking-wide text-[#df0af2] uppercase mb-3 font-semibold">{card.label}</p>
+              <h3 className="text-lg font-semibold text-[#16163f] mb-3">{card.title}</h3>
+              <p className="text-[#736d77] text-sm leading-relaxed">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SegmentsSection() {
+  const segments = [
+    { name: "Condomínios", detail: "Iluminação, elevadores, bombas e portões" },
+    { name: "Gestoras de Condomínio", detail: "Visão consolidada de múltiplos ativos" },
+    { name: "Escolas e Universidades", detail: "Alto consumo com sazonalidade previsível" },
+    { name: "Clínicas e Hospitais", detail: "Operação contínua, alta criticidade" },
+    { name: "Hotéis e Pousadas", detail: "Climatização e iluminação 24h" },
+    { name: "Supermercados", detail: "Refrigeração e carga constante" },
+    { name: "Empresas com múltiplas unidades", detail: "Visão e estratégia consolidada" },
+    { name: "Indústrias e galpões", detail: "Alta demanda, máximo potencial de economia" },
+  ];
+
+  return (
+    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4 text-center">
+          Quem atendemos
+        </h2>
+        <p className="text-center text-[#736d77] text-lg mb-12 max-w-xl mx-auto">
+          Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {segments.map((s, i) => (
+            <div key={i} className="bg-[#eee7f1] rounded-xl p-5" data-testid={`segment-${i}`}>
+              <p className="font-semibold text-[#16163f] text-sm mb-1">{s.name}</p>
+              <p className="text-[#736d77] text-xs leading-relaxed">{s.detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EcosSection() {
+  return (
+    <section className="bg-[#16163f] py-16 lg:py-20">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
+          <div>
+            <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-4">
+              Inteligência que orienta cada decisão
+            </p>
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
+              ECOS™
+            </h2>
+            <div className="space-y-4 text-lg text-gray-300 leading-relaxed">
               <p>
-                A verdadeira economia não está só na escolha do mercado certo, está na revisão contínua, na hora certa.
+                O <strong className="text-[#9e3ffd]">ECOS™</strong> é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para garantir que cada decisão seja tomada no momento certo, com as informações certas.
               </p>
               <p>
-                É aí que entra o <strong className="text-[#9e3ffd]">ECOS™</strong>, nosso sistema interno de inteligência de mercado.
-                Usamos o ECOS™ em dois momentos chave:
+                Ele não vende produto. Ele analisa dados: ofertas reais de comercializadoras, desempenho de geradores de GD, bandas de preço histórico, perfis de risco e janelas contratuais.
               </p>
-              <ul className="space-y-3 ml-1">
-                <li className="flex items-start gap-3">
-                  <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span><strong className="text-[#16163f]">No diagnóstico:</strong> para cruzar seu perfil com os três mercados (ACR, ACL, GDL) e identificar onde sua empresa economiza mais</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span><strong className="text-[#16163f]">Na renovação:</strong> para comparar seu contrato atual com o cenário de mercado e decidir, com dados, se vale a pena renegociar, trocar ou manter</span>
-                </li>
-              </ul>
-              <p>
-                O ECOS™ é uma ferramenta só nossa, usada para te entregar análises mais justas, no momento certo, sem pressa e sem ruído.
-              </p>
-              <p className="font-medium text-[#16163f]">
-                Porque economia de verdade é clareza nos momentos que importam, não interferência no meio do caminho.
+              <p className="font-medium text-white">
+                O ECOS™ só recomenda uma mudança quando há ganho real projetado. Sem conflito. Sem viés. Sem promessas vazias.
               </p>
             </div>
           </div>
-          <div className="bg-[#eee7f1] rounded-lg p-8 lg:p-10">
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Diagnóstico dos 3 mercados com dados reais</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Revisão focada na janela de renovação</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Decisões baseadas em ganho, não em pressa</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                <span className="text-lg text-[#16163f]">Economia sustentável, sem monitoramento invasivo</span>
-              </li>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-8 lg:p-10">
+            <ul className="space-y-4 text-gray-300">
+              {[
+                "Análise automática de contas e perfil de consumo",
+                "Comparação de ofertas reais de comercializadoras",
+                "Monitoramento de geradores de GD na sua região",
+                "Alertas em janelas críticas de renovação",
+                "Recomendações documentadas e rastreáveis",
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -67,91 +181,27 @@ function EcosSection() {
   );
 }
 
-function TrustSection() {
-  const trustCards = [
-    {
-      title: "Metodologia Baseada em Escolha",
-      description: "Análise estruturada que compara os três mercados (ACR, ACL, GDL) com critérios claros, priorizando seu resultado financeiro.",
-    },
-    {
-      title: "Análise por IA",
-      description: "Automação aplicada à leitura de faturas, cenários e riscos.",
-    },
-    {
-      title: "Sem Conflito de Interesse",
-      description: "O diagnóstico é gratuito. Você decide se quer avançar.",
-    },
-    {
-      title: "Rastreabilidade Total",
-      description: "Cada decisão tem justificativa, histórico e registro.",
-    },
-  ];
-
+function FinalCta() {
   return (
-    <section className="bg-[#eee7f1] py-16 lg:py-20 border-t border-gray-200">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <h2 className="dcvc-section-title mb-16 text-center">
-          Por que somos consultores, não vendedores
+    <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
+        <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+          Descubra qual é o melhor caminho para reduzir a conta de energia da sua empresa.
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {trustCards.map((card, index) => {
-            return (
-              <div 
-                key={index}
-                className="bg-white p-6 rounded-xl"
-              >
-                <div className="w-10 h-10 bg-[#9e3ffd]/10 rounded-lg flex items-center justify-center mb-4">
-                  <svg className="w-5 h-5 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-[#16163f] mb-2">
-                  {card.title}
-                </h3>
-                <p className="text-[#736d77] text-sm leading-relaxed">
-                  {card.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function MarketsGlossary() {
-  const markets = [
-    {
-      title: "O que é ACR (Mercado Cativo)?",
-      description: "O mercado tradicional, com concessionária regional fixa. Atuamos na otimização da conta, revisão de tarifas e gestão de créditos de GDL.",
-    },
-    {
-      title: "O que é ACL (Mercado Livre de Energia)?",
-      description: "Ambiente onde você pode escolher seu fornecedor e negociar contratos personalizados. Guiamos sua migração e estratégia de compra.",
-    },
-    {
-      title: "O que é GDL (Geração Distribuída Compartilhada)?",
-      description: 'Modelo de "energia por assinatura" de usinas renováveis. Analisamos a viabilidade e gerenciamos sua participação para gerar descontos na conta de luz.',
-    },
-  ];
-
-  return (
-    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <h2 className="dcvc-section-title mb-16 text-center">Entenda os Mercados</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {markets.map((market, index) => (
-            <div key={index} className="bg-[#eee7f1] p-8 rounded-xl">
-              <h4 className="text-lg font-semibold text-[#16163f] mb-4" data-testid={`market-title-${index}`}>
-                {market.title}
-              </h4>
-              <p className="text-[#736d77] leading-relaxed" data-testid={`market-desc-${index}`}>
-                {market.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        <p className="text-xl text-[#736d77] mb-4 max-w-2xl mx-auto">
+          Diagnóstico gratuito. Sem compromisso. Em até 5 dias úteis você recebe uma análise completa.
+        </p>
+        <p className="text-base text-[#736d77] mb-12 max-w-xl mx-auto">
+          Sem pressão, sem conflito de interesse. Você decide com informação.
+        </p>
+        <Link
+          href="/seja-cliente"
+          className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+          data-testid="home-final-cta"
+        >
+          Solicitar Diagnóstico Gratuito
+          <ArrowRight className="w-5 h-5" />
+        </Link>
       </div>
     </section>
   );
@@ -164,10 +214,12 @@ export default function Home() {
       <main>
         <Hero />
         <Process />
-        <EcosSection />
-        <TrustSection />
+        <DifferentiationSection />
         <Business />
-        <MarketsGlossary />
+        <WhyOtimaSection />
+        <SegmentsSection />
+        <EcosSection />
+        <FinalCta />
         <Contact />
       </main>
       <Footer />

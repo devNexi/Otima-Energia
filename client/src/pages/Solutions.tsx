@@ -13,17 +13,17 @@ export default function Solutions() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
             <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd]">
-              Soluções completas para sua empresa pagar menos energia.
+              Quatro frentes. Um objetivo: sua empresa pagando menos energia.
             </h1>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 Não existe uma única resposta para todos. Cada empresa tem um perfil de consumo, uma tarifa de distribuidora e objetivos diferentes.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico, seja no mercado cativo (ACR), no mercado livre (ACL) ou via geração compartilhada (GDL).
+                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico — seja via Geração Distribuída (GD), no Mercado Livre (ACL), na gestão contínua de contratos ou na otimização no local.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                Atuamos como seu consultor independente: analisamos os três cenários com dados reais, recomendamos o melhor caminho e executamos toda a implementação. Sem viés. Sem conflito.
+                Atuamos como seu consultor independente: analisamos todas as opções com dados reais, recomendamos o melhor caminho e executamos toda a implementação. Sem viés. Sem conflito.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-8">
                 Todas as nossas frentes de atuação são operadas sobre o <strong className="text-[#9e3ffd]">ECOS™</strong>, nosso sistema proprietário de inteligência de mercado que combina IA, automação e dados em tempo real para proteger sua empresa de decisões sem visibilidade.
@@ -37,7 +37,7 @@ export default function Solutions() {
                   <ArrowRight className="w-5 h-5" />
                 </span>
                 <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
-                  DIAGNÓSTICO GRATUITO DOS 3 MERCADOS
+                  DIAGNÓSTICO GRATUITO
                 </span>
               </Link>
             </div>
@@ -57,19 +57,17 @@ export default function Solutions() {
                 <span className="text-6xl font-light text-[#c88ff5]">01</span>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-2xl font-medium text-[#16163f]" data-testid="solution-title-diagnostico">
-                    Diagnóstico dos 3 Mercados
-                  </h3>
-                </div>
+                <h3 className="text-2xl font-medium text-[#16163f] mb-2" data-testid="solution-title-diagnostico">
+                  Diagnóstico Gratuito
+                </h3>
                 <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
                   Grátis | Sem compromisso | Para qualquer empresa
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-4">
-                  Antes de qualquer recomendação, fazemos uma análise completa e neutra.
+                  Antes de qualquer recomendação, fazemos uma análise completa e neutra do seu perfil.
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Nossa IA cruza seu perfil de consumo, tarifa da concessionária, localização e elegibilidade para calcular a economia potencial em cada um dos três mercados: <strong className="text-[#16163f]">ACR</strong> (otimização na conta atual), <strong className="text-[#16163f]">ACL</strong> (migração para o livre) e <strong className="text-[#16163f]">GDL</strong> (energia por assinatura).
+                  Nossa IA cruza seu perfil de consumo, tarifa da concessionária, localização e elegibilidade para calcular a economia potencial em cada frente: <strong className="text-[#16163f]">GD</strong> (Geração Distribuída), <strong className="text-[#16163f]">ACL</strong> (Mercado Livre), <strong className="text-[#16163f]">Gestão de Energia</strong> e <strong className="text-[#16163f]">Otimização no Local</strong>.
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-8">
                   Você recebe um diagnóstico claro com cenários, prazos e riscos. E decide, com total transparência, qual caminho faz sentido para o seu negócio.
@@ -90,40 +88,24 @@ export default function Solutions() {
                 <span className="text-6xl font-light text-[#c88ff5]">02</span>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
-                <h3 className="text-2xl font-medium text-[#16163f] mb-2" data-testid="solution-title-acr">
-                  Otimização no Mercado Cativo (ACR)
+                <h3 className="text-2xl font-medium text-[#16163f] mb-2" data-testid="solution-title-gd">
+                  GD para Empresas
                 </h3>
                 <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
-                  Gestão de contas e acesso à Geração Compartilhada (GDL)
+                  Descontos de 15% a 25% | Sem instalação | Qualquer empresa
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Sua empresa ainda não migrou para o livre? Ou não é elegível? Você ainda pode economizar, hoje, sem trocar de fornecedor.
+                  Sua empresa assina uma cota de energia gerada por uma usina solar, eólica ou de biogás da sua região. Os créditos de energia são abatidos diretamente na sua conta da concessionária. Sem obras, sem equipamentos, sem dor de cabeça.
                 </p>
-                <p className="text-[#736d77] leading-relaxed mb-4 font-medium text-[#16163f]">
-                  Atuamos em duas frentes no mercado cativo:
+                <p className="text-[#736d77] leading-relaxed mb-8">
+                  A Ótima seleciona os melhores geradores com solidez financeira e contratos transparentes, sem vínculo com nenhum deles.
                 </p>
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-                    <div>
-                      <strong className="text-[#16163f]">Análise e revisão de contas:</strong>
-                      <span className="text-[#736d77]"> Identificamos cobranças indevidas, erros de enquadramento tarifário e oportunidades imediatas de redução na sua fatura da concessionária.</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-                    <div>
-                      <strong className="text-[#16163f]">Energia por Assinatura (GDL):</strong>
-                      <span className="text-[#736d77]"> Conectamos sua empresa a usinas solares, eólicas ou biogás da sua região. Você recebe descontos de 15% a 25% na sua conta de luz, sem investir em equipamentos, sem obras, sem dor de cabeça. Nós gerenciamos toda a relação com o gerador e a compensação dos créditos.</span>
-                    </div>
-                  </div>
-                </div>
                 <Link 
-                  href="/seja-cliente"
+                  href="/gd-para-empresas"
                   className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
-                  data-testid="cta-acr"
+                  data-testid="cta-gd"
                 >
-                  Economizar no meu contrato atual
+                  Ver GD para Empresas
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -135,43 +117,43 @@ export default function Solutions() {
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
                 <h3 className="text-2xl font-medium text-[#16163f] mb-2" data-testid="solution-title-acl">
-                  Migração e Gestão no Mercado Livre (ACL)
+                  ACL / Mercado Livre de Energia
                 </h3>
                 <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
-                  Estratégia, contratação e renovação inteligente
+                  Economia de 20% a 40% | Estratégia, contratação e renovação inteligente
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Para empresas elegíveis ou já atuantes no ambiente livre, entregamos economia consistente através de:
+                  Para empresas elegíveis: migração estruturada, seleção das principais comercializadoras nacionais com independência e gestão estratégica do contrato do início à renovação.
                 </p>
                 <div className="space-y-4 mb-8">
                   <div className="flex items-start gap-3">
                     <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
                     <div>
                       <strong className="text-[#16163f]">Migração simplificada:</strong>
-                      <span className="text-[#736d77]"> Cuidamos de todo o processo regulatório, documental e contratual para entrada no ACL. Zero burocracia para você.</span>
+                      <span className="text-[#736d77]"> Cuidamos de todo o processo regulatório, documental e contratual para entrada no ACL.</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
                     <div>
                       <strong className="text-[#16163f]">Seleção de comercializadoras:</strong>
-                      <span className="text-[#736d77]"> Usamos o ECOS™ para comparar ofertas reais de múltiplas fornecedoras e negociar as melhores condições para seu perfil.</span>
+                      <span className="text-[#736d77]"> O ECOS™ compara ofertas reais dos principais players nacionais para o seu perfil.</span>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
                     <div>
-                      <strong className="text-[#16163f]">Gestão de contratos e renovação:</strong>
-                      <span className="text-[#736d77]"> Acompanhamos seu contrato ao longo do tempo. Na janela de renovação, reavaliamos o mercado e decidimos com dados se vale a pena renovar, renegociar ou trocar de fornecedor. Sem pressa, sem ruído.</span>
+                      <strong className="text-[#16163f]">Gestão e renovação estratégica:</strong>
+                      <span className="text-[#736d77]"> Acompanhamos seu contrato ao longo do tempo. Na janela de renovação, avaliamos se vale renovar, renegociar ou trocar.</span>
                     </div>
                   </div>
                 </div>
                 <Link 
-                  href="/seja-cliente"
+                  href="/mercado-livre-acl"
                   className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
                   data-testid="cta-acl"
                 >
-                  Quero migrar ou otimizar meu ACL
+                  Ver ACL / Mercado Livre
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -182,41 +164,49 @@ export default function Solutions() {
                 <span className="text-6xl font-light text-[#c88ff5]">04</span>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
+                <h3 className="text-2xl font-medium text-[#16163f] mb-2" data-testid="solution-title-gestao">
+                  Gestão de Energia
+                </h3>
+                <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
+                  Acompanhamento estratégico e contínuo
+                </p>
+                <p className="text-[#736d77] leading-relaxed mb-6">
+                  Economia contínua, não só na hora de contratar. Monitoramos sua posição no mercado, identificamos oportunidades de redução e garantimos que as decisões corretas sejam tomadas no momento certo.
+                </p>
+                <Link 
+                  href="/gestao-de-energia"
+                  className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
+                  data-testid="cta-gestao"
+                >
+                  Ver Gestão de Energia
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-[auto_1fr] gap-8 items-start">
+              <div className="flex-shrink-0">
+                <span className="text-6xl font-light text-[#c88ff5]">05</span>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-8 lg:p-10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center gap-3 mb-2">
                   <Leaf className="w-6 h-6 text-[#9e3ffd]" />
-                  <h3 className="text-2xl font-medium text-[#16163f]" data-testid="solution-title-esg">
-                    Sustentabilidade e Estratégia Energética
+                  <h3 className="text-2xl font-medium text-[#16163f]" data-testid="solution-title-otimizacao">
+                    Otimização Energética no Local
                   </h3>
                 </div>
                 <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
-                  Energia renovável certificada e neutralização de carbono
+                  Menos desperdício | Mais resultado na operação
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Para empresas com compromissos ESG ou metas de descarbonização, estruturamos soluções sob medida:
-                </p>
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-                    <span className="text-[#736d77]">Contratação de energia renovável certificada (I-REC, selo de origem)</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-                    <span className="text-[#736d77]">Estratégias de neutralização de carbono</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-                    <span className="text-[#736d77]">Apoio na comunicação de resultados socioambientais</span>
-                  </div>
-                </div>
-                <p className="text-[#736d77] leading-relaxed mb-8">
-                  Tudo com total rastreabilidade e transparência.
+                  Identificamos desperdícios na operação, revisamos o perfil de consumo e a adequação tarifária, e entregamos um plano concreto de redução — com as ações de maior impacto priorizadas.
                 </p>
                 <Link 
-                  href="/seja-cliente"
+                  href="/otimizacao-energetica"
                   className="inline-flex items-center gap-2 text-[#9e3ffd] hover:text-[#df0af2] font-medium transition-colors"
-                  data-testid="cta-esg"
+                  data-testid="cta-otimizacao"
                 >
-                  Soluções ESG para minha empresa
+                  Ver Otimização Energética
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -236,10 +226,10 @@ export default function Solutions() {
                 ECOS™, Inteligência que orienta cada decisão.
               </h2>
               <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                Seja no ACR, no ACL ou no GDL, todas as nossas recomendações são geradas e validadas pelo ECOS™, nosso sistema proprietário de IA e automação.
+                Seja no GD, no ACL, na Gestão ou na Otimização, todas as nossas recomendações são geradas e validadas pelo ECOS™, nosso sistema proprietário de IA e automação.
               </p>
               <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                Ele não vende produto. Ele analisa dados: ofertas reais de comercializadoras, desempenho de usinas GDL, bandas de preço histórico, perfis de risco e janelas contratuais.
+                Ele não vende produto. Ele analisa dados: ofertas reais de comercializadoras, desempenho de usinas GD, bandas de preço histórico, perfis de risco e janelas contratuais.
               </p>
               <p className="text-lg text-gray-300 leading-relaxed">
                 O ECOS™ só recomenda uma mudança quando há ganho real projetado. Sem conflito. Sem viés. Sem promessas vazias.
@@ -256,7 +246,7 @@ export default function Solutions() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
-                  Desempenho de usinas GDL
+                  Desempenho de usinas GD na sua região
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
@@ -282,7 +272,7 @@ export default function Solutions() {
             Pronto para descobrir o melhor caminho para sua empresa?
           </h2>
           <p className="text-xl text-[#736d77] mb-4 max-w-2xl mx-auto">
-            Faça um diagnóstico gratuito dos 3 mercados.
+            Faça um diagnóstico gratuito.
           </p>
           <p className="text-lg text-[#736d77] mb-12 max-w-2xl mx-auto">
             Em até 5 dias úteis, você recebe uma análise completa com cenários comparáveis e recomendações claras.

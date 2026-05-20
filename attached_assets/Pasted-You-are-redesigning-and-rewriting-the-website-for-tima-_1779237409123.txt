@@ -1,0 +1,350 @@
+You are redesigning and rewriting the website for Ótima Energia in Brazilian Portuguese.
+
+Important:
+- All visible website copy must be in Brazilian Portuguese.
+- Remove the Team page entirely.
+- Replace every visible use of “GDL” with “GD”.
+- Keep ACL as a major service line.
+- Keep “Parceiros” as the partner page name.
+- Delete the concept/page of “Rede Ótima” or any “Rede” naming from the site architecture.
+- The website must preserve and strengthen the existing brand values:
+  - transparency
+  - integrity
+  - independence
+  - clarity
+  - trust
+  - real value for the client
+- The site must feel premium, modern, B2B, trustworthy, and commercially sharp.
+- We are selling, but we are not pushy or manipulative. We help clients understand the full picture and make the right decision for their business.
+
+Core brand message that must NOT be lost:
+- The Brazilian energy market is opaque.
+- Most businesses do not have access to the information, comparisons, and market visibility that Ótima has.
+- Ótima works only with major national commercializadoras and serious market players that are secure, reliable, and trustworthy.
+- Ótima helps clients understand all viable options available to them.
+- Ótima does not push one single product or one single supplier.
+- Ótima’s service is unique because, for the business owner, it is free.
+- The client gets the full picture and makes the choice with clarity.
+- Ótima creates real value by reducing information asymmetry and helping businesses make better energy decisions.
+
+Business positioning to reflect:
+1. GD para Empresas
+2. ACL / Mercado Livre
+3. Gestão de Energia
+4. Otimização Energética no Local
+5. Parceiros
+
+Current issues to fix:
+- The current site is too anchored in “ACR / ACL / GDL consultoria”.
+- The new website must reflect the broader business model.
+- Remove the Team page from sitemap, navbar, footer, and internal links.
+- The homepage and solutions architecture need to be rebuilt.
+- Lead capture pages must support broader service routing, not only the older funnel logic.
+- Keep the site commercially strong, but aligned with Ótima’s values and positioning.
+
+Build the website around this new sitemap / IA:
+
+Main navigation:
+- Início
+- Soluções
+- GD para Empresas
+- ACL / Mercado Livre
+- Gestão de Energia
+- Otimização Energética
+- Parceiros
+- FAQ
+- Sobre
+- Insights
+- CTA: Solicitar Diagnóstico
+
+Public pages:
+- /
+- /sobre
+- /solucoes
+- /gd-para-empresas
+- /mercado-livre-acl
+- /gestao-de-energia
+- /otimizacao-energetica
+- /faq
+- /insights
+- /seja-cliente
+- /diagnostico
+- /reduza
+- /obrigado
+- /lei-mercado-livre
+- /renovacao-contrato
+- /parceiros
+- /termos-parcerias
+- /privacidade
+- /termos
+- /cookies
+- /portal-cliente
+
+Remove:
+- /equipe
+- any “Rede” page or “Rede” concept in navigation/site architecture unless it remains only as old redirected URL structure
+
+Design and UX requirements:
+- Premium B2B energy brand
+- Clean, high-trust layout
+- Strong CTA hierarchy
+- Strong mobile responsiveness
+- Clear section spacing
+- Modern typography
+- Sophisticated but simple
+- Avoid clutter and jargon overload
+- Avoid corporate fluff
+- Use clear, commercially strong language
+- Make the site feel credible for both direct customers and partners
+
+Homepage requirements:
+Create a new homepage with the following structure and Portuguese copy.
+
+1. Hero
+Goal:
+- Explain that Ótima reduces energy costs for businesses.
+- The best route may be GD, ACL, Gestão de Energia, or Otimização Energética no Local.
+- Position Ótima as independent, transparent, and execution-led.
+- Reinforce that the market is opaque and that Ótima gives clarity.
+
+Suggested Portuguese direction:
+Eyebrow:
+“Clareza em um mercado de energia cheio de ruído.”
+
+Headline:
+“Menos custo. Mais clareza. A decisão certa para a energia da sua empresa.”
+
+Subheadline:
+“O mercado de energia no Brasil é opaco, fragmentado e cheio de interesses cruzados. A Ótima Energia ajuda sua empresa a enxergar o quadro completo e escolher, com segurança, entre GD, ACL, Gestão de Energia e otimização no local.”
+
+CTA primary:
+“Solicitar Diagnóstico”
+
+CTA secondary:
+“Ver Soluções”
+
+2. Brand value / differentiation section
+This section must clearly communicate:
+- Ótima works with major national players only
+- secure, reliable, trustworthy suppliers and commercializadoras
+- the client sees the options clearly
+- the service is free for the business owner
+- Ótima only wins when there is real value
+
+Suggested copy direction in Portuguese:
+Heading:
+“O que torna a Ótima diferente”
+
+Points to communicate:
+- Trabalhamos com os principais players nacionais
+- Só colocamos na mesa opções seguras, confiáveis e financeiramente sólidas
+- Mostramos o quadro completo, não uma solução empurrada
+- Para sua empresa, o serviço é gratuito
+- Você decide com informação, não com pressão
+
+3. How it works
+3–4 steps:
+- Envie sua conta ou seus dados
+- Analisamos seu perfil energético
+- Mostramos as rotas viáveis com clareza
+- Você escolhe, e nós cuidamos da execução
+
+4. Solutions overview cards
+Cards for:
+- GD para Empresas
+- ACL / Mercado Livre
+- Gestão de Energia
+- Otimização Energética no Local
+- Parceiros
+
+Each card should have short, strong Portuguese copy.
+
+5. Why Ótima
+Include:
+- Independência real
+- Transparência radical
+- ECOS™ como inteligência operacional
+- Acesso aos principais players nacionais
+- Sem empurrar uma solução única
+- Execução do diagnóstico à implementação
+
+Important:
+This section must preserve the current strong brand message around trust, integrity, and transparency.
+
+6. Segments served
+Show examples such as:
+- Condomínios
+- Gestoras de Condomínio
+- Escolas
+- Clínicas
+- Hotéis
+- Supermercados
+- Empresas com múltiplas unidades
+- Operações com conta de energia relevante
+
+7. Final CTA
+Strong conversion section:
+“Descubra qual é o melhor caminho para reduzir a conta de energia da sua empresa.”
+
+Button:
+“Solicitar Diagnóstico Gratuito”
+
+About page requirements (/sobre):
+Rewrite the page in Portuguese to reflect:
+- Ótima as an independent energy intelligence and execution company
+- the Brazilian energy market is opaque
+- most businesses lack visibility
+- Ótima helps them understand the full picture
+- Ótima works with trusted, major national players only
+- Ótima protects the client from biased recommendations
+- Ótima’s service is free for the business owner
+- broader expertise across GD, ACL, management, and optimization
+- transparency and technology
+- broader ambition and national relevance
+
+Solutions page requirements (/solucoes):
+Rewrite the page around these pillars:
+1. Diagnóstico Energético Empresarial
+2. GD para Empresas
+3. ACL / Mercado Livre
+4. Gestão de Energia
+5. Otimização Energética no Local
+6. Parceiros
+
+Important:
+Each section must make it clear that Ótima does not just “sell energy”.
+It helps the client understand the available options and choose the best path with clarity.
+
+GD page requirements (/gd-para-empresas):
+Rewrite the current GDL page into GD language.
+Keep:
+- no solar installation needed
+- savings on utility bill
+- shared generation logic
+- simple onboarding
+- independent comparison
+- comparison with ACL where helpful
+
+ACL page requirements (/mercado-livre-acl):
+Build as a strong commercial and educational page for:
+- migration
+- contract renewal
+- pricing strategy
+- supplier comparison
+- structured decision-making
+
+Important:
+Reinforce that Ótima works with major national commercializadoras and only serious, trusted players.
+
+Gestão de Energia page requirements (/gestao-de-energia):
+Create a new page in Portuguese explaining services such as:
+- acompanhamento estratégico da conta de energia
+- revisão recorrente
+- apoio à tomada de decisão
+- monitoramento de oportunidades
+- visão contínua, não pontual
+
+Otimização Energética page requirements (/otimizacao-energetica):
+Create a new page in Portuguese explaining on-site services such as:
+- identificação de desperdícios
+- revisão de consumo
+- oportunidades no local
+- otimização prática da operação
+- foco em redução real e execução
+
+Parceiros page requirements (/parceiros):
+Keep “Parceiros” as the page name.
+Make it the main partner page.
+It should work for:
+- parceiros comerciais
+- parceiros regionais
+- future channel expansion if needed
+
+Tone:
+- serious
+- scalable
+- attractive
+- national opportunity with regional execution
+- not hype-heavy
+
+Important:
+It should fit the brand values of trust, transparency, and quality.
+
+FAQ requirements:
+Expand FAQ to include:
+- GD
+- ACL
+- Gestão de Energia
+- Otimização Energética
+- how Ótima gets paid
+- whether Ótima is independent
+- whether Ótima works with multiple suppliers/commercializadoras
+- whether the business owner pays for the service
+- whether Ótima handles implementation
+- partner-related questions if appropriate
+
+Lead capture pages:
+Update /seja-cliente and /diagnostico so they can capture demand for:
+- GD
+- ACL
+- Gestão de Energia
+- Otimização Energética
+not only the older narrower funnel logic.
+
+Important:
+Forms and copy should make the service feel valuable, professional, and easy to start.
+
+Footer requirements:
+Update footer to reflect:
+- GD para Empresas
+- ACL / Mercado Livre
+- Gestão de Energia
+- Otimização Energética
+- Diagnóstico
+- Parceiros
+Remove Team link completely.
+
+Insights requirements:
+Keep /insights but make it feel more active and strategic.
+Prepare the structure for future content around:
+- GD
+- ACL
+- gestão de energia
+- renovação de contrato
+- otimização
+- economia por segmento
+- regulamentação
+- condomínios
+- escolas
+- hotéis
+- clínicas
+
+Technical/build requirements:
+- Keep routes clean and SEO-friendly
+- Ensure old /energia-por-assinatura-gdl can redirect to /gd-para-empresas if desired
+- Ensure removed /equipe is not linked anywhere
+- Strong responsive build
+- Clean semantic HTML
+- Good page hierarchy
+- Good metadata titles/descriptions in Portuguese
+- High conversion UX
+
+Output required:
+1. Updated sitemap / route structure
+2. Updated navbar and footer structure
+3. Full rewritten homepage copy in Brazilian Portuguese
+4. Full rewritten solutions page copy in Brazilian Portuguese
+5. New/rewritten copy for GD, ACL, Gestão de Energia, Otimização Energética, Sobre, FAQ, Parceiros
+6. Updated lead capture page copy
+7. Removal of Team page
+8. Recommendations for redirects from old pages to new pages where needed
+
+Tone:
+- confident
+- clear
+- commercially strong
+- premium
+- Brazilian
+- not overly formal
+- not generic agency language
+- aligned with Ótima’s values, integrity, and transparency

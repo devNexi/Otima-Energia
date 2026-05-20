@@ -17,27 +17,52 @@ interface FAQSection {
 
 const faqSections: FAQSection[] = [
   {
+    title: "GD para Empresas (Geração Distribuída)",
+    items: [
+      {
+        question: "O que é Geração Distribuída (GD)?",
+        answer: "É um modelo onde sua empresa assina uma cota de energia gerada por uma usina solar, eólica ou de biogás. Você não instala equipamento nenhum. Os créditos de energia são abatidos diretamente na sua conta da concessionária, gerando descontos de 15% a 25% todo mês."
+      },
+      {
+        question: "Preciso instalar placas solares ou qualquer equipamento?",
+        answer: "Não. A usina pertence ao gerador parceiro. Você assina uma cota da energia gerada sem nenhuma obra, instalação ou investimento em equipamentos."
+      },
+      {
+        question: "Minha empresa pode fazer GD mesmo sem ser elegível para o Mercado Livre?",
+        answer: "Sim. Essa é a maior vantagem do modelo. Qualquer empresa, de qualquer porte, atendida em baixa ou média tensão, pode aderir à Geração Distribuída, desde que sua distribuidora possua usinas compartilhadas operando na região."
+      },
+      {
+        question: "Qual a diferença entre GD e Mercado Livre (ACL)?",
+        answer: "No GD, você continua cliente da sua concessionária e recebe descontos direto na fatura via créditos de usinas compartilhadas. É simples, rápido e exige consumo mínimo baixo. No Mercado Livre (ACL), você troca de fornecedor e passa a contratar energia diretamente de uma comercializadora. Exige maior consumo (a partir de ~500 kW), mas pode gerar economias de 20% a 40%. Ambos são válidos — nossa consultoria analisa qual faz mais sentido para o seu perfil."
+      },
+      {
+        question: "O desconto do GD é garantido? E se a usina gerar menos?",
+        answer: "O desconto é aplicado sobre a tarifa da concessionária — se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
+      },
+      {
+        question: "Quanto tempo leva para começar a economizar com GD?",
+        answer: "Entre 30 e 90 dias, dependendo da distribuidora e do gerador selecionado."
+      },
+      {
+        question: "Eu posso migrar para o Mercado Livre depois de entrar no GD?",
+        answer: "Sim. São caminhos complementares, não excludentes. Muitas empresas começam economizando via GD enquanto se preparam estrategicamente para migrar ao ACL no futuro. Nós podemos planejar essa transição com você."
+      },
+    ]
+  },
+  {
     title: "Mercado Livre de Energia (ACL)",
     items: [
       {
-        question: "O que é o mercado livre de energia?",
-        answer: "É o ambiente onde empresas podem escolher seu fornecedor de energia, com mais transparência e competição. Diferente do mercado regulado (cativo), onde você só pode comprar da distribuidora local, no mercado livre você tem poder de escolha e pode economizar significativamente."
+        question: "O que é o Mercado Livre de Energia (ACL)?",
+        answer: "É o ambiente onde empresas podem escolher seu fornecedor de energia, com mais transparência e competição. Diferente do mercado regulado (cativo), onde você só pode comprar da distribuidora local, no Mercado Livre você tem poder de escolha e pode economizar significativamente."
       },
       {
-        question: "Quanto custa o serviço?",
-        answer: "Nosso serviço de comparação é gratuito. Não cobramos nada do empresário. Nossa remuneração vem diretamente dos fornecedores de energia, sem impactar o preço final apresentado a você."
-      },
-      {
-        question: "Como vocês ganham dinheiro?",
-        answer: "Somos remunerados diretamente pelos fornecedores. Nosso modelo é alinhado aos interesses do cliente: você não paga nada pelo serviço de comparação, e nós ganhamos uma comissão do fornecedor escolhido."
-      },
-      {
-        question: "Quem pode participar do Mercado Livre?",
+        question: "Quem pode migrar para o Mercado Livre?",
         answer: "Hoje, empresas com demanda a partir de aproximadamente 500 kW já podem migrar. Com a Lei nº 15.269/2025, esse acesso será ampliado gradualmente, e empresas que ainda não são elegíveis já podem iniciar o diagnóstico e o planejamento conosco."
       },
       {
         question: "Quanto posso economizar no ACL?",
-        answer: "A economia pode chegar a até 40% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Oferecemos um diagnóstico gratuito impulsionado por IA para calcular sua economia potencial."
+        answer: "A economia pode chegar a até 40% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Oferecemos um diagnóstico gratuito para calcular sua economia potencial."
       },
       {
         question: "O que é a Lei nº 15.269/2025?",
@@ -52,12 +77,8 @@ const faqSections: FAQSection[] = [
         answer: "O processo completo de migração leva em média de 60 a 180 dias, dependendo da complexidade e do ciclo de faturamento. A Ótima Energia cuida de toda a burocracia, da análise de viabilidade ao acompanhamento pós-migração."
       },
       {
-        question: "Preciso fazer algum investimento inicial?",
+        question: "Preciso fazer algum investimento inicial para migrar?",
         answer: "Na maioria dos casos, não é necessário investimento inicial. A migração para o mercado livre não requer instalação de equipamentos especiais para a maioria das empresas."
-      },
-      {
-        question: "Por que tantas empresas economizam tanto no Mercado Livre?",
-        answer: "Porque a economia vem da correção de distorções do mercado: falta de visibilidade, contratos mal estruturados e pouca comparação entre fornecedores. Quando o mercado se torna transparente, a economia aparece."
       },
       {
         question: "Quando devo começar a pensar em migrar para o Mercado Livre?",
@@ -66,31 +87,36 @@ const faqSections: FAQSection[] = [
     ]
   },
   {
-    title: "Energia por Assinatura (GDL)",
+    title: "Gestão de Energia",
     items: [
       {
-        question: "O que é Energia por Assinatura (GDL)?",
-        answer: 'É um modelo onde sua empresa assina uma cota de energia gerada por uma usina solar, eólica ou de biogás. Você não instala equipamento nenhum. Os créditos de energia são abatidos diretamente na sua conta da concessionária, gerando descontos de 15% a 25% todo mês. Funciona como um "clube de descontos" na sua conta de luz.'
+        question: "O que é a Gestão de Energia da Ótima?",
+        answer: "É um acompanhamento estratégico e contínuo da sua posição energética. Monitoramos oportunidades de mercado, revisamos contratos periodicamente e agimos no momento certo — não depois de uma janela favorável ter passado."
       },
       {
-        question: "Qual a diferença entre GDL e Mercado Livre (ACL)?",
-        answer: "No GDL (Energia por Assinatura), você continua cliente da sua concessionária e recebe descontos direto na fatura via créditos de usinas compartilhadas. É simples, rápido e exige consumo mínimo baixo. No Mercado Livre (ACL), você troca de fornecedor e passa a contratar energia diretamente de uma comercializadora. Exige maior consumo (a partir de ~500 kW), mas pode gerar economias de 20% a 40%. Ambos são válidos. Nossa consultoria analisa qual faz mais sentido para o seu perfil."
+        question: "Para quem é a Gestão de Energia?",
+        answer: "Para empresas que já estão no Mercado Livre e querem garantir que o contrato continue competitivo; empresas com múltiplas unidades que precisam de visão consolidada; e empresas que não têm equipe interna para monitorar o mercado de energia."
       },
       {
-        question: "Minha empresa pode fazer GDL mesmo sem ser elegível para o Mercado Livre?",
-        answer: "Sim. Essa é a maior vantagem do modelo. Qualquer empresa, de qualquer porte, atendida em baixa ou média tensão, pode aderir à energia por assinatura, desde que sua distribuidora possua usinas compartilhadas operando na região."
+        question: "Com que frequência a Ótima revisa meu contrato?",
+        answer: "O monitoramento é contínuo via ECOS™. Revisões formais acontecem periodicamente e sempre antes de janelas críticas de renovação, garantindo que você entre no próximo período com a melhor estrutura possível."
+      },
+    ]
+  },
+  {
+    title: "Otimização Energética",
+    items: [
+      {
+        question: "O que é a Otimização Energética no Local?",
+        answer: "É uma análise estruturada que identifica desperdícios na operação, revisa o perfil de consumo e a adequação tarifária, e entrega um plano concreto de redução com as ações de maior impacto priorizadas."
       },
       {
-        question: "Quais distribuidoras têm GDL disponível hoje?",
-        answer: "Atualmente atendemos empresas nas seguintes distribuidoras: Equatorial Piauí (PI), Coelba (BA), Energisa (MT, MS), Equatorial Goiás (GO), Elektro (SP), CPFL Paulista (SP), CPFL Santa Cruz (SP), Cemig (MG), Copel (PR) e RGE (RS). Novas regiões são abertas mensalmente. Consulte-nos sobre sua distribuidora."
+        question: "O que é 'adequação tarifária'?",
+        answer: "Muitas empresas estão na modalidade tarifária errada para seu perfil de consumo. Revisamos se o enquadramento atual (verde, amarela, azul) é o mais adequado — e isso pode gerar economia imediata sem nenhuma mudança operacional."
       },
       {
-        question: "Eu ainda posso migrar para o Mercado Livre depois de assinar GDL?",
-        answer: "Sim. São caminhos complementares, não excludentes. Muitas empresas começam economizando via GDL enquanto se preparam estrategicamente para migrar ao ACL no futuro. Nós podemos planejar essa transição com você."
-      },
-      {
-        question: "O desconto do GDL é garantido? E se a usina gerar menos?",
-        answer: "O desconto é aplicado sobre a tarifa da concessionária, se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
+        question: "Posso fazer Otimização Energética mesmo sem estar no Mercado Livre?",
+        answer: "Sim. A Otimização Energética é independente do mercado em que você está. É um diagnóstico das ineficiências na operação que gera resultado independente de GD ou ACL."
       },
     ]
   },
@@ -98,12 +124,24 @@ const faqSections: FAQSection[] = [
     title: "Sobre a Ótima Energia",
     items: [
       {
+        question: "Quanto custa o serviço?",
+        answer: "Nosso diagnóstico é gratuito. Não cobramos nada do empresário para o diagnóstico inicial. Nossa remuneração vem dos fornecedores de energia quando nossa recomendação é implementada com sucesso."
+      },
+      {
+        question: "Como vocês ganham dinheiro?",
+        answer: "Somos remunerados diretamente pelos fornecedores. Nosso modelo é alinhado aos interesses do cliente: você não paga nada pelo serviço de diagnóstico, e nós ganhamos quando nossa recomendação gera valor real."
+      },
+      {
         question: "O que é o ECOS™?",
         answer: "O ECOS™ é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar contratos de energia ao longo do tempo. Ele garante que decisões só sejam tomadas quando fazem sentido financeiro, com total transparência."
       },
       {
         question: "Vocês garantem economia?",
         answer: "Não. A economia depende do perfil, do mercado e das condições de contratação. O que garantimos é um processo estruturado, transparente e tecnicamente justificado para tomar a melhor decisão possível."
+      },
+      {
+        question: "Por que tantas empresas economizam tanto ao mudar de mercado?",
+        answer: "Porque a economia vem da correção de distorções: falta de visibilidade, contratos mal estruturados e pouca comparação entre fornecedores. Quando o mercado se torna transparente, a economia aparece."
       },
     ]
   }
@@ -127,7 +165,7 @@ export default function FAQ() {
             Perguntas Frequentes
           </h1>
           <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed max-w-2xl">
-            Tire suas dúvidas sobre Mercado Livre (ACL), Energia por Assinatura (GDL) e como sua empresa pode começar a economizar, em qualquer mercado.
+            Tire suas dúvidas sobre GD, Mercado Livre (ACL), Gestão de Energia, Otimização Energética e como sua empresa pode começar a economizar.
           </p>
         </div>
       </section>
@@ -183,7 +221,7 @@ export default function FAQ() {
             Ainda tem dúvidas?
           </h2>
           <p className="text-xl text-[#736d77] mb-12 max-w-2xl mx-auto">
-            Nossa equipe está pronta para ajudar. Faça um diagnóstico gratuito e descubra qual caminho (GDL, ACL ou otimização no ACR) faz mais sentido para sua empresa.
+            Nossa equipe está pronta para ajudar. Faça um diagnóstico gratuito e descubra qual caminho (GD, ACL, Gestão ou Otimização) faz mais sentido para sua empresa.
           </p>
           <Link 
             href="/seja-cliente"
