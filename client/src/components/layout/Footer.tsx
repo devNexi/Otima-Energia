@@ -59,7 +59,7 @@ export function Footer() {
           </Link>
 
           <p className="text-sm font-medium text-[#9e3ffd]">
-            Clareza em um mercado cheio de ruído.
+            Sua energia. Sua escolha. Sua economia.
           </p>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-sm text-gray-500">

@@ -12,7 +12,7 @@ export default function About() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl">
             <p className="text-sm font-medium text-[#9e3ffd] uppercase tracking-wider mb-6">
-              Clareza em um mercado cheio de ruído.
+              Sua energia. Sua escolha. Sua economia.
             </p>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
               A Ótima Energia é uma consultoria independente especializada em guiar empresas brasileiras para a melhor decisão energética — seja via Geração Distribuída (GD), no Mercado Livre (ACL), na gestão contínua de contratos ou na otimização no local.

@@ -21,7 +21,7 @@ export function Hero() {
       <div className="relative z-10 min-h-screen flex items-end">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
           <p className="text-base lg:text-lg text-white/70 font-medium tracking-widest uppercase mb-4">
-            Clareza em um mercado de energia cheio de ruído.
+            Sua energia. Sua escolha. Sua economia.
           </p>
           <h1 className="dcvc-statement text-white max-w-5xl mb-6 leading-[1.2]">
             Menos custo. Mais clareza.{" "}
