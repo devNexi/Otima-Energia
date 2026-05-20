@@ -1,30 +1,64 @@
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import HeroBackground from "@/components/HeroBackground";
 
 export function Hero() {
   return (
-    <section id="top" className="relative min-h-screen pt-20 overflow-hidden" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 50%, #1a0835 100%)" }}>
-      {/* Wave texture overlay */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-wave1.png')", backgroundSize: "cover", opacity: 0.06 }} />
-      {/* Dot grid */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.2) 1px, transparent 1px)", backgroundSize: "32px 32px", opacity: 0.4 }} />
-      {/* Subtle radial glow */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(158,63,253,0.18) 0%, transparent 70%)" }} />
+    <section
+      id="top"
+      className="relative min-h-screen pt-20 overflow-hidden"
+      style={{ background: "#09081e" }}
+    >
+      <HeroBackground />
 
-      <div className="relative z-10 min-h-screen flex items-end">
+      {/* Dot grid overlay — layers on top of shader */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.18) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+          opacity: 0.35,
+          zIndex: 1,
+        }}
+      />
+
+      <div className="relative min-h-screen flex items-end" style={{ zIndex: 2 }}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
 
           {/* Pill badge */}
-          <div className="inline-block mb-6" style={{ background: "rgba(158,63,253,0.15)", border: "1px solid rgba(158,63,253,0.3)", color: "#c88ff5", fontSize: "0.75rem", fontWeight: 600, padding: "6px 14px", borderRadius: "99px" }}>
+          <div
+            className="inline-block mb-6"
+            style={{
+              background: "rgba(158,63,253,0.15)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              padding: "6px 14px",
+              borderRadius: "99px",
+            }}
+          >
             IA aplicada ao mercado de energia
           </div>
 
-          <h1 className="text-white max-w-5xl mb-6" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "clamp(2.5rem, 5vw, 4rem)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+          <h1
+            className="text-white max-w-5xl mb-6"
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 800,
+              fontSize: "clamp(2.5rem, 5vw, 4rem)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+            }}
+          >
             Menos custo. Mais clareza.{" "}
             <span style={{ color: "#c88ff5" }}>A decisão certa para a energia da sua empresa.</span>
           </h1>
 
-          <p className="text-lg lg:text-xl max-w-2xl" style={{ color: "rgba(255,255,255,0.8)", marginBottom: "4px" }}>
+          <p
+            className="text-lg lg:text-xl max-w-2xl"
+            style={{ color: "rgba(255,255,255,0.8)", marginBottom: "4px" }}
+          >
             O mercado de energia no Brasil é opaco, fragmentado e cheio de interesses cruzados.
             A Ótima Energia ajuda sua empresa a enxergar o quadro completo e escolher, com segurança,
             entre <strong>GD, ACL, Gestão de Energia</strong> e otimização no local.
@@ -38,7 +72,11 @@ export function Hero() {
               "Análise 100% neutra",
               "Regulamentado ANEEL/CCEE",
             ].map((item) => (
-              <span key={item} className="flex items-center gap-1.5" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
+              <span
+                key={item}
+                className="flex items-center gap-1.5"
+                style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}
+              >
                 <span style={{ color: "#9e3ffd" }}>✦</span> {item}
               </span>
             ))}
@@ -48,7 +86,11 @@ export function Hero() {
             <Link
               href="/seja-cliente"
               className="inline-flex items-center gap-3 text-white px-8 py-4 text-lg font-medium transition-all hover:opacity-90"
-              style={{ background: "#9e3ffd", borderRadius: "8px", boxShadow: "0 8px 24px rgba(158,63,253,0.35)" }}
+              style={{
+                background: "#9e3ffd",
+                borderRadius: "8px",
+                boxShadow: "0 8px 24px rgba(158,63,253,0.35)",
+              }}
               data-testid="hero-cta"
             >
               Solicitar Diagnóstico
@@ -57,7 +99,11 @@ export function Hero() {
             <Link
               href="/solucoes"
               className="inline-flex items-center gap-3 px-8 py-4 text-lg font-medium transition-colors"
-              style={{ border: "1px solid rgba(255,255,255,0.3)", borderRadius: "8px", color: "rgba(255,255,255,0.8)" }}
+              style={{
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: "8px",
+                color: "rgba(255,255,255,0.8)",
+              }}
               data-testid="hero-secondary-cta"
             >
               Ver Soluções
