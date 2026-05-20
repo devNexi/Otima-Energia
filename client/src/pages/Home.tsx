@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Hero } from "@/components/sections/Hero";
@@ -136,11 +137,44 @@ function SegmentsSection() {
 }
 
 function EcosSection() {
+  const [tab, setTab] = useState<'gd' | 'acl'>('gd');
+
+  const gdStats = [
+    { label: "CONTA ATUAL ESTIMADA", val: "R$ 18.500/mês", green: false },
+    { label: "DESCONTO GD APLICADO", val: "35%", green: false },
+    { label: "NOVA CONTA ESTIMADA", val: "R$ 12.025/mês", green: false },
+    { label: "ECONOMIA POTENCIAL EST.", val: "R$ 6.475/mês", green: true },
+  ];
+  const aclStats = [
+    { label: "CUSTO MÉDIO DE ENERGIA (R$/MWh)", val: "R$ 847/MWh", green: false },
+    { label: "MELHOR PREÇO ACL PROJETADO", val: "R$ 678/MWh", green: false },
+    { label: "CONSUMO MÉDIO", val: "42,8 MWh/mês", green: false },
+    { label: "ECONOMIA POTENCIAL EST.", val: "R$ 7.234/mês", green: true },
+  ];
+  const gdOffers = [
+    { name: "Gerador Solar — Região Sudeste", badge: "Melhor desconto", val: "35% desc.", hi: true },
+    { name: "Gerador Solar — Interior SP", badge: null, val: "28% desc.", hi: false },
+    { name: "Gerador Eólico — Região Nordeste", badge: null, val: "22% desc.", hi: false },
+  ];
+  const aclOffers = [
+    { name: "Comercializadora A", badge: "Melhor preço", val: "R$ 678/MWh", hi: true },
+    { name: "Comercializadora B", badge: null, val: "R$ 712/MWh", hi: false },
+    { name: "Comercializadora C", badge: null, val: "R$ 741/MWh", hi: false },
+  ];
+
+  const stats = tab === 'gd' ? gdStats : aclStats;
+  const offers = tab === 'gd' ? gdOffers : aclOffers;
+  const offersLabel = tab === 'gd' ? "GERADORES DISPONÍVEIS NA REGIÃO" : "COMPARAÇÃO DE OFERTAS ACL";
+  const offersNote = tab === 'gd'
+    ? "* Nomes dos geradores são ilustrativos. Os parceiros reais são apresentados após o diagnóstico, preservando a confidencialidade comercial."
+    : "* Nomes das comercializadoras são ilustrativos. As ofertas reais são apresentadas após o diagnóstico, preservando a confidencialidade comercial.";
+  const verdict = tab === 'gd'
+    ? "Desconto disponível — oportunidade identificada"
+    : "Abaixo da média — oportunidade identificada";
+
   return (
     <section className="relative overflow-hidden py-16 lg:py-24" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}>
-      {/* Texture overlay */}
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.04 }} />
-      {/* Dot grid */}
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.15) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.5 }} />
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
@@ -181,71 +215,96 @@ function EcosSection() {
             </Link>
           </div>
 
-          {/* Right — ECOS™ UI mockup */}
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "24px" }}>
-            {/* Mockup header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", paddingBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* Right — ECOS™ interactive mockup card */}
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "20px" }}>
+
+            {/* Card header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", paddingBottom: "14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <div>
-                <p style={{ color: "#c88ff5", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Outfit', sans-serif" }}>ECOS™ · Análise de Mercado</p>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", marginTop: "2px" }}>Gerado em tempo real · Confidencial</p>
+                <p style={{ color: "#c88ff5", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Outfit', sans-serif" }}>ECOS™ · ANÁLISE DE MERCADO</p>
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.6rem", marginTop: "2px" }}>Exemplo ilustrativo · Dados simulados</p>
               </div>
-              <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "6px", padding: "4px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#22c55e", display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+              <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "6px", padding: "3px 9px", fontSize: "0.6rem", fontWeight: 700, color: "#22c55e", display: "flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
                 Ativo
               </div>
             </div>
 
-            {/* 5-band market position */}
-            <div style={{ marginBottom: "20px" }}>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Posição no Mercado</p>
-              <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
-                {[0,1,2,3,4].map(i => (
-                  <div key={i} style={{ flex: 1, height: "8px", borderRadius: "4px", background: i === 1 ? "#9e3ffd" : "rgba(255,255,255,0.1)" }} />
-                ))}
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.58rem", color: "rgba(255,255,255,0.28)", marginBottom: "8px" }}>
-                <span>Muito abaixo</span><span>Muito acima</span>
-              </div>
-              <p style={{ color: "#c88ff5", fontSize: "0.82rem", fontWeight: 600 }}>Abaixo da média — oportunidade identificada</p>
+            {/* GD / ACL toggle */}
+            <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: "8px", padding: "3px", gap: "3px", marginBottom: "14px" }}>
+              {([
+                { key: 'gd', label: '⚡ Energia por Assinatura (GD)' },
+                { key: 'acl', label: '📈 Mercado Livre (ACL)' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  style={{
+                    flex: 1,
+                    padding: "7px 4px",
+                    borderRadius: "6px",
+                    fontSize: "0.68rem",
+                    fontWeight: 600,
+                    background: tab === key ? "#9e3ffd" : "transparent",
+                    color: tab === key ? "#fff" : "rgba(255,255,255,0.4)",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    fontFamily: "'Sora', sans-serif",
+                  }}
+                  data-testid={`ecos-tab-${key}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Stats grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px" }}>
-              {[
-                { label: "Consumo médio", val: "42,8 MWh/mês", green: false },
-                { label: "Tarifa atual", val: "R$ 847/MWh", green: false },
-                { label: "Melhor oferta", val: "R$ 678/MWh", green: false },
-                { label: "Economia proj.", val: "R$ 7.234/mês", green: true },
-              ].map((stat, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "10px 12px" }}>
-                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.58rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>{stat.label}</p>
-                  <p style={{ color: stat.green ? "#22c55e" : "#fff", fontSize: "0.82rem", fontWeight: 700, marginTop: "3px" }}>{stat.val}</p>
+            {/* Position bar */}
+            <div style={{ marginBottom: "14px" }}>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>POSIÇÃO NO MERCADO</p>
+              <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "4px", height: "7px", marginBottom: "5px", overflow: "hidden" }}>
+                <div style={{ width: "28%", height: "100%", borderRadius: "4px", background: "#9e3ffd" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.56rem", color: "rgba(255,255,255,0.28)", marginBottom: "6px" }}>
+                <span>Muito abaixo</span><span>Muito acima</span>
+              </div>
+              <p style={{ color: "#c88ff5", fontSize: "0.78rem", fontWeight: 600 }}>{verdict}</p>
+            </div>
+
+            {/* 4-metric grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "14px" }}>
+              {stats.map((stat, i) => (
+                <div key={`${tab}-${i}`} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "8px 10px" }}>
+                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.54rem", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.3 }}>{stat.label}</p>
+                  <p style={{ color: stat.green ? "#22c55e" : "#fff", fontSize: "0.8rem", fontWeight: 700, marginTop: "3px" }}>{stat.val}</p>
                 </div>
               ))}
             </div>
 
-            {/* Supplier comparison */}
-            <div>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Comparação de Ofertas</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {[
-                  { name: "Comercializadora A", price: "R$ 678/MWh", badge: "Melhor oferta", hi: true },
-                  { name: "Comercializadora B", price: "R$ 712/MWh", badge: null, hi: false },
-                  { name: "Comercializadora C", price: "R$ 741/MWh", badge: null, hi: false },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: s.hi ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.03)", border: s.hi ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 12px" }}>
-                    <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.75rem" }}>{s.name}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {s.badge && <span style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: "4px" }}>{s.badge}</span>}
-                      <span style={{ color: s.hi ? "#22c55e" : "#fff", fontSize: "0.8rem", fontWeight: 700 }}>{s.price}</span>
+            {/* Offers list */}
+            <div style={{ marginBottom: "14px" }}>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>{offersLabel}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                {offers.map((s, i) => (
+                  <div key={`${tab}-offer-${i}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: s.hi ? "rgba(158,63,253,0.1)" : "rgba(255,255,255,0.03)", border: s.hi ? "1px solid rgba(158,63,253,0.25)" : "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "7px 10px" }}>
+                    <span style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.7rem", flex: 1, paddingRight: "8px" }}>{s.name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                      {s.badge && <span style={{ background: "rgba(158,63,253,0.2)", color: "#c88ff5", fontSize: "0.56rem", fontWeight: 700, padding: "2px 6px", borderRadius: "4px" }}>{s.badge}</span>}
+                      <span style={{ color: s.hi ? "#c88ff5" : "#fff", fontSize: "0.78rem", fontWeight: 700 }}>{s.val}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.58rem", marginTop: "10px", textAlign: "center" }}>
-                * Dados simulados — análise real gerada com os dados da sua empresa
+              <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "0.56rem", marginTop: "8px", lineHeight: 1.4 }}>{offersNote}</p>
+            </div>
+
+            {/* Legal disclaimer */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "12px" }}>
+              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.58rem", lineHeight: 1.5, textAlign: "center" }}>
+                Simulação ilustrativa baseada no componente energia. A economia real depende do perfil de consumo, distribuidora, modalidade tarifária, encargos de rede, tributos e condições contratuais finais. Análise completa fornecida após diagnóstico.
               </p>
             </div>
+
           </div>
 
         </div>
