@@ -1,0 +1,51 @@
+brief for Replit — exact specifications, no ambiguity. Implement all changes within the existing single-page HTML file at /parceiros. Do not change URL structure, do not add external dependencies beyond those listed, do not alter the Portuguese copy except where explicitly specified below.
+
+P0 — Critical Visual design overhaul
+1
+Typography: Replace -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif with Google Fonts import: Sora (weights 400, 600) for headings and Inter (weights 400, 500) for body. Add to <head>: <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">. Apply font-family: 'Sora', sans-serif to all h1, h2, h3. Apply font-family: 'Inter', sans-serif to body, p, li, td.
+2
+Hero section background: Change the hero <section> (first section below the page-header div) to: background: linear-gradient(135deg, #0d0c2b 0%, #16163f 60%, #1e0c3a 100%). Add a subtle dot-grid texture as an SVG background-image inline: background-image: radial-gradient(circle, rgba(158,63,253,0.15) 1px, transparent 1px); background-size: 28px 28px; layered on top of the gradient using background: linear-gradient(...), radial-gradient(...) shorthand. Set color: #fff on the section. Ensure all child p and .card elements inside this section use color: rgba(255,255,255,0.75) and background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12) respectively.
+3
+Hero h2 colour: Change color: #16163f on the hero h2 to color: #ffffff. Keep .highlight at #c88ff5 (existing colour on the dark page-header, reuse here).
+4
+Section background alternation: Give alternating sections a subtle texture to break monotony. Sections 3, 5, 7, 9, 11, 13 (counting from hero as 1): add background: #f5f0fa instead of white. Keep border as-is. This creates a visual rhythm without redesigning anything.
+5
+Pricing box upgrade: Change the pricing box wrapper (currently border: 2px solid #9e3ffd) to: background: #16163f; border: none; border-radius: 16px; padding: 32px;. Change the price font-size: 2rem to 3rem, color to #c88ff5. Change all li inside to color: rgba(255,255,255,0.85). Add a checkmark before each list item using CSS: li::before { content: "✓ "; color: #9e3ffd; font-weight: 700; }. Add a CTA button inside the pricing box (see item 10 for button spec).
+6
+Impact quote section: The section containing only the h2 quote ("A Otima mostra onde mirar…") — change its background to #9e3ffd, set color: #fff, increase h2 font-size to 1.6rem, add font-style: italic, add text-align: center, add padding: 48px 40px. Add a subtle 4px top and bottom white border: border-top: 4px solid rgba(255,255,255,0.2); border-bottom: 4px solid rgba(255,255,255,0.2).
+7
+Before/After tables — colour coding: In both comparison tables (section "O problema" and section "Isto não é pirâmide"), apply to all td in column 1 (index 0): color: #991b1b; background: #fef2f2. Apply to all td in column 2 (index 1): color: #166534; background: #f0fdf4. Apply via JS targeting these tables specifically, or add a class comparison-table to both and use CSS: .comparison-table tr td:first-child { background: #fef2f2; color: #991b1b; } .comparison-table tr td:last-child { background: #f0fdf4; color: #166534; }
+P0 — Critical CTA & conversion elements
+8
+Hero CTA button: Add a button at the bottom of the hero section, below the second card row. HTML: <a href="#candidatura" class="cta-btn">Quero ser parceiro Otima →</a>. CSS: .cta-btn { display: inline-block; background: #9e3ffd; color: #fff; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 1rem; padding: 14px 32px; border-radius: 8px; text-decoration: none; margin-top: 24px; transition: background 0.2s; } .cta-btn:hover { background: #7c2fe0; }
+9
+Mid-page CTA after "Como funciona": After the closing </ol> in the "Como funciona" section, add: <div style="margin-top:32px; text-align:center;"><a href="#candidatura" class="cta-btn">Candidatar-me agora →</a></div> (reuse same .cta-btn class).
+10
+Pricing box CTA: Add inside the pricing box, below the disclaimer <p>: <a href="#candidatura" class="cta-btn" style="display:block; text-align:center; margin-top:20px;">Iniciar candidatura →</a>.
+11
+Add id="candidatura" to the form section: Change <section> containing the candidatura content to <section id="candidatura"> so anchor links above work correctly.
+12
+WhatsApp secondary CTA: After the form placeholder (or after the form itself), add: <p style="text-align:center; margin-top:24px; font-size:0.9rem; color:#736d77;">Prefere falar antes de candidatar? <a href="https://wa.me/55XXXXXXXXXX" target="_blank" style="color:#9e3ffd; font-weight:600;">Fale com a Otima no WhatsApp →</a></p>. Replace 55XXXXXXXXXX with Ótima's real WhatsApp number.
+P1 — High priority Trust & social proof
+13
+Hero social proof bar: Immediately below the hero headline (before the feature card row), add a horizontal strip: <div class="proof-bar"><span>🏢 +200 empresas prospectadas</span><span>📍 Todos os estados</span><span>✅ Processo 100% B2B</span></div>. CSS: .proof-bar { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0; } .proof-bar span { font-size: 0.85rem; color: rgba(255,255,255,0.7); }. Update the numbers to whatever is real/accurate — do not use placeholder numbers.
+14
+Add FAQ section before the form section. Add a new <section> with .section-tag "Perguntas frequentes" and the following 5 Q&As in a simple accordion (JS-toggled) or stacked open layout: (1) "Preciso ter experiência em energia?" (2) "Posso trabalhar em mais de uma região?" (3) "Quando recebo a comissão?" (4) "O que acontece se eu não conseguir clientes?" (5) "Por que o compromisso mínimo é de 6 meses?" — copy the actual answers from Ótima's team. Accordion CSS: clicking a question toggles the answer visibility. Use max-height transition for smooth open/close.
+15
+ROI framing in pricing section: Add below the pricing box (outside it): <p style="font-size:0.85rem; color:#736d77; margin-top:12px; max-width:480px;">Exemplo: um único cliente convertido com conta de R$15k/mês pode gerar <strong>R$3.000/mês em comissão recorrente</strong> — mais de 10× o valor da mensalidade.</p>. Adjust the numbers to be accurate for the Otima model.
+P2 — Polish Mobile & responsive fixes
+16
+"Para quem é / Para quem não é" section: Change the inner grid-template-columns: 1fr 1fr to grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) so it stacks on mobile.
+17
+Partner levels table: Wrap the table in <div style="overflow-x: auto;">...</div> to enable horizontal scroll on mobile without breaking the layout.
+18
+Lead mockup table: Same treatment — wrap in horizontal scroll div.
+19
+Body padding on mobile: Change body { padding: 40px 20px } to body { padding: 24px 16px } and add @media (min-width: 768px) { body { padding: 40px 20px; } }.
+P2 — Polish Copy micro-edits (exact text changes)
+20
+Pricing section tag: Change "A oferta" to "Torne-se parceiro".
+21
+Form section headline: Change "Pronto para trabalhar oportunidades reais de energia?" to "Candidate-se ao Programa de Parceiros Otima" — more directive, less rhetorical.
+22
+Footer copyright year: Change © 2025 to © 2026.
