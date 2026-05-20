@@ -66,22 +66,22 @@ function SectionTag({ text }: { text: string }) {
 // ─── Partner levels data ───────────────────────────────────────────────────────
 const LEVELS = [
   {
-    num: 1, name: "Consultor de Economia de Energia", subtitle: "Iniciando a operação",
-    leads: "25 leads/semana", faixa: "R$ 10k–R$ 30k/mês", comissao: "20%", reserva: "7 dias",
+    num: 1, name: "Consultor de Economia de Energia Otima", subtitle: "Iniciando a operação",
+    leads: "25 leads/semana", faixa: "R$ 10k–R$ 30k/mês", comissao: "15%", reserva: "7 dias",
     foco: "Negócios locais com boa chance de qualificação", color: "#9e3ffd",
   },
   {
-    num: 2, name: "Estrategista de Energia", subtitle: "Contas qualificadas comprovadas",
-    leads: "50 leads/semana", faixa: "R$ 30k–R$ 75k/mês", comissao: "25%", reserva: "10 dias",
+    num: 2, name: "Estrategista de Energia Otima", subtitle: "Contas qualificadas comprovadas",
+    leads: "50 leads/semana", faixa: "R$ 30k–R$ 75k/mês", comissao: "20%", reserva: "10 dias",
     foco: "Empresas maiores, melhores segmentos, maior potencial", color: "#3b82f6",
   },
   {
-    num: 3, name: "Executivo de Contas", subtitle: "Alta performance",
-    leads: "75 leads/semana", faixa: "R$ 50k–R$ 150k/mês", comissao: "30%", reserva: "14 dias",
+    num: 3, name: "Executivo de Contas Otima", subtitle: "Alta performance",
+    leads: "75 leads/semana", faixa: "R$ 50k–R$ 150k/mês", comissao: "25%", reserva: "14 dias",
     foco: "Oportunidades estratégicas e contas de maior valor", color: "#9e3ffd",
   },
   {
-    num: 4, name: "Parceiro Regional", subtitle: "Comprovado regionalmente",
+    num: 4, name: "Parceiro Regional Otima", subtitle: "Comprovado regionalmente",
     leads: "100–150 leads/semana", faixa: "R$ 75k–R$ 250k+/mês", comissao: "30%", reserva: "21–30 dias",
     foco: "Campanhas regionais, segmentos estratégicos, oportunidades robustas", color: "#f59e0b",
   },
