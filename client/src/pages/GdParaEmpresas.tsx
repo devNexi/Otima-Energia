@@ -83,11 +83,11 @@ export default function GdParaEmpresas() {
           <ul className="space-y-3 mb-8">
             <li className="flex items-start gap-3">
               <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Baixa tensão</strong> — comércios, lojas, escolas, clínicas, pequenas indústrias</span>
+              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Baixa tensão</strong>: comércios, lojas, escolas, clínicas, pequenas indústrias</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Média tensão</strong> — indústrias, hospitais, shoppings, condomínios, hotéis</span>
+              <span className="text-[#736d77] text-lg"><strong className="text-[#16163f]">Média tensão</strong>: indústrias, hospitais, shoppings, condomínios, hotéis</span>
             </li>
           </ul>
           <p className="text-lg text-[#736d77] leading-relaxed mb-4">
@@ -160,7 +160,7 @@ export default function GdParaEmpresas() {
                   ["Elegibilidade", "Qualquer empresa, qualquer consumo", "A partir de ~500 kW"],
                   ["Investimento", "Zero", "Zero"],
                   ["Instalação", "Nenhuma", "Nenhuma"],
-                  ["Desconto médio", "15% a 25%", "20% a 40%"],
+                  ["Desconto médio", "15% a 25%", "20% a 30%"],
                   ["Complexidade", "Baixa", "Média/Alta"],
                   ["Prazo contratual", "12 a 60 meses", "12 a 60 meses"],
                 ].map((row, i) => (
@@ -222,7 +222,7 @@ export default function GdParaEmpresas() {
           <div className="space-y-6 max-w-3xl">
             {[
               { q: "Preciso instalar placas solares?", a: "Não. Você não instala, não compra e não mantém equipamento nenhum. A usina pertence ao gerador parceiro." },
-              { q: "E se a usina gerar menos energia do que o esperado?", a: "Os melhores contratos possuem mecanismos de garantia — geração mínima, reposição ou compensação financeira. A Ótima analisa essas cláusulas antes de recomendar qualquer gerador." },
+              { q: "E se a usina gerar menos energia do que o esperado?", a: "Os melhores contratos possuem mecanismos de garantia: geração mínima, reposição ou compensação financeira. A Ótima analisa essas cláusulas antes de recomendar qualquer gerador." },
               { q: "Posso fazer GD e depois migrar para o Mercado Livre?", a: "Sim. São caminhos complementares. Muitas empresas economizam via GD enquanto se preparam estrategicamente para o ACL. Planejamos essa transição com você." },
               { q: "O desconto é fixo ou varia?", a: "O desconto é percentual sobre a tarifa da concessionária. Se a tarifa sobe, seu desconto em reais sobe junto. É uma economia proporcional e duradoura." },
               { q: "Quanto tempo leva para começar a economizar?", a: "Entre 30 e 90 dias, dependendo da distribuidora e do gerador selecionado." },

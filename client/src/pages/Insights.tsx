@@ -85,7 +85,7 @@ export default function Insights() {
               Insights
             </h1>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-              Artigos educativos sobre GD, Mercado Livre, Gestão de Energia e Otimização — para ajudar sua empresa a tomar decisões melhores sobre energia.
+              Artigos educativos sobre GD, Mercado Livre, Gestão de Energia e Otimização, para ajudar sua empresa a tomar decisões melhores sobre energia.
             </p>
           </div>
         </div>

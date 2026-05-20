@@ -120,7 +120,7 @@ export default function Solutions() {
                   ACL / Mercado Livre de Energia
                 </h3>
                 <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-6">
-                  Economia de 20% a 40% | Estratégia, contratação e renovação inteligente
+                  Economia de 20% a 30% | Estratégia, contratação e renovação inteligente
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
                   Para empresas elegíveis: migração estruturada, seleção das principais comercializadoras nacionais com independência e gestão estratégica do contrato do início à renovação.

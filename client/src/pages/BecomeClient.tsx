@@ -106,13 +106,13 @@ export default function BecomeClient() {
                 Uma análise clara, sem compromisso, para entender se, e quando, faz sentido migrar.
               </p>
               <p className="text-base text-[#736d77] mt-4">
-                Economia potencial de até 40%. Sem obrigação de contratar.
+                Economia potencial de até 30%. Sem obrigação de contratar.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-lg p-6 text-center">
                 <TrendingDown className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
-                <p className="text-2xl font-light text-[#9e3ffd]">40%</p>
+                <p className="text-2xl font-light text-[#9e3ffd]">30%</p>
                 <p className="text-sm text-[#736d77]">Economia de até</p>
               </div>
               <div className="bg-white rounded-lg p-6 text-center">

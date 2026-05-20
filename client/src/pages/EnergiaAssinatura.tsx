@@ -164,7 +164,7 @@ export default function EnergiaAssinatura() {
                   ["Fornecedor", "Continua sendo a concessionária", "Você escolhe uma comercializadora"],
                   ["Investimento", "Zero", "Zero"],
                   ["Obra/instalação", "Zero", "Zero"],
-                  ["Desconto médio", "15% a 25%", "20% a 40%"],
+                  ["Desconto médio", "15% a 25%", "20% a 30%"],
                   ["Complexidade", "Baixa", "Média/Alta"],
                   ["Prazo contratual", "12 a 60 meses", "12 a 60 meses"],
                 ].map((row, i) => (

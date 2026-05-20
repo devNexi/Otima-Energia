@@ -33,11 +33,11 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "Qual a diferença entre GD e Mercado Livre (ACL)?",
-        answer: "No GD, você continua cliente da sua concessionária e recebe descontos direto na fatura via créditos de usinas compartilhadas. É simples, rápido e exige consumo mínimo baixo. No Mercado Livre (ACL), você troca de fornecedor e passa a contratar energia diretamente de uma comercializadora. Exige maior consumo (a partir de ~500 kW), mas pode gerar economias de 20% a 40%. Ambos são válidos — nossa consultoria analisa qual faz mais sentido para o seu perfil."
+        answer: "No GD, você continua cliente da sua concessionária e recebe descontos direto na fatura via créditos de usinas compartilhadas. É simples, rápido e exige consumo mínimo baixo. No Mercado Livre (ACL), você troca de fornecedor e passa a contratar energia diretamente de uma comercializadora. Exige maior consumo (a partir de ~500 kW), mas pode gerar economias de 20% a 30%. Ambos são válidos. Nossa consultoria analisa qual faz mais sentido para o seu perfil."
       },
       {
         question: "O desconto do GD é garantido? E se a usina gerar menos?",
-        answer: "O desconto é aplicado sobre a tarifa da concessionária — se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
+        answer: "O desconto é aplicado sobre a tarifa da concessionária. Se a tarifa sobe, seu desconto em reais sobe junto. Em relação à geração, os melhores contratos possuem mecanismos de garantia (geração mínima, reposição ou compensação). Nós analisamos essas cláusulas antes de recomendar qualquer gerador."
       },
       {
         question: "Quanto tempo leva para começar a economizar com GD?",
@@ -62,7 +62,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "Quanto posso economizar no ACL?",
-        answer: "A economia pode chegar a até 40% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Oferecemos um diagnóstico gratuito para calcular sua economia potencial."
+        answer: "A economia pode chegar a até 30% na conta de luz, dependendo do perfil de consumo, localização e momento de contratação. Oferecemos um diagnóstico gratuito para calcular sua economia potencial."
       },
       {
         question: "O que é a Lei nº 15.269/2025?",
@@ -91,7 +91,7 @@ const faqSections: FAQSection[] = [
     items: [
       {
         question: "O que é a Gestão de Energia da Ótima?",
-        answer: "É um acompanhamento estratégico e contínuo da sua posição energética. Monitoramos oportunidades de mercado, revisamos contratos periodicamente e agimos no momento certo — não depois de uma janela favorável ter passado."
+        answer: "É um acompanhamento estratégico e contínuo da sua posição energética. Monitoramos oportunidades de mercado, revisamos contratos periodicamente e agimos no momento certo, não depois de uma janela favorável ter passado."
       },
       {
         question: "Para quem é a Gestão de Energia?",
@@ -112,7 +112,7 @@ const faqSections: FAQSection[] = [
       },
       {
         question: "O que é 'adequação tarifária'?",
-        answer: "Muitas empresas estão na modalidade tarifária errada para seu perfil de consumo. Revisamos se o enquadramento atual (verde, amarela, azul) é o mais adequado — e isso pode gerar economia imediata sem nenhuma mudança operacional."
+        answer: "Muitas empresas estão na modalidade tarifária errada para seu perfil de consumo. Revisamos se o enquadramento atual (verde, amarela, azul) é o mais adequado. Isso pode gerar economia imediata sem nenhuma mudança operacional."
       },
       {
         question: "Posso fazer Otimização Energética mesmo sem estar no Mercado Livre?",

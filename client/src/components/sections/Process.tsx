@@ -10,10 +10,10 @@ export function Process() {
             <span className="text-highlight">não por falta de opções, mas por falta de clareza</span>.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-6">
-            O mercado de energia é fragmentado e opaco: ofertas confusas, contratos ambíguos e fornecedores que empurram uma única solução — a que é melhor para eles, não para você.
+            O mercado de energia é fragmentado e opaco: ofertas confusas, contratos ambíguos e fornecedores que empurram uma única solução: a que é melhor para eles, não para você.
           </p>
           <p className="text-lg lg:text-xl text-[#736d77] max-w-4xl mb-12">
-            A Ótima existe para dar clareza: analisamos todas as opções viáveis (GD, ACL, Gestão de Energia e otimização no local), explicamos tudo com transparência e entregamos só o que importa — a decisão certa para o seu negócio.
+            A Ótima existe para dar clareza: analisamos todas as opções viáveis (GD, ACL, Gestão de Energia e otimização no local), explicamos tudo com transparência e entregamos só o que importa: a decisão certa para o seu negócio.
           </p>
           <div className="flex flex-wrap gap-8 lg:gap-16 max-w-4xl">
             <div>
@@ -21,7 +21,7 @@ export function Process() {
               <p className="text-[#736d77] mt-2">Frentes de atuação</p>
             </div>
             <div>
-              <p className="text-4xl font-light text-[#9e3ffd]">40%</p>
+              <p className="text-4xl font-light text-[#9e3ffd]">30%</p>
               <p className="text-[#736d77] mt-2">Economia de até</p>
             </div>
             <div>
@@ -85,7 +85,7 @@ export function Process() {
                   </svg>
                 ),
                 iconLabel: "Execução completa",
-                title: "Você escolhe — nós cuidamos da execução",
+                title: "Você escolhe, nós cuidamos da execução",
                 desc: "Da assinatura do contrato à ativação, cuidamos de toda a burocracia. E na renovação, reavaliamos o cenário para garantir que você permaneça no melhor lugar.",
               },
             ].map((item, i) => (

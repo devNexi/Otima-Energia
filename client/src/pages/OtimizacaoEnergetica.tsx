@@ -22,10 +22,10 @@ export default function OtimizacaoEnergetica() {
             </div>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                Mudar de fornecedor ou de mercado resolve uma parte do custo de energia. Mas parte significativa do que sua empresa paga está escondida na operação — em equipamentos, padrões de uso, horários de pico e ineficiências que ninguém mapeou.
+                Mudar de fornecedor ou de mercado resolve uma parte do custo de energia. Mas parte significativa do que sua empresa paga está escondida na operação: em equipamentos, padrões de uso, horários de pico e ineficiências que ninguém mapeou.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Otimização Energética da Ótima identifica, com metodologia estruturada, onde o dinheiro está sendo desperdiçado na operação — e entrega um plano concreto para reduzir, sem comprometer a operação.
+                A Otimização Energética da Ótima identifica, com metodologia estruturada, onde o dinheiro está sendo desperdiçado na operação, e entrega um plano concreto para reduzir, sem comprometer a operação.
               </p>
               <p className="text-lg lg:text-xl text-[#16163f] font-medium mb-8">
                 Resultado real. Sem promessas vagas.
@@ -49,7 +49,7 @@ export default function OtimizacaoEnergetica() {
             O que identificamos e o que entregamos
           </h2>
           <p className="text-lg text-[#736d77] mb-12 max-w-2xl">
-            Nossa abordagem combina análise da fatura, perfil de consumo e, quando aplicável, levantamento das instalações — para entregar um diagnóstico acionável, não um relatório que fica na gaveta.
+            Nossa abordagem combina análise da fatura, perfil de consumo e, quando aplicável, levantamento das instalações, para entregar um diagnóstico acionável, não um relatório que fica na gaveta.
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -60,11 +60,11 @@ export default function OtimizacaoEnergetica() {
               },
               {
                 title: "Revisão do perfil de consumo",
-                desc: "Analisamos a curva de carga da empresa e identificamos padrões que geram custos evitáveis — tanto na tarifa da concessionária quanto em eventuais contratos no ACL.",
+                desc: "Analisamos a curva de carga da empresa e identificamos padrões que geram custos evitáveis, tanto na tarifa da concessionária quanto em eventuais contratos no ACL.",
               },
               {
                 title: "Oportunidades de eficiência no local",
-                desc: "Substituição de equipamentos, ajuste de demanda contratada, adequação tarifária, uso de automação e controle — identificamos as ações com melhor custo-benefício.",
+                desc: "Substituição de equipamentos, ajuste de demanda contratada, adequação tarifária, uso de automação e controle. Identificamos as ações com melhor custo-benefício.",
               },
               {
                 title: "Adequação tarifária",
@@ -95,9 +95,9 @@ export default function OtimizacaoEnergetica() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { segment: "Condomínios", detail: "Iluminação, bombas, elevadores, portões — geralmente sem nenhum controle de eficiência." },
+              { segment: "Condomínios", detail: "Iluminação, bombas, elevadores, portões. Geralmente sem nenhum controle de eficiência." },
               { segment: "Hotéis e pousadas", detail: "Ar-condicionado, iluminação e aquecimento representam a maior parte do consumo. Otimização direta." },
-              { segment: "Supermercados e varejos", detail: "Refrigeração, iluminação e sistemas de climatização — alto impacto, alta oportunidade." },
+              { segment: "Supermercados e varejos", detail: "Refrigeração, iluminação e sistemas de climatização. Alto impacto, alta oportunidade." },
               { segment: "Clínicas e hospitais", detail: "Equipamentos médicos, climatização e iluminação 24h exigem gestão cuidadosa e eficiente." },
               { segment: "Escolas e universidades", detail: "Sazonalidade de uso permite otimizações específicas por período e área da instalação." },
               { segment: "Indústrias e galpões", detail: "Motores, compressores, iluminação industrial e demanda contratada são os maiores vetores de custo." },
@@ -119,7 +119,7 @@ export default function OtimizacaoEnergetica() {
                 Otimização Energética como parte de uma estratégia maior
               </h2>
               <p className="text-lg text-[#736d77] leading-relaxed mb-4">
-                A otimização no local é uma das frentes da Ótima. Ela complementa — e frequentemente potencializa — as demais estratégias:
+                A otimização no local é uma das frentes da Ótima. Ela complementa e frequentemente potencializa as demais estratégias:
               </p>
               <ul className="space-y-4">
                 {[
@@ -138,10 +138,10 @@ export default function OtimizacaoEnergetica() {
             <div className="bg-[#eee7f1] rounded-xl p-8 lg:p-10">
               <h3 className="text-xl font-medium text-[#16163f] mb-6">Por que a Ótima faz diferença aqui</h3>
               <p className="text-[#736d77] leading-relaxed mb-4">
-                Não somos uma empresa de eficiência energética isolada. Somos uma consultoria de inteligência energética que enxerga o custo completo de energia da sua empresa — contrato, tarifa, operação e desperdício.
+                Não somos uma empresa de eficiência energética isolada. Somos uma consultoria de inteligência energética que enxerga o custo completo de energia da sua empresa: contrato, tarifa, operação e desperdício.
               </p>
               <p className="text-[#736d77] leading-relaxed">
-                Isso nos permite recomendar ações de otimização no local que realmente fazem sentido para o seu perfil de contrato e mercado — sem criar incoerência entre as frentes.
+                Isso nos permite recomendar ações de otimização no local que realmente fazem sentido para o seu perfil de contrato e mercado, sem criar incoerência entre as frentes.
               </p>
             </div>
           </div>

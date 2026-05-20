@@ -22,7 +22,7 @@ export default function MercadoLivreAcl() {
             </div>
             <div>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                O Mercado Livre de Energia (ACL) permite que empresas elegíveis comprem energia diretamente de comercializadoras, com preços negociados, contratos personalizados e economias de até 40% na conta.
+                O Mercado Livre de Energia (ACL) permite que empresas elegíveis comprem energia diretamente de comercializadoras, com preços negociados, contratos personalizados e economias de até 30% na conta.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 O problema é que o mercado é opaco: dezenas de comercializadoras, diferentes estruturas de contrato, condições confusas e vendedores que empurram o que é melhor para eles, não para você.
@@ -49,7 +49,7 @@ export default function MercadoLivreAcl() {
             O que a Ótima entrega no ACL
           </h2>
           <p className="text-lg text-[#736d77] mb-12 max-w-2xl">
-            Atuamos em todas as etapas do ciclo de energia no Mercado Livre — da primeira análise à renovação do contrato.
+            Atuamos em todas as etapas do ciclo de energia no Mercado Livre, da primeira análise à renovação do contrato.
           </p>
 
           <div className="space-y-8">
@@ -64,7 +64,7 @@ export default function MercadoLivreAcl() {
                 num: "02",
                 title: "Seleção e comparação de comercializadoras",
                 sub: "Apenas players nacionais sólidos e confiáveis",
-                body: "A Ótima trabalha exclusivamente com as principais comercializadoras do mercado brasileiro — empresas com sólida capacidade financeira, histórico comprovado e contratos transparentes. Usamos o ECOS™ para comparar as ofertas reais e identificar a melhor combinação de preço, prazo e condições para o seu perfil.",
+                body: "A Ótima trabalha exclusivamente com as principais comercializadoras do mercado brasileiro: empresas com sólida capacidade financeira, histórico comprovado e contratos transparentes. Usamos o ECOS™ para comparar as ofertas reais e identificar a melhor combinação de preço, prazo e condições para o seu perfil.",
               },
               {
                 num: "03",
@@ -158,7 +158,7 @@ export default function MercadoLivreAcl() {
                 Independência real no mercado livre.
               </h2>
               <p className="text-lg text-gray-300 leading-relaxed mb-6">
-                A maioria das empresas que "ajuda" você a entrar no ACL representa um conjunto limitado de fornecedores — ou tem vínculo comercial com apenas uma ou duas comercializadoras.
+                A maioria das empresas que "ajuda" você a entrar no ACL representa um conjunto limitado de fornecedores, ou tem vínculo comercial com apenas uma ou duas comercializadoras.
               </p>
               <p className="text-lg text-gray-300 leading-relaxed">
                 A Ótima Energia não representa nenhuma comercializadora. Nós comparamos o mercado com dados reais, colocamos na mesa apenas players com solidez financeira e histórico comprovado, e recomendamos o que é melhor para o seu perfil.

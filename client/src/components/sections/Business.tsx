@@ -18,13 +18,13 @@ const solutions = [
     label: "Gestão de Energia",
     href: "/gestao-de-energia",
     title: "Gestão de Energia",
-    description: "Acompanhamento estratégico e contínuo da sua posição energética. Monitoramos oportunidades, revisamos contratos e agimos no momento certo — não depois.",
+    description: "Acompanhamento estratégico e contínuo da sua posição energética. Monitoramos oportunidades, revisamos contratos e agimos no momento certo, não depois.",
   },
   {
     label: "Otimização no Local",
     href: "/otimizacao-energetica",
     title: "Otimização Energética",
-    description: "Identificamos desperdícios na operação, revisamos o perfil de consumo e entregamos um plano concreto de redução — com as ações de maior impacto priorizadas.",
+    description: "Identificamos desperdícios na operação, revisamos o perfil de consumo e entregamos um plano concreto de redução, com as ações de maior impacto priorizadas.",
   },
   {
     label: "Parceiros",
@@ -42,7 +42,7 @@ export function Business() {
           <p className="dcvc-statement text-gray-900 max-w-5xl">
             Trabalhamos com os{" "}
             <span className="text-highlight-pink">principais players nacionais do setor</span>{" "}
-            e mostramos o quadro completo — não uma solução empurrada.
+            e mostramos o quadro completo, não uma solução empurrada.
           </p>
         </div>
       </section>

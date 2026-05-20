@@ -165,7 +165,7 @@ export default function LeiMercadoLivre() {
             </p>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg p-6">
-                <p className="text-4xl font-light text-[#9e3ffd] mb-2">40%</p>
+                <p className="text-4xl font-light text-[#9e3ffd] mb-2">30%</p>
                 <p className="text-[#736d77]">Economia de até</p>
               </div>
               <div className="bg-white rounded-lg p-6">

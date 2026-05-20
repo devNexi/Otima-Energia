@@ -15,7 +15,7 @@ export default function About() {
               Sua energia. Sua escolha. Sua economia.
             </p>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
-              A Ótima Energia é uma consultoria independente especializada em guiar empresas brasileiras para a melhor decisão energética — seja via Geração Distribuída (GD), no Mercado Livre (ACL), na gestão contínua de contratos ou na otimização no local.
+              A Ótima Energia é uma consultoria independente especializada em guiar empresas brasileiras para a melhor decisão energética: Geração Distribuída (GD), Mercado Livre (ACL), gestão contínua de contratos ou otimização no local.
             </p>
             <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mt-6">
               Atuamos como parceiros de longo prazo, com um compromisso inegociável: neutralidade. Não vendemos um único produto, nem representamos um único fornecedor. Comparamos o máximo possível do mercado, analisamos todas as opções com dados reais e recomendamos o caminho que entrega mais economia para o seu perfil.
@@ -39,7 +39,7 @@ export default function About() {
                   A Lei nº 15.269/2025 abre o mercado livre de energia para 80 milhões de consumidores nos próximos 36 meses. É a maior transformação do setor elétrico brasileiro desde sua privatização.
                 </p>
                 <p>
-                  Mas o ACL não é a única resposta. Milhões de empresas continuarão no mercado regulado, e muitas vão economizar mais — e mais rápido — através da Geração Distribuída (GD) ou da otimização de contratos com a concessionária.
+                  Mas o ACL não é a única resposta. Milhões de empresas continuarão no mercado regulado, e muitas vão economizar mais, e mais rápido, através da Geração Distribuída (GD) ou da otimização de contratos com a concessionária.
                 </p>
                 <p>
                   Nossa missão é garantir que nenhuma empresa pague mais do que deveria, independentemente do mercado em que está hoje ou estará amanhã.
@@ -77,7 +77,7 @@ export default function About() {
                 O setor elétrico brasileiro movimenta mais de R$100 bilhões por ano, mas continua fragmentado e opaco. Fornecedores, distribuidoras, comercializadoras e usinas operam com informações assimétricas, deixando empresas pagando mais do que deveriam, em qualquer mercado.
               </p>
               <p>
-                Acreditamos que <span className="font-medium text-[#9e3ffd]">tecnologia e dados</span> podem nivelar esse campo — não apenas no ACL, mas no GD e na gestão de contratos também.
+                Acreditamos que <span className="font-medium text-[#9e3ffd]">tecnologia e dados</span> podem nivelar esse campo, não apenas no ACL, mas no GD e na gestão de contratos também.
               </p>
               <p>
                 Nossa plataforma, o <span className="font-medium text-[#9e3ffd]">ECOS™</span>, analisa consumo, tarifas, contratos e ofertas de forma unificada. Ele não tem viés. Ele não empurra produto. Ele identifica a rota de maior economia, seja ela:
@@ -85,19 +85,19 @@ export default function About() {
               <ul className="space-y-3 ml-1">
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span>Geração Distribuída (GD) — descontos de 15% a 25% sem instalação</span>
+                  <span>Geração Distribuída (GD): descontos de 15% a 25% sem instalação</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span>Migração para o Mercado Livre (ACL) — economia de 20% a 40%</span>
+                  <span>Migração para o Mercado Livre (ACL): economia de 20% a 30%</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span>Gestão de Energia — acompanhamento estratégico e contínuo</span>
+                  <span>Gestão de Energia: acompanhamento estratégico e contínuo</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-[#9e3ffd] mt-1">•</span>
-                  <span>Otimização no local — redução de desperdícios na operação</span>
+                  <span>Otimização no local: redução de desperdícios na operação</span>
                 </li>
               </ul>
             </div>
@@ -115,7 +115,7 @@ export default function About() {
               A Ótima Energia opera como uma consultoria independente de inteligência energética.
             </p>
             <p className="text-lg text-[#736d77] leading-relaxed mt-4">
-              Enquanto o mercado permanece opaco, manual e cheio de intermediários empurrando soluções únicas, nós usamos dados, automação e independência para proteger empresas e garantir decisões melhores — na migração, na renovação, na gestão do dia a dia.
+              Enquanto o mercado permanece opaco, manual e cheio de intermediários empurrando soluções únicas, nós usamos dados, automação e independência para proteger empresas e garantir decisões melhores. Isso se aplica na migração, na renovação e na gestão do dia a dia.
             </p>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function About() {
           <div className="grid md:grid-cols-4 gap-12 lg:gap-16">
             <div>
               <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                40%
+                30%
               </div>
               <p className="text-[#736d77]">
                 Economia potencial na conta de luz*
