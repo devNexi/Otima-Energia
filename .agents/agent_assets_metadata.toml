@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "me9q_gWGrF49bGdDhpVF_"
+uri = "file://exports/otima-energia-sitemap-and-copy.md"
+type = "text"
+title = "Ótima Energia — Sitemap & Full Page Copy"
