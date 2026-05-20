@@ -12,3 +12,15 @@ id = "9nIMe0LJYSKwQANQaYbn0"
 uri = "file://parceiros-audit.zip"
 type = "unspecified"
 title = "Parceiros — Full Page Audit (HTML inside)"
+
+[[outputs]]
+id = "sHN3W8Y-sj1EUMUk8ERfN"
+uri = "file://dist/public/otima-energia-build.zip"
+type = "unspecified"
+title = "Compiled build (deploy-ready HTML + JS + CSS)"
+
+[[outputs]]
+id = "ugdDbj15Fa-Cvn4jSFsJJ"
+uri = "file://dist/public/otima-energia-source.zip"
+type = "unspecified"
+title = "Full source code (all .tsx/.ts files, no node_modules)"
