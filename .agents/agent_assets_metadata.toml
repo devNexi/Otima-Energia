@@ -6,3 +6,9 @@ id = "me9q_gWGrF49bGdDhpVF_"
 uri = "file://exports/otima-energia-sitemap-and-copy.md"
 type = "text"
 title = "Ótima Energia — Sitemap & Full Page Copy"
+
+[[outputs]]
+id = "9nIMe0LJYSKwQANQaYbn0"
+uri = "file://parceiros-audit.zip"
+type = "unspecified"
+title = "Parceiros — Full Page Audit (HTML inside)"

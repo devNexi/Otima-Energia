@@ -726,31 +726,71 @@ export default function Parceiros() {
       </section>
 
       {/* ── 11. PROGRESSION ── */}
-      <section className="px-5 py-20" style={{ background: "#1c1b4e", borderTop: "1px solid rgba(158,63,253,0.12)", borderBottom: "1px solid rgba(158,63,253,0.12)" }}>
+      <section className="px-5 py-20" style={{ background: "#eee7f1", borderTop: "1px solid rgba(158,63,253,0.15)", borderBottom: "1px solid rgba(158,63,253,0.15)" }}>
         <div className="max-w-4xl mx-auto">
           <Reveal>
             <SectionTag text="Progressão" />
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Mais acesso vem de <span style={{ color: "#9e3ffd" }}>resultado, não de conversa.</span></h2>
-            <p className="text-base mb-12 max-w-2xl" style={{ color: "#736d77" }}>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-[#16163f]">Mais acesso vem de <span style={{ color: "#9e3ffd" }}>resultado, não de conversa.</span></h2>
+            <p className="text-base mb-12 max-w-2xl text-[#736d77]">
               Na Otima, listas melhores não são liberadas porque alguém diz que "ligou bastante". Atividade importa. Mas o que aumenta seu acesso é produção verificável.
             </p>
           </Reveal>
 
-          <div className="space-y-2">
-            {["Trabalha os leads", "Coleta contas", "Envia oportunidades", "A Otima analisa", "Clientes convertem", "O parceiro ganha comissão", "O acesso pode aumentar"].map((step, i) => (
-              <Reveal key={i} delay={i * 50}>
-                <div className="flex items-center gap-4 p-4 rounded-xl transition-all" style={{ background: cardBg, border: cardBorder }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ background: `rgba(158,63,253,${0.15 + i * 0.08})`, color: "#9e3ffd" }}>{i + 1}</div>
-                  <span className="text-sm font-medium" style={{ color: "#16163f" }}>{step}</span>
-                  {i < 6 && <ChevronRight className="ml-auto w-4 h-4" style={{ color: "#c4c4c4" }} />}
-                  {i === 6 && <Star className="ml-auto w-4 h-4" style={{ color: "#f59e0b" }} />}
+          {/* Step group 1 — Partner executes */}
+          <Reveal>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#9e3ffd] mb-3">O parceiro executa</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+              {[
+                { n: 1, label: "Trabalha os leads", desc: "Aborda empresas da sua lista regional" },
+                { n: 2, label: "Coleta contas", desc: "Pede e recebe a conta de energia" },
+                { n: 3, label: "Envia oportunidades", desc: "Encaminha para análise da Otima" },
+              ].map(s => (
+                <div key={s.n} className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white mb-3" style={{ background: "#9e3ffd" }}>{s.n}</div>
+                  <p className="font-semibold text-[#16163f] mb-1">{s.label}</p>
+                  <p className="text-xs text-[#736d77]">{s.desc}</p>
                 </div>
-              </Reveal>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Reveal>
 
-          <Reveal delay={200}>
-            <p className="text-2xl font-bold mt-10 text-center text-[#16163f]">
+          {/* Otima step */}
+          <Reveal delay={80}>
+            <div className="flex justify-center mb-3">
+              <div className="w-0.5 h-6 bg-purple-300" />
+            </div>
+            <div className="rounded-2xl p-5 text-center mb-3" style={{ background: "#9e3ffd" }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm mx-auto mb-2" style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}>4</div>
+              <p className="font-bold text-white text-lg">A Otima analisa</p>
+              <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.8)" }}>Avalia a conta, valida o potencial e define a melhor rota comercial</p>
+            </div>
+            <div className="flex justify-center mb-5">
+              <div className="w-0.5 h-6 bg-purple-300" />
+            </div>
+          </Reveal>
+
+          {/* Step group 2 — Results */}
+          <Reveal delay={150}>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#736d77] mb-3">O resultado</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { n: 5, label: "Clientes convertem", desc: "A proposta é aceite e o contrato fechado", color: "#9e3ffd" },
+                { n: 6, label: "O parceiro ganha comissão", desc: "Remuneração recorrente pelo cliente ativo", color: "#9e3ffd" },
+                { n: 7, label: "O acesso pode aumentar", desc: "Mais leads, contas maiores, novo nível", color: "#f59e0b", star: true },
+              ].map(s => (
+                <div key={s.n} className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white mb-3" style={{ background: s.color }}>
+                    {s.star ? <Star className="w-4 h-4" /> : s.n}
+                  </div>
+                  <p className="font-semibold text-[#16163f] mb-1">{s.label}</p>
+                  <p className="text-xs text-[#736d77]">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+
+          <Reveal delay={250}>
+            <p className="text-xl font-bold mt-12 text-center text-[#16163f]">
               Traga contas. Gere oportunidades. <span style={{ color: "#9e3ffd" }}>Cresça por performance.</span>
             </p>
           </Reveal>
