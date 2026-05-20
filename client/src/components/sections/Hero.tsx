@@ -22,12 +22,12 @@ export function Hero() {
         }}
       />
 
-      <div className="relative min-h-screen flex items-end" style={{ zIndex: 2 }}>
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 w-full">
+      <div className="relative min-h-screen flex items-center" style={{ zIndex: 2 }}>
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-24 pt-8 w-full">
 
-          {/* Pill badge */}
+          {/* Pill badge — tight to headline */}
           <div
-            className="inline-block mb-6"
+            className="inline-block mb-4"
             style={{
               background: "rgba(158,63,253,0.15)",
               border: "1px solid rgba(158,63,253,0.3)",
@@ -42,7 +42,7 @@ export function Hero() {
           </div>
 
           <h1
-            className="text-white max-w-5xl mb-6"
+            className="text-white max-w-5xl mb-5"
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 800,
@@ -56,12 +56,10 @@ export function Hero() {
           </h1>
 
           <p
-            className="text-lg lg:text-xl max-w-2xl"
-            style={{ color: "rgba(255,255,255,0.8)", marginBottom: "4px" }}
+            className="text-xl max-w-xl"
+            style={{ color: "rgba(255,255,255,0.75)", marginBottom: "4px" }}
           >
-            O mercado de energia no Brasil é opaco, fragmentado e cheio de interesses cruzados.
-            A Ótima Energia ajuda sua empresa a enxergar o quadro completo e escolher, com segurança,
-            entre <strong>GD, ACL, Gestão de Energia</strong> e otimização no local.
+            Análise neutra. Todas as opções. A decisão certa para o seu negócio.
           </p>
 
           {/* Trust bar */}
@@ -100,9 +98,10 @@ export function Hero() {
               href="/solucoes"
               className="inline-flex items-center gap-3 px-8 py-4 text-lg font-medium transition-colors"
               style={{
-                border: "1px solid rgba(255,255,255,0.3)",
+                background: "rgba(255,255,255,0.12)",
+                border: "1.5px solid rgba(255,255,255,0.4)",
                 borderRadius: "8px",
-                color: "rgba(255,255,255,0.8)",
+                color: "rgba(255,255,255,0.9)",
               }}
               data-testid="hero-secondary-cta"
             >
