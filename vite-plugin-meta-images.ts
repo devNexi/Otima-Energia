@@ -56,6 +56,14 @@ export function metaImagesPlugin(): Plugin {
 }
 
 function getDeploymentUrl(): string | null {
+  // Production domain takes priority — set PRODUCTION_DOMAIN=otimaenergia.com in env
+  if (process.env.PRODUCTION_DOMAIN) {
+    const raw = process.env.PRODUCTION_DOMAIN.replace(/^https?:\/\//, '');
+    const url = `https://${raw}`;
+    log('[meta-images] using production domain:', url);
+    return url;
+  }
+
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
     const url = `https://${process.env.REPLIT_INTERNAL_APP_DOMAIN}`;
     log('[meta-images] using internal app domain:', url);

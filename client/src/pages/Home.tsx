@@ -137,44 +137,117 @@ function SegmentsSection() {
 
 function EcosSection() {
   return (
-    <section className="bg-[#16163f] py-16 lg:py-20">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
+    <section className="relative overflow-hidden py-16 lg:py-24" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}>
+      {/* Texture overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.04 }} />
+      {/* Dot grid */}
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.15) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.5 }} />
+
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+
+          {/* Left — text block */}
           <div>
-            <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-4">
+            <div className="inline-block mb-5" style={{ background: "rgba(158,63,253,0.15)", border: "1px solid rgba(158,63,253,0.3)", color: "#c88ff5", fontSize: "0.72rem", fontWeight: 700, padding: "5px 13px", borderRadius: "99px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Sistema Proprietário
+            </div>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "clamp(3.5rem, 7vw, 5.5rem)", color: "#fff", letterSpacing: "-0.03em", lineHeight: 0.95, marginBottom: "8px" }}>
+              ECOS<sup style={{ fontSize: "0.38em", verticalAlign: "super", fontWeight: 800 }}>™</sup>
+            </h2>
+            <p style={{ color: "#c88ff5", fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: "1.1rem", marginBottom: "20px" }}>
               Inteligência que orienta cada decisão
             </p>
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
-              ECOS™
-            </h2>
-            <div className="space-y-4 text-lg text-gray-300 leading-relaxed">
-              <p>
-                O <strong className="text-[#9e3ffd]">ECOS™</strong> é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para garantir que cada decisão seja tomada no momento certo, com as informações certas.
-              </p>
-              <p>
-                Ele não vende produto. Ele analisa dados: ofertas reais de comercializadoras, desempenho de geradores de GD, bandas de preço histórico, perfis de risco e janelas contratuais.
-              </p>
-              <p className="font-medium text-white">
-                O ECOS™ só recomenda uma mudança quando há ganho real projetado. Sem conflito. Sem viés. Sem promessas vazias.
-              </p>
-            </div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-lg p-8 lg:p-10">
-            <ul className="space-y-4 text-gray-300">
+            <p className="text-lg leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.65)", maxWidth: "480px" }}>
+              O sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para garantir que cada decisão seja tomada no momento certo, com as informações certas — sem conflito, sem viés.
+            </p>
+            <ul className="space-y-4 mb-10">
               {[
-                "Análise automática de contas e perfil de consumo",
-                "Comparação de ofertas reais de comercializadoras",
-                "Monitoramento de geradores de GD na sua região",
-                "Alertas em janelas críticas de renovação",
-                "Recomendações documentadas e rastreáveis",
+                "Analisa consumo e perfil energético",
+                "Compara ofertas reais de todas as comercializadoras",
+                "Monitora janelas de renovação e oportunidades de mercado",
               ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
+                <li key={i} className="flex items-start gap-3" style={{ color: "rgba(255,255,255,0.8)", fontSize: "1rem" }}>
+                  <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#9e3ffd" }} />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
+            <Link
+              href="/ecos"
+              className="inline-flex items-center gap-2 text-white font-medium transition-all hover:opacity-90"
+              style={{ background: "#9e3ffd", borderRadius: "8px", padding: "12px 24px", fontSize: "0.95rem", fontFamily: "'Sora', sans-serif", boxShadow: "0 4px 20px rgba(158,63,253,0.35)" }}
+            >
+              Conhecer o ECOS™ <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
+
+          {/* Right — ECOS™ UI mockup */}
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "24px" }}>
+            {/* Mockup header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", paddingBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div>
+                <p style={{ color: "#c88ff5", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Outfit', sans-serif" }}>ECOS™ · Análise de Mercado</p>
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.62rem", marginTop: "2px" }}>Gerado em tempo real · Confidencial</p>
+              </div>
+              <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "6px", padding: "4px 10px", fontSize: "0.62rem", fontWeight: 700, color: "#22c55e", display: "flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                Ativo
+              </div>
+            </div>
+
+            {/* 5-band market position */}
+            <div style={{ marginBottom: "20px" }}>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Posição no Mercado</p>
+              <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
+                {[0,1,2,3,4].map(i => (
+                  <div key={i} style={{ flex: 1, height: "8px", borderRadius: "4px", background: i === 1 ? "#9e3ffd" : "rgba(255,255,255,0.1)" }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.58rem", color: "rgba(255,255,255,0.28)", marginBottom: "8px" }}>
+                <span>Muito abaixo</span><span>Muito acima</span>
+              </div>
+              <p style={{ color: "#c88ff5", fontSize: "0.82rem", fontWeight: 600 }}>Abaixo da média — oportunidade identificada</p>
+            </div>
+
+            {/* Stats grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "20px" }}>
+              {[
+                { label: "Consumo médio", val: "42,8 MWh/mês", green: false },
+                { label: "Tarifa atual", val: "R$ 847/MWh", green: false },
+                { label: "Melhor oferta", val: "R$ 678/MWh", green: false },
+                { label: "Economia proj.", val: "R$ 7.234/mês", green: true },
+              ].map((stat, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "10px 12px" }}>
+                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.58rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>{stat.label}</p>
+                  <p style={{ color: stat.green ? "#22c55e" : "#fff", fontSize: "0.82rem", fontWeight: 700, marginTop: "3px" }}>{stat.val}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Supplier comparison */}
+            <div>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px" }}>Comparação de Ofertas</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {[
+                  { name: "Comercializadora A", price: "R$ 678/MWh", badge: "Melhor oferta", hi: true },
+                  { name: "Comercializadora B", price: "R$ 712/MWh", badge: null, hi: false },
+                  { name: "Comercializadora C", price: "R$ 741/MWh", badge: null, hi: false },
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: s.hi ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.03)", border: s.hi ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 12px" }}>
+                    <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.75rem" }}>{s.name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {s.badge && <span style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: "4px" }}>{s.badge}</span>}
+                      <span style={{ color: s.hi ? "#22c55e" : "#fff", fontSize: "0.8rem", fontWeight: 700 }}>{s.price}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.58rem", marginTop: "10px", textAlign: "center" }}>
+                * Dados simulados — análise real gerada com os dados da sua empresa
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

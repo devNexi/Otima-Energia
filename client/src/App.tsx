@@ -56,6 +56,7 @@ import GdParaEmpresas from "@/pages/GdParaEmpresas";
 import MercadoLivreAcl from "@/pages/MercadoLivreAcl";
 import GestaoDeEnergia from "@/pages/GestaoDeEnergia";
 import OtimizacaoEnergetica from "@/pages/OtimizacaoEnergetica";
+import Ecos from "@/pages/Ecos";
 
 const VALID_DEAL_TABS = ['assembly', 'overview', 'rfq', 'quotes', 'proposals', 'commission', 'documents', 'history', 'cases', 'tracks', 'sales', 'compliance', 'ecos', 'details'];
 
@@ -93,6 +94,8 @@ function Router() {
       <Route path="/diagnostico" component={DiagnosticoForm} />
       <Route path="/insights" component={Insights} />
       <Route path="/termos-parcerias" component={TermosParcerias} />
+
+      <Route path="/ecos" component={Ecos} />
 
       {/* New service pages */}
       <Route path="/gd-para-empresas" component={GdParaEmpresas} />
