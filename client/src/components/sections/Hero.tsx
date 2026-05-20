@@ -68,7 +68,6 @@ export function Hero() {
               "Operamos em todos os estados",
               "CNPJ: 65.023.912/0001-24",
               "Análise 100% neutra",
-              "Regulamentado ANEEL/CCEE",
             ].map((item) => (
               <span
                 key={item}
