@@ -208,16 +208,29 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
       const res = await fetch(`/api/ecos/evaluate/${client.id}`, {
         method: "POST"
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Failed to evaluate");
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/ecos/status/${client.id}`] });
-      toast({ title: language === "pt" ? "Avaliação atualizada!" : "Evaluation updated!" });
+      queryClient.invalidateQueries({ queryKey: [`/api/ecos/decisions/client/${client.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/ecos/clients/${client.id}/audit-trail`] });
+      const status = data?.result?.status;
+      if (status === "no_data") {
+        toast({
+          title: language === "pt" ? "Dados insuficientes" : "Insufficient data",
+          description: data?.result?.recommendation,
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: language === "pt" ? "Avaliação concluída!" : "Evaluation complete!" });
+      }
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({ 
         title: language === "pt" ? "Erro" : "Error",
-        description: language === "pt" ? "Falha ao avaliar cliente" : "Failed to evaluate client",
+        description: error.message || (language === "pt" ? "Falha ao avaliar cliente" : "Failed to evaluate client"),
         variant: "destructive"
       });
     }
@@ -336,6 +349,27 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
           <div className="mb-6">
             <NextActionWidget entityType="client" entityId={client.id} />
           </div>
+
+          {/* Setup needed banner when no evaluation exists */}
+          {!ecosLoading && !ecosStatus && (
+            <Card className="mb-6 border-blue-200 bg-blue-50">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-800">
+                      {language === "pt" ? "ECOS ainda não avaliado" : "ECOS not yet evaluated"}
+                    </p>
+                    <p className="text-sm text-blue-700 mt-1">
+                      {language === "pt"
+                        ? "Clique em \"Reavaliar\" para executar a análise ECOS. Para uma avaliação completa, este cliente precisa de: (1) um contrato ativo com preço em R$/MWh, e (2) benchmarks de mercado cadastrados para o segmento e região."
+                        : "Click \"Re-evaluate\" to run the ECOS analysis. For a full evaluation, this client needs: (1) an active contract with R$/MWh price, and (2) market benchmarks set up for their segment and region."}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {ecosStatus?.recommendation && (
             <Card className="mb-6 border-orange-200 bg-orange-50">

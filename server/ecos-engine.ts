@@ -33,10 +33,10 @@ export async function evaluateClient(
   const contract = await storage.getActiveClientContract(clientId);
   
   if (!contract || !contract.priceRmwh) {
-    return {
+    const result: EcosEvaluationResult = {
       status: "no_data",
-      recommendation: "Add an active contract with pricing information to enable ECOS evaluation.",
-      explanation: "No active contract found for this client.",
+      recommendation: "Adicione um contrato ativo com informações de preço para habilitar a avaliação ECOS.",
+      explanation: "Nenhum contrato ativo encontrado para este cliente.",
       clientPrice: null,
       benchmarkLower: null,
       benchmarkUpper: null,
@@ -46,6 +46,24 @@ export async function evaluateClient(
       contractEndDate: null,
       triggerType
     };
+    await storage.createDecisionLog({
+      clientId,
+      contractId: null,
+      triggerType,
+      benchmarkId: null,
+      benchmarkLowerRmwh: null,
+      benchmarkUpperRmwh: null,
+      snapshotConfidence: null,
+      snapshotSourceType: null,
+      clientPriceRmwh: "0",
+      clientConsumptionMwh: null,
+      contractRemainingMonths: null,
+      statusResult: "no_data",
+      recommendation: result.recommendation,
+      explanationPt: result.explanation,
+      potentialSavingsR: null
+    });
+    return result;
   }
 
   const clientPrice = parseFloat(contract.priceRmwh);
@@ -66,10 +84,10 @@ export async function evaluateClient(
   const benchmark = await storage.getBenchmarkForClient(segment, region, roundedContractLength);
   
   if (!benchmark) {
-    return {
+    const noDataResult: EcosEvaluationResult = {
       status: "no_data",
-      recommendation: `Add market benchmarks for segment "${segment}", region "${region}", and ${roundedContractLength}-month contracts.`,
-      explanation: `No benchmark data available for this client's profile.`,
+      recommendation: `Adicione benchmarks de mercado para segmento "${segment}", região "${region}" e contratos de ${roundedContractLength} meses.`,
+      explanation: `Nenhum dado de benchmark disponível para o perfil deste cliente.`,
       clientPrice,
       benchmarkLower: null,
       benchmarkUpper: null,
@@ -79,6 +97,24 @@ export async function evaluateClient(
       contractEndDate: contract.contractEnd || null,
       triggerType
     };
+    await storage.createDecisionLog({
+      clientId,
+      contractId: contract.id,
+      triggerType,
+      benchmarkId: null,
+      benchmarkLowerRmwh: null,
+      benchmarkUpperRmwh: null,
+      snapshotConfidence: null,
+      snapshotSourceType: null,
+      clientPriceRmwh: clientPrice.toString(),
+      clientConsumptionMwh: null,
+      contractRemainingMonths: noDataResult.remainingMonths,
+      statusResult: "no_data",
+      recommendation: noDataResult.recommendation,
+      explanationPt: noDataResult.explanation,
+      potentialSavingsR: null
+    });
+    return noDataResult;
   }
 
   const lowerBound = parseFloat(benchmark.lowerBoundRmwh);
