@@ -441,15 +441,15 @@ _Equipe Ótima Energia_`;
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
             {t("rfo.title")}
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 min-h-0 px-6">
           <div className="space-y-6 pb-4">
             <Card>
               <CardHeader className="pb-3">
@@ -829,45 +829,64 @@ _Equipe Ótima Energia_`;
                       )}
                     </Tabs>
                     
-                    <div className="flex items-center justify-between pt-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedSuppliers.length} {t("rfo.suppliers")}</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setShowPreview(false)}
-                          data-testid="button-edit-config"
-                        >
-                          {t("rfo.back")}
-                        </Button>
-                        <Button 
-                          onClick={handleSend}
-                          disabled={createRfoMutation.isPending}
-                          data-testid="button-send-rfo"
-                        >
-                          {createRfoMutation.isPending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              {t("rfo.sending")}
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-2" />
-                              {t("rfo.send")}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
         </ScrollArea>
+
+        {/* Sticky footer — always visible regardless of scroll position */}
+        <div className="shrink-0 flex items-center justify-between gap-3 border-t px-6 py-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {selectedSuppliers.length > 0 && (
+              <>
+                <Building2 className="h-4 w-4" />
+                <span>{selectedSuppliers.length} {t("rfo.suppliers")} selecionados</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {showPreview ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPreview(false)}
+                  data-testid="button-edit-config"
+                >
+                  {t("rfo.back")}
+                </Button>
+                <Button
+                  onClick={handleSend}
+                  disabled={createRfoMutation.isPending}
+                  data-testid="button-send-rfo"
+                >
+                  {createRfoMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t("rfo.sending")}
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      {t("rfo.send")}
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={generateEmailBody}
+                disabled={selectedSuppliers.length === 0}
+                data-testid="button-generate-preview"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {t("rfo.generate_preview")}
+              </Button>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
