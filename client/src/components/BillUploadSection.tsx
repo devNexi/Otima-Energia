@@ -7,7 +7,7 @@ import {
   Upload, FileText, AlertCircle, CheckCircle, X,
   Loader2, Eye, ExternalLink, AlertTriangle,
 } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 
 interface ExtractedFields {
   distributor:       string | null;
@@ -107,6 +107,7 @@ function confidenceLabel(c: number): { text: string; color: string } {
 
 export function BillUploadSection({ clientId, clientName, onClose }: BillUploadSectionProps) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [uploading, setUploading]     = useState(false);
   const [result, setResult]           = useState<PreviewResult | null>(null);
   const [error, setError]             = useState<string | null>(null);
@@ -301,16 +302,18 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
                 Enviar outra fatura
               </Button>
 
-              <Link href={`/admin/deals?clientId=${clientId}`}>
-                <Button
-                  size="sm"
-                  className="bg-violet-600 hover:bg-violet-700 gap-1.5"
-                  data-testid="button-create-deal"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Criar Negócio com esta Fatura
-                </Button>
-              </Link>
+              <Button
+                size="sm"
+                className="bg-violet-600 hover:bg-violet-700 gap-1.5"
+                data-testid="button-create-deal"
+                onClick={() => {
+                  onClose?.();
+                  navigate(`/admin/deals?clientId=${clientId}`);
+                }}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Criar Negócio com esta Fatura
+              </Button>
             </div>
           </div>
         )}
