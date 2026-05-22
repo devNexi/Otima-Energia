@@ -739,7 +739,7 @@ renan@otimaenergia.com`;
                       <div className="ml-9 mt-1 flex items-start gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5" data-testid={`inbox-notice-${dispatch.id}`}>
                         <Mail className="h-3 w-3 mt-0.5 flex-shrink-0" />
                         <span>
-                          A resposta do fornecedor chegará em <strong>renan@otimaenergia.com</strong>
+                          A resposta do fornecedor chegará em <strong>renan@otimaenergia.com</strong> e <strong>notificacoes@otimaenergia.com</strong>
                           {dispatch.messageSubject?.match(/\[RFQ-\d+\]/) && (
                             <span className="ml-1">com referência <strong>{dispatch.messageSubject.match(/\[RFQ-\d+\]/)?.[0]}</strong></span>
                           )}

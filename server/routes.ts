@@ -8067,7 +8067,7 @@ export async function registerRoutes(
       const htmlBody = `<div style="font-family:sans-serif;max-width:620px;margin:0 auto;line-height:1.6">${messageBody.replace(/\n/g, '<br>')}</div>`;
       await transporter.sendMail({
         from: '"Ótima Energia" <notificacoes@otimaenergia.com>',
-        replyTo: 'renan@otimaenergia.com',
+        replyTo: 'renan@otimaenergia.com, notificacoes@otimaenergia.com',
         to,
         subject,
         text: messageBody,
