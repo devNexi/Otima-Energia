@@ -1983,71 +1983,138 @@ export async function registerRoutes(
     }
   });
 
-  // ============== BILL UPLOAD WITH OCR ==============
+  // ============== BILL PREVIEW (display-only — no pipeline writes) ==============
+  // Uses the canonical parser-client.ts inline (no job queue).
+  // NEVER writes to bills_extracted, bill_uploads, or any deal table.
 
-  // Upload bill and process with OCR
   app.post("/api/clients/:id/upload-bill", upload.single("bill"), async (req, res) => {
+    const clientId = parseInt(req.params.id);
+    const file = req.file;
+
+    if (!file || file.buffer.length === 0) {
+      return res.status(400).json({ success: false, error: "Nenhum arquivo enviado." });
+    }
+
+    // PDF-only — same magic-byte check as deal upload endpoint
+    const hasPdfMagic = file.buffer.length >= 5 && file.buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+    const hasPdfExt   = file.originalname.toLowerCase().endsWith('.pdf');
+    if (!hasPdfExt && !hasPdfMagic) {
+      return res.status(400).json({
+        success: false,
+        error: "Apenas arquivos PDF são aceitos para análise de fatura.",
+        errorCategory: "INVALID_FORMAT",
+      });
+    }
+
+    const client = await storage.getClient(clientId);
+    if (!client) return res.status(404).json({ success: false, error: "Client not found" });
+
+    console.log(`[BillPreview] client=${clientId} file=${file.originalname} size=${file.size}b — preview only, no DB writes`);
+
+    const { isParserServiceConfigured, checkParserHealth, callParserService } = await import("./parser-client");
+
+    if (!isParserServiceConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: "Serviço de análise não configurado. Contate o suporte.",
+        errorCategory: "PARSER_NOT_CONFIGURED",
+      });
+    }
+
+    // Health check
+    let parserHealthy = false;
+    let ocrDegraded   = false;
     try {
-      const clientId = parseInt(req.params.id);
-      const file = req.file;
-      
-      if (!file) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Nenhum arquivo enviado." 
-        });
-      }
-      
-      const validTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
-      if (!validTypes.includes(file.mimetype)) {
-        return res.status(400).json({
+      const health = await checkParserHealth();
+      parserHealthy = health.healthy;
+      ocrDegraded   = health.healthy && health.details?.ocr_available === false;
+      if (!health.healthy) {
+        return res.status(503).json({
           success: false,
-          error: "Tipo de arquivo inválido. Use PDF, JPG ou PNG."
+          error: "Serviço de análise temporariamente indisponível. Tente novamente em alguns minutos.",
+          errorCategory: "PARSER_UNREACHABLE",
         });
       }
-      
-      const client = await storage.getClient(clientId);
-      if (!client) {
-        return res.status(404).json({ success: false, error: "Client not found" });
+    } catch (healthErr: any) {
+      return res.status(503).json({
+        success: false,
+        error: "Não foi possível verificar o serviço de análise.",
+        errorCategory: "PARSER_UNREACHABLE",
+      });
+    }
+
+    // Inline parse — 90 s hard cap for preview requests
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('PARSER_TIMEOUT: preview timed out after 90s')), 90_000)
+      );
+      const parsePromise = callParserService(file.buffer, file.originalname, {
+        sourceDocId: `preview-client-${clientId}`,
+        hintDocType: 'BILL',
+      });
+
+      const parsed = await Promise.race([parsePromise, timeoutPromise]);
+
+      if (!parsed.validated && parsed.status === 'failed') {
+        return res.status(422).json({
+          success: false,
+          error: "O parser não reconheceu este arquivo como uma fatura de energia. Verifique se o PDF é uma conta de luz.",
+          errorCategory: "FORMAT_NOT_RECOGNIZED",
+          warnings: parsed.warnings,
+        });
       }
-      
-      console.log(`Processing bill upload for client ${clientId}: ${file.originalname}`);
-      
-      const ocrResult = await processBillFile(file.buffer, file.mimetype);
-      
-      const billUpload = await storage.createBillUpload({
-        clientId,
-        fileName: file.originalname,
-        fileType: file.mimetype.split("/")[1],
-        fileSize: file.size,
-        ocrRawText: ocrResult.rawText,
-        ocrConfidence: ocrResult.confidence.toFixed(2),
-        ocrStatus: ocrResult.confidence >= 0.7 ? "success" : "failed",
-        ucCode: ocrResult.data.uc || null,
-        consumoKwh: ocrResult.data.consumo ? ocrResult.data.consumo.replace(/\./g, "").replace(",", ".") : null,
-        demandaKw: ocrResult.data.demanda ? ocrResult.data.demanda.replace(/\./g, "").replace(",", ".") : null,
-        valorTotal: ocrResult.data.valor ? ocrResult.data.valor.replace(/\./g, "").replace(",", ".") : null,
-        distribuidora: ocrResult.data.distribuidora || null,
-        mesReferencia: ocrResult.data.mes || null,
-        extractionMethod: "tesseract",
-        reviewedBy: "system"
+
+      const d = parsed.data || {};
+      const extracted = {
+        distributor:       d.distributor       ?? null,
+        referenceMonth:    d.referenceMonth     ?? null,
+        totalEnergyKwh:    d.totalEnergyKwh     ?? null,
+        totalAmount:       d.totalAmount        ?? null,
+        customerId:        d.customerId         ?? null,
+        ucCode:            d.ucCode ?? d.uc     ?? null,
+        tariffGroup:       d.tariffGroup        ?? null,
+        grupo:             d.grupo              ?? null,
+        subgrupo:          d.subgrupo           ?? null,
+        modalidade:        d.modalidade         ?? null,
+        bandeira:          d.bandeira           ?? null,
+        endereco:          d.endereco           ?? null,
+        invoiceKey:        d.invoiceKey         ?? null,
+        consumoPonta:      d.consumoPonta       ?? null,
+        consumoForaPonta:  d.consumoForaPonta   ?? null,
+        demandaContratada: d.demandaContratada  ?? null,
+        demandaMedida:     d.demandaMedida      ?? null,
+        confidence:        parsed.confidence,
+        warnings:          parsed.warnings,
+      };
+
+      console.log(`[BillPreview] OK confidence=${parsed.confidence} fields=${Object.values(extracted).filter(v => v != null).length}`);
+
+      return res.json({ success: true, previewOnly: true, extracted, parserHealthy, ocrDegraded });
+
+    } catch (parseErr: any) {
+      const msg = parseErr.message || '';
+      console.error(`[BillPreview] Parse error: ${msg}`);
+
+      let errorCategory = "PARSE_FAILED";
+      let userMessage   = "Erro ao analisar a fatura. Tente novamente.";
+
+      if (msg.includes('PARSER_TIMEOUT') || parseErr.name === 'AbortError') {
+        errorCategory = "TIMEOUT";
+        userMessage   = "A análise demorou mais que o esperado. Tente novamente.";
+      } else if (msg.includes('ECONNREFUSED') || msg.includes('CONNECTION_REFUSED') || msg.includes('UNREACHABLE')) {
+        errorCategory = "PARSER_UNREACHABLE";
+        userMessage   = "Serviço de análise indisponível. Tente novamente em alguns minutos.";
+      } else if (msg.includes('FORMAT_NOT_RECOGNIZED')) {
+        errorCategory = "FORMAT_NOT_RECOGNIZED";
+        userMessage   = "Formato não reconhecido. Envie uma fatura de energia em PDF.";
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: userMessage,
+        errorCategory,
+        detail: msg.substring(0, 200),
       });
-      
-      res.json({
-        success: true,
-        upload_id: billUpload.id,
-        data: ocrResult.data,
-        confidence: ocrResult.confidence,
-        needs_manual: ocrResult.needsManual,
-        message: ocrResult.confidence >= 0.7 
-          ? "Dados extraídos com sucesso! Verifique abaixo." 
-          : "OCR de baixa confiança. Por favor, verifique os dados.",
-        raw_text_preview: ocrResult.rawText.substring(0, 200) + "..."
-      });
-      
-    } catch (error: any) {
-      console.error("Error processing bill upload:", error);
-      res.status(500).json({ success: false, error: "Erro ao processar arquivo." });
     }
   });
 

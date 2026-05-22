@@ -1,0 +1,120 @@
+GOAL
+====
+Make the "Upload Bill" button on /admin/clients use the SAME parser pipeline 
+as the /admin/deals/:dealId Assembly tab upload — but in DISPLAY-ONLY mode. 
+It must NOT create a `bills_extracted` row or feed into the main deal pipeline.
+
+The user wants to upload a bill from the Clients tab, see the structured parsed
+fields (distributor, customerId, consumption, etc.) for review purposes only,
+and NOT have it impact ECOS / dossier / RFQ / Deal OS in any way.
+
+CURRENT STATE
+=============
+1) /admin/clients Upload Bill (LEGACY — needs to change)
+   - Component: client/src/components/BillUploadSection.tsx
+   - Endpoint:  POST /api/clients/:id/upload-bill  (server/routes.ts ~line 1989)
+   - Field:     "bill"
+   - Behavior:  Runs Tesseract.js OCR in-memory via processBillFile()
+                Writes a row to `bill_uploads` table
+                Returns OCR text + simple regex-extracted fields + confidence
+   - Problem:   Tesseract OCR is unreliable; doesn't use the canonical parser service
+
+2) /admin/deals/:dealId Assembly Upload (CANONICAL — works well)
+   - Component: client/src/components/deals/DealAssemblyTab.tsx
+   - Endpoint:  POST /api/deals/:dealId/bills/upload  (server/routes.ts ~line 10687)
+   - Field:     "file"
+   - Behavior:  SHA-256 dedup → object storage upload → enqueue BILL_PARSE job
+                → server/parser-client.ts calls the external Python parser
+                → writes structured fields to `bills_extracted` table
+                → polled by client, fields appear progressively
+
+WHAT TO BUILD
+=============
+Refactor the /admin/clients Upload Bill flow so it:
+
+A) On the SERVER (server/routes.ts):
+   - Keep the existing endpoint URL POST /api/clients/:id/upload-bill (don't break existing callers)
+   - Replace the body so it:
+     1. Validates PDF only (use the same magic-byte check as the deal endpoint)
+     2. Calls the SAME parser-client.ts that the deal flow uses to get structured fields
+        (look at how server/jobs.ts handles BILL_PARSE — use the same parser call,
+         but run it inline/synchronously here, not as a queued job)
+     3. Does NOT write to `bills_extracted` (this is critical — that table is the deal pipeline)
+     4. Does NOT write to `bill_uploads` either (legacy table, we're moving away from it)
+     5. Optionally uploads the file to object storage for inspection later, BUT only 
+        under a separate `client-bills-preview/` prefix so it's clearly not pipeline data.
+        If object storage is too heavy for a preview, skip the storage write entirely 
+        and just return the parsed fields.
+     6. Returns the SAME shape as the deal upload's extracted payload:
+        {
+          success: true,
+          previewOnly: true,        // <-- new flag making intent explicit
+          extracted: {
+            distributor, referenceMonth, totalEnergyKwh, totalAmount,
+            customerId, tariffGroup, grupo, subgrupo, endereco, bandeira,
+            invoiceKey, confidence, warnings
+          },
+          parserHealthy: boolean,
+          ocrDegraded: boolean
+        }
+     7. Handles the same error categories as the deal endpoint: parser unreachable,
+        parser failure, format not recognized, timeout — return clean error messages.
+
+B) On the CLIENT (client/src/components/BillUploadSection.tsx):
+   - Update the upload mutation to handle the new response shape
+   - Display the parsed fields in the same visual style as DealAssemblyTab's
+     "RFQ field tables" (group by Identity / Tariff / Consumption / Demand / Payment)
+   - Add a clear visual indicator that this is PREVIEW ONLY — e.g. a banner saying
+     "Visualização apenas — esta fatura não foi adicionada a nenhum negócio."
+     ("Preview only — this bill has not been added to any deal.")
+   - Remove the "save manual override" controls that currently exist for the OCR flow,
+     since there's nothing to save
+   - Add a button "Criar Negócio com esta Fatura" → links to /admin/deals?clientId=:id 
+     so the user can manually open a deal and re-upload the same file through the 
+     canonical path if they want it ingested. Don't auto-create a deal.
+
+C) STRICT GUARDRAILS — do not violate:
+   - NEVER insert into `bills_extracted` from this endpoint
+   - NEVER enqueue BILL_PARSE jobs from this endpoint
+   - NEVER update deal status / track readiness / ECOS state from this endpoint
+   - NEVER call any code path that touches the deal state machine
+   - The endpoint must be safe to call repeatedly with no side effects beyond
+     (optionally) writing a preview file to object storage
+
+D) ACCEPTANCE CRITERIA
+   1. Upload a PDF from /admin/clients → see structured parsed fields (distributor,
+      consumption, tariff, etc.) within ~5–15 seconds
+   2. Verify in the DB: `SELECT COUNT(*) FROM bills_extracted` is unchanged
+   3. Verify in the DB: `SELECT COUNT(*) FROM bill_uploads` is unchanged 
+      (assuming we drop the legacy bill_uploads insert too)
+   4. Verify Deal OS state is unchanged — no new deal events, no track events,
+      no ECOS regeneration
+   5. The same PDF uploaded via /admin/deals/:id Assembly STILL works exactly as 
+      before (no regression to the canonical pipeline)
+   6. UI clearly indicates "preview only" with a banner and disables any 
+      pipeline-implying CTAs
+
+CODE POINTERS
+=============
+- server/routes.ts:1989       — endpoint to rewrite
+- server/routes.ts:10687       — reference implementation (deal upload)
+- server/parser-client.ts      — the parser service caller (use this)
+- server/jobs.ts (BILL_PARSE)   — reference for how parsing is invoked
+- shared/schema.ts:billsExtracted — DO NOT TOUCH from this endpoint
+- shared/schema.ts:billUploads  — DO NOT TOUCH from this endpoint
+- client/src/components/BillUploadSection.tsx — UI to rewrite
+- client/src/components/deals/DealAssemblyTab.tsx — reference UI for the field display
+
+OUT OF SCOPE
+============
+- Don't touch the /admin/deals/:dealId Assembly upload flow at all
+- Don't change the parser service itself
+- Don't migrate existing rows in bill_uploads
+- Don't change the /portal/upload/:token client-side flow
+
+ASK ME BEFORE
+=============
+- If the parser service is currently being called async-only and you'd need to add a 
+  sync wrapper, propose your approach first
+- If the parser timeout exceeds 30 seconds, propose your approach for handling that
+  (long-poll? webhook? show progress?)

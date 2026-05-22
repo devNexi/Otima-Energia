@@ -1,30 +1,42 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, AlertCircle, CheckCircle, X, Loader2 } from "lucide-react";
+import {
+  Upload, FileText, AlertCircle, CheckCircle, X,
+  Loader2, Eye, ExternalLink, AlertTriangle,
+} from "lucide-react";
+import { Link } from "wouter";
 
-interface ExtractedData {
-  uc: string;
-  consumo: string;
-  demanda: string;
-  valor: string;
-  distribuidora: string;
-  mes: string;
+interface ExtractedFields {
+  distributor:       string | null;
+  referenceMonth:    string | null;
+  totalEnergyKwh:    number | null;
+  totalAmount:       number | null;
+  customerId:        string | null;
+  ucCode:            string | null;
+  tariffGroup:       string | null;
+  grupo:             string | null;
+  subgrupo:          string | null;
+  modalidade:        string | null;
+  bandeira:          string | null;
+  endereco:          string | null;
+  invoiceKey:        string | null;
+  consumoPonta:      number | null;
+  consumoForaPonta:  number | null;
+  demandaContratada: number | null;
+  demandaMedida:     number | null;
+  confidence:        number;
+  warnings:          string[];
 }
 
-interface OcrResult {
-  success: boolean;
-  upload_id: number;
-  data: ExtractedData;
-  confidence: number;
-  needs_manual: boolean;
-  message: string;
+interface PreviewResult {
+  success: true;
+  previewOnly: true;
+  extracted: ExtractedFields;
+  parserHealthy: boolean;
+  ocrDegraded: boolean;
 }
 
 interface BillUploadSectionProps {
@@ -33,134 +45,127 @@ interface BillUploadSectionProps {
   onClose?: () => void;
 }
 
-const DISTRIBUTORS = [
-  { value: "CPFL", label: "CPFL Energia" },
-  { value: "EDP", label: "EDP São Paulo" },
-  { value: "Enel", label: "Enel Distribuição" },
-  { value: "Cemig", label: "Cemig" },
-  { value: "Light", label: "Light" },
-  { value: "Neoenergia", label: "Neoenergia" },
-  { value: "Energisa", label: "Energisa" },
-  { value: "Celesc", label: "Celesc" },
-  { value: "CEB", label: "CEB Distribuição" },
-  { value: "Copel", label: "Copel" },
-  { value: "Equatorial", label: "Equatorial" },
-];
+type FieldRow = { label: string; value: string | number | null; key: string };
+
+function buildGroups(e: ExtractedFields): { title: string; fields: FieldRow[] }[] {
+  const fmt = (v: number | null, decimals = 2) =>
+    v != null ? v.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : null;
+
+  return [
+    {
+      title: "Identidade",
+      fields: [
+        { key: "distributor",    label: "Distribuidora",           value: e.distributor },
+        { key: "referenceMonth", label: "Mês de Referência",       value: e.referenceMonth },
+        { key: "customerId",     label: "CNPJ do Cliente",         value: e.customerId },
+        { key: "ucCode",         label: "Unidade Consumidora (UC)", value: e.ucCode },
+        { key: "endereco",       label: "Endereço",                value: e.endereco },
+        { key: "invoiceKey",     label: "Chave da Nota",           value: e.invoiceKey },
+      ],
+    },
+    {
+      title: "Tarifa",
+      fields: [
+        { key: "tariffGroup", label: "Grupo Tarifário", value: e.tariffGroup },
+        { key: "grupo",       label: "Grupo",           value: e.grupo },
+        { key: "subgrupo",    label: "Subgrupo",        value: e.subgrupo },
+        { key: "modalidade",  label: "Modalidade",      value: e.modalidade },
+        { key: "bandeira",    label: "Bandeira",        value: e.bandeira },
+      ],
+    },
+    {
+      title: "Consumo",
+      fields: [
+        { key: "totalEnergyKwh",   label: "Consumo Total (kWh)",      value: fmt(e.totalEnergyKwh) },
+        { key: "consumoPonta",     label: "Consumo Ponta (kWh)",      value: fmt(e.consumoPonta) },
+        { key: "consumoForaPonta", label: "Consumo Fora Ponta (kWh)", value: fmt(e.consumoForaPonta) },
+      ],
+    },
+    {
+      title: "Demanda",
+      fields: [
+        { key: "demandaContratada", label: "Demanda Contratada (kW)", value: fmt(e.demandaContratada) },
+        { key: "demandaMedida",     label: "Demanda Medida (kW)",     value: fmt(e.demandaMedida) },
+      ],
+    },
+    {
+      title: "Pagamento",
+      fields: [
+        { key: "totalAmount", label: "Valor Total (R$)", value: fmt(e.totalAmount) },
+      ],
+    },
+  ].map(g => ({ ...g, fields: g.fields.filter(f => f.value != null) }))
+   .filter(g => g.fields.length > 0);
+}
+
+function confidenceLabel(c: number): { text: string; color: string } {
+  const pct = c > 1 ? Math.round(c) : Math.round(c * 100);
+  if (pct >= 80) return { text: `Alta confiança (${pct}%)`, color: "text-green-700" };
+  if (pct >= 55) return { text: `Confiança média (${pct}%)`, color: "text-yellow-700" };
+  return { text: `Baixa confiança (${pct}%)`, color: "text-red-700" };
+}
 
 export function BillUploadSection({ clientId, clientName, onClose }: BillUploadSectionProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<ExtractedData>({
-    uc: "",
-    consumo: "",
-    demanda: "",
-    valor: "",
-    distribuidora: "",
-    mes: ""
-  });
+  const [uploading, setUploading]     = useState(false);
+  const [result, setResult]           = useState<PreviewResult | null>(null);
+  const [error, setError]             = useState<string | null>(null);
+  const [progressMsg, setProgressMsg] = useState("Enviando arquivo...");
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    const validTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
-      setError("Tipo de arquivo inválido. Use PDF, JPG ou PNG.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Arquivo muito grande. Máximo 10MB.");
-      return;
-    }
 
     setUploading(true);
     setError(null);
-    setProgress(10);
+    setResult(null);
+    setProgressMsg("Enviando arquivo...");
 
     try {
-      const uploadData = new FormData();
-      uploadData.append("bill", file);
+      const fd = new FormData();
+      fd.append("bill", file);
 
-      setProgress(30);
+      const progressTimer = setTimeout(() => setProgressMsg("Analisando fatura com IA..."), 3000);
 
-      const response = await fetch(`/api/clients/${clientId}/upload-bill`, {
+      const resp = await fetch(`/api/clients/${clientId}/upload-bill`, {
         method: "POST",
-        body: uploadData,
+        body: fd,
       });
 
-      setProgress(70);
+      clearTimeout(progressTimer);
 
-      const data = await response.json();
+      const data = await resp.json();
 
-      if (data.success) {
-        setProgress(100);
-        setOcrResult(data);
-        setFormData({
-          uc: data.data.uc || "",
-          consumo: data.data.consumo || "",
-          demanda: data.data.demanda || "",
-          valor: data.data.valor || "",
-          distribuidora: data.data.distribuidora || "",
-          mes: data.data.mes || ""
-        });
+      if (data.success && data.previewOnly) {
+        setResult(data as PreviewResult);
       } else {
-        setError(data.error || "Erro no processamento do arquivo.");
+        const cat = data.errorCategory || "";
+        let msg = data.error || "Erro ao processar arquivo.";
+        if (cat === "TIMEOUT")            msg = "A análise demorou mais que o esperado. Tente novamente.";
+        if (cat === "PARSER_UNREACHABLE") msg = "Serviço de análise indisponível. Tente mais tarde.";
+        if (cat === "FORMAT_NOT_RECOGNIZED") msg = "Formato não reconhecido. Envie uma fatura de energia em PDF.";
+        setError(msg);
       }
-    } catch (err) {
-      setError("Erro de conexão. Tente novamente.");
+    } catch {
+      setError("Erro de conexão. Verifique sua rede e tente novamente.");
     } finally {
       setUploading(false);
-      setTimeout(() => setProgress(0), 1000);
     }
   };
 
-  const saveManualMutation = useMutation({
-    mutationFn: async () => {
-      if (!ocrResult) return;
-      const response = await fetch(`/api/bill-uploads/${ocrResult.upload_id}/save-manual`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      toast({ title: "Dados salvos com sucesso!" });
-      setOcrResult(null);
-      setFormData({ uc: "", consumo: "", demanda: "", valor: "", distribuidora: "", mes: "" });
-      onClose?.();
-    },
-    onError: () => {
-      toast({ title: "Erro ao salvar dados.", variant: "destructive" });
-    }
-  });
-
-  const handleSave = () => {
-    if (!formData.uc || !formData.consumo || !formData.valor) {
-      toast({ 
-        title: "Campos obrigatórios", 
-        description: "Por favor, preencha UC, Consumo e Valor Total.",
-        variant: "destructive"
-      });
-      return;
-    }
-    saveManualMutation.mutate();
+  const resetState = () => {
+    setResult(null);
+    setError(null);
+    const input = document.getElementById("bill-preview-input") as HTMLInputElement | null;
+    if (input) input.value = "";
   };
-
-  const confidencePercent = ocrResult ? (() => { let c = ocrResult.confidence; if (c > 100) c = c / 10000; else if (c > 1) c = c / 100; return Math.round(c * 100); })() : 0;
 
   return (
     <Card className="border-2 border-violet-200" data-testid="bill-upload-section">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-lg flex items-center gap-2">
           <FileText className="w-5 h-5 text-violet-600" />
-          Upload de Fatura - {clientName}
+          Upload de Fatura — {clientName}
         </CardTitle>
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-close-upload">
@@ -168,30 +173,58 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
           </Button>
         )}
       </CardHeader>
+
       <CardContent className="space-y-4">
+
+        {/* Preview-only banner — always visible once a result is shown */}
+        {result && (
+          <div
+            className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-800 text-sm"
+            data-testid="preview-only-banner"
+          >
+            <Eye className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              <strong>Visualização apenas</strong> — esta fatura não foi adicionada a nenhum negócio.
+              Os dados abaixo são para conferência; nenhuma tabela do pipeline foi alterada.
+            </span>
+          </div>
+        )}
+
+        {/* Error state */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2 text-red-700" data-testid="upload-error">
-            <AlertCircle className="w-4 h-4" />
+          <div
+            className="bg-red-50 border border-red-200 rounded-md p-3 flex items-center gap-2 text-red-700 text-sm"
+            data-testid="upload-error"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
         )}
 
-        {!ocrResult && (
-          <div 
+        {/* Upload zone — hidden after success */}
+        {!result && (
+          <div
             className="border-2 border-dashed border-violet-300 rounded-lg p-8 text-center cursor-pointer hover:bg-violet-50 transition-colors"
-            onClick={() => document.getElementById("bill-file-input")?.click()}
+            onClick={() => !uploading && document.getElementById("bill-preview-input")?.click()}
             data-testid="upload-area"
           >
-            <Upload className="w-12 h-12 mx-auto mb-3 text-violet-400" />
-            <p className="font-medium text-gray-700">Clique para enviar fatura</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Arraste ou clique para enviar PDF, JPG ou PNG
-            </p>
-            <p className="text-xs text-gray-400 mt-2">Máximo: 10MB</p>
+            {uploading ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
+                <p className="text-sm font-medium text-gray-600">{progressMsg}</p>
+                <p className="text-xs text-gray-400">Aguarde — pode levar até 30 segundos</p>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-12 h-12 mx-auto mb-3 text-violet-400" />
+                <p className="font-medium text-gray-700">Clique para enviar fatura</p>
+                <p className="text-sm text-gray-500 mt-1">Apenas PDF · Máximo 10 MB</p>
+              </>
+            )}
             <input
-              id="bill-file-input"
+              id="bill-preview-input"
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf"
               className="hidden"
               onChange={handleFileSelect}
               disabled={uploading}
@@ -200,135 +233,84 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
           </div>
         )}
 
-        {uploading && (
-          <div className="space-y-2" data-testid="upload-progress">
-            <Progress value={progress} className="h-2" />
-            <p className="text-sm text-center text-gray-600">
-              {progress < 50 ? "Enviando arquivo..." : "Processando OCR..."} {progress}%
-            </p>
-          </div>
-        )}
+        {/* Parsed field tables */}
+        {result && (
+          <div className="space-y-4" data-testid="preview-result">
 
-        {ocrResult && (
-          <div className="space-y-4" data-testid="ocr-result">
-            <div className={`rounded-md p-3 flex items-center gap-2 ${
-              confidencePercent >= 70 
-                ? "bg-green-50 border border-green-200 text-green-700" 
-                : "bg-yellow-50 border border-yellow-200 text-yellow-700"
-            }`}>
-              {confidencePercent >= 70 ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : (
-                <AlertCircle className="w-5 h-5" />
+            {/* Confidence + OCR status row */}
+            <div className="flex flex-wrap items-center gap-2">
+              {(() => {
+                const { text, color } = confidenceLabel(result.extracted.confidence);
+                const isHigh = color.includes("green");
+                return (
+                  <div className={`flex items-center gap-1.5 text-sm font-medium ${color}`}>
+                    {isHigh
+                      ? <CheckCircle className="w-4 h-4" />
+                      : <AlertTriangle className="w-4 h-4" />}
+                    {text}
+                  </div>
+                );
+              })()}
+              {result.ocrDegraded && (
+                <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs">
+                  OCR degradado
+                </Badge>
               )}
-              <div>
-                <p className="font-medium">
-                  {confidencePercent >= 70 
-                    ? `Dados Extraídos (${confidencePercent}% de confiança)` 
-                    : `OCR de Baixa Confiança (${confidencePercent}%)`}
-                </p>
-                <p className="text-sm opacity-80">
-                  {ocrResult.message}
-                </p>
-              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="uc">UC (Unidade Consumidora) *</Label>
-                <Input
-                  id="uc"
-                  value={formData.uc}
-                  onChange={(e) => setFormData({ ...formData, uc: e.target.value })}
-                  placeholder="Ex: 123.456.789.0"
-                  className={formData.uc ? "border-green-300" : ""}
-                  data-testid="input-uc"
-                />
+            {/* Warnings */}
+            {result.extracted.warnings?.length > 0 && (
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 space-y-0.5">
+                {result.extracted.warnings.map((w, i) => (
+                  <p key={i}>⚠ {w}</p>
+                ))}
               </div>
-              <div>
-                <Label htmlFor="consumo">Consumo (kWh) *</Label>
-                <Input
-                  id="consumo"
-                  value={formData.consumo}
-                  onChange={(e) => setFormData({ ...formData, consumo: e.target.value })}
-                  placeholder="Ex: 1.234,56"
-                  className={formData.consumo ? "border-green-300" : ""}
-                  data-testid="input-consumo"
-                />
+            )}
+
+            {/* Field groups */}
+            {buildGroups(result.extracted).map(group => (
+              <div key={group.title}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1.5">
+                  {group.title}
+                </p>
+                <div className="rounded-md border border-gray-200 overflow-hidden">
+                  {group.fields.map((field, idx) => (
+                    <div
+                      key={field.key}
+                      className={`flex justify-between items-center px-3 py-2 text-sm ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                      data-testid={`field-${field.key}`}
+                    >
+                      <span className="text-gray-500">{field.label}</span>
+                      <span className="font-medium text-gray-800 text-right max-w-[60%] break-words">
+                        {String(field.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="demanda">Demanda (kW)</Label>
-                <Input
-                  id="demanda"
-                  value={formData.demanda}
-                  onChange={(e) => setFormData({ ...formData, demanda: e.target.value })}
-                  placeholder="Ex: 123,45"
-                  className={formData.demanda ? "border-green-300" : ""}
-                  data-testid="input-demanda"
-                />
-              </div>
-              <div>
-                <Label htmlFor="valor">Valor Total (R$) *</Label>
-                <Input
-                  id="valor"
-                  value={formData.valor}
-                  onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-                  placeholder="Ex: 1.234,56"
-                  className={formData.valor ? "border-green-300" : ""}
-                  data-testid="input-valor"
-                />
-              </div>
-              <div>
-                <Label htmlFor="distribuidora">Distribuidora</Label>
-                <Select 
-                  value={formData.distribuidora} 
-                  onValueChange={(value) => setFormData({ ...formData, distribuidora: value })}
+            ))}
+
+            {/* Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetState}
+                data-testid="button-upload-another"
+              >
+                Enviar outra fatura
+              </Button>
+
+              <Link href={`/admin/deals?clientId=${clientId}`}>
+                <Button
+                  size="sm"
+                  className="bg-violet-600 hover:bg-violet-700 gap-1.5"
+                  data-testid="button-create-deal"
                 >
-                  <SelectTrigger data-testid="select-distribuidora">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DISTRIBUTORS.map((dist) => (
-                      <SelectItem key={dist.value} value={dist.value}>
-                        {dist.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="mes">Mês Referência</Label>
-                <Input
-                  id="mes"
-                  value={formData.mes}
-                  onChange={(e) => setFormData({ ...formData, mes: e.target.value })}
-                  placeholder="MM/AAAA (Ex: 12/2024)"
-                  className={formData.mes ? "border-green-300" : ""}
-                  data-testid="input-mes"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setOcrResult(null);
-                  setFormData({ uc: "", consumo: "", demanda: "", valor: "", distribuidora: "", mes: "" });
-                }}
-                data-testid="button-cancel-bill"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSave}
-                disabled={saveManualMutation.isPending}
-                className="bg-violet-600 hover:bg-violet-700"
-                data-testid="button-save-bill"
-              >
-                {saveManualMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Salvar Dados da Fatura
-              </Button>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Criar Negócio com esta Fatura
+                </Button>
+              </Link>
             </div>
           </div>
         )}
