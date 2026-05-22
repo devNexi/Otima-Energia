@@ -610,6 +610,7 @@ export interface IStorage {
   getOverdueRfqDispatches(): Promise<RfqDispatch[]>;
   getAwaitingResponseDispatches(): Promise<RfqDispatch[]>;
   incrementFollowupCount(id: number): Promise<RfqDispatch | undefined>;
+  updateRfqDispatchSubject(id: number, subject: string): Promise<void>;
   
   // Dossier Edit Logs
   createDossierEditLog(data: InsertDossierEditLog): Promise<DossierEditLog>;
@@ -3547,6 +3548,12 @@ export class Storage implements IStorage {
       .orderBy(rfqDispatches.dueAt);
   }
   
+  async updateRfqDispatchSubject(id: number, subject: string): Promise<void> {
+    await db.update(rfqDispatches)
+      .set({ messageSubject: subject, updatedAt: new Date() })
+      .where(eq(rfqDispatches.id, id));
+  }
+
   async incrementFollowupCount(id: number): Promise<RfqDispatch | undefined> {
     const dispatch = await this.getRfqDispatch(id);
     if (!dispatch) return undefined;

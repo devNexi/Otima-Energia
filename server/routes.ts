@@ -8187,7 +8187,10 @@ export async function registerRoutes(
       // Attempt email delivery immediately for EMAIL channel
       let emailResult: { status: string; error?: string } = { status: 'SKIPPED' };
       if (channelUsed === 'EMAIL') {
-        emailResult = await sendRfqEmail(supplier?.contactEmail, emailSubject, emailBody);
+        const emailSubjectWithRef = `${emailSubject} [RFQ-${dispatch.id}]`;
+        await storage.updateRfqDispatchSubject(dispatch.id, emailSubjectWithRef);
+        dispatch.messageSubject = emailSubjectWithRef;
+        emailResult = await sendRfqEmail(supplier?.contactEmail, emailSubjectWithRef, emailBody);
         if (emailResult.status === 'SENT') {
           const slaConfig = playbook?.slaConfig as { responseDaysDefault?: number } | null;
           const daysUntilDue = slaConfig?.responseDaysDefault || 3;
@@ -8288,7 +8291,8 @@ export async function registerRoutes(
       const deal = await storage.getDeal(dispatch.dealId);
       const client = deal ? await storage.getClient(deal.clientId) : null;
 
-      const subject = dispatch.messageSubject || `Solicitação de Cotação — ${client?.companyName || 'Cliente'}`;
+      const baseSubject = dispatch.messageSubject || `Solicitação de Cotação — ${client?.companyName || 'Cliente'}`;
+      const subject = baseSubject.includes(`[RFQ-${id}]`) ? baseSubject : `${baseSubject} [RFQ-${id}]`;
       const emailBody = dispatch.messageBody || '';
       const emailResult = await sendRfqEmail(supplier?.contactEmail, subject, emailBody);
 
@@ -8976,6 +8980,47 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching demo ECOS snapshots:", error);
       res.status(500).json({ success: false, error: "Failed to fetch demo ECOS snapshots" });
+    }
+  });
+
+  // ============== RFQ REPLY INBOUND WEBHOOK ==============
+  // Zoho Mail (or any mail system) calls this when a supplier replies to an RFQ email.
+  // Subject must contain [RFQ-{id}] — added automatically to every outgoing RFQ email.
+  // Protect with the same x-zoho-intake-key header as the Zoho CRM intake.
+  app.post("/api/intake/rfq-reply", async (req, res) => {
+    const intakeKey = req.headers["x-zoho-intake-key"] as string;
+    const expectedKey = process.env.ZOHO_INTAKE_KEY;
+    if (!expectedKey || intakeKey !== expectedKey) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    try {
+      const { subject = "", from = "", body = "" } = req.body as { subject?: string; from?: string; body?: string };
+
+      // Extract dispatch ID from subject: look for [RFQ-{id}]
+      const match = subject.match(/\[RFQ-(\d+)\]/i);
+      if (!match) {
+        return res.status(400).json({ success: false, error: "No [RFQ-{id}] reference found in subject", subject });
+      }
+
+      const dispatchId = parseInt(match[1]);
+      const dispatch = await storage.getRfqDispatch(dispatchId);
+      if (!dispatch) {
+        return res.status(404).json({ success: false, error: `Dispatch ${dispatchId} not found` });
+      }
+
+      if (dispatch.status === 'RESPONDED') {
+        return res.json({ success: true, alreadyResponded: true, dispatchId });
+      }
+
+      await storage.markRfqDispatchResponded(dispatchId);
+
+      console.log(`[RFQ-Reply] Dispatch ${dispatchId} auto-marked RESPONDED via inbound webhook. From: ${from}`);
+
+      res.json({ success: true, dispatchId, message: `Dispatch ${dispatchId} marked as RESPONDED` });
+    } catch (error: any) {
+      console.error("[RFQ-Reply] Webhook error:", error);
+      res.status(500).json({ success: false, error: "Failed to process reply" });
     }
   });
 
