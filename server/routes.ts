@@ -713,7 +713,7 @@ export async function registerRoutes(
 
       console.log("[partner-application] received:\n" + summary);
 
-      const smtpPass = process.env.SMTP_PASS;
+      const smtpPass = process.env.OTIMA_SMTP_PASS;
       if (smtpPass) {
         try {
           const nodemailer = await import("nodemailer");
@@ -743,19 +743,31 @@ export async function registerRoutes(
   app.get("/api/setup-check", (_req, res) => {
     const check = (key: string) => !!(process.env[key] && process.env[key]!.trim().length > 0);
     const adsReadiness = checkGoogleAdsReadiness();
+
+    const landingRequired = [
+      "OTIMA_LEADS_GOOGLE_CLIENT_ID",
+      "OTIMA_LEADS_GOOGLE_CLIENT_SECRET",
+      "OTIMA_LEADS_GOOGLE_REFRESH_TOKEN",
+      "OTIMA_LEADS_SHEETS_SPREADSHEET_ID",
+      "OTIMA_LEADS_DRIVE_FOLDER_ID",
+      "OTIMA_SMTP_PASS",
+    ];
+
     res.json({
-      integrations: {
-        GOOGLE_SHEETS_SPREADSHEET_ID: check("GOOGLE_SHEETS_SPREADSHEET_ID"),
-        GOOGLE_DRIVE_FOLDER_ID: check("GOOGLE_DRIVE_FOLDER_ID"),
-        GOOGLE_CLIENT_ID: check("GOOGLE_CLIENT_ID"),
-        GOOGLE_CLIENT_SECRET: check("GOOGLE_CLIENT_SECRET"),
-        GOOGLE_REFRESH_TOKEN: check("GOOGLE_REFRESH_TOKEN"),
-        SMTP_PASS: check("SMTP_PASS"),
-        NEXT_PUBLIC_GTM_ID: check("NEXT_PUBLIC_GTM_ID") || check("VITE_GTM_ID"),
-        NEXT_PUBLIC_GA_MEASUREMENT_ID: check("NEXT_PUBLIC_GA_MEASUREMENT_ID") || check("VITE_GA_MEASUREMENT_ID"),
+      landing_page: {
+        ready: landingRequired.every(check),
+        required: Object.fromEntries(landingRequired.map(k => [k, check(k)])),
       },
-      google_ads: adsReadiness,
-      ready: check("SMTP_PASS") && check("GOOGLE_SHEETS_SPREADSHEET_ID") && check("GOOGLE_DRIVE_FOLDER_ID") && check("GOOGLE_CLIENT_ID") && check("GOOGLE_CLIENT_SECRET") && check("GOOGLE_REFRESH_TOKEN"),
+      tracking: {
+        gtm: check("OTIMA_GTM_ID"),
+        ga4: check("OTIMA_GA_MEASUREMENT_ID"),
+      },
+      google_ads_keyword_research: {
+        ready: adsReadiness.ready,
+        required: Object.fromEntries(adsReadiness.required.map((k: string) => [k, check(k)])),
+        optional: Object.fromEntries(adsReadiness.optional.map((k: string) => [k, check(k)])),
+        fields: adsReadiness.fields,
+      },
     });
   });
 
@@ -8051,7 +8063,7 @@ export async function registerRoutes(
     messageBody: string
   ): Promise<{ status: 'SENT' | 'FAILED' | 'NO_EMAIL' | 'NO_SMTP'; error?: string }> => {
     if (!to) return { status: 'NO_EMAIL' };
-    const smtpPass = process.env.SMTP_PASS;
+    const smtpPass = process.env.OTIMA_SMTP_PASS;
     if (!smtpPass) {
       console.warn('[RFQ] SMTP_PASS not configured — RFQ email not sent');
       return { status: 'NO_SMTP' };
@@ -12358,14 +12370,14 @@ export async function registerRoutes(
       if (recipientEmail && proposal.publicId) {
         try {
           const nodemailer = await import('nodemailer');
-          const smtpHost = process.env.SMTP_HOST;
-          const smtpUser = process.env.SMTP_USER;
-          const smtpPass = process.env.SMTP_PASS;
+          const smtpHost = process.env.OTIMA_SMTP_HOST;
+          const smtpUser = process.env.OTIMA_SMTP_USER;
+          const smtpPass = process.env.OTIMA_SMTP_PASS;
           
           if (smtpHost && smtpUser && smtpPass) {
             const transporter = nodemailer.createTransport({
               host: smtpHost,
-              port: parseInt(process.env.SMTP_PORT || '587'),
+              port: parseInt(process.env.OTIMA_SMTP_PORT || '587'),
               secure: process.env.SMTP_SECURE === 'true',
               auth: { user: smtpUser, pass: smtpPass },
             });
@@ -13229,7 +13241,7 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "Email and portalUrl required" });
       }
 
-      const smtpPass = process.env.SMTP_PASS;
+      const smtpPass = process.env.OTIMA_SMTP_PASS;
       if (!smtpPass) {
         return res.status(500).json({ success: false, error: "SMTP not configured" });
       }
@@ -13539,7 +13551,7 @@ export async function registerRoutes(
 
       const sentEventId = `intake_send_${trackId}_${Date.now()}`;
 
-      const smtpPass = process.env.SMTP_PASS;
+      const smtpPass = process.env.OTIMA_SMTP_PASS;
       if (!smtpPass) {
         return res.status(500).json({ success: false, error: "SMTP not configured" });
       }
@@ -13833,7 +13845,7 @@ export async function registerRoutes(
       const client = deal.clientId ? await storage.getClient(deal.clientId) : null;
       const companyName = client?.companyName || chaseState.contactName || 'Cliente';
 
-      const smtpPass = process.env.SMTP_PASS;
+      const smtpPass = process.env.OTIMA_SMTP_PASS;
       if (!smtpPass) return res.status(500).json({ success: false, error: "SMTP not configured" });
 
       const nodemailer = await import('nodemailer');
@@ -14386,14 +14398,14 @@ export async function registerRoutes(
       if (channel !== 'whatsapp') {
         try {
           const nodemailer = await import('nodemailer');
-          const smtpHost = process.env.SMTP_HOST;
-          const smtpUser = process.env.SMTP_USER;
-          const smtpPass = process.env.SMTP_PASS;
+          const smtpHost = process.env.OTIMA_SMTP_HOST;
+          const smtpUser = process.env.OTIMA_SMTP_USER;
+          const smtpPass = process.env.OTIMA_SMTP_PASS;
 
           if (smtpHost && smtpUser && smtpPass) {
             const transporter = nodemailer.createTransport({
               host: smtpHost,
-              port: parseInt(process.env.SMTP_PORT || '587'),
+              port: parseInt(process.env.OTIMA_SMTP_PORT || '587'),
               secure: process.env.SMTP_SECURE === 'true',
               auth: { user: smtpUser, pass: smtpPass },
             });
@@ -16051,14 +16063,14 @@ export async function registerRoutes(
 
       try {
         const nodemailer = await import("nodemailer");
-        const smtpHost = process.env.SMTP_HOST;
-        const smtpUser = process.env.SMTP_USER;
-        const smtpPass = process.env.SMTP_PASS;
+        const smtpHost = process.env.OTIMA_SMTP_HOST;
+        const smtpUser = process.env.OTIMA_SMTP_USER;
+        const smtpPass = process.env.OTIMA_SMTP_PASS;
 
         if (smtpHost && smtpUser && smtpPass) {
           const transporter = nodemailer.createTransport({
             host: smtpHost,
-            port: parseInt(process.env.SMTP_PORT || "587"),
+            port: parseInt(process.env.OTIMA_SMTP_PORT || "587"),
             secure: process.env.SMTP_SECURE === "true",
             auth: { user: smtpUser, pass: smtpPass },
           });

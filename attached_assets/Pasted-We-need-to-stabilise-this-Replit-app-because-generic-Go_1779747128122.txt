@@ -1,0 +1,246 @@
+We need to stabilise this Replit app because generic Google secrets collided with another Brazil API product.
+
+Do not change the public landing page design.
+
+Goal:
+Rename all environment variables/secrets in this app to unique Otima-specific names. Remove generic GOOGLE_* fallbacks so this app cannot accidentally use credentials from another project.
+
+1. Audit current environment variable usage
+
+Search the entire codebase for:
+- GOOGLE_
+- SMTP_
+- NEXT_PUBLIC_
+- VITE_
+- ADMIN_
+- EMAIL_
+
+Show me every env var currently used and where it is used.
+
+2. Replace lead capture Google OAuth secrets
+
+Replace any generic lead capture Google OAuth variables:
+
+OLD:
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REFRESH_TOKEN
+GOOGLE_SHEETS_SPREADSHEET_ID
+GOOGLE_DRIVE_FOLDER_ID
+
+NEW:
+OTIMA_LEADS_GOOGLE_CLIENT_ID
+OTIMA_LEADS_GOOGLE_CLIENT_SECRET
+OTIMA_LEADS_GOOGLE_REFRESH_TOKEN
+OTIMA_LEADS_SHEETS_SPREADSHEET_ID
+OTIMA_LEADS_DRIVE_FOLDER_ID
+
+Important:
+The lead capture OAuth token should only be used for Sheets/Drive lead handling, not Google Ads.
+
+Scopes for this token:
+- https://www.googleapis.com/auth/spreadsheets
+- https://www.googleapis.com/auth/drive.file
+
+3. Replace Google Ads API secrets
+
+Replace all generic/fallback Google Ads variables with:
+
+OTIMA_ADS_DEVELOPER_TOKEN
+OTIMA_ADS_CUSTOMER_ID
+OTIMA_ADS_CLIENT_ID
+OTIMA_ADS_CLIENT_SECRET
+OTIMA_ADS_REFRESH_TOKEN
+OTIMA_ADS_LOGIN_CUSTOMER_ID
+OTIMA_ADS_API_VERSION
+
+Do not fall back to GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET or GOOGLE_REFRESH_TOKEN.
+
+The Google Ads OAuth token should use this scope:
+- https://www.googleapis.com/auth/adwords
+
+Set the default API version to v24, but allow override with:
+OTIMA_ADS_API_VERSION
+
+The keyword ideas endpoint should be:
+https://googleads.googleapis.com/${OTIMA_ADS_API_VERSION}/customers/${customerId}:generateKeywordIdeas
+
+Use:
+- developer-token header
+- Authorization: Bearer access_token
+- login-customer-id only if OTIMA_ADS_LOGIN_CUSTOMER_ID exists
+- Content-Type: application/json
+
+4. Replace email secrets
+
+Replace generic email secrets with:
+
+OTIMA_SMTP_PASS
+OTIMA_EMAIL_FROM
+OTIMA_INTERNAL_LEAD_EMAIL
+
+If the code needs SMTP host, port or user, use:
+OTIMA_SMTP_HOST
+OTIMA_SMTP_PORT
+OTIMA_SMTP_USER
+
+Set default internal lead email to:
+callum@otimaenergia.com
+
+But prefer OTIMA_INTERNAL_LEAD_EMAIL if present.
+
+5. Replace tracking variables
+
+Replace:
+VITE_GTM_ID
+NEXT_PUBLIC_GTM_ID
+VITE_GA_MEASUREMENT_ID
+NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+With:
+OTIMA_GTM_ID
+OTIMA_GA_MEASUREMENT_ID
+
+If Vite requires client-exposed variables, map them safely in vite.config.ts from the OTIMA_* server envs. Do not require duplicate public secret names.
+
+6. Replace admin secret
+
+Use:
+OTIMA_ADMIN_PASSWORD
+
+Do not use generic ADMIN_PASSWORD.
+
+7. Update setup-check
+
+Update /api/setup-check to return separate readiness blocks:
+
+{
+  "landing_page": {
+    "ready": true/false,
+    "required": [
+      "OTIMA_LEADS_GOOGLE_CLIENT_ID",
+      "OTIMA_LEADS_GOOGLE_CLIENT_SECRET",
+      "OTIMA_LEADS_GOOGLE_REFRESH_TOKEN",
+      "OTIMA_LEADS_SHEETS_SPREADSHEET_ID",
+      "OTIMA_LEADS_DRIVE_FOLDER_ID",
+      "OTIMA_SMTP_PASS"
+    ]
+  },
+  "tracking": {
+    "gtm": true/false,
+    "ga4": true/false
+  },
+  "google_ads_keyword_research": {
+    "ready": true/false,
+    "required": [
+      "OTIMA_ADS_DEVELOPER_TOKEN",
+      "OTIMA_ADS_CUSTOMER_ID",
+      "OTIMA_ADS_CLIENT_ID",
+      "OTIMA_ADS_CLIENT_SECRET",
+      "OTIMA_ADS_REFRESH_TOKEN",
+      "OTIMA_ADS_API_VERSION"
+    ],
+    "optional": [
+      "OTIMA_ADS_LOGIN_CUSTOMER_ID"
+    ]
+  }
+}
+
+Do not expose secret values.
+
+8. Add OAuth token generator scripts
+
+Create or update setup-only scripts:
+
+scripts/get-otima-leads-refresh-token.js
+Scopes:
+- https://www.googleapis.com/auth/spreadsheets
+- https://www.googleapis.com/auth/drive.file
+
+Uses:
+OTIMA_LEADS_GOOGLE_CLIENT_ID
+OTIMA_LEADS_GOOGLE_CLIENT_SECRET
+
+Outputs:
+OTIMA_LEADS_GOOGLE_REFRESH_TOKEN
+
+scripts/get-otima-ads-refresh-token.js
+Scopes:
+- https://www.googleapis.com/auth/adwords
+
+Uses:
+OTIMA_ADS_CLIENT_ID
+OTIMA_ADS_CLIENT_SECRET
+
+Outputs:
+OTIMA_ADS_REFRESH_TOKEN
+
+These scripts must not affect production code.
+
+9. Update Google Ads diagnostics
+
+Update:
+/api/admin/google-ads-diagnostics
+
+Use only OTIMA_ADS_* secrets.
+
+It should show:
+- OTIMA_ADS_DEVELOPER_TOKEN present true/false
+- OTIMA_ADS_CUSTOMER_ID present and digits-only true/false
+- OTIMA_ADS_CLIENT_ID present true/false
+- OTIMA_ADS_CLIENT_SECRET present true/false
+- OTIMA_ADS_REFRESH_TOKEN present true/false
+- OTIMA_ADS_LOGIN_CUSTOMER_ID present true/false if used
+- OTIMA_ADS_API_VERSION
+- endpoint URL being used, without exposing secrets
+- access token generation success/failure
+
+Also support:
+/api/admin/google-ads-diagnostics?test=1
+
+This should run one live keyword idea test with:
+mercado livre de energia
+
+10. Keep keyword research page
+
+Keep:
+/admin/keyword-research
+
+Keep the Batch Name field.
+
+Make sure CSV exports include:
+batch_name
+
+11. Update SETUP.md
+
+Rewrite SETUP.md so it only references the new OTIMA_* secret names.
+
+Include:
+- Which secrets are for lead capture
+- Which secrets are for Google Ads keyword research
+- How to regenerate each OAuth refresh token
+- How to test /api/setup-check
+- How to test lead form
+- How to test Google Ads diagnostics
+- How to run the first keyword batch
+
+12. Do not delete old secrets automatically
+
+Do not remove old Replit secrets yet. Just stop the app from reading them.
+
+After the new OTIMA_* secrets are working, I will manually clean old generic secrets from Replit.
+
+13. Final tests to run
+
+After the code change, run:
+
+- /api/setup-check
+- submit test lead without bill
+- submit test lead with bill
+- /api/admin/google-ads-diagnostics
+- /api/admin/google-ads-diagnostics?test=1
+- /admin/keyword-research with:
+  mercado livre de energia
+  mercado livre energia empresa
+
+Report exact results.

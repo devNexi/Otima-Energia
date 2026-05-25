@@ -244,7 +244,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
       try {
         const nodemailer = await import('nodemailer');
-        const smtpPass = process.env.SMTP_PASS;
+        const smtpPass = process.env.OTIMA_SMTP_PASS;
         if (smtpPass) {
           const transporter = nodemailer.createTransport({
             host: "smtp.zoho.com",
@@ -686,7 +686,7 @@ async function processJob(job: typeof jobs.$inferSelect): Promise<void> {
 
       try {
         const nodemailer = await import('nodemailer');
-        const smtpPass = process.env.SMTP_PASS;
+        const smtpPass = process.env.OTIMA_SMTP_PASS;
         if (smtpPass) {
           const transporter = nodemailer.createTransport({
             host: "smtp.zoho.com",

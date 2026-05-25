@@ -41,19 +41,14 @@ export interface ClassifiedKeyword extends RawKeywordResult {
 // ─── OAuth2 access token ──────────────────────────────────────────────────────
 
 async function getAdsAccessToken(): Promise<string> {
-  const clientId =
-    process.env.GOOGLE_ADS_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret =
-    process.env.GOOGLE_ADS_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken =
-    process.env.GOOGLE_ADS_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
+  const clientId = process.env.OTIMA_ADS_CLIENT_ID;
+  const clientSecret = process.env.OTIMA_ADS_CLIENT_SECRET;
+  const refreshToken = process.env.OTIMA_ADS_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error(
-      "Google Ads OAuth credentials missing. Set GOOGLE_ADS_CLIENT_ID, " +
-        "GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_REFRESH_TOKEN (or fall back to " +
-        "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN if the " +
-        "refresh token includes the adwords scope)."
+      "Google Ads OAuth credentials missing. Set OTIMA_ADS_CLIENT_ID, " +
+        "OTIMA_ADS_CLIENT_SECRET, and OTIMA_ADS_REFRESH_TOKEN."
     );
   }
 
@@ -71,10 +66,10 @@ async function getAdsAccessToken(): Promise<string> {
 const GEO_BRAZIL = "geoTargetConstants/2076";
 const LANG_PORTUGUESE = "languageConstants/1014";
 
-// Default: v19 (Feb 2025). Override via GOOGLE_ADS_API_VERSION env var if
-// Google has sunset v19 — check https://developers.google.com/google-ads/api/docs/sunset-dates
+// Default: v24. Override via OTIMA_ADS_API_VERSION env var.
+// Check sunset dates: https://developers.google.com/google-ads/api/docs/sunset-dates
 function getApiVersion(): string {
-  return process.env.GOOGLE_ADS_API_VERSION?.trim() || "v19";
+  return process.env.OTIMA_ADS_API_VERSION?.trim() || "v24";
 }
 
 function buildKeywordIdeasUrl(customerId: string): string {
@@ -88,7 +83,7 @@ function parseAdsError(status: number, contentType: string, body: string): strin
     return (
       `Google Ads API returned ${status} (HTML/Not Found). ` +
       `The API version "${getApiVersion()}" is likely sunset or the endpoint path is wrong. ` +
-      `Set GOOGLE_ADS_API_VERSION to a supported version (e.g. v19, v20, v21) and check ` +
+      `Set OTIMA_ADS_API_VERSION to a supported version (e.g. v24) and check ` +
       `https://developers.google.com/google-ads/api/docs/sunset-dates. ` +
       `Run /api/admin/google-ads-diagnostics?test=1 for details.`
     );
@@ -114,18 +109,18 @@ export async function fetchKeywordIdeas(params: {
   seedKeywords: string[];
   includeAdultKeywords?: boolean;
 }): Promise<RawKeywordResult[]> {
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
-  const rawCustomerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
-  const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID;
+  const developerToken = process.env.OTIMA_ADS_DEVELOPER_TOKEN;
+  const rawCustomerId = process.env.OTIMA_ADS_CUSTOMER_ID;
+  const loginCustomerId = process.env.OTIMA_ADS_LOGIN_CUSTOMER_ID;
 
   if (!developerToken)
-    throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured.");
+    throw new Error("OTIMA_ADS_DEVELOPER_TOKEN not configured.");
   if (!rawCustomerId)
-    throw new Error("GOOGLE_ADS_CUSTOMER_ID not configured.");
+    throw new Error("OTIMA_ADS_CUSTOMER_ID not configured.");
 
   const customerId = rawCustomerId.replace(/-/g, "");
   if (!/^\d+$/.test(customerId))
-    throw new Error(`GOOGLE_ADS_CUSTOMER_ID must be digits only. Got: "${rawCustomerId}"`);
+    throw new Error(`OTIMA_ADS_CUSTOMER_ID must be digits only. Got: "${rawCustomerId}"`);
 
   const accessToken = await getAdsAccessToken();
 
@@ -490,26 +485,42 @@ export async function runKeywordResearch(params: {
 
 export function checkGoogleAdsReadiness(): {
   ready: boolean;
+  required: string[];
+  optional: string[];
   fields: Record<string, boolean>;
 } {
   const has = (k: string) =>
     !!(process.env[k] && process.env[k]!.trim().length > 0);
 
-  const hasDeveloperToken = has("GOOGLE_ADS_DEVELOPER_TOKEN");
-  const hasClientId = has("GOOGLE_ADS_CLIENT_ID") || has("GOOGLE_CLIENT_ID");
-  const hasClientSecret = has("GOOGLE_ADS_CLIENT_SECRET") || has("GOOGLE_CLIENT_SECRET");
-  const hasRefreshToken = has("GOOGLE_ADS_REFRESH_TOKEN") || has("GOOGLE_REFRESH_TOKEN");
-  const hasCustomerId = has("GOOGLE_ADS_CUSTOMER_ID");
+  const hasDeveloperToken = has("OTIMA_ADS_DEVELOPER_TOKEN");
+  const hasClientId = has("OTIMA_ADS_CLIENT_ID");
+  const hasClientSecret = has("OTIMA_ADS_CLIENT_SECRET");
+  const hasRefreshToken = has("OTIMA_ADS_REFRESH_TOKEN");
+  const hasCustomerId = has("OTIMA_ADS_CUSTOMER_ID");
+
+  const rawCustomerId = process.env.OTIMA_ADS_CUSTOMER_ID || "";
+  const customerIdDigitsOnly = /^\d+$/.test(rawCustomerId.replace(/-/g, ""));
 
   return {
-    ready: hasDeveloperToken && hasClientId && hasClientSecret && hasRefreshToken && hasCustomerId,
+    ready: hasDeveloperToken && hasClientId && hasClientSecret && hasRefreshToken && hasCustomerId && customerIdDigitsOnly,
+    required: [
+      "OTIMA_ADS_DEVELOPER_TOKEN",
+      "OTIMA_ADS_CUSTOMER_ID",
+      "OTIMA_ADS_CLIENT_ID",
+      "OTIMA_ADS_CLIENT_SECRET",
+      "OTIMA_ADS_REFRESH_TOKEN",
+      "OTIMA_ADS_API_VERSION",
+    ],
+    optional: ["OTIMA_ADS_LOGIN_CUSTOMER_ID"],
     fields: {
-      GOOGLE_ADS_DEVELOPER_TOKEN: hasDeveloperToken,
-      "GOOGLE_ADS_CLIENT_ID (or GOOGLE_CLIENT_ID)": hasClientId,
-      "GOOGLE_ADS_CLIENT_SECRET (or GOOGLE_CLIENT_SECRET)": hasClientSecret,
-      "GOOGLE_ADS_REFRESH_TOKEN (or GOOGLE_REFRESH_TOKEN)": hasRefreshToken,
-      GOOGLE_ADS_CUSTOMER_ID: hasCustomerId,
-      GOOGLE_ADS_LOGIN_CUSTOMER_ID: has("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
+      OTIMA_ADS_DEVELOPER_TOKEN: hasDeveloperToken,
+      "OTIMA_ADS_CUSTOMER_ID (present)": hasCustomerId,
+      "OTIMA_ADS_CUSTOMER_ID (digits only)": customerIdDigitsOnly,
+      OTIMA_ADS_CLIENT_ID: hasClientId,
+      OTIMA_ADS_CLIENT_SECRET: hasClientSecret,
+      OTIMA_ADS_REFRESH_TOKEN: hasRefreshToken,
+      OTIMA_ADS_LOGIN_CUSTOMER_ID: has("OTIMA_ADS_LOGIN_CUSTOMER_ID"),
+      OTIMA_ADS_API_VERSION: has("OTIMA_ADS_API_VERSION"),
     },
   };
 }
@@ -520,7 +531,7 @@ export async function runDiagnostics(testMode: boolean): Promise<Record<string, 
   const has = (k: string) =>
     !!(process.env[k] && process.env[k]!.trim().length > 0);
 
-  const rawCustomerId = process.env.GOOGLE_ADS_CUSTOMER_ID || "";
+  const rawCustomerId = process.env.OTIMA_ADS_CUSTOMER_ID || "";
   const customerId = rawCustomerId.replace(/-/g, "");
   const customerIdDigitsOnly = /^\d+$/.test(customerId);
   const apiVersion = getApiVersion();
@@ -530,13 +541,14 @@ export async function runDiagnostics(testMode: boolean): Promise<Record<string, 
 
   const diag: Record<string, unknown> = {
     secrets: {
-      GOOGLE_ADS_DEVELOPER_TOKEN: has("GOOGLE_ADS_DEVELOPER_TOKEN"),
-      "GOOGLE_ADS_CUSTOMER_ID (present)": has("GOOGLE_ADS_CUSTOMER_ID"),
-      "GOOGLE_ADS_CUSTOMER_ID (digits only)": customerIdDigitsOnly,
-      "OAuth client ID (ADS or GOOGLE)": has("GOOGLE_ADS_CLIENT_ID") || has("GOOGLE_CLIENT_ID"),
-      "OAuth client secret (ADS or GOOGLE)": has("GOOGLE_ADS_CLIENT_SECRET") || has("GOOGLE_CLIENT_SECRET"),
-      "Refresh token (ADS or GOOGLE)": has("GOOGLE_ADS_REFRESH_TOKEN") || has("GOOGLE_REFRESH_TOKEN"),
-      GOOGLE_ADS_LOGIN_CUSTOMER_ID: has("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
+      OTIMA_ADS_DEVELOPER_TOKEN: has("OTIMA_ADS_DEVELOPER_TOKEN"),
+      "OTIMA_ADS_CUSTOMER_ID (present)": has("OTIMA_ADS_CUSTOMER_ID"),
+      "OTIMA_ADS_CUSTOMER_ID (digits only)": customerIdDigitsOnly,
+      OTIMA_ADS_CLIENT_ID: has("OTIMA_ADS_CLIENT_ID"),
+      OTIMA_ADS_CLIENT_SECRET: has("OTIMA_ADS_CLIENT_SECRET"),
+      OTIMA_ADS_REFRESH_TOKEN: has("OTIMA_ADS_REFRESH_TOKEN"),
+      OTIMA_ADS_LOGIN_CUSTOMER_ID: has("OTIMA_ADS_LOGIN_CUSTOMER_ID"),
+      OTIMA_ADS_API_VERSION: has("OTIMA_ADS_API_VERSION"),
     },
     api_version: apiVersion,
     endpoint_url: endpointUrl,
@@ -553,14 +565,14 @@ export async function runDiagnostics(testMode: boolean): Promise<Record<string, 
   if (!testMode) return diag;
 
   // Test mode: call the API with one seed keyword
-  if (!has("GOOGLE_ADS_DEVELOPER_TOKEN") || !customerIdDigitsOnly || !customerId) {
-    diag.test = { success: false, message: "Cannot test — missing GOOGLE_ADS_DEVELOPER_TOKEN or valid GOOGLE_ADS_CUSTOMER_ID." };
+  if (!has("OTIMA_ADS_DEVELOPER_TOKEN") || !customerIdDigitsOnly || !customerId) {
+    diag.test = { success: false, message: "Cannot test — missing OTIMA_ADS_DEVELOPER_TOKEN or valid OTIMA_ADS_CUSTOMER_ID." };
     return diag;
   }
 
   try {
-    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN!;
-    const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID;
+    const developerToken = process.env.OTIMA_ADS_DEVELOPER_TOKEN!;
+    const loginCustomerId = process.env.OTIMA_ADS_LOGIN_CUSTOMER_ID;
     const accessToken = await getAdsAccessToken();
 
     const headers: Record<string, string> = {

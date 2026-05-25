@@ -2,12 +2,12 @@ import { randomUUID } from "crypto";
 
 // ── Shared OAuth2 client ───────────────────────────────────────────────────────
 async function getGoogleAuth() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const clientId = process.env.OTIMA_LEADS_GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.OTIMA_LEADS_GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.OTIMA_LEADS_GOOGLE_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
-    const msg = "[Landing] CRITICAL: Google OAuth credentials not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.";
+    const msg = "[Landing] CRITICAL: Google OAuth credentials not configured. Set OTIMA_LEADS_GOOGLE_CLIENT_ID, OTIMA_LEADS_GOOGLE_CLIENT_SECRET, OTIMA_LEADS_GOOGLE_REFRESH_TOKEN.";
     console.error(msg);
     throw new Error(msg);
   }
@@ -20,10 +20,10 @@ async function getGoogleAuth() {
 
 // ── Google Sheets ──────────────────────────────────────────────────────────────
 export async function appendToGoogleSheet(row: Record<string, any>): Promise<void> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  const spreadsheetId = process.env.OTIMA_LEADS_SHEETS_SPREADSHEET_ID;
 
   if (!spreadsheetId) {
-    const msg = "[Landing] CRITICAL: GOOGLE_SHEETS_SPREADSHEET_ID not configured — lead NOT saved to sheet.";
+    const msg = "[Landing] CRITICAL: OTIMA_LEADS_SHEETS_SPREADSHEET_ID not configured — lead NOT saved to sheet.";
     console.error(msg);
     throw new Error(msg);
   }
@@ -65,10 +65,10 @@ export async function uploadToDrive(
   filename: string,
   mimeType: string
 ): Promise<string | null> {
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  const folderId = process.env.OTIMA_LEADS_DRIVE_FOLDER_ID;
 
   if (!folderId) {
-    const msg = "[Landing] CRITICAL: GOOGLE_DRIVE_FOLDER_ID not configured — bill NOT uploaded.";
+    const msg = "[Landing] CRITICAL: OTIMA_LEADS_DRIVE_FOLDER_ID not configured — bill NOT uploaded.";
     console.error(msg);
     throw new Error(msg);
   }
@@ -132,13 +132,14 @@ export async function sendLandingEmails(params: {
   submittedAt: string;
   leadId: string;
 }): Promise<void> {
-  const smtpPass = process.env.SMTP_PASS;
+  const smtpPass = process.env.OTIMA_SMTP_PASS;
   if (!smtpPass) {
-    console.error("[Landing] SMTP_PASS not set — internal notification NOT sent. Lead may be lost if Sheet is also not configured.");
+    console.error("[Landing] OTIMA_SMTP_PASS not set — internal notification NOT sent. Lead may be lost if Sheet is also not configured.");
     return;
   }
 
-  const fromEmail = process.env.EMAIL_FROM || "notificacoes@otimaenergia.com";
+  const fromEmail = process.env.OTIMA_EMAIL_FROM || "notificacoes@otimaenergia.com";
+  const internalLeadEmail = process.env.OTIMA_INTERNAL_LEAD_EMAIL || "callum@otimaenergia.com";
 
   try {
     const nodemailer = await import("nodemailer");
@@ -182,7 +183,7 @@ User Agent: ${params.userAgent || "—"}
 
     await transporter.sendMail({
       from: `"Ótima Energia" <${fromEmail}>`,
-      to: "callum@otimaenergia.com",
+      to: internalLeadEmail,
       subject: `Novo lead Google Ads - ${params.empresa} - ${params.valorConta}`,
       text: internalBody,
     });
@@ -201,7 +202,7 @@ www.otimaenergia.com`;
 
     await transporter.sendMail({
       from: `"Ótima Energia" <${fromEmail}>`,
-      replyTo: "callum@otimaenergia.com",
+      replyTo: internalLeadEmail,
       to: params.email,
       subject: "Recebemos sua solicitação de auditoria gratuita | Ótima Energia",
       text: confirmBody,
