@@ -52,7 +52,7 @@ export function Hero() {
             }}
           >
             Menos custo. Mais clareza.{" "}
-            <span style={{ color: "#c88ff5" }}>A decisão certa para a energia da sua empresa.</span>
+            <span style={{ color: "#f0dcff" }}>A decisão certa para a energia da sua empresa.</span>
           </h1>
 
           <p
