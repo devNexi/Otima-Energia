@@ -742,9 +742,8 @@ export async function registerRoutes(
   // ── Setup Check (public, no secrets exposed) ─────────────────────────────────
   app.get("/api/setup-check", (_req, res) => {
     const check = (key: string) => !!(process.env[key] && process.env[key]!.trim().length > 0);
-    const adsReadiness = checkGoogleAdsReadiness();
 
-    const landingRequired = [
+    const landingCoreKeys = [
       "OTIMA_LEADS_GOOGLE_CLIENT_ID",
       "OTIMA_LEADS_GOOGLE_CLIENT_SECRET",
       "OTIMA_LEADS_GOOGLE_REFRESH_TOKEN",
@@ -753,20 +752,48 @@ export async function registerRoutes(
       "OTIMA_SMTP_PASS",
     ];
 
+    const rawCustomerId = process.env.OTIMA_ADS_CUSTOMER_ID || "";
+    const customerIdDigitsOnly = /^\d+$/.test(rawCustomerId.replace(/-/g, ""));
+    const adsRequiredKeys = [
+      "OTIMA_ADS_DEVELOPER_TOKEN",
+      "OTIMA_ADS_CLIENT_ID",
+      "OTIMA_ADS_CLIENT_SECRET",
+      "OTIMA_ADS_REFRESH_TOKEN",
+      "OTIMA_ADS_CUSTOMER_ID",
+    ];
+    const adsReady = adsRequiredKeys.every(check) && customerIdDigitsOnly;
+
     res.json({
       landing_page: {
-        ready: landingRequired.every(check),
-        required: Object.fromEntries(landingRequired.map(k => [k, check(k)])),
+        ready: landingCoreKeys.every(check),
+        fields: {
+          OTIMA_LEADS_GOOGLE_CLIENT_ID: check("OTIMA_LEADS_GOOGLE_CLIENT_ID"),
+          OTIMA_LEADS_GOOGLE_CLIENT_SECRET: check("OTIMA_LEADS_GOOGLE_CLIENT_SECRET"),
+          OTIMA_LEADS_GOOGLE_REFRESH_TOKEN: check("OTIMA_LEADS_GOOGLE_REFRESH_TOKEN"),
+          OTIMA_LEADS_SHEETS_SPREADSHEET_ID: check("OTIMA_LEADS_SHEETS_SPREADSHEET_ID"),
+          OTIMA_LEADS_DRIVE_FOLDER_ID: check("OTIMA_LEADS_DRIVE_FOLDER_ID"),
+          OTIMA_SMTP_PASS: check("OTIMA_SMTP_PASS"),
+          OTIMA_EMAIL_FROM: check("OTIMA_EMAIL_FROM"),
+          OTIMA_INTERNAL_LEAD_EMAIL: check("OTIMA_INTERNAL_LEAD_EMAIL"),
+        },
       },
       tracking: {
-        gtm: check("OTIMA_GTM_ID"),
-        ga4: check("OTIMA_GA_MEASUREMENT_ID"),
+        fields: {
+          OTIMA_GTM_ID: check("OTIMA_GTM_ID"),
+          OTIMA_GA_MEASUREMENT_ID: check("OTIMA_GA_MEASUREMENT_ID"),
+        },
       },
       google_ads_keyword_research: {
-        ready: adsReadiness.ready,
-        required: Object.fromEntries(adsReadiness.required.map((k: string) => [k, check(k)])),
-        optional: Object.fromEntries(adsReadiness.optional.map((k: string) => [k, check(k)])),
-        fields: adsReadiness.fields,
+        ready: adsReady,
+        fields: {
+          OTIMA_ADS_DEVELOPER_TOKEN: check("OTIMA_ADS_DEVELOPER_TOKEN"),
+          OTIMA_ADS_CLIENT_ID: check("OTIMA_ADS_CLIENT_ID"),
+          OTIMA_ADS_CLIENT_SECRET: check("OTIMA_ADS_CLIENT_SECRET"),
+          OTIMA_ADS_REFRESH_TOKEN: check("OTIMA_ADS_REFRESH_TOKEN"),
+          OTIMA_ADS_CUSTOMER_ID: check("OTIMA_ADS_CUSTOMER_ID"),
+          OTIMA_ADS_API_VERSION: check("OTIMA_ADS_API_VERSION"),
+          OTIMA_ADS_LOGIN_CUSTOMER_ID: check("OTIMA_ADS_LOGIN_CUSTOMER_ID"),
+        },
       },
     });
   });
@@ -8065,7 +8092,7 @@ export async function registerRoutes(
     if (!to) return { status: 'NO_EMAIL' };
     const smtpPass = process.env.OTIMA_SMTP_PASS;
     if (!smtpPass) {
-      console.warn('[RFQ] SMTP_PASS not configured — RFQ email not sent');
+      console.warn('[RFQ] OTIMA_SMTP_PASS not configured — RFQ email not sent');
       return { status: 'NO_SMTP' };
     }
     try {
