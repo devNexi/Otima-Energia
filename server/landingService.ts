@@ -33,7 +33,7 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
     const sheets = google.sheets({ version: "v4", auth });
 
     const COLUMNS = [
-      "Submitted At", "Lead ID", "Name", "Company", "Email", "Phone", "City", "State",
+      "Submitted At", "Lead ID", "Channel", "Name", "Company", "Email", "Phone", "City", "State",
       "Average Energy Bill", "Property Type", "Bill Uploaded?", "Bill File URL", "Message",
       "UTM Source", "UTM Medium", "UTM Campaign", "UTM Term", "UTM Content",
       "GCLID", "GBRAID", "WBRAID", "Landing Page URL", "Referrer", "User Agent", "IP Address",

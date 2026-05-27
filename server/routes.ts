@@ -930,6 +930,7 @@ export async function registerRoutes(
         "State": estado,
         "Average Energy Bill": valorConta,
         "Property Type": tipoImovel,
+        "Channel": utm_source ? `Google Ads (${utm_source})` : "Google Ads - Reduza",
         "Bill Uploaded?": billFile ? (billUploadFailed ? "Sim (UPLOAD FALHOU — coletar manualmente)" : "Sim") : "Não",
         "Bill File URL": billFileUrl || (billUploadFailed ? "UPLOAD_FAILED — arquivo enviado mas não salvo no Drive" : ""),
         "Message": mensagem || "",
