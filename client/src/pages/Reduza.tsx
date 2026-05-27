@@ -345,7 +345,7 @@ export default function Reduza() {
           <div className="md:col-span-2 hidden md:flex justify-center">
             <div
               className="relative rounded-2xl overflow-hidden w-full max-w-sm"
-              style={{ minHeight: 340, border: "1px solid rgba(255,255,255,0.12)" }}
+              style={{ minHeight: 420, border: "1px solid rgba(255,255,255,0.12)" }}
             >
               {/* Inner canvas — re-uses WebGL but as a contained card */}
               <div className="absolute inset-0">
