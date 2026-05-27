@@ -44,9 +44,9 @@ const TIPOS_NEGOCIO = [
 ];
 
 const VALORES_CONTA = [
+  "Menos de R$ 5.000 (caso especial)",
   "R$ 5.000 a R$ 10.000", "R$ 10.000 a R$ 30.000",
   "R$ 30.000 a R$ 80.000", "Mais de R$ 80.000",
-  "Menos de R$ 5.000 (caso especial)",
 ];
 
 const TRUST_BADGES = [
