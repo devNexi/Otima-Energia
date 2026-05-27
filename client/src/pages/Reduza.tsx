@@ -1,409 +1,744 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Upload, CheckCircle, Zap, BarChart2, FileText, ArrowRight, Shield, X } from "lucide-react";
+import {
+  Upload, CheckCircle, Zap, ArrowRight, Shield, X, ChevronDown,
+  ChevronUp, Search, MessageSquare, TrendingDown, Building2,
+  Mail, Phone, Clock, FileText,
+} from "lucide-react";
 
 declare global {
-  interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
-  }
+  interface Window { gtag?: (...args: any[]) => void; dataLayer?: any[]; }
 }
 
-const ESTADOS_BR = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
-  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+// ─── Brand tokens ───────────────────────────────────────────────────────────
+const BRAND = "#9e3ffd";
+const BRAND_DARK = "#16163f";
+
+// ─── Data ───────────────────────────────────────────────────────────────────
+const ESTADOS = [
+  { v: "SP", l: "São Paulo" }, { v: "MG", l: "Minas Gerais" },
+  { v: "RJ", l: "Rio de Janeiro" }, { v: "PR", l: "Paraná" },
+  { v: "RS", l: "Rio Grande do Sul" }, { v: "SC", l: "Santa Catarina" },
+  { v: "BA", l: "Bahia" }, { v: "GO", l: "Goiás" },
+  { v: "DF", l: "Distrito Federal" }, { v: "ES", l: "Espírito Santo" },
+  { v: "PE", l: "Pernambuco" }, { v: "CE", l: "Ceará" },
+  { v: "MT", l: "Mato Grosso" }, { v: "MS", l: "Mato Grosso do Sul" },
+  { v: "PA", l: "Pará" }, { v: "MA", l: "Maranhão" },
+  { v: "PB", l: "Paraíba" }, { v: "RN", l: "Rio Grande do Norte" },
+  { v: "AL", l: "Alagoas" }, { v: "SE", l: "Sergipe" },
+  { v: "PI", l: "Piauí" }, { v: "AM", l: "Amazonas" },
+  { v: "TO", l: "Tocantins" },
+  // ⚠️ AC, AP, RR, RO omitted — not covered
 ];
 
-const formSchema = z.object({
-  nome: z.string().min(2, "Nome obrigatório"),
-  empresa: z.string().min(2, "Empresa obrigatória"),
-  email: z.string().email("Email inválido"),
-  phone: z.string().min(10, "Telefone obrigatório"),
-  cidade: z.string().min(2, "Cidade obrigatória"),
-  estado: z.string().min(2, "Estado obrigatório"),
-  valorConta: z.string().min(1, "Valor da conta obrigatório"),
-  tipoImovel: z.enum(["Empresa","Comércio","Indústria","Condomínio","Outro"]),
-  mensagem: z.string().optional(),
-  honeypot: z.string().max(0, "Bot detected"),
-});
+const TIPOS_NEGOCIO = [
+  "Indústria", "Supermercado / Varejo Alimentício", "Comércio / Varejo",
+  "Hotel / Resort / Pousada", "Clínica / Hospital", "Escola / Faculdade",
+  "Condomínio Comercial", "Condomínio Residencial", "Shopping / Centro Comercial",
+  "Centro de Distribuição / Galpão", "Lavanderia / Frigorífico",
+  "Escritório / Serviços", "Outro",
+];
 
-type FormValues = z.infer<typeof formSchema>;
+const VALORES_CONTA = [
+  "R$ 5.000 a R$ 10.000", "R$ 10.000 a R$ 30.000",
+  "R$ 30.000 a R$ 80.000", "Mais de R$ 80.000",
+  "Menos de R$ 5.000 (caso especial)",
+];
 
-function getUTMParams() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    utm_source: params.get("utm_source") || "",
-    utm_medium: params.get("utm_medium") || "",
-    utm_campaign: params.get("utm_campaign") || "",
-    utm_term: params.get("utm_term") || "",
-    utm_content: params.get("utm_content") || "",
-    gclid: params.get("gclid") || "",
-    gbraid: params.get("gbraid") || "",
-    wbraid: params.get("wbraid") || "",
-  };
+const TRUST_BADGES = [
+  { icon: <CheckCircle className="h-5 w-5" />, title: "100% grátis para sua empresa", sub: "Não pagamos taxa, mensalidade, nem comissão." },
+  { icon: <Zap className="h-5 w-5" />, title: "Não é energia solar", sub: "Sem instalar placa, painel ou inversor." },
+  { icon: <Shield className="h-5 w-5" />, title: "Sem trocar de distribuidora", sub: "Você mantém Enel, CPFL, Cemig, etc." },
+  { icon: <Building2 className="h-5 w-5" />, title: "Sem obra na empresa", sub: "Nada de instalação ou intervenção física." },
+  { icon: <TrendingDown className="h-5 w-5" />, title: "Pago pelos fornecedores", sub: "Recebemos comissão dos parceiros, não de você." },
+  { icon: <Search className="h-5 w-5" />, title: "Análise feita por especialista", sub: "Engenheiros e analistas energéticos." },
+];
+
+const STEPS = [
+  { icon: <Upload className="h-7 w-7" />, title: "Você envia sua última conta de luz", desc: "Em segundos, pelo celular ou computador. Aceitamos PDF ou foto." },
+  { icon: <Search className="h-7 w-7" />, title: "Especialista analisa seu perfil", desc: "Verificamos sua distribuidora, perfil de consumo e o desconto disponível na sua região." },
+  { icon: <MessageSquare className="h-7 w-7" />, title: "Você recebe sua proposta", desc: "Análise enviada por WhatsApp ou email em até 24 horas úteis. Sem compromisso." },
+  { icon: <TrendingDown className="h-7 w-7" />, title: "Desconto direto na sua conta", desc: "Aprovou? O desconto começa a aparecer na sua próxima fatura. Você não muda nada." },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "Como a Ótima ganha dinheiro se o serviço é grátis?",
+    a: "Somos pagos pelos fornecedores parceiros de Geração Distribuída quando intermediamos uma economia. O custo nunca é repassado para sua empresa. Você apenas recebe o desconto direto na conta de luz.",
+  },
+  {
+    q: "Isso é energia solar? Preciso instalar placas na minha empresa?",
+    a: "Não. Geração Distribuída não exige a instalação de placa solar, painel, inversor ou qualquer equipamento na sua empresa. A energia já é gerada por usinas parceiras, e os créditos abatem diretamente sua conta de luz. Sua operação não muda em nada.",
+  },
+  {
+    q: "Vou precisar trocar de distribuidora ou mudar de contrato?",
+    a: "Não. Você mantém sua distribuidora atual (Enel, CPFL, Cemig, Copel, Equatorial, EDP, ou qualquer outra). Não há mudança de contrato com a concessionária, nem religação, nem obra na sua empresa. O desconto aparece direto na sua fatura.",
+  },
+  {
+    q: "Em quanto tempo começo a economizar?",
+    a: "Após análise e aprovação do contrato, o desconto costuma aparecer entre 30 e 60 dias na sua fatura, dependendo do ciclo de leitura da sua distribuidora.",
+  },
+  {
+    q: "Tem multa se eu quiser sair do contrato?",
+    a: "Os contratos de GD têm prazo de fidelidade que varia por fornecedor e região. Nosso especialista vai te apresentar as condições com clareza antes de qualquer assinatura. Você só assina se fizer sentido para sua empresa.",
+  },
+  {
+    q: "Minha empresa qualifica?",
+    a: "Atendemos empresas em 23 estados do Brasil. A elegibilidade depende da sua distribuidora, perfil de consumo e localização. Envie sua conta e analisamos sem compromisso — você só descobre se vale a pena enviando.",
+  },
+  {
+    q: "Como vocês usam minha conta de luz?",
+    a: "Sua fatura é usada exclusivamente para análise técnica de economia. Não compartilhamos com terceiros que não sejam fornecedores parceiros relevantes para preparar sua proposta. Veja nossa Política de Privacidade para detalhes.",
+  },
+  {
+    q: "Quais distribuidoras vocês atendem?",
+    a: "Trabalhamos com as principais distribuidoras do Brasil: Enel, CPFL, Cemig, Copel, Equatorial, EDP, Neoenergia, Energisa, Light, Celesc, Coelba, Celpe, e outras. Envie sua conta e confirmamos a cobertura na sua região.",
+  },
+];
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function maskPhone(raw: string) {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
-function fireEvent(eventName: string, params?: Record<string, any>) {
+function scrollToForm(e?: React.MouseEvent) {
+  e?.preventDefault();
+  document.getElementById("formulario")?.scrollIntoView({ behavior: "smooth" });
+}
+
+function fireEvent(name: string, params?: Record<string, any>) {
   try {
-    if (window.gtag) {
-      window.gtag("event", eventName, params || {});
-    } else if (window.dataLayer) {
-      window.dataLayer.push({ event: eventName, ...params });
-    }
+    if (window.gtag) window.gtag("event", name, params || {});
+    else if (window.dataLayer) window.dataLayer.push({ event: name, ...params });
   } catch {}
 }
 
+function captureUTMs() {
+  const p = new URLSearchParams(window.location.search);
+  const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid"];
+  const utms: Record<string, string> = {};
+  keys.forEach(k => {
+    const v = p.get(k);
+    if (v) {
+      utms[k] = v;
+      sessionStorage.setItem(`otima_${k}`, v);
+    }
+  });
+  return utms;
+}
+
+function getUTMsFromSession() {
+  const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid"];
+  const utms: Record<string, string> = {};
+  keys.forEach(k => { utms[k] = sessionStorage.getItem(`otima_${k}`) || ""; });
+  return utms;
+}
+
+// ─── Form schema ─────────────────────────────────────────────────────────────
+const schema = z.object({
+  nome: z.string().min(2, "Nome obrigatório").refine(
+    v => v.trim().split(/\s+/).length >= 2, "Informe nome e sobrenome"
+  ),
+  empresa: z.string().min(2, "Empresa obrigatória"),
+  email: z.string().email("Email inválido"),
+  phone: z.string().refine(v => v.replace(/\D/g, "").length === 11, "Informe DDD + 9 dígitos"),
+  estado: z.string().min(1, "Estado obrigatório"),
+  cidade: z.string().min(2, "Cidade obrigatória"),
+  tipoNegocio: z.string().min(1, "Tipo de negócio obrigatório"),
+  valorConta: z.string().min(1, "Selecione a faixa da conta"),
+  lgpd: z.boolean().refine(v => v === true, "Você precisa aceitar para continuar"),
+  honeypot: z.string().max(0),
+});
+type FormValues = z.infer<typeof schema>;
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function Reduza() {
-  const [, setLocation] = useLocation();
   const [file, setFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showSkipOption, setShowSkipOption] = useState(false);
+  const [skipBillAcknowledged, setSkipBillAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [formStarted, setFormStarted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { lgpd: false, honeypot: "" },
   });
 
+  const lgpdValue = watch("lgpd");
+
+  useEffect(() => {
+    captureUTMs();
+    fireEvent("page_view");
+  }, []);
+
   const handleFormFocus = () => {
-    if (!formStarted) {
-      setFormStarted(true);
-      fireEvent("lead_form_start");
-    }
+    if (!formStarted) { setFormStarted(true); fireEvent("form_start"); }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = maskPhone(e.target.value);
+    setValue("phone", masked, { shouldValidate: formStarted });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const allowed = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
-    if (!allowed.includes(f.type)) {
-      setSubmitError("Arquivo inválido. Envie PDF, JPG ou PNG.");
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      setSubmitError("Arquivo muito grande. Máximo 10MB.");
-      return;
-    }
+    if (!allowed.includes(f.type)) { setUploadError("Arquivo inválido. Envie PDF, JPG ou PNG."); return; }
+    if (f.size > 10 * 1024 * 1024) { setUploadError("Arquivo muito grande. Máximo 10 MB."); return; }
     setFile(f);
-    setSubmitError(null);
+    setUploadError(null);
+    setShowSkipOption(false);
     fireEvent("bill_upload_added", { file_type: f.type });
   };
 
   const onSubmit = async (data: FormValues) => {
     if (data.honeypot) return;
+    if (!file && !skipBillAcknowledged) {
+      setUploadError("Envie sua conta ou confirme que entende que a análise será simplificada.");
+      document.getElementById("upload-zone")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const utms = getUTMParams();
-      const formData = new FormData();
+      const utms = getUTMsFromSession();
+      const fd = new FormData();
+      fd.append("nome", data.nome);
+      fd.append("empresa", data.empresa);
+      fd.append("email", data.email);
+      fd.append("phone", data.phone);
+      fd.append("estado", data.estado);
+      fd.append("cidade", data.cidade);
+      fd.append("tipoImovel", data.tipoNegocio);
+      fd.append("valorConta", data.valorConta);
+      fd.append("landingPageUrl", window.location.href);
+      fd.append("referrer", document.referrer);
+      fd.append("userAgent", navigator.userAgent);
+      Object.entries(utms).forEach(([k, v]) => fd.append(k, v));
+      if (file) fd.append("bill", file);
 
-      Object.entries(data).forEach(([k, v]) => {
-        if (k !== "honeypot" && v !== undefined) formData.append(k, v);
-      });
-      Object.entries(utms).forEach(([k, v]) => formData.append(k, v));
-      formData.append("landingPageUrl", window.location.href);
-      formData.append("referrer", document.referrer);
-      formData.append("userAgent", navigator.userAgent);
-      if (file) formData.append("bill", file);
-
-      const res = await fetch("/api/landing/submit", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/landing/submit", { method: "POST", body: fd });
       const result = await res.json();
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || "Erro ao enviar formulário");
-      }
+      if (!res.ok || !result.success) throw new Error(result.error || "Erro ao enviar formulário");
 
-      fireEvent("lead_form_submit", {
-        lead_id: result.leadId,
-        empresa: data.empresa,
-        valor_conta: data.valorConta,
-        tipo_imovel: data.tipoImovel,
-        estado: data.estado,
-      });
+      const isCasoEspecial = data.valorConta === "Menos de R$ 5.000 (caso especial)";
+      const tipo = isCasoEspecial ? "caso-especial" : file ? "completo" : "sem-conta";
+      const firstName = encodeURIComponent(data.nome.trim().split(/\s+/)[0]);
+      window.location.href = `/obrigado?tipo=${tipo}&nome=${firstName}`;
 
-      setLocation("/obrigado");
     } catch (err: any) {
       setSubmitError(err.message || "Erro inesperado. Tente novamente.");
+      fireEvent("form_error", { error: err.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── Field classes ────────────────────────────────────────────────────────
+  const inputCls = (hasError: boolean) =>
+    `w-full rounded-lg px-3 py-3 text-base text-gray-900 border ${hasError ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-purple-600"} focus:outline-none focus:ring-2 focus:border-transparent bg-white transition-colors`;
+  const labelCls = "block text-sm font-medium text-slate-700 mb-1.5";
+  const errCls = "text-red-600 text-xs mt-1";
+
+  // ── CTA Button ────────────────────────────────────────────────────────────
+  const PrimaryBtn = ({ onClick, className = "" }: { onClick?: (e: React.MouseEvent) => void; className?: string }) => (
+    <button
+      onClick={onClick}
+      type="button"
+      className={`inline-flex items-center justify-center gap-2 font-semibold text-white rounded-lg transition-all ${className}`}
+      style={{ background: BRAND }}
+      onMouseEnter={e => (e.currentTarget.style.filter = "brightness(0.9)")}
+      onMouseLeave={e => (e.currentTarget.style.filter = "")}
+    >
+      Receber minha análise gratuita <ArrowRight className="h-5 w-5" />
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-white font-sans">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap className="h-6 w-6 text-purple-600" />
-            <span className="font-bold text-lg text-gray-900">Ótima Energia</span>
-          </div>
+    <div className="min-h-screen bg-white font-sans text-slate-900">
+
+      {/* ── Section 0: Sticky Header ──────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200" style={{ height: 64 }}>
+        <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2 font-bold text-lg" style={{ color: BRAND_DARK }}>
+            <Zap className="h-6 w-6" style={{ color: BRAND }} />
+            Ótima Energia
+          </a>
+          <button
+            onClick={scrollToForm}
+            className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-all"
+            style={{ background: BRAND }}
+            onMouseEnter={e => (e.currentTarget.style.filter = "brightness(0.9)")}
+            onMouseLeave={e => (e.currentTarget.style.filter = "")}
+            data-testid="header-cta"
+          >
+            <span className="hidden sm:inline">Solicitar análise grátis</span>
+            <span className="sm:hidden">Análise grátis</span>
+          </button>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-[#16163f] to-[#2a1a5e] text-white py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-purple-500/20 border border-purple-400/30 rounded-full px-4 py-1.5 text-sm text-purple-200 mb-6">
-            <Shield className="h-3.5 w-3.5" />
-            Auditoria gratuita. Sem compromisso.
+      {/* ── Section 1: Hero ───────────────────────────────────────────────── */}
+      <section
+        className="text-white py-16 md:py-24 px-4"
+        style={{ background: `linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)` }}
+      >
+        <div className="max-w-6xl mx-auto grid md:grid-cols-5 gap-10 items-center">
+          {/* Left 3/5 */}
+          <div className="md:col-span-3">
+            <p className="text-sm md:text-base font-semibold mb-4 tracking-wide" style={{ color: "#FBBF24" }}>
+              PARA EMPRESAS COM CONTA DE LUZ A PARTIR DE R$ 5.000/MÊS
+            </p>
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-5">
+              Desconto direto na conta de luz da sua empresa.
+            </h1>
+            <p className="text-lg md:text-2xl text-white/85 leading-relaxed mb-8 max-w-xl">
+              Receba até 25% de desconto na conta de energia. Sem custo, sem obra, sem trocar de distribuidora, sem instalar placa solar. Você economiza, a Ótima é paga pelos fornecedores parceiros.
+            </p>
+            <PrimaryBtn onClick={scrollToForm} className="text-lg px-7 py-4 shadow-lg mb-5 w-full sm:w-auto" />
+            <p className="text-sm text-white/65 flex flex-wrap gap-x-4 gap-y-1">
+              <span>✓ 100% grátis para sua empresa</span>
+              <span>✓ Não é energia solar</span>
+              <span>✓ Análise por especialista</span>
+            </p>
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-            Reduza a Conta de Energia<br className="hidden md:block" /> da Sua Empresa
-          </h1>
-          <p className="text-lg md:text-xl text-purple-100 mb-4 max-w-2xl mx-auto">
-            Envie sua última conta de luz e receba uma análise gratuita de economia feita por um especialista da Ótima Energia.
-          </p>
-          <p className="text-purple-200 text-sm max-w-xl mx-auto">
-            Sem compromisso. Sem obra. Sem instalação de placas solares. Apenas uma avaliação clara para descobrir se sua empresa pode economizar.
-          </p>
+          {/* Right 2/5 — visual callout card */}
+          <div className="md:col-span-2 hidden md:flex justify-center">
+            <div className="rounded-2xl bg-white/10 border border-white/20 p-7 w-full max-w-sm space-y-5">
+              <p className="text-white/70 text-sm font-medium uppercase tracking-widest">Exemplo de resultado</p>
+              <div className="space-y-2">
+                <p className="text-white/70 text-sm">Conta atual</p>
+                <p className="text-3xl font-bold text-white">R$ 10.000<span className="text-base font-normal text-white/60">/mês</span></p>
+              </div>
+              <div className="h-px bg-white/20" />
+              <div className="space-y-2">
+                <p className="text-white/70 text-sm">Economia possível</p>
+                <p className="text-3xl font-bold" style={{ color: "#A3E635" }}>
+                  até R$ 2.500<span className="text-base font-normal text-white/60">/mês</span>
+                </p>
+              </div>
+              <div className="h-px bg-white/20" />
+              <ul className="space-y-2 text-sm text-white/80">
+                {["Sem custo", "Sem obra", "Sem trocar de distribuidora"].map(t => (
+                  <li key={t} className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 shrink-0" style={{ color: "#A3E635" }} />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-white/40 italic">* Valores ilustrativos. Análise real feita por especialista.</p>
+            </div>
+          </div>
+        </div>
+        {/* Scroll hint */}
+        <div className="hidden md:flex justify-center mt-12">
+          <button onClick={scrollToForm} className="text-white/40 hover:text-white/70 transition-colors animate-bounce" aria-label="Rolar para o formulário">
+            <ChevronDown className="h-7 w-7" />
+          </button>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-12 px-4 bg-gray-50 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-center text-xl font-bold text-gray-800 mb-8">Como funciona</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { icon: <Upload className="h-6 w-6" />, text: "Você envia sua última conta de energia" },
-              { icon: <BarChart2 className="h-6 w-6" />, text: "Nossa equipe analisa seu perfil de consumo" },
-              { icon: <FileText className="h-6 w-6" />, text: "Um Especialista envia sua auditoria gratuita" },
-              { icon: <CheckCircle className="h-6 w-6" />, text: "Se houver oportunidade, mostramos quanto você economiza" },
-            ].map((step, i) => (
-              <div key={i} className="flex flex-col items-center text-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                  {step.icon}
+      {/* ── Section 2: Trust bar ──────────────────────────────────────────── */}
+      <section className="py-12 md:py-16 px-4 bg-slate-50 border-b border-slate-100">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          {TRUST_BADGES.map((b, i) => (
+            <div key={i} className="flex flex-col items-start gap-2">
+              <div className="rounded-full p-2" style={{ background: "#F3E8FF", color: BRAND }}>
+                {b.icon}
+              </div>
+              <p className="text-sm font-semibold text-slate-800 leading-tight">{b.title}</p>
+              <p className="text-xs text-slate-500 leading-snug">{b.sub}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Section 3: How it works ───────────────────────────────────────── */}
+      <section className="py-16 md:py-20 px-4 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-3" style={{ color: "#0F172A" }}>
+            Como funciona
+          </h2>
+          <p className="text-center text-slate-500 text-lg mb-12">
+            Quatro passos. Sem complicação. Sem custo para você.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-6">
+            {STEPS.map((s, i) => (
+              <div key={i} className="flex md:flex-col items-start md:items-center gap-4 md:text-center">
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white" style={{ background: BRAND }}>
+                    {s.icon}
+                  </div>
+                  <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center text-xs font-bold" style={{ borderColor: BRAND, color: BRAND }}>
+                    {i + 1}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1 text-purple-600 font-bold text-sm">
-                  <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs">{i + 1}</span>
+                <div>
+                  <p className="font-semibold text-slate-800 mb-1 leading-snug">{s.title}</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
                 </div>
-                <p className="text-sm text-gray-600">{step.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Form */}
-      <section className="py-14 px-4">
+      {/* ── Section 4: Social proof ───────────────────────────────────────── */}
+      <section className="py-16 px-4 bg-white border-t border-slate-100">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-10" style={{ color: "#0F172A" }}>
+            Empresas que já economizam com a Ótima
+          </h2>
+          {/* NOTE: Only the verified claim is shown. Add real numbers (+1.500 empresas, R$50M+) here once confirmed. */}
+          <div className="inline-flex flex-col items-center gap-1 bg-purple-50 rounded-2xl px-12 py-8 border border-purple-100">
+            <p className="text-6xl font-bold" style={{ color: BRAND }}>25%</p>
+            <p className="text-lg font-semibold text-slate-700">de desconto possível na conta de luz</p>
+            <p className="text-sm text-slate-400 mt-1">Em regiões com maior cobertura de Geração Distribuída</p>
+          </div>
+          <p className="text-xs text-slate-400 mt-4 italic">
+            * Desconto médio máximo baseado nas condições atuais de fornecedores parceiros. Análise individualizada define o desconto real para sua empresa.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Section 5: Form ───────────────────────────────────────────────── */}
+      <section id="formulario" className="py-16 md:py-20 px-4" style={{ background: "#F1F5F9" }}>
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 md:p-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Solicitar Auditoria Gratuita</h2>
-            <p className="text-gray-500 text-sm mb-8">Preencha os campos abaixo e nossa equipe entrará em contato.</p>
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: "#0F172A" }}>
+              Envie sua conta e veja seu desconto
+            </h2>
+            <p className="text-slate-500 text-base mb-8">
+              Análise feita por especialista. Resposta em até 24 horas úteis. Sem compromisso.
+            </p>
 
             <form onSubmit={handleSubmit(onSubmit)} onFocus={handleFormFocus} noValidate>
-              {/* Honeypot - hidden from humans */}
-              <input
-                type="text"
-                {...register("honeypot")}
-                className="hidden"
-                tabIndex={-1}
-                autoComplete="off"
-              />
+              {/* Honeypot */}
+              <input type="text" {...register("honeypot")} className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                  <input
-                    {...register("nome")}
-                    placeholder="Seu nome completo"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-nome"
-                  />
-                  {errors.nome && <p className="text-red-500 text-xs mt-1">{errors.nome.message}</p>}
+              <div className="space-y-5">
+                {/* Row 1: Nome + Empresa */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="nome" className={labelCls}>Nome completo <span className="text-red-500">*</span></label>
+                    <input id="nome" {...register("nome")} autoComplete="name" placeholder="Maria Silva" className={inputCls(!!errors.nome)} data-testid="input-nome" />
+                    {errors.nome && <p className={errCls} role="alert">{errors.nome.message}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="empresa" className={labelCls}>Empresa <span className="text-red-500">*</span></label>
+                    <input id="empresa" {...register("empresa")} autoComplete="organization" placeholder="Nome da empresa" className={inputCls(!!errors.empresa)} data-testid="input-empresa" />
+                    {errors.empresa && <p className={errCls} role="alert">{errors.empresa.message}</p>}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
-                  <input
-                    {...register("empresa")}
-                    placeholder="Nome da empresa"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-empresa"
-                  />
-                  {errors.empresa && <p className="text-red-500 text-xs mt-1">{errors.empresa.message}</p>}
+                {/* Row 2: Email + WhatsApp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="email" className={labelCls}>Email corporativo <span className="text-red-500">*</span></label>
+                    <input id="email" type="email" {...register("email")} autoComplete="email" placeholder="maria@empresa.com.br" className={inputCls(!!errors.email)} data-testid="input-email" />
+                    {errors.email && <p className={errCls} role="alert">{errors.email.message}</p>}
+                    <p className="text-xs text-slate-400 mt-1">Use seu email comercial para receber a análise.</p>
+                  </div>
+                  <div>
+                    <label htmlFor="phone" className={labelCls}>WhatsApp / Celular <span className="text-red-500">*</span></label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="(11) 99999-9999"
+                      className={inputCls(!!errors.phone)}
+                      onChange={handlePhoneChange}
+                      value={watch("phone") || ""}
+                      data-testid="input-phone"
+                    />
+                    {errors.phone && <p className={errCls} role="alert">{errors.phone.message}</p>}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    {...register("email")}
-                    type="email"
-                    placeholder="seu@email.com.br"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-email"
-                  />
-                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                {/* Row 3: Estado + Cidade */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="estado" className={labelCls}>Estado <span className="text-red-500">*</span></label>
+                    <select id="estado" {...register("estado")} className={inputCls(!!errors.estado)} data-testid="select-estado">
+                      <option value="">Selecione seu estado</option>
+                      {ESTADOS.map(e => <option key={e.v} value={e.v}>{e.l}</option>)}
+                    </select>
+                    {errors.estado && <p className={errCls} role="alert">{errors.estado.message}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="cidade" className={labelCls}>Cidade <span className="text-red-500">*</span></label>
+                    <input id="cidade" {...register("cidade")} autoComplete="address-level2" placeholder="Sua cidade" className={inputCls(!!errors.cidade)} data-testid="input-cidade" />
+                    {errors.cidade && <p className={errCls} role="alert">{errors.cidade.message}</p>}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
-                  <input
-                    {...register("phone")}
-                    placeholder="(11) 99999-9999"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-phone"
-                  />
-                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                {/* Row 4: Tipo de negócio + Valor da conta */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label htmlFor="tipoNegocio" className={labelCls}>Tipo de negócio <span className="text-red-500">*</span></label>
+                    <select id="tipoNegocio" {...register("tipoNegocio")} className={inputCls(!!errors.tipoNegocio)} data-testid="select-tipo-negocio">
+                      <option value="">Selecione...</option>
+                      {TIPOS_NEGOCIO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    {errors.tipoNegocio && <p className={errCls} role="alert">{errors.tipoNegocio.message}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="valorConta" className={labelCls}>Valor médio da conta por mês <span className="text-red-500">*</span></label>
+                    <select id="valorConta" {...register("valorConta")} className={inputCls(!!errors.valorConta)} data-testid="select-valor-conta">
+                      <option value="">Selecione a faixa</option>
+                      {VALORES_CONTA.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                    {errors.valorConta && <p className={errCls} role="alert">{errors.valorConta.message}</p>}
+                    <p className="text-xs text-slate-400 mt-1 italic">Atendemos empresas com conta a partir de R$ 5.000/mês. Contas menores podem ser analisadas caso a caso.</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cidade *</label>
-                  <input
-                    {...register("cidade")}
-                    placeholder="Sua cidade"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-cidade"
-                  />
-                  {errors.cidade && <p className="text-red-500 text-xs mt-1">{errors.cidade.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
-                  <select
-                    {...register("estado")}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                    data-testid="select-estado"
+                {/* File upload */}
+                <div id="upload-zone">
+                  <label className={labelCls}>
+                    Anexe sua última conta de luz{" "}
+                    <span className="text-slate-400 font-normal">(recomendado — análise muito mais precisa)</span>
+                  </label>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={e => e.key === "Enter" && fileInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+                    style={{ borderColor: file ? "#16A34A" : uploadError ? "#DC2626" : "#CBD5E1" }}
+                    data-testid="upload-dropzone"
                   >
-                    <option value="">Selecione</option>
-                    {ESTADOS_BR.map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                  {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor médio da conta *</label>
+                    {file ? (
+                      <div className="flex items-center justify-center gap-3 text-green-700">
+                        <CheckCircle className="h-5 w-5 shrink-0" />
+                        <span className="text-sm font-medium truncate max-w-xs">{file.name}</span>
+                        <button type="button" onClick={e => { e.stopPropagation(); setFile(null); }} className="text-slate-400 hover:text-red-500 ml-1 shrink-0" aria-label="Remover arquivo">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload className="h-9 w-9 mx-auto mb-2 text-slate-300" />
+                        <p className="text-sm text-slate-500 font-medium">Clique para enviar ou arraste o arquivo aqui</p>
+                        <p className="text-xs text-slate-400 mt-1">PDF ou foto da fatura · máx. 10 MB</p>
+                      </div>
+                    )}
+                  </div>
                   <input
-                    {...register("valorConta")}
-                    placeholder="Ex: R$ 5.000/mês"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    data-testid="input-valor-conta"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    data-testid="input-file"
                   />
-                  {errors.valorConta && <p className="text-red-500 text-xs mt-1">{errors.valorConta.message}</p>}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de imóvel *</label>
-                  <select
-                    {...register("tipoImovel")}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                    data-testid="select-tipo-imovel"
-                  >
-                    <option value="">Selecione</option>
-                    {["Empresa","Comércio","Indústria","Condomínio","Outro"].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  {errors.tipoImovel && <p className="text-red-500 text-xs mt-1">{errors.tipoImovel.message}</p>}
-                </div>
-              </div>
-
-              {/* Bill upload */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Conta de energia <span className="text-gray-400 font-normal">(opcional, mas acelera a análise)</span>
-                </label>
-                <div
-                  className="border-2 border-dashed border-gray-200 rounded-lg p-5 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="upload-zone"
-                >
-                  {file ? (
-                    <div className="flex items-center justify-center gap-2 text-green-700">
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="text-sm font-medium">{file.name}</span>
+                  {/* Skip path */}
+                  {!file && (
+                    <div className="mt-2">
                       <button
                         type="button"
-                        onClick={e => { e.stopPropagation(); setFile(null); }}
-                        className="text-gray-400 hover:text-red-500 ml-2"
+                        onClick={() => { setShowSkipOption(v => !v); setUploadError(null); }}
+                        className="text-sm underline underline-offset-2"
+                        style={{ color: BRAND }}
+                        data-testid="btn-skip-upload"
                       >
-                        <X className="h-4 w-4" />
+                        Não tenho minha conta agora — quero ser contatado depois
                       </button>
+                      <div
+                        className="overflow-hidden transition-all duration-300"
+                        style={{ maxHeight: showSkipOption ? 80 : 0 }}
+                      >
+                        <label className="flex items-start gap-3 mt-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={skipBillAcknowledged}
+                            onChange={e => { setSkipBillAcknowledged(e.target.checked); setUploadError(null); }}
+                            className="mt-0.5 h-4 w-4 rounded accent-purple-600"
+                            data-testid="checkbox-skip-bill"
+                          />
+                          <span className="text-sm text-slate-600 leading-snug">
+                            Entendo que sem a conta a análise será simplificada. A Ótima entrará em contato para coletar a conta antes de finalizar.
+                          </span>
+                        </label>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <Upload className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Clique para selecionar sua conta</p>
-                      <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG · máx. 10 MB</p>
-                    </>
                   )}
+
+                  {uploadError && (
+                    <p className={errCls} role="alert" aria-live="polite">{uploadError}</p>
+                  )}
+
+                  <p className="text-xs text-slate-400 mt-2 flex items-start gap-1.5">
+                    <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    Sua conta é usada exclusivamente para análise. Não compartilhamos seus dados.
+                  </p>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  data-testid="input-file"
-                />
-                <p className="text-xs text-gray-400 mt-2 flex items-start gap-1">
-                  <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-400" />
-                  Sua conta será usada exclusivamente para preparar sua auditoria de economia. Não compartilhamos seus dados.
+
+                {/* LGPD */}
+                <div>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register("lgpd")}
+                      className="mt-0.5 h-4 w-4 rounded accent-purple-600 shrink-0"
+                      data-testid="checkbox-lgpd"
+                    />
+                    <span className="text-sm text-slate-600 leading-relaxed">
+                      Concordo em compartilhar minha conta de luz e dados de contato para análise de economia, e autorizo a Ótima Energia a entrar em contato comigo por email, telefone ou WhatsApp. Veja nossa{" "}
+                      <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: BRAND }}>
+                        Política de Privacidade
+                      </a>. <span className="text-red-500">*</span>
+                    </span>
+                  </label>
+                  {errors.lgpd && <p className={errCls} role="alert" aria-live="polite">{errors.lgpd.message}</p>}
+                </div>
+
+                {/* Trust line above button */}
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-slate-500 pt-1">
+                  <span>🔒 Dados protegidos</span>
+                  <span>⏱️ Resposta em até 24h úteis</span>
+                  <span>✓ Sem compromisso</span>
+                </div>
+
+                {/* Error */}
+                {submitError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700" role="alert" aria-live="polite" data-testid="submit-error">
+                    {submitError}
+                  </div>
+                )}
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={!lgpdValue || isSubmitting}
+                  className="w-full flex items-center justify-center gap-2 font-semibold text-white text-lg rounded-lg transition-all"
+                  style={{
+                    background: BRAND,
+                    height: 56,
+                    opacity: (!lgpdValue || isSubmitting) ? 0.5 : 1,
+                    cursor: (!lgpdValue || isSubmitting) ? "not-allowed" : "pointer",
+                  }}
+                  data-testid="button-submit"
+                >
+                  {isSubmitting ? (
+                    <><svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Enviando...</>
+                  ) : (
+                    <>Receber minha análise gratuita <ArrowRight className="h-5 w-5" /></>
+                  )}
+                </button>
+
+                <p className="text-center text-xs text-slate-500">
+                  Sua conta de luz é usada apenas para preparar sua análise. Não enviamos spam.
                 </p>
               </div>
-
-              {/* Mensagem */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mensagem / observações <span className="text-gray-400 font-normal">(opcional)</span>
-                </label>
-                <textarea
-                  {...register("mensagem")}
-                  rows={3}
-                  placeholder="Alguma informação adicional que queira compartilhar..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                  data-testid="input-mensagem"
-                />
-              </div>
-
-              {submitError && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700" data-testid="submit-error">
-                  {submitError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-6 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold py-3.5 px-6 rounded-xl text-base transition-colors flex items-center justify-center gap-2"
-                data-testid="button-submit"
-              >
-                {isSubmitting ? (
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                ) : (
-                  <>Enviar Minha Conta de Energia <ArrowRight className="h-5 w-5" /></>
-                )}
-              </button>
             </form>
-          </div>
-
-          {/* Trust signals */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
-            <span className="flex items-center gap-1.5"><Shield className="h-4 w-4" /> Dados protegidos</span>
-            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4" /> Sem compromisso</span>
-            <span className="flex items-center gap-1.5"><Zap className="h-4 w-4" /> Resposta em 24h úteis</span>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-gray-100 py-6 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} Ótima Energia · 
-        <a href="/privacidade" className="ml-1 hover:text-purple-600">Política de Privacidade</a>
+      {/* ── Section 6: FAQ ────────────────────────────────────────────────── */}
+      <section className="py-16 md:py-20 px-4 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12" style={{ color: "#0F172A" }}>
+            Perguntas frequentes
+          </h2>
+          <div className="divide-y divide-slate-100">
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i}>
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between gap-4 py-5 text-left transition-colors hover:text-purple-700"
+                  data-testid={`faq-item-${i}`}
+                >
+                  <span className="text-base md:text-lg font-semibold text-slate-800">{item.q}</span>
+                  {openFaq === i
+                    ? <ChevronUp className="h-5 w-5 shrink-0" style={{ color: BRAND }} />
+                    : <ChevronDown className="h-5 w-5 shrink-0 text-slate-400" />}
+                </button>
+                <div
+                  className="overflow-hidden transition-all duration-300"
+                  style={{ maxHeight: openFaq === i ? 400 : 0 }}
+                >
+                  <p className="pb-5 text-slate-600 leading-relaxed text-base">{item.a}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 7: Final CTA ──────────────────────────────────────────── */}
+      <section className="py-20 md:py-24 px-4 text-white text-center" style={{ background: `linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)` }}>
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-5xl font-bold mb-5">Quanto sua empresa pode economizar?</h2>
+          <p className="text-lg md:text-xl text-white/85 mb-10 max-w-lg mx-auto">
+            Envie sua última conta de luz e descubra em até 24 horas úteis. Sem custo, sem compromisso.
+          </p>
+          <PrimaryBtn onClick={scrollToForm} className="text-lg px-9 py-5 shadow-xl" />
+        </div>
+      </section>
+
+      {/* ── Section 8: Footer ─────────────────────────────────────────────── */}
+      <footer style={{ background: "#0F172A" }} className="px-4 py-12">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-white/70 text-sm">
+          <div>
+            <div className="flex items-center gap-2 font-bold text-white text-base mb-3">
+              <Zap className="h-5 w-5" style={{ color: BRAND }} />
+              Ótima Energia
+            </div>
+            <p className="leading-relaxed mb-2">Energia mais barata para empresas brasileiras.</p>
+            <p className="text-white/40 text-xs leading-relaxed">
+              CNPJ 65.023.912/0001-24<br />Rio de Janeiro, Brasil
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold text-white mb-3">Links</p>
+            <ul className="space-y-2">
+              <li><a href="/privacidade" className="hover:text-white transition-colors">Política de Privacidade</a></li>
+              <li><a href="/termos" className="hover:text-white transition-colors">Termos de Uso</a></li>
+              <li><a href="/" className="hover:text-white transition-colors">Site principal</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-semibold text-white mb-3">Contato</p>
+            <ul className="space-y-2">
+              {/* TODO: Replace with real WhatsApp business number */}
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0" />
+                <a href="https://wa.me/5521999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  (21) 99999-9999 {/* TODO: update */}
+                </a>
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0" />
+                <a href="mailto:contato@otimaenergia.com.br" className="hover:text-white transition-colors">contato@otimaenergia.com.br</a>
+              </li>
+              <li className="flex items-center gap-2">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>Segunda a sexta, das 9h às 18h</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto mt-10 pt-6 border-t border-white/10 text-center text-xs text-white/40">
+          © {new Date().getFullYear()} Ótima Energia. Todos os direitos reservados.
+        </div>
       </footer>
     </div>
   );

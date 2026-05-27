@@ -1,0 +1,686 @@
+PROJECT BRIEF: Rebuild /reduza Landing Page for Ótima Energia
+Context
+You're rebuilding the landing page at otimaenergia.com/reduza. This is the destination for all Google Ads paid traffic. Current page has critical CRO issues that are tanking conversion rate. This is a full rewrite, not a patch.
+The thank-you page at /obrigado already exists and is tracked in Google Ads — do not change its URL. All form submission routing goes to /obrigado, with query parameters used to differentiate sub-flows and personalize content.
+Business context (do not deviate from)
+Ótima Energia helps Brazilian businesses get discounts on their electricity bills through Geração Distribuída (GD). The service is 100% free for the business — Ótima is paid by supplier partners. There is no obligation, no installation, no contract change with the distributor, no solar panel installation. The business simply receives a discount on their existing electricity bill.
+Target audience: business owners, finance managers, condominium síndicos, operations managers — typically businesses with monthly electricity bills of R$ 5.000+ per month.
+The strongest objections to handle are:
+
+"Sounds too good to be true / what's the catch?"
+"Is this energy solar / will I install something?"
+"Will I have to change distributor or contract?"
+"How does Ótima make money?"
+"Does this apply to my business?"
+
+Hard rules
+
+Brazilian Portuguese only. Never European Portuguese.
+Never claim a specific savings % unless conditional ("até 25%", "pode receber até 22%"). Never absolute claims.
+Mobile-first design. 70%+ of paid traffic will be mobile.
+No third-party scripts except GTM, GA4, Zoho form integration, and one chat widget if used.
+LGPD-compliant. Explicit consent for marketing contact + data use.
+Page weight under 1.2MB total. Hero image WebP/AVIF max 150KB.
+LCP < 2.0s on 4G mobile. CLS < 0.1.
+Thank-you page URL is /obrigado — do not rename, do not create new URLs. Use query params for variant content.
+
+
+SECTION-BY-SECTION SPECIFICATION
+Section 0 — Sticky header
+
+Background: white with subtle bottom border (1px #E5E7EB), 64px tall on desktop, 56px tall on mobile
+Left: Ótima Energia logo, links to /
+Right: Primary CTA button "Solicitar análise grátis"
+
+Color: brand primary (use existing brand color, fallback to vibrant green #16A34A if no brand color defined)
+Hover: slight darken
+On click: smooth-scroll anchor to #formulario
+
+
+Header remains visible on scroll (position: sticky)
+On mobile: logo left, CTA right, both at reduced sizes — CTA may say just "Análise grátis" if "Solicitar análise grátis" doesn't fit
+
+Section 1 — Hero
+Background: Dark gradient. Suggest linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%) for serious/premium feel. Or use brand colors if available.
+Layout (desktop ≥1024px): Two columns. Left column 60% width = text content. Right column 40% width = single hero image of a Brazilian business owner / commercial environment (a manager looking at a tablet, a supermarket aisle, a hotel reception — anything except solar panels, factories with smoke, or stock photo cliches).
+Layout (mobile): Single column. Text first, image below or as subtle background with overlay.
+Hero content (in order):
+
+Small kicker text above headline (mobile: 14px, desktop: 16px, color: brand accent or #FBBF24 yellow for warmth):
+
+   PARA EMPRESAS COM CONTA DE LUZ A PARTIR DE R$ 5.000/MÊS
+
+H1 Headline (mobile: 32px, desktop: 56px, font-weight: 700, color: white, line-height: 1.1):
+
+   Desconto direto na conta de luz da sua empresa.
+
+Subheadline / body (mobile: 18px, desktop: 22px, color: rgba(255,255,255,0.85), line-height: 1.4, max-width: 580px):
+
+   Receba até 25% de desconto na conta de energia. Sem custo, sem obra, sem trocar de distribuidora, sem instalar placa solar. Você economiza, a Ótima é paga pelos fornecedores parceiros.
+
+Primary CTA button (large, prominent, brand-color background, white text, 56px tall, padding 24px horizontal, font-size 18px, font-weight 600, border-radius 8px):
+
+   Receber minha análise gratuita →
+On click: smooth-scroll to #formulario
+
+Secondary trust line below CTA (14px, color: rgba(255,255,255,0.65)):
+
+   ✓ 100% grátis para sua empresa   ✓ Não é energia solar   ✓ Análise por especialista
+
+Anchor scroll hint (subtle animated chevron at bottom of hero, only visible on desktop, scrolls to next section on click).
+
+
+Section 2 — Trust bar (immediately under hero, light background)
+Background: #F8FAFC (very light grey) — visual break from dark hero.
+Padding: 48px vertical desktop, 32px mobile.
+Six trust badges in a row on desktop, 2-column grid on mobile. Each badge: small icon (lucide-react checkmark or relevant icon) + bold short text + one line of supporting text.
+
+100% grátis para sua empresa
+Não pagamos taxa, mensalidade, nem comissão.
+Não é energia solar
+Sem instalar placa, painel ou inversor.
+Sem trocar de distribuidora
+Você mantém Enel, CPFL, Cemig, etc.
+Sem obra na empresa
+Nada de instalação ou intervenção física.
+Pago pelos fornecedores
+Recebemos comissão dos parceiros, não de você.
+Análise feita por especialista
+Engenheiros e analistas energéticos.
+
+
+Section 3 — How It Works (4 steps)
+Heading (above the steps):
+Como funciona
+(font-size: 36px desktop, 28px mobile, font-weight: 700, color: #0F172A, text-align: center)
+Subheading:
+Quatro passos. Sem complicação. Sem custo para você.
+(font-size: 18px desktop, 16px mobile, color: #64748B, text-align: center, margin-bottom: 48px)
+4 steps in a horizontal row on desktop, vertical stack on mobile. Each step is a card with:
+
+Large numbered circle (48px diameter, brand color background, white number, font-weight 700)
+Icon below number (lucide-react, 32px, brand color)
+Step title (font-size: 18px, font-weight: 600, color: #0F172A)
+Step description (font-size: 15px, color: #475569, line-height: 1.5)
+
+Step 1:
+
+Icon: Upload or FileText
+Title: Você envia sua última conta de luz
+Description: Em segundos, pelo celular ou computador. Aceitamos PDF ou foto.
+
+Step 2:
+
+Icon: Search or Calculator
+Title: Especialista analisa seu perfil
+Description: Verificamos sua distribuidora, perfil de consumo e o desconto disponível na sua região.
+
+Step 3:
+
+Icon: MessageSquare or Mail
+Title: Você recebe sua proposta
+Description: Análise enviada por WhatsApp ou email em até 24 horas úteis. Sem compromisso.
+
+Step 4:
+
+Icon: Wallet or TrendingDown
+Title: Desconto direto na sua conta
+Description: Aprovou? O desconto começa a aparecer na sua próxima fatura. Você não muda nada.
+
+
+Section 4 — Social proof strip
+Background: white.
+Padding: 64px vertical desktop, 48px mobile.
+Heading:
+Empresas que já economizam com a Ótima
+(font-size: 28px desktop, 22px mobile, font-weight: 700, color: #0F172A, text-align: center)
+Below heading, three numbered stat blocks (large numbers, brand color, supporting text below):
+
++1.500 empresas atendidas em 23 estados
+Até 25% de desconto na conta de luz
+R$ 50M+ economizados pelos nossos clientes
+
+⚠️ IMPORTANT — placeholder numbers above are illustrative only. Replace with real verified numbers before launch. If real numbers are not available, use only the "Até 25%" claim (which is truthful based on the GD discount sheet) and remove the other two stats. Never publish unverified social proof — it's a legal and brand risk.
+Below the stats, a single testimonial block with:
+
+Quote in italic, font-size 20px desktop, 17px mobile
+Author name + role + company
+Optional: small company logo or initial-circle avatar
+
+If no real testimonial is available yet, omit this entire social proof section rather than fabricate. Brand credibility is more important than visual completeness.
+
+Section 5 — Form section (THE conversion point)
+Section ID: #formulario (this is the smooth-scroll target from all CTAs above)
+Background: #F1F5F9 (light grey-blue, visually distinct from previous white)
+Padding: 80px vertical desktop, 48px mobile
+Layout: Centered card, max-width 640px, white background, 16px border-radius, subtle shadow (box-shadow: 0 4px 24px rgba(0,0,0,0.08)).
+Card padding: 48px desktop, 32px mobile.
+Form heading:
+Envie sua conta e veja seu desconto
+(font-size: 32px desktop, 26px mobile, font-weight: 700, color: #0F172A)
+Subheading:
+Análise feita por especialista. Resposta em até 24 horas úteis. Sem compromisso.
+(font-size: 16px, color: #64748B, margin-bottom: 32px)
+
+Form fields (in this exact order)
+All fields:
+
+Label above input (not placeholder-as-label)
+Label: font-size 14px, font-weight 500, color #334155, margin-bottom 6px
+Input: height 48px (mobile-friendly), border 1px solid #CBD5E1, border-radius 8px, padding 12px, font-size 16px (16px prevents iOS zoom on focus)
+Focus state: border 2px solid brand color
+Error state: border 2px solid #DC2626, error text below in red 13px
+Required indicator: red asterisk after label *
+
+Field 1 — Nome completo *
+
+Type: text
+Validation: minimum 2 characters, must contain space (forces first+last name)
+Autocomplete: name
+
+Field 2 — Empresa *
+
+Type: text
+Validation: minimum 2 characters
+Autocomplete: organization
+
+Field 3 — Email corporativo *
+
+Type: email
+Validation: standard email regex
+Autocomplete: email
+Hint text below field (12px, color #64748B): Use seu email comercial para receber a análise.
+
+Field 4 — WhatsApp / Celular *
+
+Type: tel
+Format: masked (00) 00000-0000
+Use a phone mask library (e.g., imask or react-input-mask)
+inputmode: tel
+Validation: must be 11 digits after masking
+Autocomplete: tel
+
+Field 5 — Estado *
+
+Type: select
+Options (in this order — these are the ONLY allowed states):
+
+  Selecione seu estado
+  São Paulo
+  Minas Gerais
+  Rio de Janeiro
+  Paraná
+  Rio Grande do Sul
+  Santa Catarina
+  Bahia
+  Goiás
+  Distrito Federal
+  Espírito Santo
+  Pernambuco
+  Ceará
+  Mato Grosso
+  Mato Grosso do Sul
+  Pará
+  Maranhão
+  Paraíba
+  Rio Grande do Norte
+  Alagoas
+  Sergipe
+  Piauí
+  Amazonas
+  Tocantins
+⚠️ CRITICAL: Acre, Amapá, Roraima, and Rondônia are not supported. They are omitted from the dropdown above. Do not add them.
+Field 6 — Cidade *
+
+Type: text
+Validation: minimum 2 characters
+Autocomplete: address-level2
+
+Field 7 — Tipo de negócio *
+
+Type: select
+Options:
+
+  Selecione...
+  Indústria
+  Supermercado / Varejo Alimentício
+  Comércio / Varejo
+  Hotel / Resort / Pousada
+  Clínica / Hospital
+  Escola / Faculdade
+  Condomínio Comercial
+  Condomínio Residencial
+  Shopping / Centro Comercial
+  Centro de Distribuição / Galpão
+  Lavanderia / Frigorífico
+  Escritório / Serviços
+  Outro
+Field 8 — Valor médio da conta de luz por mês *
+
+Type: select
+Options (in this exact order):
+
+  Selecione a faixa
+  R$ 5.000 a R$ 10.000
+  R$ 10.000 a R$ 30.000
+  R$ 30.000 a R$ 80.000
+  Mais de R$ 80.000
+  Menos de R$ 5.000 (caso especial)
+
+Microcopy below the field (12px, color #64748B, italic):
+
+  Atendemos empresas com conta a partir de R$ 5.000/mês. Contas menores podem ser analisadas caso a caso.
+Field 9 — Anexe sua última conta de luz (recommended, soft-required)
+
+Type: file
+Accept: .pdf, .jpg, .jpeg, .png
+Max size: 10MB (validate client-side, show error if exceeded)
+Mobile: must allow camera capture — use capture="environment" attribute alongside accept
+Label: Anexe sua última conta de luz
+Hint text below label (13px, color #475569): PDF ou foto da fatura. Análise muito mais precisa com a conta real.
+Display:
+
+When no file selected: Dashed border drop zone, "Clique para enviar ou arraste o arquivo aqui" + small icon
+When file selected: filename + size + small X to remove
+
+
+Below upload field, a smaller link (14px, color brand-color, underlined):
+
+  Não tenho minha conta agora — quero ser contatado depois
+
+Clicking that link reveals (slide-down animation) a checkbox + text:
+
+  ☐ Entendo que sem a conta a análise será simplificada. A Ótima entrará em contato para coletar a conta antes de finalizar.
+
+The checkbox must be checked to allow form submit without file. The link state must persist if user changes mind.
+
+Field 10 — Aceite LGPD *
+
+Type: checkbox (required to submit)
+Label (font-size 14px, line-height 1.5):
+
+  Concordo em compartilhar minha conta de luz e dados de contato para análise de economia, e autorizo a Ótima Energia a entrar em contato comigo por email, telefone ou WhatsApp. Veja nossa [Política de Privacidade].
+
+"[Política de Privacidade]" is a link that opens /politica-privacidade in new tab
+Unchecked state must visibly prevent submit button activation
+
+
+Trust line above submit button
+Just before the submit button (16px margin-top), three small reassurance points in a single horizontal row:
+🔒 Dados protegidos    ⏱️ Resposta em até 24h úteis    ✓ Sem compromisso
+(font-size: 13px, color: #475569)
+
+Submit button
+
+Full width on mobile, max-width 400px centered on desktop
+Height: 56px
+Background: brand primary color
+Text: white, font-size 18px, font-weight 600
+Border-radius: 8px
+Text:
+
+  Receber minha análise gratuita →
+
+Hover: slight darken + subtle shadow
+Disabled state (when LGPD checkbox unchecked): 50% opacity, cursor not-allowed
+Loading state on submit: spinner replaces arrow, text changes to "Enviando..."
+
+
+Below submit button (small reassurance line)
+Sua conta de luz é usada apenas para preparar sua análise. Não enviamos spam.
+(font-size: 13px, color #64748B, text-align: center, margin-top: 16px)
+
+Section 6 — FAQ (objection handling)
+Background: white
+Padding: 80px vertical desktop, 48px mobile
+Max-width: 800px centered
+Heading:
+Perguntas frequentes
+(font-size: 32px desktop, 26px mobile, font-weight: 700, color: #0F172A, text-align: center, margin-bottom: 48px)
+Accordion list (only one open at a time, smooth animation). Each item:
+
+Question (font-size: 18px, font-weight: 600, color: #0F172A) + chevron icon
+Answer revealed on click (font-size: 16px, color: #475569, line-height: 1.6)
+
+FAQ items (in this exact order — order matters, biggest objections first):
+1. Como a Ótima ganha dinheiro se o serviço é grátis?
+Somos pagos pelos fornecedores parceiros de Geração Distribuída quando intermediamos uma economia. O custo nunca é repassado para sua empresa. Você apenas recebe o desconto direto na conta de luz.
+2. Isso é energia solar? Preciso instalar placas na minha empresa?
+Não. Geração Distribuída não exige a instalação de placa solar, painel, inversor ou qualquer equipamento na sua empresa. A energia já é gerada por usinas parceiras, e os créditos abatem diretamente sua conta de luz. Sua operação não muda em nada.
+3. Vou precisar trocar de distribuidora ou mudar de contrato?
+Não. Você mantém sua distribuidora atual (Enel, CPFL, Cemig, Copel, Equatorial, EDP, ou qualquer outra). Não há mudança de contrato com a concessionária, nem religação, nem obra na sua empresa. O desconto aparece direto na sua fatura.
+4. Em quanto tempo começo a economizar?
+Após análise e aprovação do contrato, o desconto costuma aparecer entre 30 e 60 dias na sua fatura, dependendo do ciclo de leitura da sua distribuidora.
+5. Tem multa se eu quiser sair do contrato?
+Os contratos de GD têm prazo de fidelidade que varia por fornecedor e região. Nosso especialista vai te apresentar as condições com clareza antes de qualquer assinatura. Você só assina se fizer sentido para sua empresa.
+6. Minha empresa qualifica?
+Atendemos empresas em 23 estados do Brasil. A elegibilidade depende da sua distribuidora, perfil de consumo e localização. Envie sua conta e analisamos sem compromisso — você só descobre se vale a pena enviando.
+7. Como vocês usam minha conta de luz?
+Sua fatura é usada exclusivamente para análise técnica de economia. Não compartilhamos com terceiros que não sejam fornecedores parceiros relevantes para preparar sua proposta. Veja nossa Política de Privacidade para detalhes.
+8. Quais distribuidoras vocês atendem?
+Trabalhamos com as principais distribuidoras do Brasil: Enel, CPFL, Cemig, Copel, Equatorial, EDP, Neoenergia, Energisa, Light, Celesc, Coelba, Celpe, e outras. Envie sua conta e confirmamos a cobertura na sua região.
+
+Section 7 — Final CTA / closing section
+Background: dark gradient matching hero (visual bookend)
+Padding: 96px vertical desktop, 64px mobile
+Text-align: center
+Heading:
+Quanto sua empresa pode economizar?
+(font-size: 40px desktop, 30px mobile, font-weight: 700, color: white)
+Subheading:
+Envie sua última conta de luz e descubra em até 24 horas úteis. Sem custo, sem compromisso.
+(font-size: 20px desktop, 17px mobile, color: rgba(255,255,255,0.85), max-width: 600px, margin: auto)
+CTA button (same style as hero CTA but slightly larger):
+Receber minha análise gratuita →
+On click: smooth-scroll to #formulario
+
+Section 8 — Footer
+Background: #0F172A (very dark)
+Padding: 48px vertical, 24px horizontal
+Color: rgba(255,255,255,0.7)
+Three-column layout on desktop, stacked on mobile:
+Column 1 — Company:
+
+Ótima Energia logo (white version)
+Short tagline: "Energia mais barata para empresas brasileiras."
+CNPJ + address (if available)
+
+Column 2 — Links:
+
+Política de Privacidade
+Termos de Uso
+Contato
+
+Column 3 — Contact:
+
+WhatsApp business number (clickable, opens WhatsApp)
+Email
+Horário de atendimento
+
+Footer bottom (full width, border-top):
+© 2026 Ótima Energia. Todos os direitos reservados.
+(font-size: 13px, color: rgba(255,255,255,0.5), text-align: center)
+
+ROUTING LOGIC — ALL PATHS GO TO /obrigado
+CRITICAL: /obrigado is an existing tracked URL. Do not rename it. Do not create alternate thank-you URLs. All three submission paths route to /obrigado with query parameters for variant content and event firing.
+Route A — Lead qualified above R$ 5.000 AND bill uploaded
+
+Destination: /obrigado?tipo=completo&nome={firstname}
+GA4 event fired on /obrigado page load when tipo=completo: lead_form_submit (PRIMARY conversion to Google Ads, value R$ 200)
+Zoho status: "Análise prioritária"
+
+Route B — Lead qualified above R$ 5.000 AND no bill uploaded (skip path)
+
+Destination: /obrigado?tipo=sem-conta&nome={firstname}
+GA4 event fired when tipo=sem-conta: lead_form_submit_no_bill (SECONDARY conversion to Google Ads, value R$ 60)
+Zoho status: "Aguardando conta - alta prioridade"
+
+Route C — Lead is "caso especial" (below R$ 5.000)
+
+Destination: /obrigado?tipo=caso-especial&nome={firstname}
+GA4 event fired when tipo=caso-especial: lead_form_submit_special_case — DO NOT fire to Google Ads
+Zoho status: "Caso especial - revisão manual"
+
+Default fallback (no tipo param, or unrecognized value)
+
+Render default thank-you content (Route A copy)
+Fire lead_form_submit as primary conversion (preserves existing tracking behavior on direct hits to /obrigado)
+This ensures backwards compatibility with any existing links pointing to /obrigado without params
+
+
+/obrigado PAGE — DYNAMIC CONTENT LOGIC
+The existing /obrigado page must be updated to read ?tipo= and ?nome= from URL on load and conditionally render one of three content blocks. All page chrome (header, footer, brand) stays identical across variants.
+Implementation logic (pseudocode)
+javascript// Run on /obrigado page load
+const params = new URLSearchParams(window.location.search);
+const tipo = params.get('tipo');
+const nome = sanitize(params.get('nome')); // XSS protection — strip HTML/scripts
+const greeting = nome ? `Obrigado, ${nome}!` : 'Obrigado!';
+
+switch(tipo) {
+  case 'completo':
+    renderCompletoContent(greeting);
+    gtag('event', 'lead_form_submit', { value: 200, currency: 'BRL' });
+    break;
+  case 'sem-conta':
+    renderSemContaContent(greeting);
+    gtag('event', 'lead_form_submit_no_bill', { value: 60, currency: 'BRL' });
+    break;
+  case 'caso-especial':
+    renderCasoEspecialContent(greeting);
+    gtag('event', 'lead_form_submit_special_case');
+    // Do NOT send to Google Ads
+    break;
+  default:
+    renderCompletoContent(greeting);
+    gtag('event', 'lead_form_submit', { value: 200, currency: 'BRL' });
+}
+Sanitization requirement
+The nome param must be sanitized before rendering (strip any HTML tags, JS, special characters beyond accented letters and spaces). Use a library like DOMPurify or a strict whitelist regex. If empty or invalid after sanitization, fall back to generic "Obrigado!".
+Personalization tokens
+Form submission passes:
+
+tipo=completo|sem-conta|caso-especial
+nome={firstname only, not full name} — extract first word of "Nome completo" field
+
+Example final URL:
+/obrigado?tipo=completo&nome=Carlos
+
+/obrigado CONTENT BLOCKS
+Variant: tipo=completo (or default fallback)
+Heading (H1):
+Recebemos sua conta. Análise em andamento.
+Body:
+Obrigado, [Nome]!
+
+Nossa equipe de especialistas já está analisando sua conta de luz. Você receberá sua análise personalizada e proposta de economia em até 24 horas úteis, pelo email cadastrado ou WhatsApp.
+
+Enquanto isso:
+- Verifique sua caixa de entrada (e a pasta de spam)
+- Salve nosso WhatsApp comercial: [número]
+- Conheça casos de empresas que economizaram com a Ótima
+Buttons:
+
+Primary: Salvar WhatsApp da Ótima (opens WhatsApp contact / vCard download)
+Secondary: Voltar ao site (links to /)
+
+
+Variant: tipo=sem-conta
+Heading (H1):
+Recebemos seus dados! Falta só sua conta de luz.
+Body:
+Obrigado, [Nome]!
+
+Para finalizar sua análise gratuita, precisamos da sua última conta de luz. Você pode:
+
+1. Enviar agora pelo WhatsApp (mais rápido)
+2. Aguardar nossa equipe entrar em contato em até 4 horas úteis para coletar
+3. Enviar por email para: contato@otimaenergia.com.br
+
+Quanto antes recebermos sua conta, mais rápido você descobre quanto pode economizar.
+Buttons:
+
+Primary (large, prominent): Enviar minha conta pelo WhatsApp →
+
+Opens WhatsApp with pre-filled message: "Olá, acabei de me cadastrar no site e quero enviar minha conta de luz para análise."
+
+
+Secondary: Voltar ao site
+
+
+Variant: tipo=caso-especial
+Heading (H1):
+Recebemos sua solicitação como caso especial.
+Body:
+Obrigado, [Nome]!
+
+Sua conta está fora do nosso perfil padrão (R$ 5.000+/mês), mas vamos analisar caso a caso. Nossa equipe verificará se conseguimos gerar economia significativa para sua empresa.
+
+Resposta em até 5 dias úteis pelo email cadastrado ou WhatsApp.
+
+Se houver oportunidade, entraremos em contato. Caso contrário, retornaremos com sugestões alternativas para sua empresa.
+Buttons:
+
+Primary: Voltar ao site
+Secondary: Falar com a Ótima no WhatsApp
+
+
+TRACKING SPEC (GTM + GA4)
+GTM container fires these GA4 events:
+Event nameTriggerSend to Google AdsValuepage_viewLanding page load (/reduza)No—form_startFirst interaction with any form field on /reduzaNo—form_errorForm validation error on /reduzaNo—lead_form_submit/obrigado page load with tipo=completo OR no tipo paramYES — PRIMARYR$ 200lead_form_submit_no_bill/obrigado page load with tipo=sem-contaYES — SECONDARYR$ 60lead_form_submit_special_case/obrigado page load with tipo=caso-especialNO—bill_upload_addedFile uploaded successfully on /reduza (analytics only — do not double-count)No—
+Important: existing /obrigado tracking
+If /obrigado already has a conversion pixel firing on page load, review and migrate to the conditional logic above. The new logic preserves the existing behavior (firing lead_form_submit as primary) for any direct hits without params, while adding variant routing for new form submissions.
+If the existing tracking uses a different event name, decide before launch:
+
+Option 1 (preferred): Update Google Ads conversion action to use lead_form_submit going forward. Update GTM. Confirm in Google Ads UI that the conversion still attributes correctly.
+Option 2 (no-touch): Keep existing event name firing as before on tipo=completo and default. Add the new variant events alongside.
+
+Resolve this with the developer + ads team before deploying.
+UTM capture
+All UTMs (utm_source, utm_medium, utm_campaign, utm_term, utm_content) plus gclid must persist via:
+
+Captured from URL params on /reduza landing
+Stored in sessionStorage immediately on page load
+Written to hidden form fields on form submit
+Pushed to Zoho along with form data
+Optionally appended to /obrigado URL for cross-page attribution
+
+If a user navigates away and returns, retrieve from sessionStorage to preserve attribution within the session.
+
+DESIGN TOKENS
+css/* Colors */
+--color-brand-primary: [USE EXISTING BRAND COLOR OR #16A34A]
+--color-brand-primary-dark: [SLIGHTLY DARKER VERSION]
+--color-text-primary: #0F172A
+--color-text-secondary: #475569
+--color-text-muted: #64748B
+--color-bg-light: #F8FAFC
+--color-bg-form: #F1F5F9
+--color-border: #CBD5E1
+--color-error: #DC2626
+--color-success: #16A34A
+
+/* Spacing scale */
+--space-xs: 4px
+--space-sm: 8px
+--space-md: 16px
+--space-lg: 24px
+--space-xl: 48px
+--space-2xl: 80px
+
+/* Typography */
+--font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif
+
+/* Border radius */
+--radius-sm: 4px
+--radius-md: 8px
+--radius-lg: 16px
+
+/* Shadows */
+--shadow-card: 0 4px 24px rgba(0,0,0,0.08)
+--shadow-button: 0 2px 8px rgba(0,0,0,0.12)
+
+METADATA (<head> for /reduza)
+html<title>Reduza a Conta de Luz da Sua Empresa | Análise Grátis - Ótima Energia</title>
+<meta name="description" content="Receba até 25% de desconto na conta de luz da sua empresa com Geração Distribuída. Sem custo, sem obra, sem trocar de distribuidora. Envie sua conta e descubra seu desconto." />
+<meta name="robots" content="index, follow" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="Reduza a Conta de Luz da Sua Empresa | Ótima Energia" />
+<meta property="og:description" content="Análise gratuita por especialista. Sem custo, sem obra, sem trocar de distribuidora." />
+<meta property="og:image" content="[path to OG image, 1200x630]" />
+<meta property="og:url" content="https://otimaenergia.com/reduza" />
+
+<!-- Hreflang -->
+<link rel="canonical" href="https://otimaenergia.com/reduza" />
+<meta property="og:locale" content="pt_BR" />
+
+MOBILE-SPECIFIC REQUIREMENTS
+
+All tappable elements minimum 44×44px
+Form fields height 48px minimum
+Font size 16px minimum on inputs (prevents iOS auto-zoom on focus)
+Hero must be readable without scroll on iPhone SE (375×667 viewport)
+Form section must reach within 1.5 scrolls from hero on mobile
+File upload must trigger camera via capture="environment"
+WhatsApp/phone field uses inputmode="tel"
+Test on real iOS Safari and Android Chrome, not just emulators
+
+
+ACCESSIBILITY
+
+All form fields have associated <label> elements
+All images have alt attributes
+Focus states are visible (not removed)
+Color contrast meets WCAG AA (4.5:1 for body text)
+Form errors are announced to screen readers (use aria-live="polite" on error containers)
+Submit button has clear focus + disabled states
+
+
+PERFORMANCE BUDGET
+
+LCP < 2.0s on 4G mobile (Lighthouse test)
+CLS < 0.1
+TBT < 200ms
+Total page weight < 1.2MB
+Hero image: WebP or AVIF, max 150KB
+No render-blocking scripts in <head> except critical CSS
+GTM loaded async
+Lazy-load images below fold
+
+
+BUILD SEQUENCE
+
+Static /reduza page structure + design tokens
+Hero, trust bar, how-it-works, FAQ, final CTA, footer (visual sections)
+Form with all fields + validation + masks
+Conditional logic for "skip upload" path
+Form submission logic: routes to /obrigado?tipo=X&nome=Y based on field values
+Update /obrigado to read query params and render variant content + fire variant GA4 events
+Verify legacy direct hits to /obrigado (no params) still fire the original primary conversion
+GTM container setup with all new events, conversion imports verified in Google Ads
+Zoho integration (form data + UTMs + GCLID + status by route)
+End-to-end testing: paid click → form fill (each route) → submit → /obrigado correct variant → Zoho receives correct status → conversion fires correctly in Google Ads
+Mobile QA on real devices
+Lighthouse performance pass
+Replace old /reduza (keep old at /reduza-v1 for fallback during 7-day monitoring)
+
+
+SUCCESS METRICS (POST-LAUNCH)
+Within 30 days of launch, the page should achieve:
+
+Mobile conversion rate (lead_form_submit / sessions on /reduza): 6-10%
+Bill upload rate (bill_upload_added / total submits): 50-70%
+Average time on page: 90+ seconds
+Form completion rate (form_start → submit): 35%+
+Caso especial rate (Route C / total submits): <20%
+
+If any metric is significantly below these ranges, the page needs iteration. Don't assume launch = done.
+
+STRICT DO-NOTs
+
+Do NOT change the /obrigado URL — it's tracked and live in Google Ads
+Do NOT use "Up to 35%" or any % above 25% (highest documented region discount is 25% in MG)
+Do NOT claim "save guaranteed" or any unconditional savings promise
+Do NOT use stock photos of solar panels, wind turbines, or anything that implies installation
+Do NOT use generic "happy business person" stock photos that scream stock photo
+Do NOT add a chatbot widget that auto-pops within first 5 seconds
+Do NOT add countdown timers or fake urgency
+Do NOT use carousels in the hero (kills LCP)
+
+
+QUESTIONS TO RESOLVE WITH STAKEHOLDER BEFORE BUILD
+
+What is the verified brand color hex?
+Do you have a real testimonial from a verified client?
+What is the verified number of clients served and total savings generated?
+Confirmed WhatsApp business number for footer + thank-you pages?
+Confirmed business hours for "atendimento" text?
+Existing /politica-privacidade page or does one need to be created?
+Confirmed Zoho webhook endpoint for form submission?
+GTM container ID and GA4 property ID confirmed?
+What GA4 event currently fires on /obrigado page load? (Required to plan migration — Option 1 vs Option 2 in tracking section above)
+Is the existing /obrigado page a standalone HTML/React page that can be edited to add the conditional rendering logic?
+
+
+END OF BRIEF.
