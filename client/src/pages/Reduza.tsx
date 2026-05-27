@@ -5,8 +5,10 @@ import { z } from "zod";
 import {
   Upload, CheckCircle, Zap, ArrowRight, Shield, X, ChevronDown,
   ChevronUp, Search, MessageSquare, TrendingDown, Building2,
-  Mail, Phone, Clock, FileText,
+  Mail, Phone, Clock,
 } from "lucide-react";
+import logoFull from "@/assets/branding/logo-full-large.png";
+import logoIcon from "@/assets/branding/logo-icon-transparent.png";
 
 declare global {
   interface Window { gtag?: (...args: any[]) => void; dataLayer?: any[]; }
@@ -50,7 +52,7 @@ const VALORES_CONTA = [
 const TRUST_BADGES = [
   { icon: <CheckCircle className="h-5 w-5" />, title: "100% grátis para sua empresa", sub: "Não pagamos taxa, mensalidade, nem comissão." },
   { icon: <Zap className="h-5 w-5" />, title: "Não é energia solar", sub: "Sem instalar placa, painel ou inversor." },
-  { icon: <Shield className="h-5 w-5" />, title: "Sem trocar de distribuidora", sub: "Você mantém Enel, CPFL, Cemig, etc." },
+  { icon: <Shield className="h-5 w-5" />, title: "Sem trocar de distribuidora", sub: "Você mantém sua distribuidora atual." },
   { icon: <Building2 className="h-5 w-5" />, title: "Sem obra na empresa", sub: "Nada de instalação ou intervenção física." },
   { icon: <TrendingDown className="h-5 w-5" />, title: "Pago pelos fornecedores", sub: "Recebemos comissão dos parceiros, não de você." },
   { icon: <Search className="h-5 w-5" />, title: "Análise feita por especialista", sub: "Engenheiros e analistas energéticos." },
@@ -74,7 +76,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Vou precisar trocar de distribuidora ou mudar de contrato?",
-    a: "Não. Você mantém sua distribuidora atual (Enel, CPFL, Cemig, Copel, Equatorial, EDP, ou qualquer outra). Não há mudança de contrato com a concessionária, nem religação, nem obra na sua empresa. O desconto aparece direto na sua fatura.",
+    a: "Não. Você mantém sua distribuidora atual — não há mudança de contrato com a concessionária, nem religação, nem obra na sua empresa. O desconto aparece direto na sua fatura.",
   },
   {
     q: "Em quanto tempo começo a economizar?",
@@ -94,7 +96,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Quais distribuidoras vocês atendem?",
-    a: "Trabalhamos com as principais distribuidoras do Brasil: Enel, CPFL, Cemig, Copel, Equatorial, EDP, Neoenergia, Energisa, Light, Celesc, Coelba, Celpe, e outras. Envie sua conta e confirmamos a cobertura na sua região.",
+    a: "Trabalhamos com as principais distribuidoras do Brasil. Envie sua conta e confirmamos a cobertura na sua região em até 24 horas.",
   },
 ];
 
@@ -272,9 +274,8 @@ export default function Reduza() {
       {/* ── Section 0: Sticky Header ──────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200" style={{ height: 64 }}>
         <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2 font-bold text-lg" style={{ color: BRAND_DARK }}>
-            <Zap className="h-6 w-6" style={{ color: BRAND }} />
-            Ótima Energia
+          <a href="/">
+            <img src={logoFull} alt="Ótima Energia" className="h-10 w-auto" />
           </a>
           <button
             onClick={scrollToForm}
@@ -414,9 +415,11 @@ export default function Reduza() {
       </section>
 
       {/* ── Section 5: Form ───────────────────────────────────────────────── */}
-      <section id="formulario" className="py-16 md:py-20 px-4" style={{ background: "#F1F5F9" }}>
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+      <section id="formulario" className="relative overflow-hidden py-16 md:py-20 px-4" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.04 }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.15) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.5 }} />
+        <div className="relative z-10 max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12" style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
             <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: "#0F172A" }}>
               Envie sua conta e veja seu desconto
             </h2>
@@ -698,10 +701,9 @@ export default function Reduza() {
       <footer style={{ background: "#0F172A" }} className="px-4 py-12">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-white/70 text-sm">
           <div>
-            <div className="flex items-center gap-2 font-bold text-white text-base mb-3">
-              <Zap className="h-5 w-5" style={{ color: BRAND }} />
-              Ótima Energia
-            </div>
+            <a href="/" className="inline-block mb-3">
+              <img src={logoIcon} alt="Ótima Energia" className="h-10 w-auto" />
+            </a>
             <p className="leading-relaxed mb-2">Energia mais barata para empresas brasileiras.</p>
             <p className="text-white/40 text-xs leading-relaxed">
               CNPJ 65.023.912/0001-24<br />Rio de Janeiro, Brasil
