@@ -150,7 +150,7 @@ function getUTMsFromSession() {
 // ─── Form schema ─────────────────────────────────────────────────────────────
 const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório").refine(
-    v => v.trim().split(/\s+/).length >= 2, "Informe nome e sobrenome"
+    v => v.trim().length >= 2, "Nome obrigatório"
   ),
   empresa: z.string().min(2, "Empresa obrigatória"),
   email: z.string().email("Email inválido"),
