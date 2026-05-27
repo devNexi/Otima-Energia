@@ -51,6 +51,8 @@ import Reduza from "@/pages/Reduza";
 import Obrigado from "@/pages/Obrigado";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
+import GoogleAdsLaunchPack from "@/pages/GoogleAdsLaunchPack";
+import PpcManager from "@/pages/PpcManager";
 import Parceiros from "@/pages/Parceiros";
 import GdParaEmpresas from "@/pages/GdParaEmpresas";
 import MercadoLivreAcl from "@/pages/MercadoLivreAcl";
@@ -138,6 +140,8 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/keyword-research" component={KeywordResearch} />
       <Route path="/admin/google-ads-diagnostics" component={GoogleAdsDiagnostics} />
+      <Route path="/admin/google-ads-launch-pack" component={GoogleAdsLaunchPack} />
+      <Route path="/admin/ppc-manager" component={PpcManager} />
       <Route path="/admin/qa" component={QaConsole} />
       <Route path="/admin/qa/history" component={QaHistory} />
       <Route path="/admin/walkthrough" component={RenanWalkthrough} />

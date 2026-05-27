@@ -1,0 +1,114 @@
+Google Ads API approval is pending and may take three business days.
+
+Do not wait on API access. Build the next phase in offline/manual mode.
+
+Goal:
+Create a Google Ads launch pack generator and PPC Manager skeleton that can work from static keyword seed data now, and later connect to the Google Ads API once the developer token is approved.
+
+Do not make any live Google Ads changes.
+
+1. Create /admin/google-ads-launch-pack
+
+This admin page should let me generate and download Google Ads Editor CSVs from the existing Otima PPC strategy.
+
+Outputs:
+- Campaigns.csv
+- AdGroups.csv
+- Keywords.csv
+- NegativeKeywords.csv
+- ResponsiveSearchAds.csv
+- Assets.csv
+
+All campaigns must be Paused by default.
+
+Use these campaigns:
+01_Reducao_Custo_Energia_BR
+02_Mercado_Livre_Energia_BR
+03_Comparativo_ACR_ACL_GDL
+04_Reducao_Custos_Empresariais
+05_Condominios
+06_Verticais_Industria_Comercio
+
+Settings:
+- Campaign type: Search
+- Network: Google Search only
+- Search partners: off
+- Display: off
+- Location: Brazil
+- Language: Portuguese
+- Bidding: Maximize Clicks or Maximize Conversions selectable
+- Conversion goal: lead_form_submit
+- Final URL: https://www.otimaenergia.com/reduza
+- Campaign status: Paused
+
+2. Include keyword seed strategy
+
+Use exact and phrase match only. No broad match.
+
+Include campaigns/ad groups and keywords from our Otima PPC strategy:
+- Redução de Conta de Energia
+- Mercado Livre de Energia / ACL
+- ACR vs ACL vs GDL
+- Redução de Custos Empresariais
+- Condomínios
+- Indústria / Comércio verticals
+
+3. Add negative keyword exports
+
+Create:
+- MASTER_NEG_OTIMA.csv
+- Campaign-level negatives
+- Ad-group-level negatives
+
+Include negatives for:
+segunda via, boleto, utility support, residential, jobs, courses, PDFs, templates, academic research, solar B2C, marketplace Mercado Livre confusion, accounting/tax/HR/software/general business-cost noise.
+
+4. Responsive Search Ads
+
+Generate one RSA per ad group with:
+- 15 headlines where possible
+- 4 descriptions
+- paths
+- final URL
+
+All copy in Brazilian Portuguese.
+
+No unverifiable claims like guaranteed savings or fixed percentage savings.
+
+5. Assets
+
+Generate:
+- sitelinks
+- callouts
+- structured snippets
+
+6. Create /admin/ppc-manager skeleton
+
+This page should not require Google Ads API yet.
+
+It should show:
+- Daily optimisation rules
+- Negative keyword automation rules
+- Keyword promotion rules
+- Pause rules
+- Human approval boundaries
+
+Add a placeholder upload option where I can later upload Search Terms CSV manually if API access is not ready.
+
+7. Manual Search Terms CSV workflow
+
+Allow upload of a Google Ads Search Terms CSV and classify each query as:
+- KEEP
+- ADD_NEGATIVE_ACCOUNT
+- ADD_NEGATIVE_CAMPAIGN
+- ADD_NEGATIVE_ADGROUP
+- PROMOTE_TO_EXACT
+- PROMOTE_TO_PHRASE
+- REVIEW_MANUALLY
+
+Use Otima-specific rules:
+Reject utility support, segunda via, residential, jobs, courses, PDF/template, marketplace confusion, generic business topics unrelated to energy.
+
+8. Do not use Google Ads API calls in this phase.
+
+This is offline generation and manual CSV classification only until API approval arrives.
