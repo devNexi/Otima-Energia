@@ -352,8 +352,12 @@ export default function Reduza() {
                 <HeroBackground />
               </div>
               <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(9,8,30,0.15) 0%, rgba(9,8,30,0.72) 55%, rgba(9,8,30,0.88) 100%)" }} />
-              <div className="absolute inset-0 flex flex-col justify-end px-7 pb-7 pt-10 text-white">
-                <p className="text-white/55 text-xs font-semibold uppercase tracking-widest mb-4">Exemplo de resultado</p>
+              <div className="absolute inset-0 flex flex-col px-7 pt-12 pb-7 text-white">
+                {/* Label pinned to top */}
+                <p className="text-white/55 text-xs font-semibold uppercase tracking-widest">Exemplo de resultado</p>
+                {/* Spacer pushes stats to the bottom */}
+                <div className="flex-1" />
+                {/* Stats at bottom */}
                 <div className="space-y-1 mb-4">
                   <p className="text-sm text-white/55">Conta atual</p>
                   <p className="text-3xl font-bold text-white">R$ 10.000<span className="text-base font-normal text-white/50">/mês</span></p>
