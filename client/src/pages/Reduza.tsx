@@ -200,7 +200,8 @@ export default function Reduza() {
     setFile(f);
     setUploadError(null);
     setShowSkipOption(false);
-    fireEvent("bill_upload_added", { file_type: f.type });
+    // NOTE: bill_upload_added is intentionally NOT fired here.
+    // It fires in onSubmit after the server confirms the upload succeeded.
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -237,6 +238,13 @@ export default function Reduza() {
 
       const isCasoEspecial = data.valorConta === "Menos de R$ 5.000 (caso especial)";
       const tipo = isCasoEspecial ? "caso-especial" : file ? "completo" : "sem-conta";
+
+      // bill_upload_added fires here — only after the server has confirmed the
+      // bill was received and saved (not on file-field interaction).
+      if (file) {
+        fireEvent("bill_upload_added", { file_type: file.type });
+      }
+
       const firstName = encodeURIComponent(data.nome.trim().split(/\s+/)[0]);
       window.location.href = `/obrigado?tipo=${tipo}&nome=${firstName}`;
 

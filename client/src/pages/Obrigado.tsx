@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
-import { CheckCircle, Zap, ArrowRight, MessageCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, ArrowRight, MessageCircle, ExternalLink } from "lucide-react";
+import logoFull from "@/assets/branding/logo-full-large.png";
 
 declare global {
   interface Window { gtag?: (...args: any[]) => void; dataLayer?: any[]; }
@@ -229,10 +230,9 @@ export default function Obrigado() {
     <div className="min-h-screen bg-white font-sans flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
-          <a href="/" className="flex items-center gap-2 font-bold text-lg text-slate-900">
-            <Zap className="h-6 w-6" style={{ color: BRAND }} />
-            Ótima Energia
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
+          <a href="/">
+            <img src={logoFull} alt="Ótima Energia" className="h-10 w-auto" />
           </a>
         </div>
       </header>
