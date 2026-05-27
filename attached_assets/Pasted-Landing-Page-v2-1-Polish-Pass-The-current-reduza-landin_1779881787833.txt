@@ -1,0 +1,91 @@
+Landing Page v2.1 Polish Pass
+The current /reduza landing page is functional but visually bland. Goal: make it feel like a modern hi-tech AI-powered Brazilian energy company (think Brex, Stripe, Linear, Pipefy in terms of polish), not a 2018 SaaS template. Implement the following changes:
+1. Hero video integration (CRITICAL):
+Find the hero video used on the homepage. Search the project for .mp4, .webm, or .mov files, and search Home.tsx/Index.tsx for any <video> element. Once found, integrate it in two places on /reduza:
+
+Replace the "Exemplo de resultado" card in the right column of the hero with the video (rounded-2xl, dark overlay gradient on top, hide on mobile)
+Add the same video as a subtle background behind the form section (§5), at opacity 0.15-0.2, with dark gradient overlay so the white form card stays readable
+
+If no video file exists, report back before making any visual changes. Don't fabricate a video element pointing to a missing file.
+2. Hero polish:
+
+Break the hero subheadline into two punchier lines instead of one heavy paragraph:
+
+Line 1 (current size): "Receba até 25% de desconto na conta de energia da sua empresa."
+Line 2 (smaller, muted): "Sem custo, sem obra, sem trocar de distribuidora. Você economiza, a Ótima é paga pelos fornecedores parceiros."
+
+
+Tighten vertical spacing between the trust line and the start of next section (currently has too much dead space on >1440px screens)
+Remove the bouncing chevron OR replace with a subtle static down arrow with a gentle pulse animation
+
+3. Trust bar — replace emojis with proper SVG icons:
+Remove emojis (⚡🛡🏢📉🔍) and use lucide-react icons throughout:
+
+CheckCircle2 for "100% grátis"
+Sparkles or Zap for "Não é energia solar"
+Shield for "Sem trocar de distribuidora"
+Building2 for "Sem obra na empresa"
+Handshake or TrendingDown for "Pago pelos fornecedores"
+Search or LineChart for "Análise feita por especialista"
+
+Icons should be 24px, color matching the brand primary at 50% opacity, inside a subtle circle background (#F3F4F6 light grey).
+4. "Como funciona" section — make it look engineered, not childish:
+
+Connect the four steps with a horizontal dotted/dashed line (desktop only)
+Make the numbered badges smaller and more sophisticated (replace the floating "1, 2, 3, 4" pills with subtle numbered labels inside the icon circles)
+The icons themselves should have a more modern treatment — instead of solid purple circles, use outlined circles with the icon in the brand color
+On mobile, stack the steps with a vertical connector line between them
+
+5. Social proof section — restructure:
+The single "25%" stat block is weak. Replace with:
+
+A 3-column grid (desktop) / stacked (mobile) showing:
+
+23 | Estados atendidos no Brasil | (with subtle map icon)
+Até 25% | Desconto possível na conta de luz | (with bar chart icon)
+24h | Resposta da análise gratuita | (with clock icon)
+
+
+If real client logos become available, add a horizontal logo strip below the stats
+Keep the disclaimer: "* Desconto médio máximo baseado nas condições atuais..."
+
+6. FAQ section — surface the most critical question:
+
+The first FAQ question ("Como a Ótima ganha dinheiro se o serviço é grátis?") should be pre-expanded by default since this is the #1 trust objection
+Add a subtle "Mais perguntadas" label above the first 3 questions
+Use a more sophisticated chevron animation when accordion expands (smooth rotation, not a snap)
+
+7. Form section visual upgrade:
+
+Beyond adding the background video (see #1), increase the form card shadow depth slightly for more "lift" off the dark background: box-shadow: 0 20px 60px rgba(0,0,0,0.3)
+Add a subtle border-glow effect on the form card (1px solid rgba(brand-primary, 0.1))
+The "Receber minha análise gratuita" button should have a subtle hover state with a gentle scale (1.02) and shadow lift
+
+8. Footer expansion:
+Current footer is too minimal. Expand to 3 columns on desktop, stacked on mobile:
+
+Column 1: Logo + brand tagline "Energia mais barata para empresas brasileiras." + CNPJ if available
+Column 2: Navigation links — Sobre, Como funciona, Perguntas frequentes, Política de Privacidade, Termos de Uso
+Column 3: Contact — WhatsApp business, email, "Atendemos em 23 estados do Brasil"
+Bottom bar (full-width, border-top): © 2026 Ótima Energia. Plus social icons (LinkedIn, Instagram if applicable).
+
+9. Performance — verify before deploy:
+
+Lighthouse Performance score must remain ≥ 85 on mobile
+LCP under 2.5s on 4G simulation
+CLS under 0.1
+Total page weight ≤ 1.5MB (video files counted)
+If the hero video pushes weight over budget, compress to under 800KB or split into a poster image + lower-res 480p loop
+
+Do NOT change:
+
+The form fields, validation logic, or submit routing — that's all working
+The /obrigado URL or tracking events
+The Brazilian Portuguese copy in form labels, FAQ answers, or CTAs — content is approved
+The 25% maximum discount claim or any conditional savings language
+
+Report back with:
+
+Whether you found the video file (and its path)
+Lighthouse scores before and after
+Any decisions you made on visual treatment that weren't fully specified

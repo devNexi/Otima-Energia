@@ -3,12 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Upload, CheckCircle, Zap, ArrowRight, Shield, X, ChevronDown,
-  ChevronUp, Search, MessageSquare, TrendingDown, Building2,
-  Mail, Phone, Clock,
+  Upload, CheckCircle, CheckCircle2, ArrowRight, Shield, X, ChevronDown,
+  Search, MessageSquare, TrendingDown, Building2, Sparkles,
+  Mail, Phone, Clock, Map, BarChart2, Linkedin, Instagram,
 } from "lucide-react";
 import logoFull from "@/assets/branding/logo-full-large.png";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
+import HeroBackground from "@/components/HeroBackground";
 
 declare global {
   interface Window { gtag?: (...args: any[]) => void; dataLayer?: any[]; }
@@ -16,7 +17,6 @@ declare global {
 
 // ─── Brand tokens ───────────────────────────────────────────────────────────
 const BRAND = "#9e3ffd";
-const BRAND_DARK = "#16163f";
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 const ESTADOS = [
@@ -50,19 +50,25 @@ const VALORES_CONTA = [
 ];
 
 const TRUST_BADGES = [
-  { icon: <CheckCircle className="h-5 w-5" />, title: "100% grátis para sua empresa", sub: "Não pagamos taxa, mensalidade, nem comissão." },
-  { icon: <Zap className="h-5 w-5" />, title: "Não é energia solar", sub: "Sem instalar placa, painel ou inversor." },
-  { icon: <Shield className="h-5 w-5" />, title: "Sem trocar de distribuidora", sub: "Você mantém sua distribuidora atual." },
-  { icon: <Building2 className="h-5 w-5" />, title: "Sem obra na empresa", sub: "Nada de instalação ou intervenção física." },
-  { icon: <TrendingDown className="h-5 w-5" />, title: "Pago pelos fornecedores", sub: "Recebemos comissão dos parceiros, não de você." },
-  { icon: <Search className="h-5 w-5" />, title: "Análise feita por especialista", sub: "Engenheiros e analistas energéticos." },
+  { icon: <CheckCircle2 className="h-6 w-6" />, title: "100% grátis para sua empresa", sub: "Sem taxa, mensalidade ou comissão." },
+  { icon: <Sparkles className="h-6 w-6" />, title: "Não é energia solar", sub: "Sem placas, painel ou inversor." },
+  { icon: <Shield className="h-6 w-6" />, title: "Sem trocar de distribuidora", sub: "Você mantém sua distribuidora atual." },
+  { icon: <Building2 className="h-6 w-6" />, title: "Sem obra na empresa", sub: "Sem instalação ou intervenção física." },
+  { icon: <TrendingDown className="h-6 w-6" />, title: "Pago pelos fornecedores", sub: "Comissão dos parceiros, não de você." },
+  { icon: <Search className="h-6 w-6" />, title: "Análise por especialista", sub: "Engenheiros e analistas energéticos." },
 ];
 
 const STEPS = [
-  { icon: <Upload className="h-7 w-7" />, title: "Você envia sua última conta de luz", desc: "Em segundos, pelo celular ou computador. Aceitamos PDF ou foto." },
-  { icon: <Search className="h-7 w-7" />, title: "Especialista analisa seu perfil", desc: "Verificamos sua distribuidora, perfil de consumo e o desconto disponível na sua região." },
-  { icon: <MessageSquare className="h-7 w-7" />, title: "Você recebe sua proposta", desc: "Análise enviada por WhatsApp ou email em até 24 horas úteis. Sem compromisso." },
-  { icon: <TrendingDown className="h-7 w-7" />, title: "Desconto direto na sua conta", desc: "Aprovou? O desconto começa a aparecer na sua próxima fatura. Você não muda nada." },
+  { icon: <Upload className="h-6 w-6" />, title: "Você envia sua última conta de luz", desc: "Em segundos, pelo celular ou computador. Aceitamos PDF ou foto." },
+  { icon: <Search className="h-6 w-6" />, title: "Especialista analisa seu perfil", desc: "Verificamos sua distribuidora, consumo e o desconto disponível na sua região." },
+  { icon: <MessageSquare className="h-6 w-6" />, title: "Você recebe sua proposta", desc: "Análise enviada por WhatsApp ou email em até 24 horas úteis. Sem compromisso." },
+  { icon: <TrendingDown className="h-6 w-6" />, title: "Desconto direto na sua conta", desc: "Aprovou? O desconto começa a aparecer na sua próxima fatura. Você não muda nada." },
+];
+
+const STATS = [
+  { icon: <Map className="h-7 w-7" />, stat: "23", label: "Estados atendidos no Brasil" },
+  { icon: <BarChart2 className="h-7 w-7" />, stat: "Até 25%", label: "Desconto possível na conta de luz" },
+  { icon: <Clock className="h-7 w-7" />, stat: "24h", label: "Resposta da análise gratuita" },
 ];
 
 const FAQ_ITEMS = [
@@ -166,7 +172,8 @@ export default function Reduza() {
   const [skipBillAcknowledged, setSkipBillAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // Pre-expand the #1 trust objection question by default
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [formStarted, setFormStarted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -269,8 +276,8 @@ export default function Reduza() {
       type="button"
       className={`inline-flex items-center justify-center gap-2 font-semibold text-white rounded-lg transition-all ${className}`}
       style={{ background: BRAND }}
-      onMouseEnter={e => (e.currentTarget.style.filter = "brightness(0.9)")}
-      onMouseLeave={e => (e.currentTarget.style.filter = "")}
+      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(158,63,253,0.45)"; }}
+      onMouseLeave={e => { e.currentTarget.style.filter = ""; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
     >
       Receber minha análise gratuita <ArrowRight className="h-5 w-5" />
     </button>
@@ -301,105 +308,167 @@ export default function Reduza() {
 
       {/* ── Section 1: Hero ───────────────────────────────────────────────── */}
       <section
-        className="text-white py-16 md:py-24 px-4"
-        style={{ background: `linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)` }}
+        className="relative text-white py-16 md:py-24 px-4 overflow-hidden"
+        style={{ background: "#09081e" }}
       >
-        <div className="max-w-6xl mx-auto grid md:grid-cols-5 gap-10 items-center">
+        {/* WebGL smoke bg */}
+        <div className="absolute inset-0">
+          <HeroBackground />
+        </div>
+        {/* Dark overlay so text stays readable */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(9,8,30,0.72) 0%, rgba(9,8,30,0.55) 50%, rgba(9,8,30,0.70) 100%)" }} />
+
+        <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-5 gap-10 items-center">
           {/* Left 3/5 */}
           <div className="md:col-span-3">
             <p className="text-sm md:text-base font-semibold mb-4 tracking-wide" style={{ color: "#FBBF24" }}>
               PARA EMPRESAS COM CONTA DE LUZ A PARTIR DE R$ 5.000/MÊS
             </p>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-5">
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
               Desconto direto na conta de luz da sua empresa.
             </h1>
-            <p className="text-lg md:text-2xl text-white/85 leading-relaxed mb-8 max-w-xl">
-              Receba até 25% de desconto na conta de energia. Sem custo, sem obra, sem trocar de distribuidora, sem instalar placa solar. Você economiza, a Ótima é paga pelos fornecedores parceiros.
+            <p className="text-lg md:text-xl text-white/90 leading-relaxed mb-2 max-w-xl font-medium">
+              Receba até 25% de desconto na conta de energia da sua empresa.
+            </p>
+            <p className="text-base md:text-lg text-white/60 leading-relaxed mb-8 max-w-xl">
+              Sem custo, sem obra, sem trocar de distribuidora. Você economiza, a Ótima é paga pelos fornecedores parceiros.
             </p>
             <PrimaryBtn onClick={scrollToForm} className="text-lg px-7 py-4 shadow-lg mb-5 w-full sm:w-auto" />
-            <p className="text-sm text-white/65 flex flex-wrap gap-x-4 gap-y-1">
+            <p className="text-sm text-white/55 flex flex-wrap gap-x-4 gap-y-1">
               <span>✓ 100% grátis para sua empresa</span>
               <span>✓ Não é energia solar</span>
               <span>✓ Análise por especialista</span>
             </p>
           </div>
-          {/* Right 2/5 — visual callout card */}
+
+          {/* Right 2/5 — WebGL card with result callout (desktop only) */}
           <div className="md:col-span-2 hidden md:flex justify-center">
-            <div className="rounded-2xl bg-white/10 border border-white/20 p-7 w-full max-w-sm space-y-5">
-              <p className="text-white/70 text-sm font-medium uppercase tracking-widest">Exemplo de resultado</p>
-              <div className="space-y-2">
-                <p className="text-white/70 text-sm">Conta atual</p>
-                <p className="text-3xl font-bold text-white">R$ 10.000<span className="text-base font-normal text-white/60">/mês</span></p>
+            <div
+              className="relative rounded-2xl overflow-hidden w-full max-w-sm"
+              style={{ minHeight: 340, border: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              {/* Inner canvas — re-uses WebGL but as a contained card */}
+              <div className="absolute inset-0">
+                <HeroBackground />
               </div>
-              <div className="h-px bg-white/20" />
-              <div className="space-y-2">
-                <p className="text-white/70 text-sm">Economia possível</p>
-                <p className="text-3xl font-bold" style={{ color: "#A3E635" }}>
-                  até R$ 2.500<span className="text-base font-normal text-white/60">/mês</span>
-                </p>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(9,8,30,0.15) 0%, rgba(9,8,30,0.72) 55%, rgba(9,8,30,0.88) 100%)" }} />
+              <div className="absolute inset-0 flex flex-col justify-end p-7 text-white">
+                <p className="text-white/55 text-xs font-semibold uppercase tracking-widest mb-4">Exemplo de resultado</p>
+                <div className="space-y-1 mb-4">
+                  <p className="text-sm text-white/55">Conta atual</p>
+                  <p className="text-3xl font-bold text-white">R$ 10.000<span className="text-base font-normal text-white/50">/mês</span></p>
+                </div>
+                <div className="h-px mb-4" style={{ background: "rgba(255,255,255,0.12)" }} />
+                <div className="space-y-1 mb-4">
+                  <p className="text-sm text-white/55">Economia possível</p>
+                  <p className="text-2xl font-bold" style={{ color: "#A3E635" }}>
+                    até R$ 2.500<span className="text-base font-normal text-white/50">/mês</span>
+                  </p>
+                </div>
+                <ul className="space-y-2 text-sm text-white/75 mb-4">
+                  {["Sem custo", "Sem obra", "Sem trocar de distribuidora"].map(t => (
+                    <li key={t} className="flex items-center gap-2">
+                      <CheckCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#A3E635" }} />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-white/30 italic">* Valores ilustrativos. Análise real feita por especialista.</p>
               </div>
-              <div className="h-px bg-white/20" />
-              <ul className="space-y-2 text-sm text-white/80">
-                {["Sem custo", "Sem obra", "Sem trocar de distribuidora"].map(t => (
-                  <li key={t} className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 shrink-0" style={{ color: "#A3E635" }} />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-white/40 italic">* Valores ilustrativos. Análise real feita por especialista.</p>
             </div>
           </div>
         </div>
-        {/* Scroll hint */}
-        <div className="hidden md:flex justify-center mt-12">
-          <button onClick={scrollToForm} className="text-white/40 hover:text-white/70 transition-colors animate-bounce" aria-label="Rolar para o formulário">
+
+        {/* Scroll hint — subtle pulse, no bounce */}
+        <div className="relative z-10 hidden md:flex justify-center mt-10">
+          <button
+            onClick={scrollToForm}
+            className="text-white/35 hover:text-white/60 transition-colors"
+            aria-label="Rolar para o formulário"
+            style={{ animation: "pulse 2.5s cubic-bezier(0.4,0,0.6,1) infinite" }}
+          >
             <ChevronDown className="h-7 w-7" />
           </button>
         </div>
       </section>
 
       {/* ── Section 2: Trust bar ──────────────────────────────────────────── */}
-      <section className="py-12 md:py-16 px-4 bg-slate-50 border-b border-slate-100">
+      <section className="py-12 md:py-16 px-4 bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {TRUST_BADGES.map((b, i) => (
-            <div key={i} className="flex flex-col items-start gap-2">
-              <div className="rounded-full p-2" style={{ background: "#F3E8FF", color: BRAND }}>
+            <div key={i} className="flex flex-col items-start gap-2.5">
+              <div
+                className="rounded-full p-2.5 flex items-center justify-center"
+                style={{ background: "#F3F4F6", color: BRAND }}
+              >
                 {b.icon}
               </div>
               <p className="text-sm font-semibold text-slate-800 leading-tight">{b.title}</p>
-              <p className="text-xs text-slate-500 leading-snug">{b.sub}</p>
+              <p className="text-xs text-slate-400 leading-snug">{b.sub}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Section 3: How it works ───────────────────────────────────────── */}
-      <section className="py-16 md:py-20 px-4 bg-white">
+      <section className="py-16 md:py-20 px-4 bg-slate-50">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-3" style={{ color: "#0F172A" }}>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-3 text-slate-900">
             Como funciona
           </h2>
           <p className="text-center text-slate-500 text-lg mb-12">
             Quatro passos. Sem complicação. Sem custo para você.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-6">
-            {STEPS.map((s, i) => (
-              <div key={i} className="flex md:flex-col items-start md:items-center gap-4 md:text-center">
-                <div className="relative shrink-0">
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white" style={{ background: BRAND }}>
-                    {s.icon}
+
+          {/* Steps with connector line */}
+          <div className="relative">
+            {/* Desktop horizontal connector — dotted line at icon-center height */}
+            <div
+              className="hidden md:block absolute"
+              style={{
+                top: 28,
+                left: "calc(12.5% + 28px)",
+                right: "calc(12.5% + 28px)",
+                height: 1,
+                backgroundImage: `repeating-linear-gradient(90deg, rgba(158,63,253,0.35) 0px, rgba(158,63,253,0.35) 6px, transparent 6px, transparent 14px)`,
+              }}
+            />
+            {/* Mobile vertical connector */}
+            <div
+              className="md:hidden absolute left-7"
+              style={{
+                top: 56,
+                bottom: 56,
+                width: 1,
+                backgroundImage: `repeating-linear-gradient(180deg, rgba(158,63,253,0.35) 0px, rgba(158,63,253,0.35) 6px, transparent 6px, transparent 14px)`,
+              }}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-6">
+              {STEPS.map((s, i) => (
+                <div key={i} className="flex md:flex-col items-start md:items-center gap-5 md:text-center">
+                  {/* Outlined icon circle with number badge */}
+                  <div className="relative shrink-0 z-10">
+                    <div
+                      className="w-14 h-14 rounded-full border-2 bg-white flex items-center justify-center"
+                      style={{ borderColor: BRAND, color: BRAND }}
+                    >
+                      {s.icon}
+                    </div>
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full text-white flex items-center justify-center font-bold"
+                      style={{ background: BRAND, fontSize: "0.58rem" }}
+                    >
+                      {i + 1}
+                    </span>
                   </div>
-                  <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center text-xs font-bold" style={{ borderColor: BRAND, color: BRAND }}>
-                    {i + 1}
-                  </span>
+                  <div>
+                    <p className="font-semibold text-slate-800 mb-1 leading-snug">{s.title}</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-800 mb-1 leading-snug">{s.title}</p>
-                  <p className="text-sm text-slate-500 leading-relaxed">{s.desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -407,28 +476,56 @@ export default function Reduza() {
       {/* ── Section 4: Social proof ───────────────────────────────────────── */}
       <section className="py-16 px-4 bg-white border-t border-slate-100">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-10" style={{ color: "#0F172A" }}>
+          <h2 className="text-2xl md:text-3xl font-bold mb-10 text-slate-900">
             Empresas que já economizam com a Ótima
           </h2>
-          {/* NOTE: Only the verified claim is shown. Add real numbers (+1.500 empresas, R$50M+) here once confirmed. */}
-          <div className="inline-flex flex-col items-center gap-1 bg-purple-50 rounded-2xl px-12 py-8 border border-purple-100">
-            <p className="text-6xl font-bold" style={{ color: BRAND }}>25%</p>
-            <p className="text-lg font-semibold text-slate-700">de desconto possível na conta de luz</p>
-            <p className="text-sm text-slate-400 mt-1">Em regiões com maior cobertura de Geração Distribuída</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
+            {STATS.map((s, i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center gap-3 rounded-2xl px-6 py-8 border border-slate-100"
+                style={{ background: "#FAFAFA" }}
+              >
+                <div className="rounded-full p-3" style={{ background: "#F3E8FF", color: BRAND }}>
+                  {s.icon}
+                </div>
+                <p className="text-4xl font-bold" style={{ color: BRAND }}>{s.stat}</p>
+                <p className="text-sm font-medium text-slate-600 leading-snug">{s.label}</p>
+              </div>
+            ))}
           </div>
-          <p className="text-xs text-slate-400 mt-4 italic">
+
+          <p className="text-xs text-slate-400 italic">
             * Desconto médio máximo baseado nas condições atuais de fornecedores parceiros. Análise individualizada define o desconto real para sua empresa.
           </p>
         </div>
       </section>
 
       {/* ── Section 5: Form ───────────────────────────────────────────────── */}
-      <section id="formulario" className="relative overflow-hidden py-16 md:py-20 px-4" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.04 }} />
-        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.15) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.5 }} />
+      <section
+        id="formulario"
+        className="relative overflow-hidden py-16 md:py-20 px-4"
+        style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}
+      >
+        {/* WebGL bg at low opacity for depth */}
+        <div className="absolute inset-0" style={{ opacity: 0.18 }}>
+          <HeroBackground />
+        </div>
+        {/* Dark overlay to keep form readable */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(135deg, rgba(10,9,32,0.80) 0%, rgba(22,22,63,0.78) 60%, rgba(26,8,53,0.82) 100%)" }}
+        />
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.035 }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(158,63,253,0.12) 1px, transparent 1px)", backgroundSize: "28px 28px", opacity: 0.5 }} />
+
         <div className="relative z-10 max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12" style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: "#0F172A" }}>
+          <div
+            className="bg-white rounded-2xl p-8 md:p-12"
+            style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(158,63,253,0.08)" }}
+          >
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-slate-900">
               Envie sua conta e veja seu desconto
             </h2>
             <p className="text-slate-500 text-base mb-8">
@@ -644,6 +741,18 @@ export default function Reduza() {
                     opacity: (!lgpdValue || isSubmitting) ? 0.5 : 1,
                     cursor: (!lgpdValue || isSubmitting) ? "not-allowed" : "pointer",
                   }}
+                  onMouseEnter={e => {
+                    if (!isSubmitting && lgpdValue) {
+                      e.currentTarget.style.filter = "brightness(0.92)";
+                      e.currentTarget.style.transform = "scale(1.02)";
+                      e.currentTarget.style.boxShadow = "0 8px 28px rgba(158,63,253,0.45)";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.filter = "";
+                    e.currentTarget.style.transform = "";
+                    e.currentTarget.style.boxShadow = "";
+                  }}
                   data-testid="button-submit"
                 >
                   {isSubmitting ? (
@@ -665,12 +774,23 @@ export default function Reduza() {
       {/* ── Section 6: FAQ ────────────────────────────────────────────────── */}
       <section className="py-16 md:py-20 px-4 bg-white">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12" style={{ color: "#0F172A" }}>
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12 text-slate-900">
             Perguntas frequentes
           </h2>
           <div className="divide-y divide-slate-100">
             {FAQ_ITEMS.map((item, i) => (
               <div key={i}>
+                {/* "Mais perguntadas" label before the first 3 questions */}
+                {i === 0 && (
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 pt-1 pb-3">
+                    Mais perguntadas
+                  </p>
+                )}
+                {i === 3 && (
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 pt-5 pb-3">
+                    Outras dúvidas
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
@@ -678,15 +798,20 @@ export default function Reduza() {
                   data-testid={`faq-item-${i}`}
                 >
                   <span className="text-base md:text-lg font-semibold text-slate-800">{item.q}</span>
-                  {openFaq === i
-                    ? <ChevronUp className="h-5 w-5 shrink-0" style={{ color: BRAND }} />
-                    : <ChevronDown className="h-5 w-5 shrink-0 text-slate-400" />}
+                  <ChevronDown
+                    className="h-5 w-5 shrink-0"
+                    style={{
+                      color: openFaq === i ? BRAND : "#94a3b8",
+                      transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.3s ease, color 0.2s ease",
+                    }}
+                  />
                 </button>
                 <div
                   className="overflow-hidden transition-all duration-300"
                   style={{ maxHeight: openFaq === i ? 400 : 0 }}
                 >
-                  <p className="pb-5 text-slate-600 leading-relaxed text-base">{item.a}</p>
+                  <p className="text-slate-600 text-base leading-relaxed pb-5">{item.a}</p>
                 </div>
               </div>
             ))}
@@ -695,10 +820,14 @@ export default function Reduza() {
       </section>
 
       {/* ── Section 7: Final CTA ──────────────────────────────────────────── */}
-      <section className="py-20 md:py-24 px-4 text-white text-center" style={{ background: `linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)` }}>
-        <div className="max-w-2xl mx-auto">
+      <section className="relative overflow-hidden py-20 md:py-24 px-4 text-white text-center" style={{ background: "#09081e" }}>
+        <div className="absolute inset-0">
+          <HeroBackground />
+        </div>
+        <div className="absolute inset-0" style={{ background: "rgba(9,8,30,0.72)" }} />
+        <div className="relative z-10 max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-5xl font-bold mb-5">Quanto sua empresa pode economizar?</h2>
-          <p className="text-lg md:text-xl text-white/85 mb-10 max-w-lg mx-auto">
+          <p className="text-lg md:text-xl text-white/75 mb-10 max-w-lg mx-auto">
             Envie sua última conta de luz e descubra em até 24 horas úteis. Sem custo, sem compromisso.
           </p>
           <PrimaryBtn onClick={scrollToForm} className="text-lg px-9 py-5 shadow-xl" />
@@ -706,48 +835,83 @@ export default function Reduza() {
       </section>
 
       {/* ── Section 8: Footer ─────────────────────────────────────────────── */}
-      <footer style={{ background: "#0F172A" }} className="px-4 py-12">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-white/70 text-sm">
+      <footer style={{ background: "#0F172A" }} className="px-4 pt-14 pb-8">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-white/65 text-sm mb-10">
+          {/* Col 1: Brand */}
           <div>
-            <a href="/" className="inline-block mb-3">
+            <a href="/" className="inline-block mb-4">
               <img src={logoIcon} alt="Ótima Energia" className="h-10 w-auto" />
             </a>
-            <p className="leading-relaxed mb-2">Energia mais barata para empresas brasileiras.</p>
-            <p className="text-white/40 text-xs leading-relaxed">
+            <p className="leading-relaxed mb-2 text-white/80">Energia mais barata para empresas brasileiras.</p>
+            <p className="text-white/35 text-xs leading-relaxed">
               CNPJ 65.023.912/0001-24<br />Rio de Janeiro, Brasil
             </p>
           </div>
+
+          {/* Col 2: Navigation */}
           <div>
-            <p className="font-semibold text-white mb-3">Links</p>
-            <ul className="space-y-2">
+            <p className="font-semibold text-white mb-4">Navegação</p>
+            <ul className="space-y-2.5">
+              <li><a href="/#sobre" className="hover:text-white transition-colors">Sobre a Ótima</a></li>
+              <li><a href="#formulario" onClick={scrollToForm} className="hover:text-white transition-colors">Como funciona</a></li>
+              <li><a href="#formulario" onClick={scrollToForm} className="hover:text-white transition-colors">Análise gratuita</a></li>
               <li><a href="/privacidade" className="hover:text-white transition-colors">Política de Privacidade</a></li>
               <li><a href="/termos" className="hover:text-white transition-colors">Termos de Uso</a></li>
-              <li><a href="/" className="hover:text-white transition-colors">Site principal</a></li>
             </ul>
           </div>
+
+          {/* Col 3: Contact */}
           <div>
-            <p className="font-semibold text-white mb-3">Contato</p>
-            <ul className="space-y-2">
+            <p className="font-semibold text-white mb-4">Contato</p>
+            <ul className="space-y-3">
               {/* TODO: Replace with real WhatsApp business number */}
               <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0" />
+                <Phone className="h-4 w-4 shrink-0 opacity-60" />
                 <a href="https://wa.me/5521999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                   (21) 99999-9999 {/* TODO: update */}
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0" />
+                <Mail className="h-4 w-4 shrink-0 opacity-60" />
                 <a href="mailto:contato@otimaenergia.com.br" className="hover:text-white transition-colors">contato@otimaenergia.com.br</a>
               </li>
               <li className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0" />
+                <Clock className="h-4 w-4 shrink-0 opacity-60" />
                 <span>Segunda a sexta, das 9h às 18h</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Map className="h-4 w-4 shrink-0 opacity-60" />
+                <span>Atendemos em 23 estados do Brasil</span>
               </li>
             </ul>
           </div>
         </div>
-        <div className="max-w-5xl mx-auto mt-10 pt-6 border-t border-white/10 text-center text-xs text-white/40">
-          © {new Date().getFullYear()} Ótima Energia. Todos os direitos reservados.
+
+        {/* Bottom bar */}
+        <div className="max-w-5xl mx-auto pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/35">
+            © {new Date().getFullYear()} Ótima Energia. Todos os direitos reservados.
+          </p>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://linkedin.com/company/otimaenergia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/35 hover:text-white/70 transition-colors"
+              aria-label="LinkedIn"
+            >
+              <Linkedin className="h-4 w-4" />
+            </a>
+            <a
+              href="https://instagram.com/otimaenergia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/35 hover:text-white/70 transition-colors"
+              aria-label="Instagram"
+            >
+              <Instagram className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
