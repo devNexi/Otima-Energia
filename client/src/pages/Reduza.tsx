@@ -1,7 +1,33 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+
+// ── Error boundary — prevents white screen on any render crash ────────────────
+class PageErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean; msg: string }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { crashed: false, msg: "" };
+  }
+  static getDerivedStateFromError(err: Error) {
+    return { crashed: true, msg: err.message };
+  }
+  render() {
+    if (this.state.crashed) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", padding: "2rem", textAlign: "center" }}>
+          <p style={{ fontSize: "2rem", marginBottom: "1rem" }}>⚡</p>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem", color: "#1e293b" }}>Algo deu errado</h1>
+          <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Tente recarregar a página. Se o problema persistir, envie um email para <a href="mailto:contato@otimaenergia.com" style={{ color: "#9e3ffd" }}>contato@otimaenergia.com</a>.</p>
+          <button onClick={() => window.location.reload()} style={{ background: "#9e3ffd", color: "#fff", border: "none", borderRadius: "8px", padding: "0.75rem 1.5rem", fontWeight: 600, cursor: "pointer", fontSize: "1rem" }}>
+            Recarregar página
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import {
   Upload, CheckCircle, CheckCircle2, ArrowRight, Shield, X, ChevronDown,
   Search, MessageSquare, TrendingDown, Building2, Sparkles,
@@ -165,7 +191,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function Reduza() {
+function RedzaInner() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showSkipOption, setShowSkipOption] = useState(false);
@@ -919,5 +945,13 @@ export default function Reduza() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Reduza() {
+  return (
+    <PageErrorBoundary>
+      <RedzaInner />
+    </PageErrorBoundary>
   );
 }
