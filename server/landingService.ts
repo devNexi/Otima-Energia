@@ -47,7 +47,7 @@ export async function appendToGoogleSheet(row: Record<string, any>): Promise<voi
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Sheet1!A1",
+      range: "A1",
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [values] },
     });
