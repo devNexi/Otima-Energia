@@ -895,6 +895,7 @@ export async function registerRoutes(
 
       // File validation
       let billFileUrl: string | null = null;
+      let billUploadFailed = false;
       const billFile = req.file;
       if (billFile) {
         const allowedMimes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
@@ -904,17 +905,14 @@ export async function registerRoutes(
         if (billFile.size > 10 * 1024 * 1024) {
           return res.status(400).json({ success: false, error: "Arquivo muito grande. Máximo 10MB." });
         }
-        // Upload to Google Drive — if this fails the file would be lost, so fail the request
+        // Attempt Drive upload — if it fails, still accept the lead and flag for manual follow-up
         try {
           const ext = billFile.originalname.split(".").pop() || "pdf";
           const filename = `conta-${empresa?.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
           billFileUrl = await uploadToDrive(billFile.buffer, filename, billFile.mimetype);
         } catch (driveErr: any) {
-          console.error("[Landing] Drive upload failed — rejecting submission to avoid losing file:", driveErr.message);
-          return res.status(500).json({
-            success: false,
-            error: "Não foi possível salvar sua conta de energia. Verifique sua conexão e tente novamente, ou envie o arquivo por email para contato@otimaenergia.com.",
-          });
+          console.error("[Landing] Drive upload failed — lead will still be saved, file needs manual collection:", driveErr.message);
+          billUploadFailed = true;
         }
       }
 
@@ -932,8 +930,8 @@ export async function registerRoutes(
         "State": estado,
         "Average Energy Bill": valorConta,
         "Property Type": tipoImovel,
-        "Bill Uploaded?": billFile ? "Sim" : "Não",
-        "Bill File URL": billFileUrl || "",
+        "Bill Uploaded?": billFile ? (billUploadFailed ? "Sim (UPLOAD FALHOU — coletar manualmente)" : "Sim") : "Não",
+        "Bill File URL": billFileUrl || (billUploadFailed ? "UPLOAD_FAILED — arquivo enviado mas não salvo no Drive" : ""),
         "Message": mensagem || "",
         "UTM Source": utm_source || "",
         "UTM Medium": utm_medium || "",
