@@ -1,0 +1,104 @@
+BUG: `/obrigado` page is not firing the no-bill GA4/GTM event for `tipo=sem-conta`
+
+Summary:
+The `/obrigado` page correctly fires route conversion events for two of the three thank-you URL variants, but appears to miss the event for `?tipo=sem-conta`.
+
+Confirmed behaviour tested 28 May 2026:
+
+* `/obrigado?tipo=completo` → `lead_form_submit` fires ✅
+* `/obrigado?tipo=sem-conta` → `lead_form_submit_no_bill` does not fire ❌
+* `/obrigado?tipo=caso-especial` → `lead_form_submit_special_case` fires ✅
+
+The no-bill form path itself works. The form redirects correctly to:
+
+`https://otimaenergia.com/obrigado?tipo=sem-conta&nome=...`
+
+The page renders correctly. The bug appears to be only in the thank-you page event-firing logic.
+
+Required investigation:
+Before changing code, inspect the `/obrigado` page component, likely `Obrigado.tsx`, `ThankYou.tsx`, or similar.
+
+Find the existing code that fires:
+
+* `lead_form_submit`
+* `lead_form_submit_special_case`
+* `thank_you_page_view`
+
+Then report what you find:
+
+1. Is there already a `sem-conta` branch?
+2. Is the branch missing entirely?
+3. Is the event name misspelled?
+4. Is the existing implementation using `window.dataLayer.push(...)`, `window.gtag(...)`, or a tracking helper function?
+5. Is the page firing the event inside a `useEffect`/mount hook?
+
+Required fix:
+Use the same tracking mechanism already used by the working events. Do not introduce a second tracking method unless absolutely necessary.
+
+The page-load logic should be equivalent to:
+
+```ts
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const tipo = params.get("tipo");
+
+  // Always keep existing thank_you_page_view behaviour if present.
+
+  switch (tipo) {
+    case "completo":
+      fireTrackingEvent("lead_form_submit", {
+        value: 200,
+        currency: "BRL",
+      });
+      break;
+
+    case "sem-conta":
+      fireTrackingEvent("lead_form_submit_no_bill", {
+        value: 60,
+        currency: "BRL",
+      });
+      break;
+
+    case "caso-especial":
+      fireTrackingEvent("lead_form_submit_special_case");
+      break;
+
+    default:
+      fireTrackingEvent("lead_form_submit", {
+        value: 200,
+        currency: "BRL",
+      });
+      break;
+  }
+}, []);
+```
+
+Important:
+`fireTrackingEvent(...)` above is pseudocode. Replace it with the actual event-firing method already used in the codebase, for example `window.dataLayer.push({ event: ... })`, `window.gtag("event", ...)`, or the existing helper.
+
+Critical implementation notes:
+
+* The event must fire on page load.
+* It must fire exactly once per page load.
+* Keep the `useEffect` dependency array as `[]` unless the current routing setup requires otherwise.
+* Do not break the working `tipo=completo` and `tipo=caso-especial` branches.
+* Event name must be exactly: `lead_form_submit_no_bill`
+* Case-sensitive, underscores exactly as written.
+* `lead_form_submit_special_case` must remain analytics-only and must not receive value/currency.
+
+Acceptance test after deploy:
+
+1. Open incognito Chrome.
+2. Visit: `https://otimaenergia.com/reduza?utm_source=test&utm_medium=test&utm_campaign=nobill_test`
+3. Fill out the form with valid test data.
+4. Do not upload a bill.
+5. Use the “Não tenho minha conta agora” / no-bill skip path.
+6. Tick the acknowledgement checkbox if required.
+7. Submit.
+8. Confirm final URL is: `/obrigado?tipo=sem-conta&nome=...`
+9. Open DevTools → Network → filter `collect`.
+10. Confirm a GA4 collect request fires with `en=lead_form_submit_no_bill`, or confirm the equivalent GTM/dataLayer event in Tag Assistant.
+11. Open GA4 Realtime.
+12. Confirm `lead_form_submit_no_bill` appears within 30–60 seconds.
+
+This is high priority because `lead_form_submit_no_bill` is already configured as a Google Ads conversion action with R$60 value. If it does not fire, Google Ads will undercount the no-bill lead path and campaign optimisation data will be incomplete.

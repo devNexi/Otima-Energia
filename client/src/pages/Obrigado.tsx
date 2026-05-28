@@ -210,11 +210,8 @@ export default function Obrigado() {
   }, []);
 
   useEffect(() => {
-    switch (tipo) {
-      case "completo":
-      default:
-        fireEvent("lead_form_submit", { value: 200, currency: "BRL" });
-        break;
+    const t = new URLSearchParams(window.location.search).get("tipo") || "completo";
+    switch (t) {
       case "sem-conta":
         fireEvent("lead_form_submit_no_bill", { value: 60, currency: "BRL" });
         break;
@@ -222,9 +219,13 @@ export default function Obrigado() {
         // ⚠️ Do NOT send to Google Ads — intentionally no ads conversion here
         fireEvent("lead_form_submit_special_case");
         break;
+      case "completo":
+      default:
+        fireEvent("lead_form_submit", { value: 200, currency: "BRL" });
+        break;
     }
-    fireEvent("thank_you_page_view", { tipo });
-  }, [tipo]);
+    fireEvent("thank_you_page_view", { tipo: t });
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col">
