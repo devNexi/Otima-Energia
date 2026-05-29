@@ -344,7 +344,7 @@ function FinalCta() {
 // 2. Create a free widget connected to your Google Business page
 // 3. Copy the app ID from the embed code (looks like: elfsight-app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 // 4. Replace ELFSIGHT_APP_ID below with your real ID
-const ELFSIGHT_APP_ID = "elfsight-app-REPLACE-WITH-YOUR-ID";
+const ELFSIGHT_APP_ID = "elfsight-app-621cc45b-3c8c-4f91-9a14-009acabd13bf";
 
 function GoogleReviews() {
   return (
