@@ -1,0 +1,493 @@
+# Ótima Energia — Full Site Design Unification Brief
+
+## The problem to solve
+
+The site currently has two completely different design languages:
+
+**Version A (new — correct direction):** Dark backgrounds, high contrast, electric purple accents, premium AI feel. Seen in the "Trabalhamos com os principais players" section, the "Construída para ser diferente" section, and the ECOS™ card section.
+
+**Version B (old — must be eliminated):** Light lavender/lilac backgrounds (#f0e8fa range), light grey cards with faint borders, muted text, generic corporate grid layout. Seen in the "Como funciona o diagnóstico" section, the "A maioria das empresas" section, the stats section, the CTA section, and the contact/footer area.
+
+**The goal:** Make the entire site feel like Version A — but using Ótima's actual brand colours, not just copying the neon treatment directly. The lavender tones don't disappear — they get repurposed as glows, accents, and subtle overlays on dark backgrounds rather than as background fills.
+
+---
+
+## Design system to apply across the entire site
+
+### Colour tokens
+
+These are the only background colours permitted on marketing pages going forward:
+
+```
+--bg-deep:     #09081e   /* deepest background — hero, major dark sections */
+--bg-dark:     #13112a   /* standard dark section background */
+--bg-card:     #1a1833   /* card and elevated surface background */
+--bg-card-border: rgba(158,63,253,0.15)  /* card border */
+--bg-subtle:   #0f0e24   /* alternate dark — use to break rhythm between dark sections */
+
+/* RETIRED — do not use as backgrounds anywhere on marketing pages: */
+/* #f0e8fa, #f5f0fa, #ede4f7, #f8f4fe, white, #ffffff, lavender variants */
+```
+
+The lavender/lilac tones are repurposed as:
+- Glow effects behind icons: `radial-gradient(circle, rgba(158,63,253,0.25) 0%, transparent 70%)`
+- Text accents and highlights: `#c88ff5`
+- Subtle card border glow on hover: `box-shadow: 0 0 0 1px rgba(158,63,253,0.3), 0 8px 32px rgba(158,63,253,0.12)`
+- Section divider lines: `rgba(158,63,253,0.12)`
+
+### Typography tokens
+
+```
+/* Display — homepage hero h1 only */
+font-family: 'Outfit', sans-serif;
+font-weight: 800;
+font-size: clamp(2.5rem, 5vw, 4rem);
+letter-spacing: -0.025em;
+line-height: 1.08;
+color: #ffffff;
+
+/* Section headline — all h2 on marketing pages */
+font-family: 'Outfit', sans-serif;
+font-weight: 700;
+font-size: clamp(1.6rem, 3vw, 2.4rem);
+letter-spacing: -0.02em;
+color: #ffffff;
+
+/* Sub-heading — h3, card titles */
+font-family: 'Sora', sans-serif;
+font-weight: 600;
+font-size: 1.1rem;
+color: #ffffff;
+
+/* Body — all paragraphs */
+font-family: 'Inter', sans-serif;
+font-weight: 400;
+font-size: 0.95rem;
+line-height: 1.75;
+color: rgba(255,255,255,0.6);
+
+/* Label/overline — small caps section tags */
+font-family: 'Sora', sans-serif;
+font-weight: 700;
+font-size: 0.7rem;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: #9e3ffd;
+```
+
+### Section tag pill (the small labels above section headings)
+
+```css
+.section-tag {
+  display: inline-block;
+  background: rgba(158,63,253,0.12);
+  border: 1px solid rgba(158,63,253,0.3);
+  color: #c88ff5;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 99px;
+  margin-bottom: 16px;
+}
+```
+
+### Card standard
+
+```css
+.card {
+  background: #1a1833;
+  border: 1px solid rgba(158,63,253,0.15);
+  border-radius: 14px;
+  padding: 24px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+  border-color: rgba(158,63,253,0.4);
+  box-shadow: 0 0 0 1px rgba(158,63,253,0.15), 0 8px 32px rgba(158,63,253,0.1);
+}
+```
+
+### Icon treatment (for all feature/solution icons)
+
+Remove plain circle backgrounds. Replace with:
+```css
+.icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(158,63,253,0.12);
+  border: 1px solid rgba(158,63,253,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+.icon-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 11px;
+  background: radial-gradient(circle at center, rgba(158,63,253,0.2) 0%, transparent 70%);
+  z-index: -1;
+}
+```
+Icon colour: `#9e3ffd` (not white, not grey).
+
+### Primary CTA button
+
+```css
+.btn-primary {
+  background: #9e3ffd;
+  color: #ffffff;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  padding: 13px 26px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(158,63,253,0.35);
+}
+.btn-primary:hover {
+  background: #8a2fe8;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(158,63,253,0.5);
+}
+```
+
+### Secondary/ghost CTA button
+
+```css
+.btn-secondary {
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.2);
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover {
+  border-color: rgba(158,63,253,0.5);
+  color: #ffffff;
+  background: rgba(158,63,253,0.08);
+}
+```
+
+### "Saiba mais" / inline link style
+
+```css
+.link-arrow {
+  color: #9e3ffd;
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: gap 0.2s;
+}
+.link-arrow:hover { gap: 10px; }
+```
+
+### Section spacing
+
+```css
+.section { padding: 96px 0; }
+.section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 768px) {
+  .section { padding: 64px 0; }
+  .section-inner { padding: 0 16px; }
+}
+```
+
+### Highlighted text (the purple highlight blocks on headlines)
+
+Keep this pattern — it's working well. Use it on one phrase per headline maximum:
+```css
+.highlight {
+  background: #9e3ffd;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline;
+}
+```
+
+---
+
+## Section-by-section instructions
+
+Apply the design system above to every section. Specific instructions per section below.
+
+---
+
+### Section: "A maioria das empresas brasileiras paga mais..."
+
+**Current problem:** White/lavender background, light text, generic stats row.
+
+**Changes:**
+- Background: `#09081e`
+- Add a very subtle radial glow behind the headline: `radial-gradient(ellipse 60% 40% at 20% 50%, rgba(158,63,253,0.08) 0%, transparent 70%)` as a pseudo-element
+- Headline: Outfit 800, white, keep the purple highlight on "não por falta de clareza"
+- Body paragraphs: Inter 400, `rgba(255,255,255,0.6)`
+- Stats row ("4 frentes", "30%", "0 conflitos"): make the numbers large and electric
+  - Number: Outfit 700, 3rem, `#9e3ffd`
+  - Label: Inter 400, 0.8rem, `rgba(255,255,255,0.4)`
+  - Add a thin top border to the stats row: `border-top: 1px solid rgba(158,63,253,0.15); padding-top: 32px; margin-top: 32px`
+- Footnote: `rgba(255,255,255,0.25)`, 0.75rem
+
+---
+
+### Section: "Como funciona o diagnóstico"
+
+**Current problem:** White background, lavender icon circles, grey cards, flat and corporate.
+
+**Changes:**
+- Background: `#13112a`
+- Section tag pill: as per design system
+- Headline: Outfit 700, white
+- Intro paragraph: `rgba(255,255,255,0.6)`
+- 4 step cards: apply card standard from design system
+- Icon circles: replace lavender circles with icon-wrap treatment from design system
+- Step numbers (01, 02, 03, 04): Outfit 800, `4rem`, `rgba(158,63,253,0.15)` — large and ghost-like, sitting behind the step title, not in front of it. Use `position: absolute; top: -8px; right: 16px` inside a `position: relative` card.
+- Step title: Sora 600, white, 1rem
+- Step description: Inter 400, `rgba(255,255,255,0.55)`, 0.875rem
+- "Solicitar Diagnóstico Gratuito" link: use `.link-arrow` style with arrow icon
+
+---
+
+### Section: "O que torna a Ótima diferente"
+
+**Current problem:** Split layout — light background left, dark right. Inconsistent. The checklist on the right looks like a basic list.
+
+**Changes:**
+- Background: `#09081e` (full width)
+- Left column headline: Outfit 700, white
+- Left column body: `rgba(255,255,255,0.6)`
+- "Nós existimos para nivelar esse campo": make this a pull-quote styled line — `color: #c88ff5; font-size: 1.05rem; font-style: italic; border-left: 2px solid #9e3ffd; padding-left: 16px; margin: 20px 0`
+- Right column checklist items: replace plain checkmarks with:
+  - Container: `display: flex; gap: 16px; padding: 20px; background: #1a1833; border: 1px solid rgba(158,63,253,0.12); border-radius: 12px; margin-bottom: 10px`
+  - Check icon: a small `20px` circle with `background: rgba(158,63,253,0.15); border: 1px solid rgba(158,63,253,0.3)` containing a purple checkmark SVG
+  - Title: Sora 600, white, 0.9rem
+  - Description: Inter 400, `rgba(255,255,255,0.55)`, 0.825rem
+
+---
+
+### Section: "Trabalhamos com os principais players nacionais..." (the large statement headline)
+
+**Current state:** This section is already working well — dark background, large highlight text. Do not break it.
+
+**Minor refinements only:**
+- Ensure background is `#13112a` (not pure black — needs to be slightly different from adjacent sections for rhythm)
+- Body text below headline: `rgba(255,255,255,0.55)`
+- Confirm the highlight uses `.highlight` class as specified
+
+---
+
+### Section: "Nossas Frentes de Atuação" / 4 solution cards
+
+**Current problem:** Cards appear on a dark background but the cards themselves may still use the old light treatment. The "Saiba mais" links likely need updating.
+
+**Changes:**
+- Section background: `#09081e`
+- Section tag and headline: as per design system
+- All 4 cards: apply full card standard
+- Icon wraps: apply icon-wrap treatment
+- Solution category label (e.g. "GD PARA EMPRESAS"): `.section-tag` style but smaller — `font-size: 0.62rem; padding: 3px 10px; margin-bottom: 10px`
+- Card title: Sora 600, white, 1rem
+- Card body: Inter 400, `rgba(255,255,255,0.55)`, 0.85rem
+- "Saiba mais →": `.link-arrow` style
+
+---
+
+### Section: "Construída para ser diferente" (01–04 pillars)
+
+**Current state:** Already working well — dark, numbered, electric. Keep as-is.
+
+**Minor refinements:**
+- Ensure numbered large background digits use `rgba(158,63,253,0.1)` not a solid colour
+- Section tag and headline: confirm they match the design system tokens exactly
+- Card bodies: confirm text is `rgba(255,255,255,0.55)` not white — pure white body copy is too harsh
+
+---
+
+### Section: "Quem atendemos" / sector grid
+
+**Current problem:** Cards on dark background but cards look flat — likely missing the card border and hover treatment.
+
+**Changes:**
+- Background: `#13112a`
+- Apply full card standard to all 8 sector cards
+- Card title: Sora 600, white, 0.9rem
+- Card subtitle: Inter 400, `rgba(255,255,255,0.45)`, 0.8rem
+- On hover: card glows as per card standard
+
+---
+
+### Section: ECOS™ showcase (left text, right card)
+
+**Current state:** Already working — dark background, ECOS™ card with GD/ACL toggle. Keep structure.
+
+**Refinements:**
+- "SISTEMA PROPRIETÁRIO" tag: apply `.section-tag` exactly
+- "ECOS™" display text: Outfit 800, 3.5rem, white, `letter-spacing: -0.03em`
+- "Inteligência que orienta cada decisão": Sora 600, `#c88ff5`, 1rem — this is the tagline, give it colour
+- Body copy: `rgba(255,255,255,0.6)`
+- Checklist items: same treatment as "O que torna a Ótima diferente" checklist above
+- "Conhecer o ECOS™ →": `.btn-primary`
+
+---
+
+### Section: "Avaliações / O que nossos clientes dizem"
+
+**Current problem:** Testimonial widget sits on a white/light background, completely out of brand.
+
+**Changes:**
+- Background: `#09081e`
+- Section tag and headline: design system tokens
+- The Google Reviews widget card: wrap it in a container with `background: #1a1833; border: 1px solid rgba(158,63,253,0.15); border-radius: 14px; padding: 24px`
+- If the widget iframe or embed cannot be styled, ensure the surrounding section background is dark and the headline/tag are on-brand — the widget itself is acceptable as a white card on dark background, it just needs the dark context around it
+
+---
+
+### Section: "Descubra qual é o melhor caminho..." (CTA band)
+
+**Current problem:** Light lavender background, looks like a placeholder section.
+
+**Changes:**
+- Background: `#9e3ffd` (solid brand purple — this is the one section that uses purple as a background, making it visually distinctive as the conversion moment)
+- OR alternative: `linear-gradient(135deg, #16163f 0%, #2a0f5e 100%)` if solid purple feels too loud
+- Headline: Outfit 700, white, `clamp(1.5rem, 3vw, 2rem)`
+- Subtext: `rgba(255,255,255,0.75)`
+- "Diagnóstico gratuito. Sem compromisso. Em até 5 dias úteis": make this a 3-item inline trust strip — same style as the hero trust bar (small, spaced, muted white with purple ✦ bullets)
+- CTA button: white background, purple text — `background: #fff; color: #9e3ffd; font-weight: 700` — inverted so it pops on the purple background
+
+---
+
+### Contact section ("Pronto para começar a economizar?")
+
+**Current problem:** Split layout — dark left, light right with white form fields. The form fields are completely off-brand.
+
+**Changes:**
+- Full section background: `#13112a`
+- Left column headline: keep the highlight treatment
+- Contact detail labels ("E-MAIL", "LOCALIZAÇÃO"): `.section-tag` style
+- Contact detail values: Inter 400, `rgba(255,255,255,0.7)`
+- Form fields: 
+  ```css
+  input, textarea {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 12px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input::placeholder, textarea::placeholder {
+    color: rgba(255,255,255,0.25);
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: rgba(158,63,253,0.5);
+    background: rgba(158,63,253,0.05);
+  }
+  ```
+- Field labels: Sora 600, 0.72rem, letter-spacing 0.08em, `rgba(255,255,255,0.4)`, uppercase
+- Submit button: `.btn-primary` full width
+- Consent text below button: `rgba(255,255,255,0.25)`, 0.75rem
+
+---
+
+### Footer
+
+**Current problem:** May still use light background.
+
+**Changes:**
+- Background: `#09081e`
+- Top border: `1px solid rgba(158,63,253,0.12)`
+- Column headings ("SOLUÇÕES", "EMPRESA", etc.): `.section-tag` style
+- Footer links: Inter 400, `rgba(255,255,255,0.45)`, hover: `rgba(255,255,255,0.8)`
+- Tagline "Sua energia. Sua escolha. Sua economia.": Sora 600, `rgba(255,255,255,0.6)`, centered above copyright — this is the brand tagline, give it presence
+- Copyright line: `rgba(255,255,255,0.25)`, 0.8rem
+- LinkedIn/Instagram icons: `rgba(255,255,255,0.4)`, hover: `#9e3ffd`
+- Bottom divider line: `rgba(255,255,255,0.06)`
+
+---
+
+## Section rhythm (background alternation)
+
+To prevent the site feeling like one flat dark wall, alternate between the two dark tones in this order going down the page:
+
+```
+Hero:                    #09081e  (with plasma shader)
+"A maioria...":          #09081e
+"Como funciona...":      #13112a  ← slightly lighter
+"O que torna diferente": #09081e
+"Statement headline":    #13112a
+"Frentes de atuação":    #09081e
+"Construída diferente":  #13112a
+"Quem atendemos":        #09081e
+"ECOS™ section":         #13112a
+"Avaliações":            #09081e
+"CTA band":              #9e3ffd  ← purple — the only colour break
+"Contato":               #13112a
+Footer:                  #09081e
+```
+
+The transition between `#09081e` and `#13112a` is subtle but creates enough depth that the eye reads sections as distinct without needing borders or dividers between them.
+
+---
+
+## What NOT to do
+
+- Do not add white or lavender backgrounds anywhere on marketing pages
+- Do not use `shadow-lg` (Tailwind) — use the specific box-shadow values specified above
+- Do not use pure white (`#ffffff`) for body copy — use `rgba(255,255,255,0.6)`
+- Do not use `rounded-full` for icon containers — use `border-radius: 10px` (squircle, not circle)
+- Do not add decorative gradients on top of the plasma hero — the shader provides its own background
+- Do not change the hero section, navbar, ECOS™ card, or the "Trabalhamos com os principais players" and "Construída para ser diferente" sections structurally — they are working correctly
+
+---
+
+## Scope
+
+These changes apply to:
+- Homepage (`/`)
+- All solution pages (`/gd-para-empresas`, `/mercado-livre-acl`, `/gestao-de-energia`, `/otimizacao-energetica`)
+- `/sobre`
+- `/ecos`
+- `/faq`
+- `/insights` (article list page)
+- `/lei-mercado-livre`
+- `/renovacao-contrato`
+- `/parceiros`
+
+Do NOT apply to:
+- `/portal` and all sub-routes
+- `/admin` and all sub-routes
+- `/proposta` and all sub-routes
+- Any authentication pages
+
+---
+
+## Priority order
+
+1. Homepage — all sections above
+2. `/parceiros` — highest traffic after homepage
+3. Solution pages — shared template, one change affects all four
+4. `/sobre`, `/faq`, `/insights`
+5. `/lei-mercado-livre`, `/renovacao-contrato`

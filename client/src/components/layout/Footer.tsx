@@ -1,8 +1,6 @@
 import { Link } from "wouter";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
 
-const BRAND = "#9e3ffd";
-
 function LinkedInIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
@@ -19,62 +17,80 @@ function InstagramIcon() {
   );
 }
 
+const colHead: React.CSSProperties = {
+  fontFamily: "'Sora', sans-serif",
+  fontWeight: 700,
+  fontSize: "0.68rem",
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "#9e3ffd",
+  marginBottom: "14px",
+  display: "block",
+};
+
+const footerLink = "text-sm transition-colors duration-200";
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-white py-8 lg:py-10 border-t border-gray-200">
+    <footer
+      style={{ background: "#09081e", borderTop: "1px solid rgba(158,63,253,0.12)" }}
+      className="py-10 lg:py-12"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
 
         {/* Main columns */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-8 mb-10">
           {/* Soluções */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Soluções</p>
-            <ul className="space-y-1.5">
-              <li><Link href="/gd-para-empresas" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">GD para Empresas</Link></li>
-              <li><Link href="/mercado-livre-acl" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">ACL / Mercado Livre</Link></li>
-              <li><Link href="/gestao-de-energia" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Gestão de Energia</Link></li>
-              <li><Link href="/otimizacao-energetica" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Otimização Energética</Link></li>
-              <li><Link href="/seja-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Diagnóstico Gratuito</Link></li>
+            <span style={colHead}>Soluções</span>
+            <ul className="space-y-2">
+              <li><Link href="/gd-para-empresas" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>GD para Empresas</Link></li>
+              <li><Link href="/mercado-livre-acl" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>ACL / Mercado Livre</Link></li>
+              <li><Link href="/gestao-de-energia" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Gestão de Energia</Link></li>
+              <li><Link href="/otimizacao-energetica" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Otimização Energética</Link></li>
+              <li><Link href="/seja-cliente" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Diagnóstico Gratuito</Link></li>
             </ul>
           </div>
 
           {/* Empresa */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Empresa</p>
-            <ul className="space-y-1.5">
-              <li><Link href="/sobre" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Sobre</Link></li>
-              <li><Link href="/insights" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Insights</Link></li>
-              <li><Link href="/parceiros" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Parceiros</Link></li>
-              <li><Link href="/faq" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Perguntas Frequentes</Link></li>
-              <li><Link href="/portal-cliente" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Portal do Cliente</Link></li>
+            <span style={colHead}>Empresa</span>
+            <ul className="space-y-2">
+              <li><Link href="/sobre" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Sobre</Link></li>
+              <li><Link href="/insights" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Insights</Link></li>
+              <li><Link href="/parceiros" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Parceiros</Link></li>
+              <li><Link href="/faq" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Perguntas Frequentes</Link></li>
+              <li><Link href="/portal-cliente" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Portal do Cliente</Link></li>
             </ul>
           </div>
 
           {/* Recursos */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Recursos</p>
-            <ul className="space-y-1.5">
-              <li><Link href="/lei-mercado-livre" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Lei do Mercado Livre</Link></li>
-              <li><Link href="/renovacao-contrato" className="text-[#736d77] hover:text-[#9e3ffd] transition-colors text-sm">Renovação de Contrato</Link></li>
+            <span style={colHead}>Recursos</span>
+            <ul className="space-y-2">
+              <li><Link href="/lei-mercado-livre" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Lei do Mercado Livre</Link></li>
+              <li><Link href="/renovacao-contrato" className={footerLink} style={{ color: "rgba(255,255,255,0.45)" }} onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")} onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>Renovação de Contrato</Link></li>
             </ul>
           </div>
 
           {/* Contato */}
           <div>
-            <p className="text-sm tracking-wide text-gray-500 uppercase mb-3">Contato</p>
-            <div className="text-[#736d77] space-y-0.5 text-sm">
+            <span style={colHead}>Contato</span>
+            <div className="space-y-1 text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
               <p>Rio de Janeiro, Brasil</p>
               <p className="mt-2">contato@otimaenergia.com</p>
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2 mt-4">
                 <a
                   href="https://br.linkedin.com/company/%C3%B3tima-energia"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn da Ótima Energia"
-                  className="flex items-center justify-center rounded-md transition-opacity hover:opacity-80"
-                  style={{ background: BRAND, color: "#fff", width: "30px", height: "30px" }}
+                  className="flex items-center justify-center rounded-md transition-all duration-200"
+                  style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)", width: "30px", height: "30px" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(158,63,253,0.2)"; (e.currentTarget as HTMLElement).style.color = "#9e3ffd"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; }}
                   data-testid="link-linkedin"
                 >
                   <LinkedInIcon />
@@ -84,8 +100,10 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram da Ótima Energia"
-                  className="flex items-center justify-center rounded-md transition-opacity hover:opacity-80"
-                  style={{ background: BRAND, color: "#fff", width: "30px", height: "30px" }}
+                  className="flex items-center justify-center rounded-md transition-all duration-200"
+                  style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)", width: "30px", height: "30px" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(158,63,253,0.2)"; (e.currentTarget as HTMLElement).style.color = "#9e3ffd"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.4)"; }}
                   data-testid="link-instagram"
                 >
                   <InstagramIcon />
@@ -96,22 +114,30 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="pt-5 border-t border-gray-200">
-          {/* Logo + tagline */}
-          <div className="flex items-center gap-3 mb-2">
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "24px" }}>
+          <div className="flex items-center gap-3 mb-3 justify-center">
             <Link href="/">
-              <img src={logoIcon} alt="Ótima Energia" className="h-8 w-8 object-contain" />
+              <img src={logoIcon} alt="Ótima Energia" className="h-7 w-7 object-contain opacity-70" />
             </Link>
-            <span className="text-sm font-medium" style={{ color: BRAND }}>
+            <span
+              style={{
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.6)",
+                fontSize: "0.875rem",
+              }}
+            >
               Sua energia. Sua escolha. Sua economia.
             </span>
           </div>
-          {/* Copyright + legal — left-aligned below */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-gray-400">
+          <div
+            className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1"
+            style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.8rem" }}
+          >
             <span>©{currentYear} Ótima Energia (CNPJ: 65.023.912/0001-24)</span>
-            <Link href="/privacidade" className="hover:text-[#9e3ffd] transition-colors">Privacidade</Link>
-            <Link href="/termos" className="hover:text-[#9e3ffd] transition-colors">Termos de Uso</Link>
-            <Link href="/cookies" className="hover:text-[#9e3ffd] transition-colors">Cookies</Link>
+            <Link href="/privacidade" className="transition-colors hover:text-[#9e3ffd]">Privacidade</Link>
+            <Link href="/termos" className="transition-colors hover:text-[#9e3ffd]">Termos de Uso</Link>
+            <Link href="/cookies" className="transition-colors hover:text-[#9e3ffd]">Cookies</Link>
           </div>
         </div>
 

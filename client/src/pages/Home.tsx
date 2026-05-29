@@ -29,27 +29,76 @@ function DifferentiationSection() {
   ];
 
   return (
-    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+    <section
+      style={{ background: "#09081e" }}
+      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           <div>
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-6">
+            <h2
+              className="mb-6"
+              style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontWeight: 700,
+                fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
+                letterSpacing: "-0.02em",
+                color: "#ffffff",
+              }}
+            >
               O que torna a Ótima diferente
             </h2>
-            <p className="text-lg text-[#736d77] leading-relaxed">
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: "1.75" }}>
               O mercado de energia é opaco por design. Fornecedores, distribuidoras e comercializadoras operam com informações assimétricas. A maioria das empresas não tem acesso à comparação, aos dados e à visibilidade que a Ótima tem.
             </p>
-            <p className="text-lg text-[#736d77] leading-relaxed mt-4">
+            <p
+              className="mt-4"
+              style={{
+                color: "#c88ff5",
+                fontSize: "1.05rem",
+                fontStyle: "italic",
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 600,
+                borderLeft: "2px solid #9e3ffd",
+                paddingLeft: "16px",
+                marginTop: "20px",
+              }}
+            >
               Nós existimos para nivelar esse campo.
             </p>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-3">
             {points.map((p, i) => (
-              <div key={i} className="flex items-start gap-4">
-                <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-1" />
+              <div
+                key={i}
+                className="flex items-start gap-4 p-5 rounded-xl"
+                style={{
+                  background: "#1a1833",
+                  border: "1px solid rgba(158,63,253,0.12)",
+                }}
+              >
+                <div
+                  className="flex-shrink-0 mt-0.5 flex items-center justify-center"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "50%",
+                    background: "rgba(158,63,253,0.15)",
+                    border: "1px solid rgba(158,63,253,0.3)",
+                  }}
+                >
+                  <CheckCircle className="w-3 h-3" style={{ color: "#9e3ffd" }} />
+                </div>
                 <div>
-                  <h3 className="font-medium text-[#16163f] mb-1">{p.title}</h3>
-                  <p className="text-[#736d77] text-sm leading-relaxed">{p.desc}</p>
+                  <h3
+                    className="mb-1"
+                    style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, color: "#ffffff", fontSize: "0.9rem" }}
+                  >
+                    {p.title}
+                  </h3>
+                  <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.825rem", lineHeight: "1.65" }}>
+                    {p.desc}
+                  </p>
                 </div>
               </div>
             ))}
@@ -439,20 +488,53 @@ function EcosSection() {
 
 function FinalCta() {
   return (
-    <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+    <section
+      style={{ background: "linear-gradient(135deg, #16163f 0%, #2a0f5e 100%)" }}
+      className="py-24 lg:py-32 border-t border-[rgba(158,63,253,0.2)]"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
-        <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+        <h2
+          className="mb-6 mx-auto max-w-3xl"
+          style={{
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 700,
+            fontSize: "clamp(1.5rem, 3vw, 2rem)",
+            letterSpacing: "-0.02em",
+            color: "#ffffff",
+          }}
+        >
           Descubra qual é o melhor caminho para reduzir a conta de energia da sua empresa.
         </h2>
-        <p className="text-xl text-[#736d77] mb-4 max-w-2xl mx-auto">
-          Diagnóstico gratuito. Sem compromisso. Em até 5 dias úteis você recebe uma análise completa.
-        </p>
-        <p className="text-base text-[#736d77] mb-12 max-w-xl mx-auto">
-          Sem pressão, sem conflito de interesse. Você decide com informação.
-        </p>
+
+        <div
+          className="flex flex-wrap justify-center gap-6 mb-10"
+          style={{ marginTop: "24px" }}
+        >
+          {[
+            "Diagnóstico gratuito",
+            "Sem compromisso",
+            "Em até 5 dias úteis",
+          ].map((item) => (
+            <span
+              key={item}
+              className="flex items-center gap-1.5"
+              style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.7)" }}
+            >
+              <span style={{ color: "#c88ff5" }}>✦</span> {item}
+            </span>
+          ))}
+        </div>
+
         <Link
           href="/seja-cliente"
-          className="inline-flex items-center gap-3 bg-[#9e3ffd] hover:bg-[#df0af2] text-white px-8 py-4 text-lg font-medium transition-colors"
+          className="inline-flex items-center gap-3 px-8 py-4 text-base font-bold transition-all hover:opacity-90 hover:-translate-y-0.5"
+          style={{
+            background: "#ffffff",
+            color: "#9e3ffd",
+            borderRadius: "8px",
+            fontFamily: "'Sora', sans-serif",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+          }}
           data-testid="home-final-cta"
         >
           Solicitar Diagnóstico Gratuito
@@ -472,13 +554,51 @@ const ELFSIGHT_APP_ID = "elfsight-app-621cc45b-3c8c-4f91-9a14-009acabd13bf";
 
 function GoogleReviews() {
   return (
-    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+    <section
+      style={{ background: "#09081e" }}
+      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="text-center mb-8">
-          <p className="text-sm tracking-widest text-[#9e3ffd] uppercase font-semibold mb-2">Avaliações</p>
-          <h2 className="text-2xl lg:text-3xl font-semibold text-[#16163f]">O que nossos clientes dizem</h2>
+        <div className="text-center mb-10">
+          <div
+            className="inline-block mb-4"
+            style={{
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              padding: "5px 14px",
+              borderRadius: "99px",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              fontFamily: "'Sora', sans-serif",
+            }}
+          >
+            Avaliações
+          </div>
+          <h2
+            className="text-white"
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700,
+              fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            O que nossos clientes dizem
+          </h2>
         </div>
-        <div className={ELFSIGHT_APP_ID} data-elfsight-app-lazy="true"></div>
+        <div
+          style={{
+            background: "#1a1833",
+            border: "1px solid rgba(158,63,253,0.15)",
+            borderRadius: "14px",
+            padding: "24px",
+          }}
+        >
+          <div className={ELFSIGHT_APP_ID} data-elfsight-app-lazy="true"></div>
+        </div>
       </div>
     </section>
   );
