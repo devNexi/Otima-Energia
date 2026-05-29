@@ -954,6 +954,18 @@ export async function registerRoutes(
         "Next Action Date": "",
       };
 
+      const emailParams = {
+        nome, empresa, email, phone, cidade, estado,
+        valorConta, tipoImovel, mensagem,
+        billFileUrl,
+        billUploaded: !!billFile,
+        ipAddress: ip,
+        leadStatus: "Novo",
+        utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+        gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
+        submittedAt, leadId,
+      };
+
       // Step 1: Append to Google Sheets — this is the primary record; failure = hard stop
       try {
         await appendToGoogleSheet(sheetRow);
@@ -962,13 +974,7 @@ export async function registerRoutes(
         console.error(`[Landing] CRITICAL: Sheet append failed for lead ${leadId} (${empresa} / ${email}):`, sheetErr);
         // Still attempt email so Callum gets notified even if Sheets failed
         try {
-          await sendLandingEmails({
-            nome, empresa, email, phone, cidade, estado,
-            valorConta, tipoImovel, mensagem,
-            billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-            gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
-            submittedAt, leadId,
-          });
+          await sendLandingEmails(emailParams);
         } catch (emailErr: any) {
           console.error(`[Landing] Email also failed for lead ${leadId}:`, emailErr);
         }
@@ -980,16 +986,10 @@ export async function registerRoutes(
 
       // Step 2: Send emails — lead is already in Sheets so email failure is non-fatal
       try {
-        await sendLandingEmails({
-          nome, empresa, email, phone, cidade, estado,
-          valorConta, tipoImovel, mensagem,
-          billFileUrl, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-          gclid, gbraid, wbraid, landingPageUrl, referrer, userAgent,
-          submittedAt, leadId,
-        });
+        await sendLandingEmails(emailParams);
         console.log(`[Landing] Emails sent for lead ${leadId}`);
       } catch (emailErr: any) {
-        console.error(`[Landing] Email failed for lead ${leadId} (lead IS saved in Sheets):`, emailErr);
+        console.error(`[Landing] CRITICAL: Email failed for lead ${leadId} — lead IS saved in Sheets but Callum was not notified:`, emailErr);
       }
 
       console.log(`[Landing] Lead ${leadId} from ${empresa} (${email}) fully processed`);
@@ -8643,6 +8643,51 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error seeding supplier playbooks v5:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to seed supplier playbooks v5" });
+    }
+  });
+
+  // ── Test lead email (admin-only, no Sheet write) ──────────────────────────
+  app.post("/api/admin/test-lead-email", async (req, res) => {
+    if (!await validateDealOsSession(req, res)) return;
+    const sessionId = req.headers["x-session-id"] as string;
+    const session = await storage.getAdminSession(sessionId);
+    const user = session ? await storage.getUser(session.userId) : null;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+    try {
+      await sendLandingEmails({
+        leadId: "LD-TEST001",
+        submittedAt: new Date().toISOString(),
+        nome: "Test Lead",
+        empresa: "Otima Test Company",
+        email: "callum@makesensemarketing.xyz",
+        phone: "21999999999",
+        cidade: "Rio de Janeiro",
+        estado: "RJ",
+        valorConta: "R$50.000",
+        tipoImovel: "Empresa",
+        mensagem: "Esta é uma mensagem de teste.",
+        billFileUrl: "https://drive.google.com/file/d/FAKE_FILE_ID/view",
+        billUploaded: true,
+        ipAddress: "127.0.0.1",
+        leadStatus: "Novo",
+        utm_source: "google",
+        utm_medium: "cpc",
+        utm_campaign: "test_campaign",
+        utm_term: "mercado livre energia empresa",
+        utm_content: undefined,
+        gclid: "TEST-GCLID-123",
+        gbraid: undefined,
+        wbraid: undefined,
+        landingPageUrl: "https://otimaenergia.com/reduza?utm_source=google&utm_medium=cpc",
+        referrer: "https://google.com",
+        userAgent: "Mozilla/5.0 (admin test)",
+      });
+      res.json({ success: true, message: "Test email sent to callum@otimaenergia.com" });
+    } catch (err: any) {
+      console.error("[Admin] test-lead-email error:", err);
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

@@ -1,0 +1,215 @@
+Before Google Ads goes live, please audit and fix the lead email flow for `/reduza`.
+
+Current requirement:
+Every successful form submission must:
+
+1. Save the lead to Google Sheets.
+2. Upload the bill to Google Drive if attached.
+3. Send the lead/customer a confirmation email.
+4. Send an internal lead alert email to Callum with all submitted details and a direct WhatsApp link for the customer.
+
+Please inspect the current submit route and email service first, then report back exactly:
+
+* what confirmation email is currently sent to the customer;
+* what internal email is currently sent to Callum;
+* which env vars control sender/from/recipient;
+* whether failures in internal email are fatal or non-fatal;
+* whether the phone field is labelled and stored as WhatsApp.
+
+Required frontend/form change:
+The phone field should be labelled as WhatsApp, not just generic telephone.
+
+Use Portuguese label:
+
+`WhatsApp`
+
+or:
+
+`Telefone / WhatsApp`
+
+The submitted field may still be called `phone` internally, but the label and email/sheet copy should make clear this is the customer’s WhatsApp number.
+
+Required internal notification email:
+Send immediately to:
+
+`callum@otimaenergia.com`
+
+Use env var if already available:
+
+`OTIMA_INTERNAL_LEAD_EMAIL`
+
+Default fallback:
+
+`callum@otimaenergia.com`
+
+Subject format:
+
+`Novo lead Ótima — {{company}} — {{averageEnergyBill}} — {{state}}`
+
+If company is missing, use name.
+
+Email body must include:
+
+* Lead ID
+* Submitted at
+* Name
+* Company
+* Email
+* WhatsApp / phone
+* City
+* State
+* Average energy bill
+* Property type
+* Bill uploaded? yes/no
+* Bill file URL if present
+* Message
+* Lead status
+* UTM source
+* UTM medium
+* UTM campaign
+* UTM term
+* UTM content
+* GCLID
+* GBRAID
+* WBRAID
+* Landing page URL
+* Referrer
+* User agent
+* IP address
+
+Also include a prominent WhatsApp action link.
+
+Build the WhatsApp link from the submitted phone number:
+
+* strip all non-digits;
+* if the number does not start with Brazil country code `55`, prefix `55`;
+* generate:
+
+`https://wa.me/{{normalizedPhone}}`
+
+Also include a prefilled WhatsApp message link:
+
+`https://wa.me/{{normalizedPhone}}?text={{encodedMessage}}`
+
+Suggested prefilled message in Portuguese:
+
+`Olá {{name}}, aqui é o Renan da Ótima Energia. Recebemos sua solicitação de análise gratuita para reduzir a conta de energia da {{company}}. Posso te chamar por aqui para confirmar alguns dados?`
+
+The internal email should show:
+
+`Abrir WhatsApp do lead`
+
+as a clickable button/link.
+
+Also include:
+
+`Enviar para Renan`
+
+as a mailto link if possible, prefilled with all lead details, OR include a clean copy/paste block that Callum can forward to Renan.
+
+Forward/copy block:
+
+```
+Novo lead Ótima
+
+Nome:
+Empresa:
+Email:
+WhatsApp:
+Cidade/UF:
+Conta média:
+Tipo de imóvel:
+Conta enviada:
+Link da conta:
+Mensagem:
+
+Origem:
+Campanha:
+Termo:
+GCLID:
+
+Próxima ação sugerida:
+Chamar no WhatsApp imediatamente.
+```
+
+Required customer confirmation email:
+Send to the customer email immediately after successful submission.
+
+From should be the configured Ótima sender, preferably:
+
+`marketing@otimaenergia.com`
+
+If sender is env controlled, use:
+
+`OTIMA_EMAIL_FROM`
+
+Subject:
+
+`Recebemos sua solicitação — Ótima Energia`
+
+Portuguese body:
+
+```
+Olá {{name}},
+
+Recebemos sua solicitação para a análise gratuita da sua conta de energia.
+
+Nossa equipe irá revisar as informações enviadas e um Especialista em Energia da Ótima entrará em contato com sua comparação personalizada.
+
+Se você já enviou sua conta de energia, não precisa fazer mais nada neste momento.
+
+Se ainda não enviou, você pode responder este email com a conta em anexo para agilizar a análise.
+
+Atenciosamente,
+Equipe Ótima Energia
+```
+
+Important:
+
+* Do not expose internal notes, GCLID, UTMs, or tracking data in the customer email.
+* Customer confirmation email failure should be logged.
+* Internal Callum email is operationally important. If Google Sheets save succeeds but internal email fails, submission can still return success, but log the full error loudly with lead ID.
+* If Google Sheets save fails, continue current hard-failure behaviour unless the existing architecture intentionally differs.
+* If bill upload was attempted and fails, preserve the current hard-failure behaviour.
+
+Required test endpoint:
+Please add or confirm an admin-only test endpoint:
+
+`POST /api/admin/test-lead-email`
+
+It should send a sample internal lead notification to Callum using fake lead data, without writing a real lead to the Google Sheet.
+
+Sample fake data:
+
+* Name: Test Lead
+* Company: Otima Test Company
+* Email: [callum@makesensemarketing.xyz](mailto:callum@makesensemarketing.xyz)
+* WhatsApp: 21999999999
+* City: Rio de Janeiro
+* State: RJ
+* Average bill: R$50.000
+* Property type: Empresa
+* Bill uploaded: Sim
+* Bill URL: fake Google Drive URL
+* UTM source: google
+* UTM medium: cpc
+* UTM campaign: test_campaign
+* UTM term: mercado livre energia empresa
+* GCLID: TEST-GCLID-123
+
+Acceptance test:
+
+1. Trigger the admin test endpoint.
+2. Confirm Callum receives the internal alert email.
+3. Confirm the WhatsApp link opens the correct wa.me URL.
+4. Submit a real test lead on `/reduza`.
+5. Confirm:
+
+   * Google Sheet row appears.
+   * Bill appears in Drive if uploaded.
+   * Customer confirmation email arrives.
+   * Internal Callum alert email arrives with all submitted fields.
+   * WhatsApp link is correct.
+   * Phone/WhatsApp value matches the form submission.
+
+Please inspect first, then implement. Do not change conversion tracking or Google Ads tags while doing this.

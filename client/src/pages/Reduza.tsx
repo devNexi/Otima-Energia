@@ -590,7 +590,7 @@ function RedzaInner() {
                     <p className="text-xs text-slate-400 mt-1">Use seu email comercial para receber a análise.</p>
                   </div>
                   <div>
-                    <label htmlFor="phone" className={labelCls}>WhatsApp / Celular <span className="text-red-500">*</span></label>
+                    <label htmlFor="phone" className={labelCls}>Telefone / WhatsApp <span className="text-red-500">*</span></label>
                     <input
                       id="phone"
                       type="tel"
