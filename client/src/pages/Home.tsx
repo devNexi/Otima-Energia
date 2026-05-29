@@ -339,6 +339,27 @@ function FinalCta() {
   );
 }
 
+// ─── Google Reviews via Elfsight ──────────────────────────────────────────────
+// 1. Go to https://elfsight.com/google-reviews-widget/
+// 2. Create a free widget connected to your Google Business page
+// 3. Copy the app ID from the embed code (looks like: elfsight-app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+// 4. Replace ELFSIGHT_APP_ID below with your real ID
+const ELFSIGHT_APP_ID = "elfsight-app-REPLACE-WITH-YOUR-ID";
+
+function GoogleReviews() {
+  return (
+    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+        <div className="text-center mb-8">
+          <p className="text-sm tracking-widest text-[#9e3ffd] uppercase font-semibold mb-2">Avaliações</p>
+          <h2 className="text-2xl lg:text-3xl font-semibold text-[#16163f]">O que nossos clientes dizem</h2>
+        </div>
+        <div className={ELFSIGHT_APP_ID} data-elfsight-app-lazy="true"></div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
@@ -351,6 +372,7 @@ export default function Home() {
         <WhyOtimaSection />
         <SegmentsSection />
         <EcosSection />
+        <GoogleReviews />
         <FinalCta />
         <Contact />
       </main>
