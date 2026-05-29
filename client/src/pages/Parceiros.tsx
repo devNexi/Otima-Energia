@@ -866,7 +866,7 @@ export default function Parceiros() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="text-left max-w-xl mx-auto" style={{ background: "#431a6d", borderRadius: "16px", padding: "32px" }}>
+            <div className="text-left max-w-xl mx-auto" style={{ background: "#16163f", borderRadius: "16px", padding: "32px" }}>
               <div className="flex items-end gap-3 mb-6">
                 <span style={{ fontSize: "3rem", fontWeight: 700, color: "#c88ff5", fontFamily: "'Sora', sans-serif", lineHeight: 1 }}>R$ 297</span>
                 <span className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.45)" }}>/mês · compromisso mínimo de 6 meses</span>

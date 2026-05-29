@@ -49,23 +49,23 @@ export function Process() {
     <>
       {/* ── "A maioria" statement section ─────────────────────── */}
       <section
-        style={{ background: "#ffffff" }}
-        className="py-20 lg:py-24 border-t border-[#dfbaf2]"
+        style={{ background: "#09081e" }}
+        className="py-20 lg:py-24 border-t border-[rgba(158,63,253,0.15)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <p className="dcvc-statement text-[#000000] max-w-5xl mb-8">
+          <p className="dcvc-statement text-white max-w-5xl mb-8">
             A maioria das empresas brasileiras paga mais do que deveria pela energia,{" "}
-            não por falta de opções, mas <span className="text-highlight">por falta de clareza</span>.
+            <span className="text-highlight">não por falta de opções, mas por falta de clareza</span>.
           </p>
           <p
             className="text-lg lg:text-xl max-w-4xl mb-6"
-            style={{ color: "#736d77", lineHeight: "1.75" }}
+            style={{ color: "rgba(255,255,255,0.6)", lineHeight: "1.75" }}
           >
             O mercado de energia é fragmentado e opaco: ofertas confusas, contratos ambíguos e fornecedores que empurram uma única solução: a que é melhor para eles, não para você.
           </p>
           <p
             className="text-lg lg:text-xl max-w-4xl"
-            style={{ color: "#736d77", lineHeight: "1.75" }}
+            style={{ color: "rgba(255,255,255,0.6)", lineHeight: "1.75" }}
           >
             A Ótima existe para dar clareza: analisamos todas as opções viáveis (GD, ACL, Gestão de Energia e otimização no local), explicamos tudo com transparência e entregamos só o que importa: a decisão certa para o seu negócio.
           </p>
@@ -73,7 +73,7 @@ export function Process() {
           <div
             className="flex flex-wrap gap-10 lg:gap-20 max-w-4xl mt-10"
             style={{
-              borderTop: "1px solid #dfbaf2",
+              borderTop: "1px solid rgba(158,63,253,0.15)",
               paddingTop: "32px",
             }}
           >
@@ -94,13 +94,13 @@ export function Process() {
                 >
                   {num}
                 </p>
-                <p className="mt-2 text-sm" style={{ color: "#736d77" }}>
+                <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
                   {label}
                 </p>
               </div>
             ))}
           </div>
-          <p className="text-sm mt-8 max-w-2xl" style={{ color: "#736d77", opacity: 0.6 }}>
+          <p className="text-sm mt-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.25)" }}>
             *Valores indicam potencial de economia estimada. Resultados variam conforme perfil, região e prazo.
           </p>
         </div>
@@ -109,17 +109,17 @@ export function Process() {
       {/* ── "Como funciona" step cards ─────────────────────────── */}
       <section
         id="process"
-        style={{ background: "#eee7f1" }}
-        className="py-20 lg:py-24 border-t border-[#dfbaf2]"
+        style={{ background: "#13112a" }}
+        className="py-20 lg:py-24 border-t border-[rgba(158,63,253,0.15)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="mb-12">
             <div
               className="inline-block mb-4"
               style={{
-                background: "rgba(158,63,253,0.08)",
-                border: "1px solid rgba(158,63,253,0.25)",
-                color: "#9e3ffd",
+                background: "rgba(158,63,253,0.12)",
+                border: "1px solid rgba(158,63,253,0.3)",
+                color: "#c88ff5",
                 fontSize: "0.68rem",
                 fontWeight: 700,
                 padding: "5px 14px",
@@ -137,7 +137,7 @@ export function Process() {
                 fontWeight: 700,
                 fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
                 letterSpacing: "-0.02em",
-                color: "#000000",
+                color: "#ffffff",
                 marginBottom: "12px",
               }}
             >
@@ -145,7 +145,7 @@ export function Process() {
             </h2>
             <p
               className="max-w-3xl"
-              style={{ color: "#736d77", fontSize: "1rem", lineHeight: "1.75" }}
+              style={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: "1.75" }}
             >
               Nosso processo substitui a venda de uma solução única por uma análise neutra e estruturada. Trabalhamos como seu consultor estratégico para identificar a rota de maior economia para o seu perfil.
             </p>
@@ -157,15 +157,15 @@ export function Process() {
                 key={i}
                 className="relative p-6 rounded-2xl overflow-hidden"
                 style={{
-                  background: "#ffffff",
-                  border: "1px solid #dfbaf2",
+                  background: "#1a1833",
+                  border: "1px solid rgba(158,63,253,0.15)",
                   transition: "border-color 0.2s, box-shadow 0.2s",
                 }}
               >
                 <span
                   className="absolute select-none pointer-events-none font-black"
                   style={{
-                    color: "rgba(158,63,253,0.07)",
+                    color: "rgba(158,63,253,0.1)",
                     fontSize: "4.5rem",
                     lineHeight: 1,
                     fontFamily: "'Outfit', sans-serif",
@@ -182,8 +182,8 @@ export function Process() {
                     width: "44px",
                     height: "44px",
                     borderRadius: "10px",
-                    background: "rgba(158,63,253,0.1)",
-                    border: "1px solid #dfbaf2",
+                    background: "rgba(158,63,253,0.12)",
+                    border: "1px solid rgba(158,63,253,0.25)",
                   }}
                 >
                   {item.icon}
@@ -193,7 +193,7 @@ export function Process() {
                   className="font-semibold mb-2 relative z-10"
                   style={{
                     fontFamily: "'Sora', sans-serif",
-                    color: "#000000",
+                    color: "#ffffff",
                     fontSize: "1rem",
                     lineHeight: 1.35,
                   }}
@@ -202,7 +202,7 @@ export function Process() {
                 </h3>
                 <p
                   className="relative z-10"
-                  style={{ color: "#736d77", fontSize: "0.875rem", lineHeight: "1.75" }}
+                  style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.875rem", lineHeight: "1.75" }}
                 >
                   {item.desc}
                 </p>

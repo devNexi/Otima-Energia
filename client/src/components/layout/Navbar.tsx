@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoFull from "@/assets/branding/logo-full-large.png";
@@ -22,35 +22,11 @@ const navLinks = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 80);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const linkColor = scrolled ? "#000000" : "rgba(255,255,255,0.85)";
-  const linkHoverClass = scrolled ? "hover:text-[#9e3ffd]" : "hover:text-white";
 
   return (
     <>
-      <nav
-        data-testid="navbar"
-        style={{
-          background: scrolled ? "rgba(255,255,255,0.95)" : "transparent",
-          backdropFilter: scrolled ? "blur(12px)" : "none",
-          borderBottom: scrolled ? "1px solid #eee7f1" : "none",
-          transition: "all 0.3s ease",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-        }}
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200" data-testid="navbar">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -68,8 +44,7 @@ export function Navbar() {
               >
                 <Link
                   href="/solucoes"
-                  className={`flex items-center gap-1 text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${linkHoverClass}`}
-                  style={{ color: linkColor, fontFamily: "'Sora', sans-serif" }}
+                  className="dcvc-nav-link flex items-center gap-1"
                   data-testid="nav-solucoes"
                 >
                   SOLUÇÕES
@@ -77,13 +52,13 @@ export function Navbar() {
                 </Link>
                 {subOpen && (
                   <div className="absolute top-full left-0 pt-2 w-52">
-                    <div className="bg-white border border-[#eee7f1] rounded-lg shadow-lg py-2">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-lg py-2">
                       {solutions.map((s) => (
                         <Link
                           key={s.href}
                           href={s.href}
                           onClick={() => setSubOpen(false)}
-                          className="block px-4 py-2.5 text-sm text-[#000000] hover:bg-[#eee7f1] hover:text-[#9e3ffd] transition-colors"
+                          className="block px-4 py-2.5 text-sm text-[#16163f] hover:bg-[#eee7f1] hover:text-[#9e3ffd] transition-colors"
                           data-testid={`nav-sub-${s.name.toLowerCase().replace(/\s/g, "-")}`}
                         >
                           {s.name}
@@ -98,12 +73,8 @@ export function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${link.highlight ? "" : linkHoverClass}`}
-                  style={{
-                    color: link.highlight ? "#9e3ffd" : linkColor,
-                    fontFamily: "'Sora', sans-serif",
-                    fontWeight: link.highlight ? 700 : 600,
-                  }}
+                  className="dcvc-nav-link"
+                  style={link.highlight ? { color: "#9e3ffd", fontWeight: 700 } : undefined}
                   data-testid={`nav-${link.name.toLowerCase().replace(/[\s™]/g, "-")}`}
                 >
                   {link.name}
@@ -125,8 +96,7 @@ export function Navbar() {
 
             {/* Mobile Menu Button */}
             <button
-              className="lg:hidden p-2 transition-colors"
-              style={{ color: scrolled ? "#000000" : "rgba(255,255,255,0.85)" }}
+              className="lg:hidden p-2 text-gray-700"
               onClick={() => setIsOpen(!isOpen)}
               data-testid="mobile-menu-toggle"
             >
@@ -137,20 +107,20 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="lg:hidden bg-white border-t border-[#eee7f1]">
+          <div className="lg:hidden bg-white border-t border-gray-200">
             <div className="px-6 py-8 space-y-4">
-              <p className="text-xs font-semibold text-[#736d77] uppercase tracking-wider mb-2">Soluções</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Soluções</p>
               {solutions.map((s) => (
                 <Link
                   key={s.href}
                   href={s.href}
                   onClick={() => setIsOpen(false)}
-                  className="block text-base text-[#000000] hover:text-[#9e3ffd] transition-colors pl-2"
+                  className="block text-base text-[#16163f] hover:text-[#9e3ffd] transition-colors pl-2"
                 >
                   {s.name}
                 </Link>
               ))}
-              <div className="border-t border-[#eee7f1] pt-4 space-y-4">
+              <div className="border-t border-gray-100 pt-4 space-y-4">
                 <Link href="/ecos" onClick={() => setIsOpen(false)} className="block text-base font-semibold hover:text-[#9e3ffd] transition-colors" style={{ color: "#9e3ffd" }}>
                   ECOS™
                 </Link>
@@ -165,7 +135,7 @@ export function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
-                    className="block text-base text-[#000000] hover:text-[#9e3ffd] transition-colors"
+                    className="block text-base text-[#16163f] hover:text-[#9e3ffd] transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -186,6 +156,7 @@ export function Navbar() {
           </div>
         )}
       </nav>
+
     </>
   );
 }

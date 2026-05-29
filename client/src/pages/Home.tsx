@@ -30,8 +30,8 @@ function DifferentiationSection() {
 
   return (
     <section
-      style={{ background: "#ffffff" }}
-      className="py-16 lg:py-20 border-t border-[#dfbaf2]"
+      style={{ background: "#09081e" }}
+      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
@@ -43,18 +43,18 @@ function DifferentiationSection() {
                 fontWeight: 700,
                 fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
                 letterSpacing: "-0.02em",
-                color: "#000000",
+                color: "#ffffff",
               }}
             >
               O que torna a Ótima diferente
             </h2>
-            <p style={{ color: "#736d77", fontSize: "1rem", lineHeight: "1.75" }}>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: "1.75" }}>
               O mercado de energia é opaco por design. Fornecedores, distribuidoras e comercializadoras operam com informações assimétricas. A maioria das empresas não tem acesso à comparação, aos dados e à visibilidade que a Ótima tem.
             </p>
             <p
               className="mt-4"
               style={{
-                color: "#9e3ffd",
+                color: "#c88ff5",
                 fontSize: "1.05rem",
                 fontStyle: "italic",
                 fontFamily: "'Sora', sans-serif",
@@ -73,8 +73,8 @@ function DifferentiationSection() {
                 key={i}
                 className="flex items-start gap-4 p-5 rounded-xl"
                 style={{
-                  background: "#ffffff",
-                  border: "1px solid #dfbaf2",
+                  background: "#1a1833",
+                  border: "1px solid rgba(158,63,253,0.12)",
                 }}
               >
                 <div
@@ -83,8 +83,8 @@ function DifferentiationSection() {
                     width: "20px",
                     height: "20px",
                     borderRadius: "50%",
-                    background: "rgba(158,63,253,0.1)",
-                    border: "1px solid #dfbaf2",
+                    background: "rgba(158,63,253,0.15)",
+                    border: "1px solid rgba(158,63,253,0.3)",
                   }}
                 >
                   <CheckCircle className="w-3 h-3" style={{ color: "#9e3ffd" }} />
@@ -92,11 +92,11 @@ function DifferentiationSection() {
                 <div>
                   <h3
                     className="mb-1"
-                    style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, color: "#000000", fontSize: "0.9rem" }}
+                    style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, color: "#ffffff", fontSize: "0.9rem" }}
                   >
                     {p.title}
                   </h3>
-                  <p style={{ color: "#736d77", fontSize: "0.825rem", lineHeight: "1.65" }}>
+                  <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.825rem", lineHeight: "1.65" }}>
                     {p.desc}
                   </p>
                 </div>
@@ -139,17 +139,17 @@ function WhyOtimaSection() {
 
   return (
     <section
-      style={{ background: "#eee7f1" }}
-      className="py-20 lg:py-28 border-t border-[#dfbaf2]"
+      style={{ background: "#0d0c24" }}
+      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="mb-14 text-center">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.08)",
-              border: "1px solid rgba(158,63,253,0.25)",
-              color: "#9e3ffd",
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
               fontSize: "0.72rem",
               fontWeight: 600,
               padding: "5px 14px",
@@ -161,7 +161,7 @@ function WhyOtimaSection() {
             Por que a Ótima Energia
           </div>
           <h2
-            className="text-[#000000]"
+            className="text-white"
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 700,
@@ -179,14 +179,14 @@ function WhyOtimaSection() {
               key={i}
               className="relative p-7 rounded-2xl overflow-hidden"
               style={{
-                background: "#ffffff",
-                border: "1px solid #dfbaf2",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(158,63,253,0.18)",
               }}
             >
               <span
                 className="absolute top-2 right-4 select-none pointer-events-none font-black"
                 style={{
-                  color: "rgba(158,63,253,0.07)",
+                  color: "rgba(158,63,253,0.08)",
                   fontSize: "5.5rem",
                   lineHeight: 1,
                   fontFamily: "'Outfit', sans-serif",
@@ -196,14 +196,14 @@ function WhyOtimaSection() {
               </span>
               <p
                 className="text-xs tracking-widest uppercase mb-3 font-semibold relative z-10"
-                style={{ color: "#9e3ffd" }}
+                style={{ color: "#df0af2" }}
               >
                 {card.label}
               </p>
               <h3
                 className="font-bold mb-3 relative z-10"
                 style={{
-                  color: "#000000",
+                  color: "rgba(255,255,255,0.92)",
                   fontFamily: "'Outfit', sans-serif",
                   fontSize: "1.05rem",
                   lineHeight: 1.3,
@@ -213,7 +213,7 @@ function WhyOtimaSection() {
               </h3>
               <p
                 className="text-sm leading-relaxed relative z-10"
-                style={{ color: "#736d77" }}
+                style={{ color: "rgba(255,255,255,0.5)" }}
               >
                 {card.desc}
               </p>
@@ -239,17 +239,17 @@ function SegmentsSection() {
 
   return (
     <section
-      style={{ background: "#ffffff" }}
-      className="py-20 lg:py-28 border-t border-[#dfbaf2]"
+      style={{ background: "#09081e" }}
+      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="mb-14 text-center">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.08)",
-              border: "1px solid rgba(158,63,253,0.25)",
-              color: "#9e3ffd",
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
               fontSize: "0.72rem",
               fontWeight: 600,
               padding: "5px 14px",
@@ -261,7 +261,7 @@ function SegmentsSection() {
             Quem Atendemos
           </div>
           <h2
-            className="text-[#000000]"
+            className="text-white"
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 700,
@@ -273,7 +273,7 @@ function SegmentsSection() {
           </h2>
           <p
             className="mt-3 text-base max-w-xl mx-auto"
-            style={{ color: "#736d77" }}
+            style={{ color: "rgba(255,255,255,0.5)" }}
           >
             Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
           </p>
@@ -282,22 +282,22 @@ function SegmentsSection() {
           {segments.map((s, i) => (
             <div
               key={i}
-              className="p-5 rounded-xl transition-all duration-200 hover:border-[#c88ff5]"
+              className="p-5 rounded-xl transition-all duration-200 hover:border-[rgba(158,63,253,0.4)]"
               style={{
-                background: "#ffffff",
-                border: "1px solid #dfbaf2",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(158,63,253,0.18)",
               }}
               data-testid={`segment-${i}`}
             >
               <p
                 className="font-semibold text-sm mb-1"
-                style={{ color: "#000000" }}
+                style={{ color: "rgba(255,255,255,0.88)" }}
               >
                 {s.name}
               </p>
               <p
                 className="text-xs leading-relaxed"
-                style={{ color: "#736d77" }}
+                style={{ color: "rgba(255,255,255,0.42)" }}
               >
                 {s.detail}
               </p>
@@ -388,7 +388,7 @@ function EcosSection() {
             </Link>
           </div>
 
-          {/* Right — ECOS™ interactive mockup card — unchanged */}
+          {/* Right — ECOS™ interactive mockup card */}
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "20px" }}>
 
             {/* Card header */}
@@ -489,8 +489,8 @@ function EcosSection() {
 function FinalCta() {
   return (
     <section
-      style={{ background: "#431a6d" }}
-      className="py-24 lg:py-32 border-t border-[rgba(255,255,255,0.12)]"
+      style={{ background: "linear-gradient(135deg, #16163f 0%, #2a0f5e 100%)" }}
+      className="py-24 lg:py-32 border-t border-[rgba(158,63,253,0.2)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
         <h2
@@ -518,7 +518,7 @@ function FinalCta() {
             <span
               key={item}
               className="flex items-center gap-1.5"
-              style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.65)" }}
+              style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.7)" }}
             >
               <span style={{ color: "#c88ff5" }}>✦</span> {item}
             </span>
@@ -530,7 +530,7 @@ function FinalCta() {
           className="inline-flex items-center gap-3 px-8 py-4 text-base font-bold transition-all hover:opacity-90 hover:-translate-y-0.5"
           style={{
             background: "#ffffff",
-            color: "#431a6d",
+            color: "#9e3ffd",
             borderRadius: "8px",
             fontFamily: "'Sora', sans-serif",
             boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
@@ -545,22 +545,27 @@ function FinalCta() {
   );
 }
 
+// ─── Google Reviews via Elfsight ──────────────────────────────────────────────
+// 1. Go to https://elfsight.com/google-reviews-widget/
+// 2. Create a free widget connected to your Google Business page
+// 3. Copy the app ID from the embed code (looks like: elfsight-app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+// 4. Replace ELFSIGHT_APP_ID below with your real ID
 const ELFSIGHT_APP_ID = "elfsight-app-621cc45b-3c8c-4f91-9a14-009acabd13bf";
 
 function GoogleReviews() {
   return (
     <section
-      style={{ background: "#eee7f1" }}
-      className="py-16 lg:py-20 border-t border-[#dfbaf2]"
+      style={{ background: "#09081e" }}
+      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="text-center mb-10">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.08)",
-              border: "1px solid rgba(158,63,253,0.25)",
-              color: "#9e3ffd",
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
               fontSize: "0.68rem",
               fontWeight: 700,
               padding: "5px 14px",
@@ -573,7 +578,7 @@ function GoogleReviews() {
             Avaliações
           </div>
           <h2
-            className="text-[#000000]"
+            className="text-white"
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 700,
@@ -584,7 +589,14 @@ function GoogleReviews() {
             O que nossos clientes dizem
           </h2>
         </div>
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+        <div
+          style={{
+            background: "#1a1833",
+            border: "1px solid rgba(158,63,253,0.15)",
+            borderRadius: "14px",
+            padding: "24px",
+          }}
+        >
           <div className={ELFSIGHT_APP_ID} data-elfsight-app-lazy="true"></div>
         </div>
       </div>

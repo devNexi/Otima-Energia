@@ -36,11 +36,11 @@ export function Business() {
   return (
     <>
       <section
-        style={{ background: "#ffffff" }}
-        className="py-16 lg:py-20 border-t border-[#dfbaf2]"
+        style={{ background: "#09081e" }}
+        className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-          <p className="dcvc-statement text-[#000000] max-w-5xl">
+          <p className="dcvc-statement text-white max-w-5xl">
             Trabalhamos com os{" "}
             <span className="text-highlight-pink">principais players nacionais do setor</span>{" "}
             e mostramos o quadro completo, não uma solução empurrada.
@@ -50,7 +50,7 @@ export function Business() {
 
       <section
         id="business"
-        style={{ background: "#ffffff" }}
+        style={{ background: "#09081e" }}
         className="pb-20 lg:pb-28"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
@@ -59,9 +59,9 @@ export function Business() {
             <div
               className="inline-block mb-4"
               style={{
-                background: "rgba(158,63,253,0.08)",
-                border: "1px solid rgba(158,63,253,0.25)",
-                color: "#9e3ffd",
+                background: "rgba(158,63,253,0.12)",
+                border: "1px solid rgba(158,63,253,0.3)",
+                color: "#c88ff5",
                 fontSize: "0.72rem",
                 fontWeight: 600,
                 padding: "5px 14px",
@@ -73,7 +73,7 @@ export function Business() {
               Nossas Frentes de Atuação
             </div>
             <h2
-              className="text-[#000000]"
+              className="text-white"
               style={{
                 fontFamily: "'Outfit', sans-serif",
                 fontWeight: 700,
@@ -86,7 +86,7 @@ export function Business() {
             </h2>
             <p
               className="mt-3 text-base max-w-xl"
-              style={{ color: "#736d77" }}
+              style={{ color: "rgba(255,255,255,0.5)" }}
             >
               Cada empresa tem um perfil diferente. Identificamos qual caminho gera mais economia para o seu caso específico.
             </p>
@@ -101,28 +101,28 @@ export function Business() {
                   href={s.href}
                   className="group relative flex flex-col p-7 rounded-2xl transition-all duration-300 overflow-hidden"
                   style={{
-                    background: "#ffffff",
-                    border: "1px solid #dfbaf2",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(158,63,253,0.18)",
                   }}
                   data-testid={`solution-card-${i}`}
                 >
                   <div
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     style={{
-                      background: "radial-gradient(circle at 50% 0%, rgba(158,63,253,0.06) 0%, transparent 70%)",
+                      background: "radial-gradient(circle at 50% 0%, rgba(158,63,253,0.14) 0%, transparent 70%)",
                     }}
                   />
                   <div
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    style={{ border: "1px solid #c88ff5" }}
+                    style={{ border: "1px solid rgba(158,63,253,0.5)" }}
                   />
 
                   <div className="relative z-10 flex flex-col h-full">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
                       style={{
-                        background: "rgba(158,63,253,0.1)",
-                        border: "1px solid #dfbaf2",
+                        background: "rgba(158,63,253,0.15)",
+                        border: "1px solid rgba(158,63,253,0.3)",
                       }}
                     >
                       <Icon className="w-5 h-5" style={{ color: "#9e3ffd" }} />
@@ -130,14 +130,14 @@ export function Business() {
 
                     <p
                       className="text-xs tracking-widest uppercase mb-2 font-semibold"
-                      style={{ color: "#9e3ffd" }}
+                      style={{ color: "#c88ff5" }}
                     >
                       {s.label}
                     </p>
                     <h3
-                      className="font-bold mb-3 transition-colors duration-200 group-hover:text-[#9e3ffd]"
+                      className="font-bold mb-3 transition-colors duration-200 group-hover:text-[#c88ff5]"
                       style={{
-                        color: "#000000",
+                        color: "rgba(255,255,255,0.92)",
                         fontFamily: "'Outfit', sans-serif",
                         fontSize: "1.1rem",
                         lineHeight: 1.25,
@@ -147,7 +147,7 @@ export function Business() {
                     </h3>
                     <p
                       className="text-sm leading-relaxed flex-grow mb-6"
-                      style={{ color: "#736d77" }}
+                      style={{ color: "rgba(255,255,255,0.5)" }}
                     >
                       {s.description}
                     </p>

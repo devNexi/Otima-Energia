@@ -15,16 +15,16 @@ const formSchema = z.object({
 });
 
 const fieldStyle: React.CSSProperties = {
-  background: "#ffffff",
-  border: "1px solid #dfbaf2",
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.1)",
   borderRadius: "8px",
-  color: "#000000",
+  color: "#ffffff",
   padding: "12px 16px",
   fontFamily: "'Inter', sans-serif",
   fontSize: "0.9rem",
   width: "100%",
   outline: "none",
-  transition: "border-color 0.2s, box-shadow 0.2s",
+  transition: "border-color 0.2s, background 0.2s",
 };
 
 const labelStyle: React.CSSProperties = {
@@ -32,7 +32,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: "0.72rem",
   letterSpacing: "0.08em",
-  color: "#736d77",
+  color: "rgba(255,255,255,0.4)",
   textTransform: "uppercase",
   display: "block",
   marginBottom: "6px",
@@ -74,8 +74,8 @@ export function Contact() {
   return (
     <section
       id="contact"
-      style={{ background: "#ffffff" }}
-      className="pt-20 pb-12 lg:pt-24 lg:pb-16 border-t border-[#dfbaf2]"
+      style={{ background: "#13112a" }}
+      className="pt-20 pb-12 lg:pt-24 lg:pb-16 border-t border-[rgba(158,63,253,0.15)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
@@ -85,9 +85,9 @@ export function Contact() {
             <div
               className="inline-block mb-4"
               style={{
-                background: "rgba(158,63,253,0.08)",
-                border: "1px solid rgba(158,63,253,0.25)",
-                color: "#9e3ffd",
+                background: "rgba(158,63,253,0.12)",
+                border: "1px solid rgba(158,63,253,0.3)",
+                color: "#c88ff5",
                 fontSize: "0.68rem",
                 fontWeight: 700,
                 padding: "5px 14px",
@@ -100,7 +100,7 @@ export function Contact() {
               Contato
             </div>
             <p
-              className="dcvc-statement text-[#000000] mb-8"
+              className="dcvc-statement text-white mb-8"
               style={{ marginTop: "8px" }}
             >
               Pronto para{" "}
@@ -115,10 +115,10 @@ export function Contact() {
                     fontWeight: 700,
                     fontSize: "0.68rem",
                     letterSpacing: "0.12em",
-                    color: "#9e3ffd",
+                    color: "#c88ff5",
                     textTransform: "uppercase",
-                    background: "rgba(158,63,253,0.08)",
-                    border: "1px solid rgba(158,63,253,0.25)",
+                    background: "rgba(158,63,253,0.12)",
+                    border: "1px solid rgba(158,63,253,0.3)",
                     borderRadius: "99px",
                     display: "inline-block",
                     padding: "3px 10px",
@@ -127,7 +127,7 @@ export function Contact() {
                 >
                   E-mail
                 </p>
-                <p style={{ color: "#736d77", fontSize: "1rem" }}>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>
                   contato@otimaenergia.com
                 </p>
               </div>
@@ -138,10 +138,10 @@ export function Contact() {
                     fontWeight: 700,
                     fontSize: "0.68rem",
                     letterSpacing: "0.12em",
-                    color: "#9e3ffd",
+                    color: "#c88ff5",
                     textTransform: "uppercase",
-                    background: "rgba(158,63,253,0.08)",
-                    border: "1px solid rgba(158,63,253,0.25)",
+                    background: "rgba(158,63,253,0.12)",
+                    border: "1px solid rgba(158,63,253,0.3)",
                     borderRadius: "99px",
                     display: "inline-block",
                     padding: "3px 10px",
@@ -150,7 +150,7 @@ export function Contact() {
                 >
                   Localização
                 </p>
-                <p style={{ color: "#736d77", fontSize: "1rem" }}>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "1rem" }}>
                   Rio de Janeiro, Brasil
                 </p>
               </div>
@@ -173,12 +173,12 @@ export function Contact() {
                             placeholder="Seu nome"
                             data-testid="input-name"
                             style={fieldStyle}
-                            onFocus={e => { e.currentTarget.style.borderColor = "#9e3ffd"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(158,63,253,0.06)"; }}
-                            onBlur={e => { e.currentTarget.style.borderColor = "#dfbaf2"; e.currentTarget.style.boxShadow = "none"; }}
+                            onFocus={e => { e.currentTarget.style.borderColor = "rgba(158,63,253,0.5)"; e.currentTarget.style.background = "rgba(158,63,253,0.05)"; }}
+                            onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage className="text-red-500 text-xs mt-1" />
+                        <FormMessage className="text-red-400 text-xs mt-1" />
                       </FormItem>
                     )}
                   />
@@ -193,12 +193,12 @@ export function Contact() {
                             placeholder="+55 21 99999-9999"
                             data-testid="input-phone"
                             style={fieldStyle}
-                            onFocus={e => { e.currentTarget.style.borderColor = "#9e3ffd"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(158,63,253,0.06)"; }}
-                            onBlur={e => { e.currentTarget.style.borderColor = "#dfbaf2"; e.currentTarget.style.boxShadow = "none"; }}
+                            onFocus={e => { e.currentTarget.style.borderColor = "rgba(158,63,253,0.5)"; e.currentTarget.style.background = "rgba(158,63,253,0.05)"; }}
+                            onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage className="text-red-500 text-xs mt-1" />
+                        <FormMessage className="text-red-400 text-xs mt-1" />
                       </FormItem>
                     )}
                   />
@@ -215,12 +215,12 @@ export function Contact() {
                           placeholder="voce@empresa.com.br"
                           data-testid="input-email"
                           style={fieldStyle}
-                          onFocus={e => { e.currentTarget.style.borderColor = "#9e3ffd"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(158,63,253,0.06)"; }}
-                          onBlur={e => { e.currentTarget.style.borderColor = "#dfbaf2"; e.currentTarget.style.boxShadow = "none"; }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "rgba(158,63,253,0.5)"; e.currentTarget.style.background = "rgba(158,63,253,0.05)"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500 text-xs mt-1" />
+                      <FormMessage className="text-red-400 text-xs mt-1" />
                     </FormItem>
                   )}
                 />
@@ -236,12 +236,12 @@ export function Contact() {
                           placeholder="Nome da empresa"
                           data-testid="input-company"
                           style={fieldStyle}
-                          onFocus={e => { e.currentTarget.style.borderColor = "#9e3ffd"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(158,63,253,0.06)"; }}
-                          onBlur={e => { e.currentTarget.style.borderColor = "#dfbaf2"; e.currentTarget.style.boxShadow = "none"; }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "rgba(158,63,253,0.5)"; e.currentTarget.style.background = "rgba(158,63,253,0.05)"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500 text-xs mt-1" />
+                      <FormMessage className="text-red-400 text-xs mt-1" />
                     </FormItem>
                   )}
                 />
@@ -258,12 +258,12 @@ export function Contact() {
                           data-testid="input-message"
                           rows={4}
                           style={{ ...fieldStyle, resize: "none", minHeight: "110px" }}
-                          onFocus={e => { e.currentTarget.style.borderColor = "#9e3ffd"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(158,63,253,0.06)"; }}
-                          onBlur={e => { e.currentTarget.style.borderColor = "#dfbaf2"; e.currentTarget.style.boxShadow = "none"; }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "rgba(158,63,253,0.5)"; e.currentTarget.style.background = "rgba(158,63,253,0.05)"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-500 text-xs mt-1" />
+                      <FormMessage className="text-red-400 text-xs mt-1" />
                     </FormItem>
                   )}
                 />
@@ -283,13 +283,13 @@ export function Contact() {
                     borderRadius: "8px",
                     border: "none",
                     cursor: "pointer",
-                    boxShadow: "0 4px 20px rgba(158,63,253,0.25)",
+                    boxShadow: "0 4px 20px rgba(158,63,253,0.35)",
                   }}
                 >
                   {submitLead.isPending ? "Enviando..." : "Enviar Solicitação"}
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <p style={{ color: "#736d77", fontSize: "0.75rem", opacity: 0.7 }}>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.75rem" }}>
                   Ao enviar, você confirma que é decisor(a) ou está autorizado(a) pela empresa a solicitar análises, cotações e avançar no processo.
                 </p>
               </form>
