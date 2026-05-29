@@ -5,7 +5,7 @@ import { Hero } from "@/components/sections/Hero";
 import { Process } from "@/components/sections/Process";
 import { Business } from "@/components/sections/Business";
 import { Contact } from "@/components/sections/Contact";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight, Building2, GraduationCap, HeartPulse, Hotel, ShoppingCart, Layers, Factory, Building } from "lucide-react";
 import { Link } from "wouter";
 
 function DifferentiationSection() {
@@ -228,91 +228,181 @@ function WhyOtimaSection() {
 
 function SegmentsSection() {
   const segments = [
-    { name: "Condomínios", detail: "Iluminação, elevadores, bombas e portões" },
-    { name: "Gestoras de Condomínio", detail: "Visão consolidada de múltiplos ativos" },
-    { name: "Escolas e Universidades", detail: "Alto consumo com sazonalidade previsível" },
-    { name: "Clínicas e Hospitais", detail: "Operação contínua, alta criticidade" },
-    { name: "Hotéis e Pousadas", detail: "Climatização e iluminação 24h" },
-    { name: "Supermercados", detail: "Refrigeração e carga constante" },
-    { name: "Empresas com múltiplas unidades", detail: "Visão e estratégia consolidada" },
-    { name: "Indústrias e galpões", detail: "Alta demanda, máximo potencial de economia" },
+    { Icon: Building2,        name: "Condomínios",                   detail: "Iluminação, elevadores, bombas e portões" },
+    { Icon: Building,         name: "Gestoras de Condomínio",        detail: "Visão consolidada de múltiplos ativos" },
+    { Icon: GraduationCap,    name: "Escolas e Universidades",       detail: "Alto consumo com sazonalidade previsível" },
+    { Icon: HeartPulse,       name: "Clínicas e Hospitais",          detail: "Operação contínua, alta criticidade" },
+    { Icon: Hotel,            name: "Hotéis e Pousadas",             detail: "Climatização e iluminação 24h" },
+    { Icon: ShoppingCart,     name: "Supermercados",                 detail: "Refrigeração e carga constante" },
+    { Icon: Layers,           name: "Múltiplas Unidades",            detail: "Visão e estratégia consolidada" },
+    { Icon: Factory,          name: "Indústrias e galpões",          detail: "Alta demanda, máximo potencial de economia" },
   ];
 
   return (
     <section
+      className="relative overflow-hidden py-20 lg:py-28 border-t border-[rgba(255,255,255,0.04)]"
       style={{ background: "#09081e" }}
-      className="py-20 lg:py-28 border-t border-[rgba(255,255,255,0.04)]"
     >
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
+      {/* Deep purple radial spotlight from bottom */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 90% 55% at 50% 105%, rgba(74,29,150,0.55) 0%, rgba(94,39,210,0.18) 40%, transparent 70%)",
+        }}
+      />
+      {/* Top purple gradient hairline */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: "linear-gradient(90deg, transparent 0%, rgba(158,63,253,0.7) 50%, transparent 100%)" }}
+      />
+
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
+
+        {/* Header */}
         <div className="mb-14 text-center">
           <div
-            className="inline-block mb-4"
+            className="inline-block mb-5"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(158,63,253,0.3)",
+              background: "rgba(158,63,253,0.18)",
+              border: "1px solid rgba(158,63,253,0.45)",
               color: "#c88ff5",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              padding: "5px 14px",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              padding: "5px 16px",
               borderRadius: "99px",
-              letterSpacing: "0.08em",
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
+              fontFamily: "'Sora', sans-serif",
             }}
           >
             Quem Atendemos
           </div>
           <h2
-            className="text-white"
             style={{
               fontFamily: "'Outfit', sans-serif",
-              fontWeight: 700,
-              fontSize: "clamp(1.75rem, 3vw, 2.5rem)",
-              letterSpacing: "-0.02em",
+              fontWeight: 800,
+              fontSize: "clamp(2rem, 4vw, 3rem)",
+              letterSpacing: "-0.03em",
+              color: "#ffffff",
+              lineHeight: 1.1,
             }}
           >
-            Qualquer empresa com energia relevante
+            Qualquer empresa com{" "}
+            <span
+              style={{
+                backgroundImage: "linear-gradient(135deg, #bf7fff 0%, #9e3ffd 45%, #df0af2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              energia relevante
+            </span>
           </h2>
           <p
-            className="mt-3 text-base max-w-xl mx-auto"
-            style={{ color: "rgba(255,255,255,0.72)" }}
+            className="mt-4 text-base max-w-lg mx-auto"
+            style={{ color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}
           >
-            Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
+            Uma conta relevante é o único requisito. O diagnóstico é gratuito, sem compromisso.
           </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {segments.map((s, i) => (
+
+        {/* Card grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-5">
+          {segments.map(({ Icon, name, detail }, i) => (
             <div
               key={i}
-              className="p-5 rounded-xl transition-all duration-200"
+              className="group relative rounded-2xl overflow-hidden transition-all duration-300 cursor-default"
               style={{
-                background: "rgba(255,255,255,0.07)",
+                background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(158,63,253,0.5)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 1px rgba(158,63,253,0.2), 0 8px 32px rgba(158,63,253,0.15)";
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = "rgba(94,39,210,0.18)";
+                el.style.borderColor = "rgba(158,63,253,0.55)";
+                el.style.boxShadow = "0 0 0 1px rgba(158,63,253,0.2), 0 12px 40px rgba(74,29,150,0.35)";
+                el.style.transform = "translateY(-2px)";
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                const el = e.currentTarget as HTMLElement;
+                el.style.background = "rgba(255,255,255,0.05)";
+                el.style.borderColor = "rgba(255,255,255,0.1)";
+                el.style.boxShadow = "none";
+                el.style.transform = "translateY(0)";
               }}
               data-testid={`segment-${i}`}
             >
-              <p
-                className="font-semibold text-sm mb-1"
-                style={{ color: "#ffffff" }}
-              >
-                {s.name}
-              </p>
-              <p
-                className="text-xs leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.65)" }}
-              >
-                {s.detail}
-              </p>
+              {/* Purple top accent bar */}
+              <div
+                style={{
+                  height: "3px",
+                  background: "linear-gradient(90deg, #9e3ffd, #df0af2)",
+                  opacity: 0.7,
+                }}
+              />
+
+              <div className="p-5 lg:p-6">
+                {/* Icon + faded number row */}
+                <div className="flex items-start justify-between mb-4">
+                  <div
+                    className="flex items-center justify-center"
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "10px",
+                      background: "rgba(158,63,253,0.15)",
+                      border: "1px solid rgba(158,63,253,0.25)",
+                    }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: "#bf7fff" }} />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: "'Outfit', sans-serif",
+                      fontWeight: 800,
+                      fontSize: "2rem",
+                      lineHeight: 1,
+                      color: "rgba(158,63,253,0.2)",
+                      userSelect: "none",
+                    }}
+                  >
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </div>
+
+                <p
+                  className="font-semibold mb-1.5"
+                  style={{ color: "#ffffff", fontSize: "0.9rem", lineHeight: 1.3 }}
+                >
+                  {name}
+                </p>
+                <p
+                  style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.78rem", lineHeight: 1.6 }}
+                >
+                  {detail}
+                </p>
+              </div>
             </div>
           ))}
         </div>
+
+        {/* Bottom note */}
+        <div className="mt-12 text-center">
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.85rem", marginBottom: "16px" }}>
+            Não encontrou o seu segmento? Qualquer empresa com conta relevante pode solicitar o diagnóstico.
+          </p>
+          <Link
+            href="/seja-cliente"
+            className="inline-flex items-center gap-2 font-semibold transition-all duration-200 hover:gap-3"
+            style={{ color: "#9e3ffd", fontFamily: "'Sora', sans-serif", fontSize: "0.9rem" }}
+            data-testid="segments-cta"
+          >
+            Solicitar Diagnóstico Gratuito
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
       </div>
     </section>
   );
