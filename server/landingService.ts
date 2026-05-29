@@ -129,6 +129,7 @@ export async function sendLandingEmails(params: {
   mensagem?: string;
   billFileUrl?: string | null;
   billUploaded?: boolean;
+  tipo?: string;
   ipAddress?: string;
   leadStatus?: string;
   utm_source?: string;
@@ -249,22 +250,52 @@ Chamar no WhatsApp imediatamente.`;
     text: copyBlock,
   });
 
-  // Customer confirmation — failure is caught separately by the caller
-  const confirmText = `Olá ${params.nome},
+  // Customer confirmation — varies by submission tipo
+  const { plain: waOtima } = buildWhatsAppLinks("5521999999999", params.nome, companyOrName);
+  let confirmText: string;
+  if (params.tipo === "sem-conta") {
+    confirmText = `Olá ${params.nome},
+
+Recebemos sua solicitação para a análise gratuita da sua conta de energia.
+
+Como você ainda não tem a conta de energia em mãos, nossa equipe entrará em contato pelo WhatsApp para te orientar nos próximos passos.
+
+Se quiser agilizar, você pode nos enviar a conta pelo WhatsApp agora mesmo:
+${waOtima}
+
+Ou responda este email com a conta em anexo e iremos analisar assim que receber.
+
+Atenciosamente,
+Equipe Ótima Energia`;
+  } else if (params.tipo === "caso-especial") {
+    confirmText = `Olá ${params.nome},
+
+Recebemos sua solicitação para a análise gratuita da sua conta de energia.
+
+Como o valor informado está fora do perfil padrão do mercado livre, nossa equipe irá revisar o seu caso individualmente e entrará em contato para entender melhor o seu perfil de consumo.
+
+Isso pode levar um pouco mais de tempo do que a análise padrão, mas daremos o retorno assim que tivermos uma avaliação.
+
+Se tiver dúvidas, pode nos chamar pelo WhatsApp:
+${waOtima}
+
+Atenciosamente,
+Equipe Ótima Energia`;
+  } else {
+    confirmText = `Olá ${params.nome},
 
 Recebemos sua solicitação para a análise gratuita da sua conta de energia.
 
 Nossa equipe irá revisar as informações enviadas e um Especialista em Energia da Ótima entrará em contato com sua comparação personalizada.
 
-Se você já enviou sua conta de energia, não precisa fazer mais nada neste momento.
-
-Se ainda não enviou, você pode responder este email com a conta em anexo para agilizar a análise.
+Não precisa fazer mais nada neste momento — entraremos em contato em breve.
 
 Atenciosamente,
 Equipe Ótima Energia`;
+  }
 
   await transporter.sendMail({
-    from: `"Otto da Ótima Energia" <otto@otimaenergia.com>`,
+    from: `"Ótima Energia" <notificacoes@otimaenergia.com>`,
     replyTo: internalLeadEmail,
     to: params.email,
     subject: "Recebemos sua solicitação — Ótima Energia",

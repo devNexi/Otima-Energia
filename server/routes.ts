@@ -954,11 +954,15 @@ export async function registerRoutes(
         "Next Action Date": "",
       };
 
+      const isCasoEspecial = valorConta === "Menos de R$ 5.000 (caso especial)";
+      const emailTipo = isCasoEspecial ? "caso-especial" : billFile ? "completo" : "sem-conta";
+
       const emailParams = {
         nome, empresa, email, phone, cidade, estado,
         valorConta, tipoImovel, mensagem,
         billFileUrl,
         billUploaded: !!billFile,
+        tipo: emailTipo,
         ipAddress: ip,
         leadStatus: "Novo",
         utm_source, utm_medium, utm_campaign, utm_term, utm_content,
