@@ -26,12 +26,6 @@ const solutions = [
     title: "Otimização Energética",
     description: "Identificamos desperdícios na operação, revisamos o perfil de consumo e entregamos um plano concreto de redução, com as ações de maior impacto priorizadas.",
   },
-  {
-    label: "Parceiros",
-    href: "/parceiros",
-    title: "Programa de Parceiros",
-    description: "Trabalhe com a Ótima como parceiro comercial ou regional. Listas de leads qualificados, processo comercial estruturado e comissões competitivas.",
-  },
 ];
 
 export function Business() {
