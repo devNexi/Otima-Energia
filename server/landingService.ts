@@ -106,6 +106,10 @@ export async function uploadToDrive(
   }
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+const WA_BUSINESS = "5521997959777";
+const BRAND_PURPLE = "#9e3ffd";
+
 // ── WhatsApp helper ────────────────────────────────────────────────────────────
 function buildWhatsAppLinks(rawPhone: string, nome: string, empresa: string): { plain: string; prefilled: string } {
   const digits = rawPhone.replace(/\D/g, "");
@@ -114,6 +118,30 @@ function buildWhatsAppLinks(rawPhone: string, nome: string, empresa: string): { 
   const message = `Olá ${nome}, aqui é o Renan da Ótima Energia. Recebemos sua solicitação de análise gratuita para reduzir a conta de energia da ${empresa || nome}. Posso te chamar por aqui para confirmar alguns dados?`;
   const prefilled = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   return { plain, prefilled };
+}
+
+// ── Email building blocks ──────────────────────────────────────────────────────
+const OTTO_SIGNATURE = `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e5e5;color:#666;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <p style="margin:0 0 4px 0;">—</p>
+  <p style="margin:4px 0;"><strong>Otto</strong></p>
+  <p style="margin:0;color:#888;">Agente de IA da Ótima Energia</p>
+  <p style="margin:4px 0;">
+    <a href="https://otimaenergia.com" style="color:${BRAND_PURPLE};text-decoration:none;">otimaenergia.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://wa.me/${WA_BUSINESS}" style="color:${BRAND_PURPLE};text-decoration:none;">WhatsApp</a>
+  </p>
+</div>`;
+
+function waButton(url: string, label = "💬 Falar pelo WhatsApp"): string {
+  return `<a href="${url}" style="display:inline-block;padding:14px 28px;background-color:#25D366;color:white;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;margin:16px 0;">${label}</a>`;
+}
+
+function wrapEmail(body: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;color:#222;padding:24px;">
+${body}
+${OTTO_SIGNATURE}
+</body></html>`;
 }
 
 // ── Email via Zoho SMTP ────────────────────────────────────────────────────────
@@ -152,8 +180,9 @@ export async function sendLandingEmails(params: {
     return;
   }
 
-  const fromEmail = process.env.OTIMA_EMAIL_FROM || "notificacoes@otimaenergia.com";
+  const fromEmail = process.env.OTIMA_EMAIL_FROM || "marketing@otimaenergia.com";
   const internalLeadEmail = process.env.OTIMA_INTERNAL_LEAD_EMAIL || "callum@otimaenergia.com";
+  const ottoFrom = `"Otto - Ótima Energia" <otto@otimaenergia.com>`;
 
   const nodemailer = await import("nodemailer");
   const transporter = nodemailer.createTransport({
@@ -166,9 +195,10 @@ export async function sendLandingEmails(params: {
   const companyOrName = params.empresa?.trim() || params.nome;
   const { plain: waPlain, prefilled: waPrefilled } = buildWhatsAppLinks(params.phone, params.nome, companyOrName);
   const billLine = params.billUploaded
-    ? (params.billFileUrl ? `Sim — <a href="${params.billFileUrl}" style="color:#9e3ffd;">Ver arquivo</a>` : "Sim (upload falhou — coletar manualmente)")
+    ? (params.billFileUrl ? `Sim — <a href="${params.billFileUrl}" style="color:${BRAND_PURPLE};">Ver arquivo</a>` : "Sim (upload falhou — coletar manualmente)")
     : "Não";
 
+  // ── Copy block for internal forward ──
   const copyBlock = `Novo lead Ótima
 
 Nome: ${params.nome}
@@ -185,30 +215,32 @@ Mensagem: ${params.mensagem || "—"}
 Origem: ${params.utm_source || "—"}
 Campanha: ${params.utm_campaign || "—"}
 Termo: ${params.utm_term || "—"}
+Conteúdo: ${params.utm_content || "—"}
 GCLID: ${params.gclid || "—"}
 
 Próxima ação sugerida:
 Chamar no WhatsApp imediatamente.`;
 
+  // ── Internal alert HTML ──
   const internalHtml = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"/></head>
 <body style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#222;">
-  <div style="background:#9e3ffd;padding:20px 24px;border-radius:8px 8px 0 0;">
+  <div style="background:${BRAND_PURPLE};padding:20px 24px;border-radius:8px 8px 0 0;">
     <h1 style="color:#fff;margin:0;font-size:20px;">🔔 Novo lead Ótima</h1>
     <p style="color:#e8d5ff;margin:4px 0 0;">${params.leadId} · ${params.submittedAt}</p>
   </div>
-  <div style="background:#f9f6ff;padding:20px 24px;border-bottom:3px solid #9e3ffd;">
+  <div style="background:#f9f6ff;padding:20px 24px;border-bottom:3px solid ${BRAND_PURPLE};">
     <a href="${waPrefilled}" style="display:inline-block;background:#25D366;color:#fff;font-weight:bold;padding:14px 28px;border-radius:6px;text-decoration:none;font-size:16px;">📲 Abrir WhatsApp do lead</a>
-    <p style="margin:10px 0 0;font-size:13px;color:#666;">Link direto: <a href="${waPlain}" style="color:#9e3ffd;">${waPlain}</a></p>
+    <p style="margin:10px 0 0;font-size:13px;color:#666;">Link direto: <a href="${waPlain}" style="color:${BRAND_PURPLE};">${waPlain}</a></p>
   </div>
   <div style="padding:20px 24px;">
-    <h2 style="font-size:16px;color:#9e3ffd;margin:0 0 12px;">Dados do lead</h2>
+    <h2 style="font-size:16px;color:${BRAND_PURPLE};margin:0 0 12px;">Dados do lead</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       <tr><td style="padding:6px 0;color:#666;width:160px;">Nome</td><td style="padding:6px 0;font-weight:bold;">${params.nome}</td></tr>
       <tr style="background:#f5f0ff;"><td style="padding:6px 4px;color:#666;">Empresa</td><td style="padding:6px 4px;">${params.empresa || "—"}</td></tr>
-      <tr><td style="padding:6px 0;color:#666;">Email</td><td style="padding:6px 0;"><a href="mailto:${params.email}" style="color:#9e3ffd;">${params.email}</a></td></tr>
-      <tr style="background:#f5f0ff;"><td style="padding:6px 4px;color:#666;">WhatsApp</td><td style="padding:6px 4px;"><a href="${waPlain}" style="color:#9e3ffd;">${params.phone}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#666;">Email</td><td style="padding:6px 0;"><a href="mailto:${params.email}" style="color:${BRAND_PURPLE};">${params.email}</a></td></tr>
+      <tr style="background:#f5f0ff;"><td style="padding:6px 4px;color:#666;">WhatsApp</td><td style="padding:6px 4px;"><a href="${waPlain}" style="color:${BRAND_PURPLE};">${params.phone}</a></td></tr>
       <tr><td style="padding:6px 0;color:#666;">Cidade / UF</td><td style="padding:6px 0;">${params.cidade} / ${params.estado}</td></tr>
       <tr style="background:#f5f0ff;"><td style="padding:6px 4px;color:#666;">Conta média</td><td style="padding:6px 4px;font-weight:bold;">${params.valorConta}</td></tr>
       <tr><td style="padding:6px 0;color:#666;">Tipo de imóvel</td><td style="padding:6px 0;">${params.tipoImovel}</td></tr>
@@ -216,7 +248,7 @@ Chamar no WhatsApp imediatamente.`;
       <tr><td style="padding:6px 0;color:#666;">Status</td><td style="padding:6px 0;">${params.leadStatus || "Novo"}</td></tr>
       <tr style="background:#f5f0ff;"><td style="padding:6px 4px;color:#666;">Mensagem</td><td style="padding:6px 4px;">${params.mensagem || "—"}</td></tr>
     </table>
-    <h2 style="font-size:16px;color:#9e3ffd;margin:20px 0 12px;">Rastreamento</h2>
+    <h2 style="font-size:16px;color:${BRAND_PURPLE};margin:20px 0 12px;">Rastreamento</h2>
     <table style="width:100%;border-collapse:collapse;font-size:13px;color:#555;">
       <tr><td style="padding:4px 0;width:160px;">UTM Source</td><td>${params.utm_source || "—"}</td></tr>
       <tr style="background:#f5f0ff;"><td style="padding:4px 4px;">UTM Medium</td><td style="padding:4px 4px;">${params.utm_medium || "—"}</td></tr>
@@ -231,75 +263,62 @@ Chamar no WhatsApp imediatamente.`;
       <tr><td style="padding:4px 0;">IP</td><td>${params.ipAddress || "—"}</td></tr>
       <tr style="background:#f5f0ff;"><td style="padding:4px 4px;">User Agent</td><td style="padding:4px 4px;font-size:11px;word-break:break-all;">${params.userAgent || "—"}</td></tr>
     </table>
-    <h2 style="font-size:16px;color:#9e3ffd;margin:20px 0 8px;">Bloco para encaminhar ao Renan</h2>
+    <h2 style="font-size:16px;color:${BRAND_PURPLE};margin:20px 0 8px;">Bloco para encaminhar ao Renan</h2>
     <pre style="background:#f0ebff;border:1px solid #d4b8ff;border-radius:6px;padding:14px;font-size:12px;white-space:pre-wrap;word-break:break-word;">${copyBlock}</pre>
   </div>
   <div style="background:#f3f0f8;padding:12px 24px;font-size:11px;color:#999;border-radius:0 0 8px 8px;">
-    Ótima Energia · notificacoes@otimaenergia.com · otimaenergia.com
+    Ótima Energia · otto@otimaenergia.com · otimaenergia.com
   </div>
+  ${OTTO_SIGNATURE.replace('style="', 'style="padding:0 24px 16px;')}
 </body>
 </html>`;
 
-  // Internal alert — non-fatal callers handle errors
+  // ── Send internal alert ──
   const internalSubject = `Novo lead Ótima — ${companyOrName} — ${params.valorConta} — ${params.estado}`;
   await transporter.sendMail({
-    from: `"Ótima Energia" <${fromEmail}>`,
+    from: ottoFrom,
     to: internalLeadEmail,
     subject: internalSubject,
     html: internalHtml,
     text: copyBlock,
   });
 
-  // Customer confirmation — varies by submission tipo
-  const { plain: waOtima } = buildWhatsAppLinks("5521999999999", params.nome, companyOrName);
-  let confirmText: string;
+  // ── Customer confirmation — HTML, varies by tipo ──
+  const waCompleto = `https://wa.me/${WA_BUSINESS}?text=${encodeURIComponent("Olá! Acabei de me cadastrar no site da Ótima Energia e gostaria de conversar sobre minha análise.")}`;
+  const waSemConta = `https://wa.me/${WA_BUSINESS}?text=${encodeURIComponent(`Olá! Acabei de me cadastrar no site da Ótima Energia e vou enviar minha conta de luz para análise. Meu nome é ${params.nome} da empresa ${companyOrName}.`)}`;
+  const waCasoEspecial = `https://wa.me/${WA_BUSINESS}?text=${encodeURIComponent("Olá! Acabei de me cadastrar no site da Ótima Energia - caso especial - gostaria de conversar sobre minha situação.")}`;
+
+  let confirmHtml: string;
   if (params.tipo === "sem-conta") {
-    confirmText = `Olá ${params.nome},
-
-Recebemos sua solicitação para a análise gratuita da sua conta de energia.
-
-Como você ainda não tem a conta de energia em mãos, nossa equipe entrará em contato pelo WhatsApp para te orientar nos próximos passos.
-
-Se quiser agilizar, você pode nos enviar a conta pelo WhatsApp agora mesmo:
-${waOtima}
-
-Ou responda este email com a conta em anexo e iremos analisar assim que receber.
-
-Atenciosamente,
-Equipe Ótima Energia`;
+    confirmHtml = wrapEmail(`
+<p>Olá ${params.nome},</p>
+<p>Recebemos seus dados! Para fazermos sua análise gratuita o mais rápido possível, precisamos da sua conta de luz mais recente.</p>
+<p>A forma mais rápida é enviar agora pelo WhatsApp:</p>
+<p style="text-align:center;">${waButton(waSemConta, "💬 Enviar conta pelo WhatsApp")}</p>
+<p>Ou responda este email anexando o PDF/foto da conta.</p>
+<p style="color:#666;">Sem a conta, nossa equipe entrará em contato pelo telefone informado para coletar as informações necessárias.</p>`);
   } else if (params.tipo === "caso-especial") {
-    confirmText = `Olá ${params.nome},
-
-Recebemos sua solicitação para a análise gratuita da sua conta de energia.
-
-Como o valor informado está fora do perfil padrão do mercado livre, nossa equipe irá revisar o seu caso individualmente e entrará em contato para entender melhor o seu perfil de consumo.
-
-Isso pode levar um pouco mais de tempo do que a análise padrão, mas daremos o retorno assim que tivermos uma avaliação.
-
-Se tiver dúvidas, pode nos chamar pelo WhatsApp:
-${waOtima}
-
-Atenciosamente,
-Equipe Ótima Energia`;
+    confirmHtml = wrapEmail(`
+<p>Olá ${params.nome},</p>
+<p>Recebemos sua solicitação. Seu caso está um pouco fora do perfil padrão que atendemos (empresas com conta de luz acima de R$ 5.000/mês), mas vamos fazer uma revisão individual para ver se conseguimos te ajudar.</p>
+<p>Esse processo pode levar um pouco mais que o normal. Se tiver dúvidas, fale conosco pelo WhatsApp:</p>
+<p style="text-align:center;">${waButton(waCasoEspecial)}</p>`);
   } else {
-    confirmText = `Olá ${params.nome},
-
-Recebemos sua solicitação para a análise gratuita da sua conta de energia.
-
-Nossa equipe irá revisar as informações enviadas e um Especialista em Energia da Ótima entrará em contato com sua comparação personalizada.
-
-Não precisa fazer mais nada neste momento — entraremos em contato em breve.
-
-Atenciosamente,
-Equipe Ótima Energia`;
+    confirmHtml = wrapEmail(`
+<p>Olá ${params.nome},</p>
+<p>Recebemos sua conta de luz e seus dados! Nossa equipe de especialistas vai analisar tudo e entrar em contato em até 24 horas úteis.</p>
+<p>Não precisa fazer mais nada agora.</p>
+<p>Se preferir falar conosco agora pelo WhatsApp:</p>
+<p style="text-align:center;">${waButton(waCompleto)}</p>`);
   }
 
   await transporter.sendMail({
-    from: `"Ótima Energia" <notificacoes@otimaenergia.com>`,
+    from: ottoFrom,
     replyTo: internalLeadEmail,
     to: params.email,
     subject: "Recebemos sua solicitação — Ótima Energia",
-    text: confirmText,
+    html: confirmHtml,
+    text: confirmHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
   });
 
   console.log(`[Landing] Emails sent for lead ${params.leadId}`);

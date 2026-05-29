@@ -279,7 +279,8 @@ function RedzaInner() {
       }
 
       const firstName = encodeURIComponent(data.nome.trim().split(/\s+/)[0]);
-      window.location.href = `/obrigado?tipo=${tipo}&nome=${firstName}`;
+      const empresa = encodeURIComponent(data.empresa?.trim() || "");
+      window.location.href = `/obrigado?tipo=${tipo}&nome=${firstName}&empresa=${empresa}`;
 
     } catch (err: any) {
       setSubmitError(err.message || "Erro inesperado. Tente novamente.");
@@ -894,11 +895,10 @@ function RedzaInner() {
           <div>
             <p className="font-semibold text-white mb-4">Contato</p>
             <ul className="space-y-3">
-              {/* TODO: Replace with real WhatsApp business number */}
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 opacity-60" />
-                <a href="https://wa.me/5521999999999" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                  (21) 99999-9999 {/* TODO: update */}
+                <a href="https://wa.me/5521997959777" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                  (21) 99795-9777
                 </a>
               </li>
               <li className="flex items-center gap-2">

@@ -1,0 +1,185 @@
+Final email + WhatsApp implementation for Otto / Maestro
+WhatsApp Business number now live: (21) 99795-9777
+Use the exact format 5521997959777 in wa.me/ links (international format, no +, no spaces, no dashes).
+1. From-address for ALL outgoing Otto emails
+Customer-facing AND internal lead alerts both from:
+"Otto - Ótima Energia" <otto@otimaenergia.com>
+SMTP auth continues using marketing@ credentials (Otto is a Send-As alias).
+2. Email signature on ALL outgoing emails (HTML)
+Append this signature block to every Otto email — customer confirmations (all 3 tipo variants), internal lead alerts, test endpoint emails:
+html<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; color: #666; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <p style="margin: 0 0 4px 0;">—</p>
+  <p style="margin: 4px 0;"><strong>Otto</strong></p>
+  <p style="margin: 0; color: #888;">Agente de IA da Ótima Energia</p>
+  <p style="margin: 4px 0;">
+    <a href="https://otimaenergia.com" style="color: #5B3FBA; text-decoration: none;">otimaenergia.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://wa.me/5521997959777" style="color: #5B3FBA; text-decoration: none;">WhatsApp</a>
+  </p>
+</div>
+Match the brand purple color (#5B3FBA placeholder — use the actual brand purple from the existing email template).
+Critical wording choices:
+
+"Agente de IA" NOT "Assistente Virtual" — signals advanced agentic AI tech
+"da Ótima Energia" — correct Brazilian Portuguese possessive
+Otto is the persona/agent. Maestro is the system name (not user-facing yet)
+
+3. Customer email — restore WhatsApp button on all 3 tipo variants
+tipo=completo (bill uploaded)
+Olá [Nome],
+
+Recebemos sua conta de luz e seus dados! Nossa equipe de especialistas vai analisar tudo e entrar em contato em até 24 horas úteis.
+
+Não precisa fazer mais nada agora.
+
+Se preferir falar conosco agora pelo WhatsApp:
+
+[WhatsApp button → https://wa.me/5521997959777?text=Olá!%20Acabei%20de%20me%20cadastrar%20no%20site%20da%20Ótima%20Energia%20e%20gostaria%20de%20conversar%20sobre%20minha%20análise.]
+
+[Signature]
+tipo=sem-conta (skipped bill upload)
+Olá [Nome],
+
+Recebemos seus dados! Para fazermos sua análise gratuita o mais rápido possível, precisamos da sua conta de luz mais recente.
+
+A forma mais rápida é enviar agora pelo WhatsApp:
+
+[WhatsApp button → https://wa.me/5521997959777?text=Olá!%20Acabei%20de%20me%20cadastrar%20no%20site%20da%20Ótima%20Energia%20e%20vou%20enviar%20minha%20conta%20de%20luz%20para%20análise.%20Meu%20nome%20é%20[NOME]%20da%20empresa%20[EMPRESA].]
+
+Ou responda este email anexando o PDF/foto da conta.
+
+Sem a conta, nossa equipe entrará em contato pelo telefone informado para coletar as informações necessárias.
+
+[Signature]
+Pre-fill [NOME] and [EMPRESA] from the lead's submitted form data in the URL-encoded WhatsApp message. If empresa is missing, fall back to "minha empresa".
+tipo=caso-especial (sub-R$5k bill)
+Olá [Nome],
+
+Recebemos sua solicitação. Seu caso está um pouco fora do perfil padrão que atendemos (empresas com conta de luz acima de R$ 5.000/mês), mas vamos fazer uma revisão individual para ver se conseguimos te ajudar.
+
+Esse processo pode levar um pouco mais que o normal. Se tiver dúvidas, fale conosco pelo WhatsApp:
+
+[WhatsApp button → https://wa.me/5521997959777?text=Olá!%20Acabei%20de%20me%20cadastrar%20no%20site%20da%20Ótima%20Energia%20-%20caso%20especial%20-%20gostaria%20de%20conversar%20sobre%20minha%20situação.]
+
+[Signature]
+4. WhatsApp button styling (HTML)
+For all WhatsApp buttons in customer emails, use this consistent style:
+html<a href="WHATSAPP_URL_HERE" style="display: inline-block; padding: 14px 28px; background-color: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; margin: 16px 0;">
+  💬 Falar pelo WhatsApp
+</a>
+#25D366 is the official WhatsApp green.
+5. Internal lead alert (to Callum + Renan) — keep WhatsApp button
+The internal email already has a WhatsApp button using the LEAD's phone number. Confirm that's still working — Renan clicks to message the lead directly. No change needed there, just verify it's intact after these other edits.
+6. NEW REQUIREMENT — Update /obrigado page with WhatsApp button
+This is separate from the email work — frontend change to the thank-you page.
+The current /obrigado page has variant content based on ?tipo=. Add a prominent WhatsApp button to:
+/obrigado?tipo=sem-conta — HIGH PRIORITY
+After the "Recebemos seus dados" message, add a prominent WhatsApp CTA block:
+html<div style="background: #f8f5ff; border-left: 4px solid #5B3FBA; padding: 24px; border-radius: 8px; margin: 32px 0; text-align: center;">
+  <h3 style="margin: 0 0 12px 0; font-size: 20px;">Quer agilizar sua análise?</h3>
+  <p style="margin: 0 0 20px 0; color: #555;">Envie sua conta de luz pelo WhatsApp agora e nossa equipe analisará no mesmo dia.</p>
+  <a href="https://wa.me/5521997959777?text=Olá!%20Acabei%20de%20me%20cadastrar%20no%20site%20da%20Ótima%20Energia%20e%20vou%20enviar%20minha%20conta%20de%20luz%20para%20análise.%20Meu%20nome%20é%20[NOME]%20da%20empresa%20[EMPRESA]." style="display: inline-block; padding: 16px 32px; background-color: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 18px;">
+    💬 Enviar conta pelo WhatsApp
+  </a>
+</div>
+Pre-fill the WhatsApp message with the submitted name and empresa (read from URL query params or session state — same data that's already being passed for the nome URL param).
+/obrigado?tipo=completo — MEDIUM PRIORITY
+Add a smaller WhatsApp option below the main "Recebemos sua conta" confirmation:
+html<p style="text-align: center; margin: 24px 0 12px 0; color: #666;">Prefere falar pelo WhatsApp?</p>
+<div style="text-align: center;">
+  <a href="https://wa.me/5521997959777?text=Olá!%20Acabei%20de%20enviar%20minha%20conta%20de%20luz%20no%20site%20da%20Ótima%20Energia%20e%20gostaria%20de%20conversar." style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+    💬 Falar pelo WhatsApp
+  </a>
+</div>
+/obrigado?tipo=caso-especial — LOW PRIORITY
+Add a subtle WhatsApp option matching the completo variant styling. Pre-fill message:
+Olá! Acabei de me cadastrar como caso especial no site da Ótima Energia e gostaria de conversar sobre minha situação.
+CRITICAL — these WhatsApp clicks must also fire a GA4 event
+Add a JS click tracker so we can measure how many people click the WhatsApp button after submitting the form (huge KPI for the strategy):
+javascript// On WhatsApp button click
+window.gtag?.('event', 'whatsapp_click_obrigado', {
+  tipo: tipo,  // pulled from URL param
+  source: 'thank_you_page'
+});
+Fire this on click, BEFORE the link navigates to WhatsApp. Use onclick handler or event listener.
+We don't need to import this to Google Ads as a conversion (it's an engagement signal, not a lead). Just track in GA4 for our own analytics — tells us how many sem-conta users actually engage via WhatsApp.
+7. Updated acceptance test
+Before publishing, run all of these:
+Test 1 — Test endpoint email
+POST /api/admin/test-lead-email (admin session)
+Verify:
+
+✅ Email arrives at callum@otimaenergia.com inbox (NOT spam)
+✅ From shows "Otto - Ótima Energia otto@otimaenergia.com"
+✅ Otto signature renders at bottom (purple link, "Agente de IA da Ótima Energia")
+✅ WhatsApp link in signature opens WhatsApp with our number 5521997959777
+✅ Also test arrival at a Gmail and Outlook/Hotmail test address — confirm NOT in spam
+
+Test 2 — Real lead submission, tipo=completo
+Submit via /reduza with bill upload, valor ≥ R$ 5k.
+Verify:
+
+✅ Customer email body says "Recebemos sua conta de luz..."
+✅ Customer email has WhatsApp button (green, "Falar pelo WhatsApp")
+✅ WhatsApp button opens WhatsApp with pre-filled "Olá! Acabei de me cadastrar..." message
+✅ Internal alert to callum + Renan arrives
+✅ Internal alert WhatsApp button uses the LEAD's phone (not our business number)
+✅ All emails have Otto signature
+✅ /obrigado?tipo=completo shows smaller WhatsApp option below confirmation
+✅ Clicking WhatsApp on /obrigado fires GA4 whatsapp_click_obrigado event (verify in Realtime)
+
+Test 3 — Real lead submission, tipo=sem-conta
+Submit via /reduza WITHOUT bill upload, use skip path.
+Verify:
+
+✅ Customer email body says "Para fazermos sua análise gratuita o mais rápido possível..."
+✅ Customer email WhatsApp button pre-fills with lead's NAME and EMPRESA
+✅ Customer email also offers reply-by-email as alternative
+✅ /obrigado?tipo=sem-conta shows PROMINENT WhatsApp CTA block (purple background, large green button)
+✅ /obrigado WhatsApp click fires GA4 event with tipo: 'sem-conta'
+
+Test 4 — Real lead submission, tipo=caso-especial
+Submit via /reduza with valor < R$ 5k.
+Verify:
+
+✅ Customer email body acknowledges "fora do perfil padrão"
+✅ Customer email mentions "revisão individual"
+✅ WhatsApp button present, pre-fills with "caso especial" context
+✅ /obrigado?tipo=caso-especial shows subtle WhatsApp option
+✅ Existing lead_form_submit_special_case GA4 event still fires (don't break this!)
+✅ NO Google Ads conversion ping (verify in Network tab — only GA4 event, no googleadservices.com call)
+
+Test 5 — Email deliverability
+Send test emails from Otto to:
+
+A Gmail address (gmail.com)
+An Outlook address (outlook.com)
+A Hotmail address (hotmail.com)
+An iCloud address (icloud.com if convenient)
+
+Verify all land in inbox, NOT spam. If any go to spam, we have a deliverability issue with otto@ alias setup that needs DMARC/SPF/DKIM review BEFORE we expose this to real customer traffic.
+Test 6 — Forward block in internal email
+Open the internal alert email. Find the "copy/paste forward block" at bottom. Verify it contains:
+
+Name, company, phone, email
+City, state, valor médio
+Tipo de negócio
+Bill URL (or "Não enviou conta" if no bill)
+WhatsApp link (clickable, lead's number)
+UTM source, UTM campaign, UTM term, UTM content, GCLID
+
+If any UTM data missing, the forward block is broken for attribution.
+8. Priority and timeline
+All of this is high priority because campaigns are LIVE and leads can come in any time. We risk leads receiving:
+
+Broken WhatsApp placeholder links
+Confusing notificacoes@ from-address
+Missing variant context (sem-conta getting "you already sent your bill" message)
+
+Implement and deploy ASAP.
+9. After deploy — confirm
+Once deployed and acceptance tests pass:
+
+Reply confirming all 6 tests passed
+I'll publish
+Monitor email delivery rate for first 24h (Sendgrid/SMTP provider logs)

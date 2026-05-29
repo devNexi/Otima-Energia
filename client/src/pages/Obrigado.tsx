@@ -7,8 +7,7 @@ declare global {
 }
 
 const BRAND = "#9e3ffd";
-// TODO: Replace with real WhatsApp business number before launch
-const WA_NUMBER = "5521999999999";
+const WA_NUMBER = "5521997959777";
 const WA_BASE = `https://wa.me/${WA_NUMBER}`;
 
 function fireEvent(name: string, params?: Record<string, any>) {
@@ -26,8 +25,8 @@ function sanitizeName(raw: string | null): string {
 }
 
 // ─── Content variants ────────────────────────────────────────────────────────
-function ContentCompleto({ nome }: { nome: string }) {
-  const waLink = `${WA_BASE}?text=${encodeURIComponent("Olá, sou " + (nome || "cliente") + " e acabei de me cadastrar no site para analisar minha conta de luz.")}`;
+function ContentCompleto({ nome, tipo }: { nome: string; tipo: string }) {
+  const waLink = `${WA_BASE}?text=${encodeURIComponent("Olá! Acabei de enviar minha conta de luz no site da Ótima Energia e gostaria de conversar.")}`;
   return (
     <>
       <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
@@ -52,17 +51,19 @@ function ContentCompleto({ nome }: { nome: string }) {
         </ul>
       </div>
 
+      <p className="text-center text-slate-500 mb-3 text-sm">Prefere falar pelo WhatsApp?</p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <a
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
           className="inline-flex items-center justify-center gap-2 font-semibold text-white rounded-lg px-6 py-3 transition-all"
-          style={{ background: "#16A34A" }}
+          style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-completo"
         >
           <MessageCircle className="h-5 w-5" />
-          Salvar WhatsApp da Ótima
+          💬 Falar pelo WhatsApp
         </a>
         <a
           href="/"
@@ -76,8 +77,9 @@ function ContentCompleto({ nome }: { nome: string }) {
   );
 }
 
-function ContentSemConta({ nome }: { nome: string }) {
-  const waMsg = encodeURIComponent("Olá, acabei de me cadastrar no site e quero enviar minha conta de luz para análise.");
+function ContentSemConta({ nome, empresa, tipo }: { nome: string; empresa: string; tipo: string }) {
+  const empresaOrDefault = empresa || "minha empresa";
+  const waMsg = encodeURIComponent(`Olá! Acabei de me cadastrar no site da Ótima Energia e vou enviar minha conta de luz para análise. Meu nome é ${nome} da empresa ${empresaOrDefault}.`);
   const waLink = `${WA_BASE}?text=${waMsg}`;
   return (
     <>
@@ -90,62 +92,43 @@ function ContentSemConta({ nome }: { nome: string }) {
       <p className="text-slate-600 text-base md:text-lg mb-2">
         {nome ? `Obrigado, ${nome}!` : "Obrigado!"}
       </p>
-      <p className="text-slate-500 text-base leading-relaxed mb-8">
-        Para finalizar sua análise gratuita, precisamos da sua última conta de luz. Você pode:
-      </p>
 
-      <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 text-left mb-8">
-        <ul className="space-y-3 text-sm text-amber-800">
-          <li className="flex items-start gap-2">
-            <span className="font-bold mt-0.5 shrink-0">1.</span>
-            <span>Enviar agora pelo WhatsApp (mais rápido — clique no botão abaixo)</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="font-bold mt-0.5 shrink-0">2.</span>
-            <span>Aguardar nossa equipe entrar em contato em até 4 horas úteis para coletar</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="font-bold mt-0.5 shrink-0">3.</span>
-            <span>
-              Enviar por email para:{" "}
-              <a href="mailto:contato@otimaenergia.com.br" className="underline font-medium">
-                contato@otimaenergia.com.br
-              </a>
-            </span>
-          </li>
-        </ul>
-        <p className="text-xs text-amber-600 mt-3 italic">
-          Quanto antes recebermos sua conta, mais rápido você descobre quanto pode economizar.
-        </p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <div className="rounded-xl p-6 mb-8 text-center" style={{ background: "#f8f5ff", borderLeft: "4px solid #9e3ffd" }}>
+        <h3 className="text-lg font-bold text-slate-900 mb-2">Quer agilizar sua análise?</h3>
+        <p className="text-slate-600 text-sm mb-5">Envie sua conta de luz pelo WhatsApp agora e nossa equipe analisará no mesmo dia.</p>
         <a
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 font-semibold text-white rounded-lg px-6 py-3 transition-all shadow-md text-base"
-          style={{ background: "#16A34A" }}
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
+          className="inline-flex items-center justify-center gap-2 font-bold text-white rounded-lg px-8 py-4 text-lg shadow-md transition-all"
+          style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-sem-conta"
         >
           <MessageCircle className="h-5 w-5" />
-          Enviar minha conta pelo WhatsApp
-          <ArrowRight className="h-4 w-4" />
-        </a>
-        <a
-          href="/"
-          className="inline-flex items-center justify-center gap-2 font-medium text-slate-600 border border-slate-200 rounded-lg px-6 py-3 hover:bg-slate-50 transition-colors"
-          data-testid="btn-voltar-site-sem-conta"
-        >
-          Voltar ao site
+          💬 Enviar conta pelo WhatsApp
         </a>
       </div>
+
+      <p className="text-slate-500 text-sm mb-6">
+        Ou responda o email de confirmação com o arquivo da conta em anexo.
+        <br />
+        Sem a conta, nossa equipe entrará em contato pelo telefone informado.
+      </p>
+
+      <a
+        href="/"
+        className="inline-flex items-center justify-center gap-2 font-medium text-slate-600 border border-slate-200 rounded-lg px-6 py-3 hover:bg-slate-50 transition-colors"
+        data-testid="btn-voltar-site-sem-conta"
+      >
+        Voltar ao site
+      </a>
     </>
   );
 }
 
-function ContentCasoEspecial({ nome }: { nome: string }) {
-  const waMsg = encodeURIComponent("Olá, me cadastrei no site como caso especial e gostaria de falar com a equipe da Ótima.");
+function ContentCasoEspecial({ nome, tipo }: { nome: string; tipo: string }) {
+  const waMsg = encodeURIComponent("Olá! Acabei de me cadastrar como caso especial no site da Ótima Energia e gostaria de conversar sobre minha situação.");
   const waLink = `${WA_BASE}?text=${waMsg}`;
   return (
     <>
@@ -175,6 +158,7 @@ function ContentCasoEspecial({ nome }: { nome: string }) {
         </ul>
       </div>
 
+      <p className="text-center text-slate-500 mb-3 text-sm">Prefere falar pelo WhatsApp?</p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <a
           href="/"
@@ -188,11 +172,13 @@ function ContentCasoEspecial({ nome }: { nome: string }) {
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 font-medium text-slate-600 border border-slate-200 rounded-lg px-6 py-3 hover:bg-slate-50 transition-colors"
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
+          className="inline-flex items-center justify-center gap-2 font-medium text-white rounded-lg px-6 py-3 transition-colors"
+          style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-especial"
         >
           <MessageCircle className="h-5 w-5" />
-          Falar com a Ótima no WhatsApp
+          💬 Falar pelo WhatsApp
         </a>
       </div>
     </>
@@ -201,11 +187,12 @@ function ContentCasoEspecial({ nome }: { nome: string }) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function Obrigado() {
-  const { tipo, nome } = useMemo(() => {
+  const { tipo, nome, empresa } = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return {
       tipo: params.get("tipo") || "completo",
       nome: sanitizeName(params.get("nome")),
+      empresa: sanitizeName(params.get("empresa")),
     };
   }, []);
 
@@ -240,10 +227,10 @@ export default function Obrigado() {
 
       <main className="flex-1 flex items-center justify-center px-4 py-16">
         <div className="max-w-lg w-full text-center">
-          {tipo === "sem-conta" && <ContentSemConta nome={nome} />}
-          {tipo === "caso-especial" && <ContentCasoEspecial nome={nome} />}
+          {tipo === "sem-conta" && <ContentSemConta nome={nome} empresa={empresa} tipo={tipo} />}
+          {tipo === "caso-especial" && <ContentCasoEspecial nome={nome} tipo={tipo} />}
           {(tipo === "completo" || (tipo !== "sem-conta" && tipo !== "caso-especial")) && (
-            <ContentCompleto nome={nome} />
+            <ContentCompleto nome={nome} tipo={tipo} />
           )}
         </div>
       </main>
