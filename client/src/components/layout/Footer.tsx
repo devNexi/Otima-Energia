@@ -96,9 +96,9 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-5 border-t border-gray-200">
-          {/* Left: logo + tagline */}
-          <div className="flex items-center gap-3">
+        <div className="pt-5 border-t border-gray-200">
+          {/* Logo + tagline */}
+          <div className="flex items-center gap-3 mb-2">
             <Link href="/">
               <img src={logoIcon} alt="Ótima Energia" className="h-8 w-8 object-contain" />
             </Link>
@@ -106,9 +106,8 @@ export function Footer() {
               Sua energia. Sua escolha. Sua economia.
             </span>
           </div>
-
-          {/* Right: copyright + legal */}
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-1 text-sm text-gray-400">
+          {/* Copyright + legal — left-aligned below */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-gray-400">
             <span>©{currentYear} Ótima Energia (CNPJ: 65.023.912/0001-24)</span>
             <Link href="/privacidade" className="hover:text-[#9e3ffd] transition-colors">Privacidade</Link>
             <Link href="/termos" className="hover:text-[#9e3ffd] transition-colors">Termos de Uso</Link>
