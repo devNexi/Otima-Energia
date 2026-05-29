@@ -78,7 +78,7 @@ export default function FAQ() {
           <h1 className="text-[3rem] lg:text-[4rem] leading-[1] font-normal tracking-tight text-[#9e3ffd] mb-6">
             Perguntas Frequentes
           </h1>
-          <p className="text-lg lg:text-xl text-white/70 leading-relaxed max-w-2xl">
+          <p className="text-lg lg:text-xl text-white/80 leading-relaxed max-w-2xl">
             Tire suas dúvidas sobre GD, Mercado Livre (ACL), Gestão de Energia, Otimização Energética e como sua empresa pode começar a economizar.
           </p>
         </div>
@@ -97,12 +97,12 @@ export default function FAQ() {
                   return (
                     <div
                       key={key}
-                      className="border border-white/10 rounded-lg overflow-hidden"
+                      className="border border-white/[0.18] rounded-lg overflow-hidden"
                     >
                       <button
                         onClick={() => toggleFaq(sectionIdx, itemIdx)}
                         className="w-full flex items-center justify-between p-6 text-left transition-colors"
-                        style={{ background: openIndex === key ? "rgba(158,63,253,0.08)" : "rgba(255,255,255,0.03)" }}
+                        style={{ background: openIndex === key ? "rgba(158,63,253,0.08)" : "rgba(255,255,255,0.06)" }}
                         data-testid={`faq-question-${sectionIdx}-${itemIdx}`}
                       >
                         <span className="text-lg font-medium text-white pr-4">
@@ -114,7 +114,7 @@ export default function FAQ() {
                       </button>
                       {openIndex === key && (
                         <div className="px-6 pb-6 pt-4 border-t border-white/[0.05]">
-                          <p className="text-white/70 leading-relaxed">
+                          <p className="text-white/80 leading-relaxed">
                             {faq.answer}
                           </p>
                         </div>
@@ -133,7 +133,7 @@ export default function FAQ() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Ainda tem dúvidas?
           </h2>
-          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
             Nossa equipe está pronta para ajudar. Faça um diagnóstico gratuito e descubra qual caminho (GD, ACL, Gestão ou Otimização) faz mais sentido para sua empresa.
           </p>
           <Link

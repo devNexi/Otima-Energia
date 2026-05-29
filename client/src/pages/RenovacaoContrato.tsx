@@ -15,7 +15,7 @@ export default function RenovacaoContrato() {
               Quando minha empresa pode migrar para o Mercado Livre de Energia?
             </h1>
             <div>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-8">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-8">
                 O momento certo depende do seu contrato, e de um bom planejamento.
               </p>
               <Link 
@@ -26,7 +26,7 @@ export default function RenovacaoContrato() {
                 <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-white/70 group-hover:text-[#df0af2] transition-colors">
+                <span className="text-white/80 group-hover:text-[#df0af2] transition-colors">
                   SOLICITAR DIAGNÓSTICO GRATUITO
                 </span>
               </Link>
@@ -40,10 +40,10 @@ export default function RenovacaoContrato() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-8">
             A regra prática: sua empresa pode se preparar agora.
           </h2>
-          <p className="text-lg lg:text-xl text-white/70 leading-relaxed max-w-4xl mb-4">
+          <p className="text-lg lg:text-xl text-white/80 leading-relaxed max-w-4xl mb-4">
             No Mercado Livre de Energia, o momento da migração depende do contrato atual da sua empresa, das cláusulas de saída e do planejamento do processo.
           </p>
-          <p className="text-lg lg:text-xl text-white/70 leading-relaxed max-w-4xl">
+          <p className="text-lg lg:text-xl text-white/80 leading-relaxed max-w-4xl">
             Por isso, mesmo que sua empresa ainda não possa migrar hoje, já é possível iniciar o diagnóstico e se preparar com antecedência.
           </p>
         </div>
@@ -69,12 +69,12 @@ export default function RenovacaoContrato() {
                 body: 'O fator decisivo não é "esperar uma data". O que define o momento ideal são as condições do seu contrato atual, o prazo de migração com a distribuidora e o planejamento correto para evitar riscos e perdas financeiras.',
               },
             ].map((card, i) => (
-              <div key={i} className="rounded-lg p-8 border border-white/10 hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div key={i} className="rounded-lg p-8 border border-white/[0.18] hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300" style={{ background: "rgba(255,255,255,0.1)" }}>
                 <div className="w-14 h-14 rounded-lg flex items-center justify-center mb-6" style={{ background: "rgba(158,63,253,0.12)" }}>
                   <card.icon className="w-7 h-7 text-[#9e3ffd]" />
                 </div>
                 <h3 className="text-xl font-medium text-white mb-4">{card.title}</h3>
-                <p className="text-white/70 leading-relaxed">{card.body}</p>
+                <p className="text-white/80 leading-relaxed">{card.body}</p>
               </div>
             ))}
           </div>
@@ -102,8 +102,8 @@ export default function RenovacaoContrato() {
                   ["Empresa ainda fora do Mercado Livre", "Iniciar diagnóstico e planejamento desde já"],
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-white/[0.06]">
-                    <td className="py-4 pr-8 text-white/70">{row[0]}</td>
-                    <td className="py-4 text-white/70">{row[1]}</td>
+                    <td className="py-4 pr-8 text-white/80">{row[0]}</td>
+                    <td className="py-4 text-white/80">{row[1]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -125,7 +125,7 @@ export default function RenovacaoContrato() {
                 "Reduz riscos contratuais",
                 "Permite estruturar economia de forma planejada",
               ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-lg text-white/70">
+                <li key={i} className="flex items-start gap-3 text-lg text-white/80">
                   <CheckCircle className="w-6 h-6 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </li>
@@ -140,7 +140,7 @@ export default function RenovacaoContrato() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quer entender o melhor caminho para sua empresa?
           </h2>
-          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
             Solicite um diagnóstico gratuito. Analisamos sua conta, avaliamos sua elegibilidade e indicamos o melhor momento para migrar, agora ou quando sua empresa estiver apta.
           </p>
           <Link 

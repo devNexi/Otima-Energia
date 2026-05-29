@@ -21,10 +21,10 @@ export default function GestaoDeEnergia() {
               </h1>
             </div>
             <div>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 A maioria das empresas resolve a energia uma vez, quando migra ou contrata, e esquece. O mercado muda, a tarifa muda, o contrato envelhece, e ninguém revisa.
               </p>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 A Gestão de Energia da Ótima é um acompanhamento estratégico contínuo. Monitoramos sua posição no mercado, identificamos oportunidades de redução e garantimos que as decisões corretas sejam tomadas no momento certo, não depois.
               </p>
               <p className="text-lg lg:text-xl text-white font-medium mb-8">
@@ -48,7 +48,7 @@ export default function GestaoDeEnergia() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-4">
             O que inclui a Gestão de Energia da Ótima
           </h2>
-          <p className="text-lg text-white/70 mb-12 max-w-2xl">
+          <p className="text-lg text-white/80 mb-12 max-w-2xl">
             Uma visão estratégica e recorrente da sua posição energética, não uma análise pontual que fica obsoleta em seis meses.
           </p>
 
@@ -79,9 +79,9 @@ export default function GestaoDeEnergia() {
                 desc: "Cada análise, recomendação e decisão é documentada. Você tem histórico completo e pode justificar internamente cada escolha energética da empresa.",
               },
             ].map((item, i) => (
-              <div key={i} className="p-6 rounded-xl border border-white/10 hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.04)" }} data-testid={`gestao-feature-${i}`}>
+              <div key={i} className="p-6 rounded-xl border border-white/[0.18] hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.1)" }} data-testid={`gestao-feature-${i}`}>
                 <h3 className="text-lg font-semibold text-white mb-3">{item.title}</h3>
-                <p className="text-white/70 leading-relaxed">{item.desc}</p>
+                <p className="text-white/80 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -95,7 +95,7 @@ export default function GestaoDeEnergia() {
               <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-6">
                 Para quem é a Gestão de Energia?
               </h2>
-              <p className="text-lg text-white/70 leading-relaxed mb-6">
+              <p className="text-lg text-white/80 leading-relaxed mb-6">
                 A Gestão de Energia é ideal para empresas que:
               </p>
               <ul className="space-y-4">
@@ -108,17 +108,17 @@ export default function GestaoDeEnergia() {
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                    <span className="text-white/70">{item}</span>
+                    <span className="text-white/80">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-xl p-8 lg:p-10 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="rounded-xl p-8 lg:p-10 border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
               <h3 className="text-xl font-medium text-white mb-6">O que mudou com a Lei nº 15.269/2025</h3>
-              <p className="text-white/70 leading-relaxed mb-4">
+              <p className="text-white/80 leading-relaxed mb-4">
                 Com a abertura gradual do mercado livre até 2028, mais empresas terão acesso ao ACL. Isso significa mais oportunidades, mas também mais decisões a tomar.
               </p>
-              <p className="text-white/70 leading-relaxed mb-4">
+              <p className="text-white/80 leading-relaxed mb-4">
                 Empresas sem gestão estratégica tendem a tomar decisões tardias, contratar mal ou perder janelas favoráveis de negociação.
               </p>
               <p className="text-white font-medium">
@@ -135,7 +135,7 @@ export default function GestaoDeEnergia() {
             O papel do ECOS™ na gestão contínua
           </h2>
           <div className="grid lg:grid-cols-2 gap-12 items-start">
-            <div className="space-y-6 text-lg text-white/70 leading-relaxed">
+            <div className="space-y-6 text-lg text-white/80 leading-relaxed">
               <p>
                 O <strong className="text-[#9e3ffd]">ECOS™</strong> é o sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para acompanhar, avaliar e otimizar posições de energia ao longo do tempo.
               </p>
@@ -157,7 +157,7 @@ export default function GestaoDeEnergia() {
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                    <span className="text-white/70">{item}</span>
+                    <span className="text-white/80">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -171,7 +171,7 @@ export default function GestaoDeEnergia() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Comece com um diagnóstico gratuito
           </h2>
-          <p className="text-xl text-white/70 mb-4 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-4 max-w-2xl mx-auto">
             Entendemos sua posição atual, identificamos oportunidades e recomendamos o modelo de gestão mais adequado para o seu caso.
           </p>
           <p className="text-base text-white/40 mb-12 max-w-xl mx-auto">

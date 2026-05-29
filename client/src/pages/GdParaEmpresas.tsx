@@ -21,16 +21,16 @@ export default function GdParaEmpresas() {
               </h1>
             </div>
             <div>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 Sua empresa paga uma conta de energia relevante todo mês, mas ainda não migrou para o Mercado Livre?
               </p>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 A Geração Distribuída (GD) permite que sua empresa receba descontos diretos na fatura da concessionária, participando de uma usina solar, eólica ou de biogás da sua região.
               </p>
               <p className="text-lg lg:text-xl text-white font-medium mb-4">
                 Sem obras. Sem equipamentos. Sem burocracia para você.
               </p>
-              <p className="text-lg text-white/70 leading-relaxed mb-8">
+              <p className="text-lg text-white/80 leading-relaxed mb-8">
                 A Ótima analisa sua elegibilidade, compara os geradores disponíveis na sua região com independência total e cuida de toda a implementação. Você só vê o desconto na conta.
               </p>
               <Link
@@ -65,7 +65,7 @@ export default function GdParaEmpresas() {
                 <h3 className="text-xl font-medium text-white mb-3" data-testid={`gd-step-${i}`}>
                   {item.title}
                 </h3>
-                <p className="text-white/70 leading-relaxed">{item.desc}</p>
+                <p className="text-white/80 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -77,23 +77,23 @@ export default function GdParaEmpresas() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-4">
             Quem pode aderir?
           </h2>
-          <p className="text-lg text-white/70 leading-relaxed mb-6">
+          <p className="text-lg text-white/80 leading-relaxed mb-6">
             A GD está disponível para empresas atendidas em:
           </p>
           <ul className="space-y-3 mb-8">
             <li className="flex items-start gap-3">
               <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-              <span className="text-white/70 text-lg"><strong className="text-white">Baixa tensão</strong>: comércios, lojas, escolas, clínicas, pequenas indústrias</span>
+              <span className="text-white/80 text-lg"><strong className="text-white">Baixa tensão</strong>: comércios, lojas, escolas, clínicas, pequenas indústrias</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="text-[#9e3ffd] mt-1 font-bold">•</span>
-              <span className="text-white/70 text-lg"><strong className="text-white">Média tensão</strong>: indústrias, hospitais, shoppings, condomínios, hotéis</span>
+              <span className="text-white/80 text-lg"><strong className="text-white">Média tensão</strong>: indústrias, hospitais, shoppings, condomínios, hotéis</span>
             </li>
           </ul>
-          <p className="text-lg text-white/70 leading-relaxed mb-4">
+          <p className="text-lg text-white/80 leading-relaxed mb-4">
             A Ótima trabalha com os principais geradores e comercializadoras do mercado nacional. Nossa análise considera todos os players qualificados, com capacidade financeira e histórico comprovado, não apenas um parceiro exclusivo.
           </p>
-          <p className="text-lg text-white/70 leading-relaxed mb-8">
+          <p className="text-lg text-white/80 leading-relaxed mb-8">
             Se sua distribuidora ainda não opera com GD, avisamos quando surgir disponibilidade na sua região.
           </p>
           <Link
@@ -119,9 +119,9 @@ export default function GdParaEmpresas() {
               { title: "Cuidamos de toda a burocracia", body: "Contrato, análise de crédito, registro, acompanhamento mensal dos créditos. Você não precisa se preocupar com nenhum detalhe operacional." },
               { title: "Visão de longo prazo com o ECOS™", body: "A GD é vantajosa hoje. Pode ser mais vantajoso mudar de gerador ou migrar para o Mercado Livre amanhã. O ECOS™ monitora isso continuamente para você." },
             ].map((card, i) => (
-              <div key={i} className="p-6 rounded-xl border border-white/10 hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div key={i} className="p-6 rounded-xl border border-white/[0.18] hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.1)" }}>
                 <h3 className="text-lg font-semibold text-white mb-3">{card.title}</h3>
-                <p className="text-white/70 leading-relaxed">{card.body}</p>
+                <p className="text-white/80 leading-relaxed">{card.body}</p>
               </div>
             ))}
           </div>
@@ -133,7 +133,7 @@ export default function GdParaEmpresas() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-12">
             GD vs. Mercado Livre (ACL): qual escolher?
           </h2>
-          <div className="rounded-lg overflow-x-auto mb-8 border border-white/10">
+          <div className="rounded-lg overflow-x-auto mb-8 border border-white/[0.18]">
             <table className="w-full min-w-[600px]">
               <thead>
                 <tr style={{ background: "rgba(158,63,253,0.15)", borderBottom: "1px solid rgba(158,63,253,0.3)" }}>
@@ -151,10 +151,10 @@ export default function GdParaEmpresas() {
                   ["Complexidade", "Baixa", "Média/Alta"],
                   ["Prazo contratual", "12 a 60 meses", "12 a 60 meses"],
                 ].map((row, i) => (
-                  <tr key={i} className="border-b border-white/[0.05]" style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)" }}>
+                  <tr key={i} className="border-b border-white/[0.05]" style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.1)" }}>
                     <td className="px-6 py-3 font-medium text-white">{row[0]}</td>
-                    <td className="px-6 py-3 text-white/70">{row[1]}</td>
-                    <td className="px-6 py-3 text-white/70">{row[2]}</td>
+                    <td className="px-6 py-3 text-white/80">{row[1]}</td>
+                    <td className="px-6 py-3 text-white/80">{row[2]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -173,12 +173,12 @@ export default function GdParaEmpresas() {
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                    <span className="text-white/70">{item}</span>
+                    <span className="text-white/80">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="p-6 rounded-xl border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="p-6 rounded-xl border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
               <h3 className="text-lg font-semibold text-white mb-4">Mercado Livre é o melhor caminho para empresas que:</h3>
               <ul className="space-y-3">
                 {[
@@ -189,7 +189,7 @@ export default function GdParaEmpresas() {
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-white/40 flex-shrink-0 mt-0.5" />
-                    <span className="text-white/70">{item}</span>
+                    <span className="text-white/80">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -214,9 +214,9 @@ export default function GdParaEmpresas() {
               { q: "O desconto é fixo ou varia?", a: "O desconto é percentual sobre a tarifa da concessionária. Se a tarifa sobe, seu desconto em reais sobe junto. É uma economia proporcional e duradoura." },
               { q: "Quanto tempo leva para começar a economizar?", a: "Entre 30 e 90 dias, dependendo da distribuidora e do gerador selecionado." },
             ].map((faq, i) => (
-              <div key={i} className="p-6 rounded-xl border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div key={i} className="p-6 rounded-xl border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
                 <h3 className="text-lg font-semibold text-white mb-2" data-testid={`gd-faq-${i}`}>{faq.q}</h3>
-                <p className="text-white/70 leading-relaxed">{faq.a}</p>
+                <p className="text-white/80 leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -228,7 +228,7 @@ export default function GdParaEmpresas() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Pronto para reduzir sua conta de energia?
           </h2>
-          <p className="text-xl text-white/70 mb-4 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-4 max-w-2xl mx-auto">
             Faça um diagnóstico gratuito. Em até 5 dias úteis, você recebe uma análise completa com o potencial de desconto para sua empresa.
           </p>
           <p className="text-base text-white/40 mb-12 max-w-xl mx-auto">

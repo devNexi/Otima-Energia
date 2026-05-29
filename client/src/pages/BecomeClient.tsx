@@ -75,7 +75,7 @@ export default function BecomeClient() {
   }
 
   const inputClass = "h-12 border-white/10 focus:border-[#9e3ffd] focus:ring-0 text-white placeholder:text-white/30";
-  const inputStyle = { background: "rgba(255,255,255,0.06)" };
+  const inputStyle = { background: "rgba(255,255,255,0.1)" };
 
   return (
     <div className="min-h-screen" style={{ background: "#09081e" }}>
@@ -91,7 +91,7 @@ export default function BecomeClient() {
               <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
                 Simule sua economia com um diagnóstico técnico gratuito
               </h1>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed">
                 Uma análise clara, sem compromisso, para entender se, e quando, faz sentido migrar.
               </p>
               <p className="text-base text-white/50 mt-4">
@@ -104,7 +104,7 @@ export default function BecomeClient() {
                 { Icon: Clock, num: "IA", label: "Impulsionado" },
                 { Icon: CheckCircle, num: "R$0", label: "Custo para você" },
               ].map(({ Icon, num, label }, i) => (
-                <div key={i} className="rounded-lg p-6 text-center border border-white/10" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div key={i} className="rounded-lg p-6 text-center border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
                   <Icon className="w-8 h-8 text-[#9e3ffd] mx-auto mb-3" />
                   <p className="text-2xl font-light text-[#9e3ffd]">{num}</p>
                   <p className="text-sm text-white/50">{label}</p>
@@ -142,7 +142,7 @@ export default function BecomeClient() {
                 ))}
               </div>
 
-              <div className="mt-12 p-6 rounded-lg border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div className="mt-12 p-6 rounded-lg border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
                 <h3 className="font-medium text-white mb-2">Elegibilidade</h3>
                 <p className="text-white/60 text-sm">
                   Para migrar ao mercado livre, sua empresa precisa ter conta de luz acima de R$8.000/mês ou demanda contratada de 500kW+. Não sabe se é elegível? <a href="/faq" className="text-[#9e3ffd] hover:underline">Consulte nosso FAQ</a> ou envie seus dados que verificamos para você.
@@ -150,7 +150,7 @@ export default function BecomeClient() {
               </div>
             </div>
 
-            <div className="rounded-lg p-8 lg:p-10 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="rounded-lg p-8 lg:p-10 border border-white/[0.18]" style={{ background: "rgba(255,255,255,0.1)" }}>
               <h2 className="text-2xl font-medium text-white mb-6">
                 Solicite seu diagnóstico
               </h2>
@@ -160,7 +160,7 @@ export default function BecomeClient() {
                   <div className="grid md:grid-cols-2 gap-5">
                     <FormField control={form.control} name="name" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">Nome Completo *</FormLabel>
+                        <FormLabel className="text-sm text-white/80">Nome Completo *</FormLabel>
                         <FormControl>
                           <Input placeholder="Seu nome" data-testid="input-name" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -169,7 +169,7 @@ export default function BecomeClient() {
                     )} />
                     <FormField control={form.control} name="phone" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">Telefone *</FormLabel>
+                        <FormLabel className="text-sm text-white/80">Telefone *</FormLabel>
                         <FormControl>
                           <Input placeholder="+55 21 99999-9999" data-testid="input-phone" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -180,7 +180,7 @@ export default function BecomeClient() {
 
                   <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm text-white/70">E-mail Corporativo *</FormLabel>
+                      <FormLabel className="text-sm text-white/80">E-mail Corporativo *</FormLabel>
                       <FormControl>
                         <Input placeholder="voce@empresa.com.br" data-testid="input-email" className={inputClass} style={inputStyle} {...field} />
                       </FormControl>
@@ -191,7 +191,7 @@ export default function BecomeClient() {
                   <div className="grid md:grid-cols-2 gap-5">
                     <FormField control={form.control} name="company" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">Empresa *</FormLabel>
+                        <FormLabel className="text-sm text-white/80">Empresa *</FormLabel>
                         <FormControl>
                           <Input placeholder="Nome da empresa" data-testid="input-company" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -200,7 +200,7 @@ export default function BecomeClient() {
                     )} />
                     <FormField control={form.control} name="cnpj" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">CNPJ</FormLabel>
+                        <FormLabel className="text-sm text-white/80">CNPJ</FormLabel>
                         <FormControl>
                           <Input placeholder="00.000.000/0000-00" data-testid="input-cnpj" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -212,7 +212,7 @@ export default function BecomeClient() {
                   <div className="grid md:grid-cols-2 gap-5">
                     <FormField control={form.control} name="ucCode" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">Código UC (se souber)</FormLabel>
+                        <FormLabel className="text-sm text-white/80">Código UC (se souber)</FormLabel>
                         <FormControl>
                           <Input placeholder="Código da Unidade Consumidora" data-testid="input-uc" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -221,7 +221,7 @@ export default function BecomeClient() {
                     )} />
                     <FormField control={form.control} name="averageBill" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-white/70">Valor médio da conta</FormLabel>
+                        <FormLabel className="text-sm text-white/80">Valor médio da conta</FormLabel>
                         <FormControl>
                           <Input placeholder="R$ 10.000/mês" data-testid="input-bill" className={inputClass} style={inputStyle} {...field} />
                         </FormControl>
@@ -232,12 +232,12 @@ export default function BecomeClient() {
 
                   <FormField control={form.control} name="message" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm text-white/70">Informações adicionais</FormLabel>
+                      <FormLabel className="text-sm text-white/80">Informações adicionais</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Conte-nos mais sobre sua empresa e consumo de energia..."
                           className="resize-none min-h-[100px] border-white/10 focus:border-[#9e3ffd] focus:ring-0 text-white placeholder:text-white/30"
-                          style={{ background: "rgba(255,255,255,0.06)" }}
+                          style={{ background: "rgba(255,255,255,0.1)" }}
                           data-testid="input-message"
                           {...field}
                         />

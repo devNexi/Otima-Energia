@@ -83,7 +83,7 @@ export default function Insights() {
             <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
               Insights
             </h1>
-            <p className="text-lg lg:text-xl text-white/70 leading-relaxed">
+            <p className="text-lg lg:text-xl text-white/80 leading-relaxed">
               Artigos educativos sobre GD, Mercado Livre, Gestão de Energia e Otimização, para ajudar sua empresa a tomar decisões melhores sobre energia.
             </p>
           </div>
@@ -96,8 +96,8 @@ export default function Insights() {
             {articles.map((article) => (
               <article
                 key={article.id}
-                className="rounded-lg overflow-hidden flex flex-col border border-white/10 hover:border-[#9e3ffd] hover:shadow-[0_0_0_1px_rgba(158,63,253,0.15),0_8px_32px_rgba(158,63,253,0.12)] transition-all duration-300"
-                style={{ background: "rgba(255,255,255,0.04)" }}
+                className="rounded-lg overflow-hidden flex flex-col border border-white/[0.18] hover:border-[#9e3ffd] hover:shadow-[0_0_0_1px_rgba(158,63,253,0.15),0_8px_32px_rgba(158,63,253,0.12)] transition-all duration-300"
+                style={{ background: "rgba(255,255,255,0.1)" }}
                 data-testid={`article-${article.id}`}
               >
                 <div className="h-48 flex items-center justify-center border-b border-white/[0.06]" style={{ background: "rgba(158,63,253,0.06)" }}>
@@ -126,7 +126,7 @@ export default function Insights() {
                     {article.title}
                   </h2>
 
-                  <p className="text-white/70 leading-relaxed mb-6 flex-grow">
+                  <p className="text-white/80 leading-relaxed mb-6 flex-grow">
                     {article.excerpt}
                   </p>
 
@@ -146,7 +146,7 @@ export default function Insights() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quer saber o que é certo para a sua empresa?
           </h2>
-          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
             Diagnóstico gratuito. Em até 5 dias úteis você recebe uma análise completa com recomendações claras para o seu perfil.
           </p>
           <Link 

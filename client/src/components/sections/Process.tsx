@@ -50,12 +50,12 @@ export function Process() {
       {/* ── "A maioria" statement ─────────────────────────────── */}
       <section
         style={{ background: "#09081e" }}
-        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.04)]"
+        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.1)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-white max-w-5xl mb-8">
             A maioria das empresas brasileiras paga mais do que deveria pela energia,{" "}
-            <span className="text-highlight">não por falta de opções, mas por falta de clareza</span>.
+            não por falta de opções, mas <span className="text-highlight">por falta de clareza</span>.
           </p>
           <p
             className="text-lg lg:text-xl max-w-4xl mb-6"
@@ -72,7 +72,7 @@ export function Process() {
 
           <div
             className="flex flex-wrap gap-10 lg:gap-20 max-w-4xl mt-10"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "32px" }}
+            style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: "32px" }}
           >
             {[
               { num: "4", label: "Frentes de atuação" },
@@ -107,15 +107,15 @@ export function Process() {
       <section
         id="process"
         style={{ background: "#13112a" }}
-        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.04)]"
+        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.1)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="mb-12">
             <div
               className="inline-block mb-4"
               style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(158,63,253,0.3)",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
                 color: "#c88ff5",
                 fontSize: "0.68rem",
                 fontWeight: 700,
@@ -154,8 +154,8 @@ export function Process() {
                 key={i}
                 className="relative p-6 rounded-2xl overflow-hidden transition-all duration-200"
                 style={{
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.18)",
                 }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLElement).style.borderColor = "rgba(158,63,253,0.5)";

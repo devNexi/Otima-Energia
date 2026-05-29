@@ -32,18 +32,14 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const navStyle: React.CSSProperties = scrolled
-    ? {
-        background: "rgba(13,12,43,0.95)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(158,63,253,0.15)",
-      }
-    : {
-        background: "transparent",
-        borderBottom: "none",
-      };
+  const navStyle: React.CSSProperties = {
+    background: "#ffffff",
+    borderBottom: "1px solid rgba(0,0,0,0.08)",
+    boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.08)" : "none",
+  };
 
-  const linkColor = "rgba(255,255,255,0.75)";
+  const linkColor = "#3d3a4a";
+  const linkHover = "#9e3ffd";
 
   return (
     <>
@@ -61,7 +57,6 @@ export function Navbar() {
                 src={logoFull}
                 alt="Ótima Energia"
                 className="h-14 lg:h-16 w-auto"
-                style={{ filter: "brightness(0) invert(1)" }}
               />
             </Link>
 
@@ -77,7 +72,7 @@ export function Navbar() {
                   href="/solucoes"
                   className="flex items-center gap-1 text-xs font-semibold tracking-widest transition-colors duration-150"
                   style={{ color: linkColor, letterSpacing: "0.08em" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#ffffff")}
+                  onMouseEnter={e => (e.currentTarget.style.color = linkHover)}
                   onMouseLeave={e => (e.currentTarget.style.color = linkColor)}
                   data-testid="nav-solucoes"
                 >
@@ -89,9 +84,9 @@ export function Navbar() {
                     <div
                       className="rounded-lg py-2 shadow-xl"
                       style={{
-                        background: "rgba(13,12,43,0.97)",
-                        border: "1px solid rgba(158,63,253,0.2)",
-                        backdropFilter: "blur(12px)",
+                        background: "#ffffff",
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
                       }}
                     >
                       {solutions.map((s) => (
@@ -100,9 +95,9 @@ export function Navbar() {
                           href={s.href}
                           onClick={() => setSubOpen(false)}
                           className="block px-4 py-2.5 text-sm transition-colors duration-150"
-                          style={{ color: "rgba(255,255,255,0.65)" }}
-                          onMouseEnter={e => (e.currentTarget.style.color = "#ffffff")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.65)")}
+                          style={{ color: "#3d3a4a" }}
+                          onMouseEnter={e => (e.currentTarget.style.color = "#9e3ffd")}
+                          onMouseLeave={e => (e.currentTarget.style.color = "#3d3a4a")}
                           data-testid={`nav-sub-${s.name.toLowerCase().replace(/\s/g, "-")}`}
                         >
                           {s.name}
@@ -123,8 +118,8 @@ export function Navbar() {
                     fontWeight: link.highlight ? 700 : 600,
                     letterSpacing: "0.08em",
                   }}
-                  onMouseEnter={e => { if (!link.highlight) e.currentTarget.style.color = "#ffffff"; }}
-                  onMouseLeave={e => { if (!link.highlight) e.currentTarget.style.color = linkColor; }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "#9e3ffd"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = link.highlight ? "#9e3ffd" : linkColor; }}
                   data-testid={`nav-${link.name.toLowerCase().replace(/[\s™]/g, "-")}`}
                 >
                   {link.name}
@@ -152,7 +147,7 @@ export function Navbar() {
             {/* Mobile Menu Button */}
             <button
               className="lg:hidden p-2 transition-colors"
-              style={{ color: "rgba(255,255,255,0.8)" }}
+              style={{ color: "#3d3a4a" }}
               onClick={() => setIsOpen(!isOpen)}
               data-testid="mobile-menu-toggle"
             >
@@ -166,15 +161,14 @@ export function Navbar() {
           <div
             className="lg:hidden"
             style={{
-              background: "rgba(13,12,43,0.97)",
-              borderTop: "1px solid rgba(158,63,253,0.15)",
-              backdropFilter: "blur(12px)",
+              background: "#ffffff",
+              borderTop: "1px solid rgba(0,0,0,0.08)",
             }}
           >
             <div className="px-6 py-8 space-y-4">
               <p
                 className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: "rgba(255,255,255,0.3)" }}
+                style={{ color: "rgba(0,0,0,0.35)" }}
               >
                 Soluções
               </p>
@@ -184,14 +178,14 @@ export function Navbar() {
                   href={s.href}
                   onClick={() => setIsOpen(false)}
                   className="block text-base pl-2 transition-colors"
-                  style={{ color: "rgba(255,255,255,0.65)" }}
+                  style={{ color: "#3d3a4a" }}
                 >
                   {s.name}
                 </Link>
               ))}
               <div
                 className="pt-4 space-y-4"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
               >
                 <Link
                   href="/ecos"
@@ -213,7 +207,7 @@ export function Navbar() {
                     href={link.href}
                     onClick={() => setIsOpen(false)}
                     className="block text-base transition-colors"
-                    style={{ color: "rgba(255,255,255,0.65)" }}
+                    style={{ color: "#3d3a4a" }}
                   >
                     {link.name}
                   </Link>

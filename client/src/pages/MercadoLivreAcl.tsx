@@ -21,10 +21,10 @@ export default function MercadoLivreAcl() {
               </h1>
             </div>
             <div>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 O Mercado Livre de Energia (ACL) permite que empresas elegíveis comprem energia diretamente de comercializadoras, com preços negociados, contratos personalizados e economias de até 30% na conta.
               </p>
-              <p className="text-lg lg:text-xl text-white/70 leading-relaxed mb-4">
+              <p className="text-lg lg:text-xl text-white/80 leading-relaxed mb-4">
                 O problema é que o mercado é opaco: dezenas de comercializadoras, diferentes estruturas de contrato, condições confusas e vendedores que empurram o que é melhor para eles, não para você.
               </p>
               <p className="text-lg lg:text-xl text-white font-medium mb-8">
@@ -48,7 +48,7 @@ export default function MercadoLivreAcl() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-4">
             O que a Ótima entrega no ACL
           </h2>
-          <p className="text-lg text-white/70 mb-12 max-w-2xl">
+          <p className="text-lg text-white/80 mb-12 max-w-2xl">
             Atuamos em todas as etapas do ciclo de energia no Mercado Livre, da primeira análise à renovação do contrato.
           </p>
 
@@ -83,10 +83,10 @@ export default function MercadoLivreAcl() {
                 <div className="flex-shrink-0">
                   <span className="text-6xl font-light text-[#9e3ffd]/40">{item.num}</span>
                 </div>
-                <div className="rounded-lg p-8 border border-white/10 hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="rounded-lg p-8 border border-white/[0.18] hover:border-[#9e3ffd] hover:shadow-lg transition-all" style={{ background: "rgba(255,255,255,0.1)" }}>
                   <h3 className="text-xl font-medium text-white mb-1" data-testid={`acl-service-${i}`}>{item.title}</h3>
                   <p className="text-sm text-[#9e3ffd] font-medium uppercase tracking-wide mb-4">{item.sub}</p>
-                  <p className="text-white/70 leading-relaxed">{item.body}</p>
+                  <p className="text-white/80 leading-relaxed">{item.body}</p>
                 </div>
               </div>
             ))}
@@ -99,7 +99,7 @@ export default function MercadoLivreAcl() {
           <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-white mb-4">
             Quem pode migrar para o ACL?
           </h2>
-          <p className="text-lg text-white/70 mb-8 max-w-2xl">
+          <p className="text-lg text-white/80 mb-8 max-w-2xl">
             Com a Lei nº 15.269/2025, o acesso ao Mercado Livre está sendo ampliado gradualmente. Veja o cronograma:
           </p>
           <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -120,20 +120,20 @@ export default function MercadoLivreAcl() {
                 phase: "Até 2028",
                 title: "Abertura total",
                 items: ["Inclusão de pequenas empresas", "Até 80 milhões de consumidores elegíveis"],
-                headerBg: "rgba(255,255,255,0.07)",
+                headerBg: "rgba(255,255,255,0.1)",
               },
             ].map((phase, i) => (
-              <div key={i} className="rounded-lg overflow-hidden border border-white/10">
+              <div key={i} className="rounded-lg overflow-hidden border border-white/[0.18]">
                 <div className="px-6 py-4" style={{ background: phase.headerBg }}>
-                  <p className="text-sm uppercase tracking-wide font-medium text-white/70">{phase.phase}</p>
+                  <p className="text-sm uppercase tracking-wide font-medium text-white/80">{phase.phase}</p>
                   <p className="text-lg font-medium text-white">{phase.title}</p>
                 </div>
-                <div className="p-6" style={{ background: "rgba(255,255,255,0.03)" }}>
+                <div className="p-6" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <ul className="space-y-3">
                     {phase.items.map((item, j) => (
                       <li key={j} className="flex items-start gap-3">
                         <CheckCircle className="w-4 h-4 text-[#9e3ffd] flex-shrink-0 mt-1" />
-                        <span className="text-white/70 text-sm">{item}</span>
+                        <span className="text-white/80 text-sm">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -157,10 +157,10 @@ export default function MercadoLivreAcl() {
               <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
                 Independência real no mercado livre.
               </h2>
-              <p className="text-lg text-white/70 leading-relaxed mb-6">
+              <p className="text-lg text-white/80 leading-relaxed mb-6">
                 A maioria das empresas que "ajuda" você a entrar no ACL representa um conjunto limitado de fornecedores, ou tem vínculo comercial com apenas uma ou duas comercializadoras.
               </p>
-              <p className="text-lg text-white/70 leading-relaxed">
+              <p className="text-lg text-white/80 leading-relaxed">
                 A Ótima Energia não representa nenhuma comercializadora. Nós comparamos o mercado com dados reais, colocamos na mesa apenas players com solidez financeira e histórico comprovado, e recomendamos o que é melhor para o seu perfil.
               </p>
             </div>
@@ -174,7 +174,7 @@ export default function MercadoLivreAcl() {
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-[#9e3ffd] flex-shrink-0 mt-0.5" />
-                  <span className="text-white/70">{item}</span>
+                  <span className="text-white/80">{item}</span>
                 </div>
               ))}
             </div>
@@ -187,7 +187,7 @@ export default function MercadoLivreAcl() {
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Descubra se o ACL é o caminho certo para a sua empresa
           </h2>
-          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto">
             Diagnóstico gratuito. Sem compromisso. Em até 5 dias úteis você recebe uma análise clara com cenários, prazos e recomendação.
           </p>
           <Link

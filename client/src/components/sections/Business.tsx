@@ -37,7 +37,7 @@ export function Business() {
     <>
       <section
         style={{ background: "#13112a" }}
-        className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.04)]"
+        className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.1)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-white max-w-5xl">
@@ -51,7 +51,7 @@ export function Business() {
       <section
         id="business"
         style={{ background: "#09081e" }}
-        className="pb-20 lg:pb-28 border-t border-[rgba(255,255,255,0.04)]"
+        className="pb-20 lg:pb-28 border-t border-[rgba(255,255,255,0.1)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="mb-12 flex flex-col items-center text-center pt-16">
@@ -101,8 +101,8 @@ export function Business() {
                   href={s.href}
                   className="group relative flex flex-col p-7 rounded-2xl transition-all duration-200 overflow-hidden"
                   style={{
-                    background: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.18)",
                   }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLElement;

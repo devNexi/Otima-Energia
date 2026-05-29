@@ -69,7 +69,7 @@ export default function Ecos() {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "clamp(1.75rem, 3vw, 2.5rem)", color: "#fff", letterSpacing: "-0.015em", marginBottom: "16px" }}>
                 O que o ECOS™ faz por você
               </h2>
-              <p className="text-lg max-w-xl mx-auto text-white/70">
+              <p className="text-lg max-w-xl mx-auto text-white/80">
                 Três capacidades integradas que transformam dados brutos em decisões confiáveis.
               </p>
             </div>
@@ -79,7 +79,7 @@ export default function Ecos() {
                 <div
                   key={i}
                   className="flex flex-col"
-                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "28px 24px" }}
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: "14px", padding: "28px 24px" }}
                   data-testid={`ecos-feature-${i}`}
                 >
                   <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 flex-shrink-0" style={{ background: "rgba(158,63,253,0.15)" }}>
@@ -88,7 +88,7 @@ export default function Ecos() {
                   <h3 style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: "1.05rem", color: "#fff", marginBottom: "10px" }}>
                     {f.title}
                   </h3>
-                  <p className="text-white/70" style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>{f.desc}</p>
+                  <p className="text-white/80" style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>{f.desc}</p>
                 </div>
               ))}
             </div>
@@ -99,7 +99,7 @@ export default function Ecos() {
                   <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "1.75rem", color: "#fff", marginBottom: "12px" }}>
                     Sem conflito. Sem viés.
                   </h3>
-                  <p className="text-white/70" style={{ fontSize: "1rem", lineHeight: 1.7 }}>
+                  <p className="text-white/80" style={{ fontSize: "1rem", lineHeight: 1.7 }}>
                     O ECOS™ não tem interesse em qual solução você escolhe. Ele só recomenda uma mudança quando há ganho real projetado — e você sempre vê os dados que sustentam a recomendação.
                   </p>
                 </div>
@@ -112,7 +112,7 @@ export default function Ecos() {
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#9e3ffd" }} />
-                      <span className="text-white/70" style={{ fontSize: "0.9rem" }}>{item}</span>
+                      <span className="text-white/80" style={{ fontSize: "0.9rem" }}>{item}</span>
                     </li>
                   ))}
                 </ul>
