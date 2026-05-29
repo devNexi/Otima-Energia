@@ -1,0 +1,159 @@
+# Ótima Energia — Lighten & Unify Brief
+
+## Context
+The dark design is correct and stays. Do not change any backgrounds, layouts, structures, animations, or component designs. This brief does two things only:
+
+1. **Lightens elements within the dark design** so it breathes more — brighter cards, higher contrast text, white accents in specific places
+2. **Ensures every public-facing page uses the same design system** — any page that currently looks different gets brought in line
+
+---
+
+## RULE: Do not touch
+- Hero plasma shader
+- Any background colours
+- Any layouts or structures
+- Any copy or content
+- /admin, /portal, /proposta, auth pages
+
+---
+
+## Part 1 — Inject lightness into the existing dark design
+
+### 1. Navbar — make it dark to match the site
+The navbar is currently white, which clashes with the dark site beneath it. Change it to match the scroll-aware dark treatment:
+
+- Default (top of page, over hero): `background: transparent; border-bottom: none`
+- Scrolled (past 80px): `background: rgba(13,12,43,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(158,63,253,0.15)`
+- Nav link colours: `rgba(255,255,255,0.75)`, hover `#ffffff`
+- "ECOS™": always `#9e3ffd`, font-weight 700
+- "Solicitar Diagnóstico" button: `#9e3ffd` background, white text — unchanged
+
+```tsx
+const [scrolled, setScrolled] = useState(false);
+useEffect(() => {
+  const onScroll = () => setScrolled(window.scrollY > 80);
+  window.addEventListener('scroll', onScroll);
+  return () => window.removeEventListener('scroll', onScroll);
+}, []);
+```
+
+### 2. Card surfaces — lift them off the background
+Currently cards are very close in tone to the section backgrounds, making everything feel flat. Lighten card surfaces so they visibly float:
+
+| Current card background | Replace with |
+|---|---|
+| `#1a1833` | `rgba(255,255,255,0.06)` |
+| `rgba(255,255,255,0.04)` | `rgba(255,255,255,0.07)` |
+| `rgba(255,255,255,0.05)` | `rgba(255,255,255,0.07)` |
+
+Card border: change from `rgba(158,63,253,0.15)` to `rgba(255,255,255,0.1)`
+Card hover border: `rgba(158,63,253,0.5)`
+Card hover glow: `box-shadow: 0 0 0 1px rgba(158,63,253,0.2), 0 8px 32px rgba(158,63,253,0.15)`
+
+### 3. Body text — increase contrast
+Currently body text is too close to the background in brightness, making it hard to read and adding to the heavy feel.
+
+| Current | Replace with |
+|---|---|
+| `rgba(255,255,255,0.55)` | `rgba(255,255,255,0.72)` |
+| `rgba(255,255,255,0.6)` | `rgba(255,255,255,0.72)` |
+| `rgba(255,255,255,0.45)` | `rgba(255,255,255,0.65)` |
+
+Headings (h2, h3 on dark sections): ensure they are pure `#ffffff`, not off-white variants.
+
+### 4. Section dividers — add subtle separation between sections
+Currently sections bleed into each other with no visual break. Add a 1px divider between each section:
+
+```css
+section + section {
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+```
+
+This is nearly invisible but gives the eye a beat between sections.
+
+### 5. Inject white into specific elements
+
+**Icon wraps:** Change background from `rgba(158,63,253,0.12)` to `rgba(255,255,255,0.08)`. Keep border `rgba(158,63,253,0.25)`. Keep icon colour `#9e3ffd`. This makes the icon container feel lighter and less saturated.
+
+**Section tag pills:** Change background from `rgba(158,63,253,0.12)` to `rgba(255,255,255,0.08)`. Keep border `rgba(158,63,253,0.3)`. Keep text `#c88ff5`. The white-tinted pill sits lighter on the dark background than the purple-tinted one.
+
+**Ghost step numbers (01, 02, 03, 04):** Change from `rgba(158,63,253,0.1)` to `rgba(255,255,255,0.05)`. Slightly cooler and less saturated, stops the numbers from adding purple heaviness.
+
+**Stats numbers ("4", "30%", "0"):** Ensure these are pure `#ffffff` not `#9e3ffd` — white numbers on dark backgrounds have more visual impact and feel lighter.
+
+**Pull-quote ("Nós existimos para nivelar esse campo."):** Change text from `#c88ff5` to `rgba(255,255,255,0.9)` with the left border staying `#9e3ffd`. White italic text reads as cleaner and more confident.
+
+**"Saiba mais →" links:** Change from `#9e3ffd` to `rgba(255,255,255,0.6)` with hover `#ffffff`. Purple links on purple-heavy dark pages add to the saturation. White links with a white hover are cleaner.
+
+**Checklist card titles:** Ensure `#ffffff` not off-white.
+
+**Checklist check icons:** Change the circle from `rgba(158,63,253,0.15)` to `rgba(255,255,255,0.08)` background. Keep checkmark `#9e3ffd`. Lighter container, sharp purple tick — more contrast.
+
+### 6. CTA band — make it visually distinct
+The CTA band currently blends into adjacent dark sections. Change background to `#431a6d` (deep brand purple — distinct from the near-black sections around it). This gives the conversion section its own identity.
+
+- Background: `#431a6d`
+- All text: white — unchanged
+- CTA button: `background: #ffffff; color: #431a6d; font-weight: 700` (inverted — white button pops on purple)
+- Button hover: `background: #eee7f1`
+- Trust strip bullets (✦): `#c88ff5`
+
+### 7. Footer — add a top accent line
+Add `border-top: 2px solid #9e3ffd` to the footer. This gives a clean brand-coloured cap to the page and visually separates the footer from the last section above it.
+
+---
+
+## Part 2 — Apply consistently to all public pages
+
+Every public-facing page must use the same dark design system. Go through each page below and apply the same card, text, icon, tag, and button treatments specified above. Do not change any page's structure or layout — only ensure the colour tokens match.
+
+Pages to audit and align:
+- `/` — homepage (reference page, already correct)
+- `/parceiros`
+- `/seja-cliente`
+- `/diagnostico`
+- `/faq`
+- `/ecos`
+- `/sobre`
+- `/insights`
+- `/lei-mercado-livre`
+- `/renovacao-contrato`
+- `/gd-para-empresas`
+- `/mercado-livre-acl`
+- `/gestao-de-energia`
+- `/otimizacao-energetica`
+
+For each page, check:
+- [ ] Section backgrounds match homepage dark tones
+- [ ] Cards use `rgba(255,255,255,0.07)` surface with `rgba(255,255,255,0.1)` border
+- [ ] Body text is `rgba(255,255,255,0.72)`
+- [ ] Headings are `#ffffff`
+- [ ] Section tag pills: `rgba(255,255,255,0.08)` background, `rgba(158,63,253,0.3)` border, `#c88ff5` text
+- [ ] Icon wraps: `rgba(255,255,255,0.08)` background
+- [ ] All CTA buttons: `#9e3ffd` background, white text
+- [ ] "Saiba mais →" links: `rgba(255,255,255,0.6)`, hover `#ffffff`
+- [ ] Forms (if present): dark fields `rgba(255,255,255,0.05)` background, `rgba(255,255,255,0.1)` border, white text, `#9e3ffd` focus border
+
+---
+
+## Summary of all colour token changes
+
+| Token | Old value | New value |
+|---|---|---|
+| Card background | `#1a1833` / `rgba(255,255,255,0.05)` | `rgba(255,255,255,0.07)` |
+| Card border | `rgba(158,63,253,0.15)` | `rgba(255,255,255,0.1)` |
+| Body text | `rgba(255,255,255,0.55–0.6)` | `rgba(255,255,255,0.72)` |
+| Icon wrap bg | `rgba(158,63,253,0.12)` | `rgba(255,255,255,0.08)` |
+| Section tag bg | `rgba(158,63,253,0.12)` | `rgba(255,255,255,0.08)` |
+| Ghost numbers | `rgba(158,63,253,0.1)` | `rgba(255,255,255,0.05)` |
+| Stats numbers | `#9e3ffd` | `#ffffff` |
+| Pull-quote text | `#c88ff5` | `rgba(255,255,255,0.9)` |
+| Arrow links | `#9e3ffd` | `rgba(255,255,255,0.6)` hover `#ffffff` |
+| CTA band bg | current dark | `#431a6d` |
+| CTA band button | purple on dark | `#ffffff` bg, `#431a6d` text |
+| Footer top border | none | `2px solid #9e3ffd` |
+| Navbar (top) | white | `transparent` |
+| Navbar (scrolled) | white | `rgba(13,12,43,0.95)` + blur |
+| Navbar links | dark | `rgba(255,255,255,0.75)` hover `#ffffff` |
+| Section dividers | none | `1px solid rgba(255,255,255,0.04)` |

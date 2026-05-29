@@ -31,7 +31,7 @@ function DifferentiationSection() {
   return (
     <section
       style={{ background: "#09081e" }}
-      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
+      className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.04)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
@@ -48,13 +48,13 @@ function DifferentiationSection() {
             >
               O que torna a Ótima diferente
             </h2>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: "1.75" }}>
+            <p style={{ color: "rgba(255,255,255,0.72)", fontSize: "1rem", lineHeight: "1.75" }}>
               O mercado de energia é opaco por design. Fornecedores, distribuidoras e comercializadoras operam com informações assimétricas. A maioria das empresas não tem acesso à comparação, aos dados e à visibilidade que a Ótima tem.
             </p>
             <p
               className="mt-4"
               style={{
-                color: "#c88ff5",
+                color: "rgba(255,255,255,0.9)",
                 fontSize: "1.05rem",
                 fontStyle: "italic",
                 fontFamily: "'Sora', sans-serif",
@@ -67,14 +67,15 @@ function DifferentiationSection() {
               Nós existimos para nivelar esse campo.
             </p>
           </div>
+
           <div className="space-y-3">
             {points.map((p, i) => (
               <div
                 key={i}
                 className="flex items-start gap-4 p-5 rounded-xl"
                 style={{
-                  background: "#1a1833",
-                  border: "1px solid rgba(158,63,253,0.12)",
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.1)",
                 }}
               >
                 <div
@@ -83,7 +84,7 @@ function DifferentiationSection() {
                     width: "20px",
                     height: "20px",
                     borderRadius: "50%",
-                    background: "rgba(158,63,253,0.15)",
+                    background: "rgba(255,255,255,0.08)",
                     border: "1px solid rgba(158,63,253,0.3)",
                   }}
                 >
@@ -96,7 +97,7 @@ function DifferentiationSection() {
                   >
                     {p.title}
                   </h3>
-                  <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.825rem", lineHeight: "1.65" }}>
+                  <p style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.825rem", lineHeight: "1.65" }}>
                     {p.desc}
                   </p>
                 </div>
@@ -139,15 +140,15 @@ function WhyOtimaSection() {
 
   return (
     <section
-      style={{ background: "#0d0c24" }}
-      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
+      style={{ background: "#13112a" }}
+      className="py-20 lg:py-28 border-t border-[rgba(255,255,255,0.04)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="mb-14 text-center">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.12)",
+              background: "rgba(255,255,255,0.08)",
               border: "1px solid rgba(158,63,253,0.3)",
               color: "#c88ff5",
               fontSize: "0.72rem",
@@ -179,14 +180,14 @@ function WhyOtimaSection() {
               key={i}
               className="relative p-7 rounded-2xl overflow-hidden"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(158,63,253,0.18)",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.1)",
               }}
             >
               <span
                 className="absolute top-2 right-4 select-none pointer-events-none font-black"
                 style={{
-                  color: "rgba(158,63,253,0.08)",
+                  color: "rgba(255,255,255,0.05)",
                   fontSize: "5.5rem",
                   lineHeight: 1,
                   fontFamily: "'Outfit', sans-serif",
@@ -203,7 +204,7 @@ function WhyOtimaSection() {
               <h3
                 className="font-bold mb-3 relative z-10"
                 style={{
-                  color: "rgba(255,255,255,0.92)",
+                  color: "#ffffff",
                   fontFamily: "'Outfit', sans-serif",
                   fontSize: "1.05rem",
                   lineHeight: 1.3,
@@ -213,7 +214,7 @@ function WhyOtimaSection() {
               </h3>
               <p
                 className="text-sm leading-relaxed relative z-10"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "rgba(255,255,255,0.72)" }}
               >
                 {card.desc}
               </p>
@@ -240,14 +241,14 @@ function SegmentsSection() {
   return (
     <section
       style={{ background: "#09081e" }}
-      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
+      className="py-20 lg:py-28 border-t border-[rgba(255,255,255,0.04)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="mb-14 text-center">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.12)",
+              background: "rgba(255,255,255,0.08)",
               border: "1px solid rgba(158,63,253,0.3)",
               color: "#c88ff5",
               fontSize: "0.72rem",
@@ -273,7 +274,7 @@ function SegmentsSection() {
           </h2>
           <p
             className="mt-3 text-base max-w-xl mx-auto"
-            style={{ color: "rgba(255,255,255,0.5)" }}
+            style={{ color: "rgba(255,255,255,0.72)" }}
           >
             Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
           </p>
@@ -282,22 +283,30 @@ function SegmentsSection() {
           {segments.map((s, i) => (
             <div
               key={i}
-              className="p-5 rounded-xl transition-all duration-200 hover:border-[rgba(158,63,253,0.4)]"
+              className="p-5 rounded-xl transition-all duration-200"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(158,63,253,0.18)",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(158,63,253,0.5)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 1px rgba(158,63,253,0.2), 0 8px 32px rgba(158,63,253,0.15)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
               }}
               data-testid={`segment-${i}`}
             >
               <p
                 className="font-semibold text-sm mb-1"
-                style={{ color: "rgba(255,255,255,0.88)" }}
+                style={{ color: "#ffffff" }}
               >
                 {s.name}
               </p>
               <p
                 className="text-xs leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.42)" }}
+                style={{ color: "rgba(255,255,255,0.65)" }}
               >
                 {s.detail}
               </p>
@@ -489,8 +498,8 @@ function EcosSection() {
 function FinalCta() {
   return (
     <section
-      style={{ background: "linear-gradient(135deg, #16163f 0%, #2a0f5e 100%)" }}
-      className="py-24 lg:py-32 border-t border-[rgba(158,63,253,0.2)]"
+      style={{ background: "#431a6d" }}
+      className="py-24 lg:py-32 border-t border-[rgba(255,255,255,0.04)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
         <h2
@@ -530,7 +539,7 @@ function FinalCta() {
           className="inline-flex items-center gap-3 px-8 py-4 text-base font-bold transition-all hover:opacity-90 hover:-translate-y-0.5"
           style={{
             background: "#ffffff",
-            color: "#9e3ffd",
+            color: "#431a6d",
             borderRadius: "8px",
             fontFamily: "'Sora', sans-serif",
             boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
@@ -556,14 +565,14 @@ function GoogleReviews() {
   return (
     <section
       style={{ background: "#09081e" }}
-      className="py-16 lg:py-20 border-t border-[rgba(158,63,253,0.15)]"
+      className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.04)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="text-center mb-10">
           <div
             className="inline-block mb-4"
             style={{
-              background: "rgba(158,63,253,0.12)",
+              background: "rgba(255,255,255,0.08)",
               border: "1px solid rgba(158,63,253,0.3)",
               color: "#c88ff5",
               fontSize: "0.68rem",
@@ -591,8 +600,8 @@ function GoogleReviews() {
         </div>
         <div
           style={{
-            background: "#1a1833",
-            border: "1px solid rgba(158,63,253,0.15)",
+            background: "rgba(255,255,255,0.07)",
+            border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: "14px",
             padding: "24px",
           }}

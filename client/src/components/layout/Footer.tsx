@@ -35,7 +35,7 @@ export function Footer() {
 
   return (
     <footer
-      style={{ background: "#09081e", borderTop: "1px solid rgba(158,63,253,0.12)" }}
+      style={{ background: "#09081e", borderTop: "2px solid #9e3ffd" }}
       className="py-10 lg:py-12"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">

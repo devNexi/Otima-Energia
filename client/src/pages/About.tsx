@@ -5,36 +5,36 @@ import { Link } from "wouter";
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: "#09081e" }}>
       <Navbar />
       
-      <section className="bg-[#eee7f1] pt-32 pb-24 lg:pt-40 lg:pb-32">
+      <section className="bg-[#13112a] pt-32 pb-24 lg:pt-40 lg:pb-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl">
             <p className="text-sm font-medium text-[#9e3ffd] uppercase tracking-wider mb-6">
               Sua energia. Sua escolha. Sua economia.
             </p>
-            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
+            <p className="text-lg lg:text-xl text-white/70 leading-relaxed">
               A Ótima Energia é uma consultoria independente especializada em guiar empresas brasileiras para a melhor decisão energética: Geração Distribuída (GD), Mercado Livre (ACL), gestão contínua de contratos ou otimização no local.
             </p>
-            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mt-6">
+            <p className="text-lg lg:text-xl text-white/70 leading-relaxed mt-6">
               Atuamos como parceiros de longo prazo, com um compromisso inegociável: neutralidade. Não vendemos um único produto, nem representamos um único fornecedor. Comparamos o máximo possível do mercado, analisamos todas as opções com dados reais e recomendamos o caminho que entrega mais economia para o seu perfil.
             </p>
-            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mt-6">
+            <p className="text-lg lg:text-xl text-white/70 leading-relaxed mt-6">
               Nosso serviço de diagnóstico é gratuito. Somos remunerados apenas quando nossa recomendação gera valor real para o cliente, e sempre com total transparência sobre como e por quem somos pagos.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#09081e] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+              <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
                 Estamos com pressa.
               </h2>
-              <div className="space-y-6 text-lg text-[#736d77] leading-relaxed">
+              <div className="space-y-6 text-lg text-white/70 leading-relaxed">
                 <p>
                   A Lei nº 15.269/2025 abre o mercado livre de energia para 80 milhões de consumidores nos próximos 36 meses. É a maior transformação do setor elétrico brasileiro desde sua privatização.
                 </p>
@@ -44,7 +44,7 @@ export default function About() {
                 <p>
                   Nossa missão é garantir que nenhuma empresa pague mais do que deveria, independentemente do mercado em que está hoje ou estará amanhã.
                 </p>
-                <p className="font-medium text-[#16163f]">
+                <p className="font-medium text-white">
                   Queremos estar na linha de frente dessa revolução, como guias, não como vendedores.
                 </p>
               </div>
@@ -57,7 +57,7 @@ export default function About() {
                 <span className="w-10 h-10 bg-[#9e3ffd] group-hover:bg-[#df0af2] flex items-center justify-center text-white transition-colors">
                   <ArrowRight className="w-5 h-5" />
                 </span>
-                <span className="text-[#16163f] group-hover:text-[#df0af2] transition-colors">
+                <span className="text-white/70 group-hover:text-[#df0af2] transition-colors">
                   EXPLORAR SOLUÇÕES
                 </span>
               </Link>
@@ -66,13 +66,13 @@ export default function About() {
         </div>
       </section>
 
-      <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#13112a] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl">
             <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-12">
               Acreditamos em transparência radical.
             </h2>
-            <div className="space-y-6 text-lg text-[#736d77] leading-relaxed">
+            <div className="space-y-6 text-lg text-white/70 leading-relaxed">
               <p>
                 O setor elétrico brasileiro movimenta mais de R$100 bilhões por ano, mas continua fragmentado e opaco. Fornecedores, distribuidoras, comercializadoras e usinas operam com informações assimétricas, deixando empresas pagando mais do que deveriam, em qualquer mercado.
               </p>
@@ -105,116 +105,76 @@ export default function About() {
         </div>
       </section>
 
-      <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+      <section className="bg-[#09081e] py-16 lg:py-20 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-4xl mb-16">
-            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#16163f] mb-6">
+            <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
               Não somos apenas uma corretora.
             </h2>
-            <p className="text-lg text-[#736d77] leading-relaxed">
+            <p className="text-lg text-white/70 leading-relaxed">
               A Ótima Energia opera como uma consultoria independente de inteligência energética.
             </p>
-            <p className="text-lg text-[#736d77] leading-relaxed mt-4">
+            <p className="text-lg text-white/70 leading-relaxed mt-4">
               Enquanto o mercado permanece opaco, manual e cheio de intermediários empurrando soluções únicas, nós usamos dados, automação e independência para proteger empresas e garantir decisões melhores. Isso se aplica na migração, na renovação e na gestão do dia a dia.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-[#eee7f1] py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#13112a] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-4 gap-12 lg:gap-16">
             <div>
-              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                30%
-              </div>
-              <p className="text-[#736d77]">
-                Economia potencial na conta de luz*
-              </p>
+              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">30%</div>
+              <p className="text-white/70">Economia potencial na conta de luz*</p>
             </div>
             <div>
-              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                R$100B+
-              </div>
-              <p className="text-[#736d77]">
-                Volume anual do setor elétrico
-              </p>
+              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">R$100B+</div>
+              <p className="text-white/70">Volume anual do setor elétrico</p>
             </div>
             <div>
-              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                80M
-              </div>
-              <p className="text-[#736d77]">
-                Consumidores elegíveis até 2028
-              </p>
+              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">80M</div>
+              <p className="text-white/70">Consumidores elegíveis até 2028</p>
             </div>
             <div>
-              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">
-                R$0
-              </div>
-              <p className="text-[#736d77]">
-                Custo do diagnóstico gratuito
-              </p>
+              <div className="text-5xl lg:text-6xl font-light text-[#9e3ffd] mb-4">R$0</div>
+              <p className="text-white/70">Custo do diagnóstico gratuito</p>
             </div>
           </div>
-          <p className="text-sm text-[#736d77] mt-8">
+          <p className="text-sm text-white/40 mt-8">
             *Resultados variam conforme perfil, região, mercado e condições de contratação.
           </p>
         </div>
       </section>
 
-      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#09081e] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-[#9e3ffd] mb-16">
             Por que a Ótima Energia?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Independência</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Independência
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Não temos vínculo com nenhuma comercializadora, geradora ou usina. Nossa única lealdade é com o cliente.
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Expertise</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Expertise
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Fundada por especialistas com experiência internacional no setor de energia. Trouxemos as melhores práticas globais para o mercado brasileiro, e as adaptamos à nossa realidade.
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Tecnologia</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Tecnologia
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                O ECOS™ analisa consumo, compara ofertas e simula cenários em todas as frentes com IA e automação. Decisão boa é decisão com dados.
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#9e3ffd] transition-colors">
-              <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">Resultados</p>
-              <h3 className="text-xl font-medium text-[#16163f] mb-4">
-                Resultados
-              </h3>
-              <p className="text-[#736d77] leading-relaxed">
-                Nossos clientes economizam. Cuidamos de toda a burocracia, do diagnóstico à ativação, em qualquer frente.
-              </p>
-            </div>
+            {[
+              { tag: "Independência", title: "Independência", body: "Não temos vínculo com nenhuma comercializadora, geradora ou usina. Nossa única lealdade é com o cliente." },
+              { tag: "Expertise", title: "Expertise", body: "Fundada por especialistas com experiência internacional no setor de energia. Trouxemos as melhores práticas globais para o mercado brasileiro, e as adaptamos à nossa realidade." },
+              { tag: "Tecnologia", title: "Tecnologia", body: "O ECOS™ analisa consumo, compara ofertas e simula cenários em todas as frentes com IA e automação. Decisão boa é decisão com dados." },
+              { tag: "Resultados", title: "Resultados", body: "Nossos clientes economizam. Cuidamos de toda a burocracia, do diagnóstico à ativação, em qualquer frente." },
+            ].map((card, i) => (
+              <div key={i} className="rounded-lg p-8 border border-white/10 hover:border-[#9e3ffd] transition-colors" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <p className="text-sm tracking-wide text-[#df0af2] uppercase mb-4">{card.tag}</p>
+                <h3 className="text-xl font-medium text-white mb-4">{card.title}</h3>
+                <p className="text-white/70 leading-relaxed">{card.body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#16163f] py-24 lg:py-32">
+      <section className="bg-[#13112a] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Pronto para descobrir o melhor caminho para sua empresa?
           </h2>
-          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
             Faça um diagnóstico gratuito. Em até 5 dias úteis você recebe uma análise completa.
           </p>
           <Link 

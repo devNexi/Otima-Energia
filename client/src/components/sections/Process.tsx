@@ -47,10 +47,10 @@ export function Process() {
 
   return (
     <>
-      {/* ── "A maioria" statement section ─────────────────────── */}
+      {/* ── "A maioria" statement ─────────────────────────────── */}
       <section
         style={{ background: "#09081e" }}
-        className="py-20 lg:py-24 border-t border-[rgba(158,63,253,0.15)]"
+        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.04)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <p className="dcvc-statement text-white max-w-5xl mb-8">
@@ -59,23 +59,20 @@ export function Process() {
           </p>
           <p
             className="text-lg lg:text-xl max-w-4xl mb-6"
-            style={{ color: "rgba(255,255,255,0.6)", lineHeight: "1.75" }}
+            style={{ color: "rgba(255,255,255,0.72)", lineHeight: "1.75" }}
           >
             O mercado de energia é fragmentado e opaco: ofertas confusas, contratos ambíguos e fornecedores que empurram uma única solução: a que é melhor para eles, não para você.
           </p>
           <p
             className="text-lg lg:text-xl max-w-4xl"
-            style={{ color: "rgba(255,255,255,0.6)", lineHeight: "1.75" }}
+            style={{ color: "rgba(255,255,255,0.72)", lineHeight: "1.75" }}
           >
             A Ótima existe para dar clareza: analisamos todas as opções viáveis (GD, ACL, Gestão de Energia e otimização no local), explicamos tudo com transparência e entregamos só o que importa: a decisão certa para o seu negócio.
           </p>
 
           <div
             className="flex flex-wrap gap-10 lg:gap-20 max-w-4xl mt-10"
-            style={{
-              borderTop: "1px solid rgba(158,63,253,0.15)",
-              paddingTop: "32px",
-            }}
+            style={{ borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "32px" }}
           >
             {[
               { num: "4", label: "Frentes de atuação" },
@@ -88,7 +85,7 @@ export function Process() {
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 700,
                     fontSize: "3rem",
-                    color: "#9e3ffd",
+                    color: "#ffffff",
                     lineHeight: 1,
                   }}
                 >
@@ -110,14 +107,14 @@ export function Process() {
       <section
         id="process"
         style={{ background: "#13112a" }}
-        className="py-20 lg:py-24 border-t border-[rgba(158,63,253,0.15)]"
+        className="py-20 lg:py-24 border-t border-[rgba(255,255,255,0.04)]"
       >
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="mb-12">
             <div
               className="inline-block mb-4"
               style={{
-                background: "rgba(158,63,253,0.12)",
+                background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(158,63,253,0.3)",
                 color: "#c88ff5",
                 fontSize: "0.68rem",
@@ -145,7 +142,7 @@ export function Process() {
             </h2>
             <p
               className="max-w-3xl"
-              style={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: "1.75" }}
+              style={{ color: "rgba(255,255,255,0.72)", fontSize: "1rem", lineHeight: "1.75" }}
             >
               Nosso processo substitui a venda de uma solução única por uma análise neutra e estruturada. Trabalhamos como seu consultor estratégico para identificar a rota de maior economia para o seu perfil.
             </p>
@@ -155,17 +152,24 @@ export function Process() {
             {steps.map((item, i) => (
               <div
                 key={i}
-                className="relative p-6 rounded-2xl overflow-hidden"
+                className="relative p-6 rounded-2xl overflow-hidden transition-all duration-200"
                 style={{
-                  background: "#1a1833",
-                  border: "1px solid rgba(158,63,253,0.15)",
-                  transition: "border-color 0.2s, box-shadow 0.2s",
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(158,63,253,0.5)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 1px rgba(158,63,253,0.2), 0 8px 32px rgba(158,63,253,0.15)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
                 }}
               >
                 <span
                   className="absolute select-none pointer-events-none font-black"
                   style={{
-                    color: "rgba(158,63,253,0.1)",
+                    color: "rgba(255,255,255,0.05)",
                     fontSize: "4.5rem",
                     lineHeight: 1,
                     fontFamily: "'Outfit', sans-serif",
@@ -182,7 +186,7 @@ export function Process() {
                     width: "44px",
                     height: "44px",
                     borderRadius: "10px",
-                    background: "rgba(158,63,253,0.12)",
+                    background: "rgba(255,255,255,0.08)",
                     border: "1px solid rgba(158,63,253,0.25)",
                   }}
                 >
@@ -191,18 +195,13 @@ export function Process() {
 
                 <h3
                   className="font-semibold mb-2 relative z-10"
-                  style={{
-                    fontFamily: "'Sora', sans-serif",
-                    color: "#ffffff",
-                    fontSize: "1rem",
-                    lineHeight: 1.35,
-                  }}
+                  style={{ fontFamily: "'Sora', sans-serif", color: "#ffffff", fontSize: "1rem", lineHeight: 1.35 }}
                 >
                   {item.title}
                 </h3>
                 <p
                   className="relative z-10"
-                  style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.875rem", lineHeight: "1.75" }}
+                  style={{ color: "rgba(255,255,255,0.72)", fontSize: "0.875rem", lineHeight: "1.75" }}
                 >
                   {item.desc}
                 </p>
@@ -213,8 +212,10 @@ export function Process() {
           <div className="mt-10">
             <Link
               href="/seja-cliente"
-              className="inline-flex items-center gap-2 font-semibold transition-all hover:gap-3"
-              style={{ color: "#9e3ffd", fontFamily: "'Sora', sans-serif", fontSize: "0.85rem" }}
+              className="inline-flex items-center gap-2 font-semibold transition-all duration-200 hover:gap-3"
+              style={{ color: "rgba(255,255,255,0.6)", fontFamily: "'Sora', sans-serif", fontSize: "0.85rem" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#ffffff")}
+              onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
               data-testid="process-cta"
             >
               Solicitar Diagnóstico Gratuito

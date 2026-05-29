@@ -23,11 +23,10 @@ const features = [
 
 export default function Ecos() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: "#09081e" }}>
       <Navbar />
       <main>
 
-        {/* Section 1 — Dark hero */}
         <section
           className="relative overflow-hidden pt-40 pb-24"
           style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}
@@ -61,17 +60,16 @@ export default function Ecos() {
           </div>
         </section>
 
-        {/* Section 2 — Light feature grid */}
-        <section className="bg-white py-20 lg:py-28">
+        <section className="py-20 lg:py-28 border-t border-white/[0.04]" style={{ background: "#13112a" }}>
           <div className="max-w-[1100px] mx-auto px-6 lg:px-12">
             <div className="text-center mb-16">
               <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: "#9e3ffd", fontFamily: "'Sora', sans-serif" }}>
                 Capacidades
               </p>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "clamp(1.75rem, 3vw, 2.5rem)", color: "#16163f", letterSpacing: "-0.015em", marginBottom: "16px" }}>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "clamp(1.75rem, 3vw, 2.5rem)", color: "#fff", letterSpacing: "-0.015em", marginBottom: "16px" }}>
                 O que o ECOS™ faz por você
               </h2>
-              <p className="text-lg max-w-xl mx-auto" style={{ color: "#736d77" }}>
+              <p className="text-lg max-w-xl mx-auto text-white/70">
                 Três capacidades integradas que transformam dados brutos em decisões confiáveis.
               </p>
             </div>
@@ -81,27 +79,27 @@ export default function Ecos() {
                 <div
                   key={i}
                   className="flex flex-col"
-                  style={{ background: "#fff", border: "1px solid #eee7f1", borderRadius: "14px", padding: "28px 24px", boxShadow: "0 1px 3px rgba(22,22,63,0.06), 0 4px 16px rgba(22,22,63,0.04)" }}
+                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "28px 24px" }}
                   data-testid={`ecos-feature-${i}`}
                 >
-                  <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 flex-shrink-0" style={{ background: "rgba(158,63,253,0.1)" }}>
+                  <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 flex-shrink-0" style={{ background: "rgba(158,63,253,0.15)" }}>
                     <f.icon className="w-5 h-5" style={{ color: "#9e3ffd" }} />
                   </div>
-                  <h3 style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: "1.05rem", color: "#16163f", marginBottom: "10px" }}>
+                  <h3 style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: "1.05rem", color: "#fff", marginBottom: "10px" }}>
                     {f.title}
                   </h3>
-                  <p style={{ color: "#736d77", fontSize: "0.9rem", lineHeight: 1.6 }}>{f.desc}</p>
+                  <p className="text-white/70" style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>{f.desc}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-16 rounded-2xl p-8 lg:p-12" style={{ background: "#f5f0fa", border: "1px solid #eee7f1" }}>
+            <div className="mt-16 rounded-2xl p-8 lg:p-12" style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}>
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "1.75rem", color: "#16163f", marginBottom: "12px" }}>
+                  <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "1.75rem", color: "#fff", marginBottom: "12px" }}>
                     Sem conflito. Sem viés.
                   </h3>
-                  <p style={{ color: "#736d77", fontSize: "1rem", lineHeight: 1.7 }}>
+                  <p className="text-white/70" style={{ fontSize: "1rem", lineHeight: 1.7 }}>
                     O ECOS™ não tem interesse em qual solução você escolhe. Ele só recomenda uma mudança quando há ganho real projetado — e você sempre vê os dados que sustentam a recomendação.
                   </p>
                 </div>
@@ -114,7 +112,7 @@ export default function Ecos() {
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#9e3ffd" }} />
-                      <span style={{ color: "#16163f", fontSize: "0.9rem" }}>{item}</span>
+                      <span className="text-white/70" style={{ fontSize: "0.9rem" }}>{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -123,9 +121,8 @@ export default function Ecos() {
           </div>
         </section>
 
-        {/* Section 3 — Dark CTA */}
         <section
-          className="relative overflow-hidden py-24"
+          className="relative overflow-hidden py-24 border-t border-white/[0.04]"
           style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 100%)" }}
         >
           <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "url('/texture-electric.png')", backgroundSize: "600px", backgroundRepeat: "repeat", opacity: 0.04 }} />
@@ -136,7 +133,7 @@ export default function Ecos() {
             <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "clamp(2rem, 4vw, 3rem)", color: "#fff", letterSpacing: "-0.02em", marginBottom: "16px" }}>
               Deixe o ECOS™ analisar a energia da sua empresa
             </h2>
-            <p className="text-lg mb-10" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <p className="text-lg mb-10 text-white/60">
               Diagnóstico gratuito. Em até 5 dias úteis você recebe uma análise completa com as melhores opções para o seu perfil.
             </p>
             <Link

@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-
 import { ArrowRight, Calendar } from "lucide-react";
 import { Link } from "wouter";
 
@@ -65,56 +64,57 @@ const articles: Article[] = [
 ];
 
 const categoryColors: Record<string, string> = {
-  "Legislação": "bg-blue-100 text-blue-700",
-  "Estratégia": "bg-purple-100 text-purple-700",
-  "Gestão": "bg-green-100 text-green-700",
-  "Economia": "bg-yellow-100 text-yellow-700",
-  "Otimização": "bg-orange-100 text-orange-700",
-  "Sustentabilidade": "bg-emerald-100 text-emerald-700",
+  "Legislação": "bg-blue-900/50 text-blue-300 border border-blue-700/40",
+  "Estratégia": "bg-purple-900/50 text-purple-300 border border-purple-700/40",
+  "Gestão": "bg-green-900/50 text-green-300 border border-green-700/40",
+  "Economia": "bg-yellow-900/50 text-yellow-300 border border-yellow-700/40",
+  "Otimização": "bg-orange-900/50 text-orange-300 border border-orange-700/40",
+  "Sustentabilidade": "bg-emerald-900/50 text-emerald-300 border border-emerald-700/40",
 };
 
 export default function Insights() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: "#09081e" }}>
       <Navbar />
       
-      <section className="bg-[#eee7f1] pt-32 pb-24 lg:pt-40 lg:pb-32">
+      <section className="bg-[#13112a] pt-32 pb-24 lg:pt-40 lg:pb-32">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="max-w-3xl">
             <h1 className="text-[2.5rem] lg:text-[3.5rem] leading-[1.1] font-normal tracking-tight text-[#9e3ffd] mb-6">
               Insights
             </h1>
-            <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed">
+            <p className="text-lg lg:text-xl text-white/70 leading-relaxed">
               Artigos educativos sobre GD, Mercado Livre, Gestão de Energia e Otimização, para ajudar sua empresa a tomar decisões melhores sobre energia.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-white py-24 lg:py-32 border-t border-gray-200">
+      <section className="bg-[#09081e] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {articles.map((article) => (
               <article
                 key={article.id}
-                className="border border-gray-200 rounded-lg overflow-hidden hover:border-[#9e3ffd] hover:shadow-lg transition-all duration-300 flex flex-col"
+                className="rounded-lg overflow-hidden flex flex-col border border-white/10 hover:border-[#9e3ffd] hover:shadow-[0_0_0_1px_rgba(158,63,253,0.15),0_8px_32px_rgba(158,63,253,0.12)] transition-all duration-300"
+                style={{ background: "rgba(255,255,255,0.04)" }}
                 data-testid={`article-${article.id}`}
               >
-                <div className="bg-[#eee7f1] h-48 flex items-center justify-center">
+                <div className="h-48 flex items-center justify-center border-b border-white/[0.06]" style={{ background: "rgba(158,63,253,0.06)" }}>
                   <div className="text-center p-6">
-                    <div className="w-12 h-12 bg-[#9e3ffd]/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(158,63,253,0.15)" }}>
                       <svg className="w-6 h-6 text-[#9e3ffd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${categoryColors[article.category] || "bg-gray-100 text-gray-700"}`}>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${categoryColors[article.category] || "bg-white/10 text-white/60"}`}>
                       {article.category}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                  <div className="flex items-center gap-4 text-sm text-white/40 mb-4">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
                       {new Date(article.date).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}
@@ -122,11 +122,11 @@ export default function Insights() {
                     <span>{article.readTime} de leitura</span>
                   </div>
 
-                  <h2 className="text-xl font-medium text-[#16163f] mb-3 group-hover:text-[#9e3ffd] transition-colors">
+                  <h2 className="text-xl font-medium text-white mb-3">
                     {article.title}
                   </h2>
 
-                  <p className="text-[#736d77] leading-relaxed mb-6 flex-grow">
+                  <p className="text-white/70 leading-relaxed mb-6 flex-grow">
                     {article.excerpt}
                   </p>
 
@@ -141,12 +141,12 @@ export default function Insights() {
         </div>
       </section>
 
-      <section className="bg-[#16163f] py-24 lg:py-32">
+      <section className="bg-[#13112a] py-24 lg:py-32 border-t border-white/[0.04]">
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
           <h2 className="text-3xl lg:text-4xl font-normal tracking-tight text-white mb-6">
             Quer saber o que é certo para a sua empresa?
           </h2>
-          <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+          <p className="text-xl text-white/70 mb-12 max-w-2xl mx-auto">
             Diagnóstico gratuito. Em até 5 dias úteis você recebe uma análise completa com recomendações claras para o seu perfil.
           </p>
           <Link 
