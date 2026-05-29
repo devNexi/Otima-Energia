@@ -1,0 +1,196 @@
+Before I publish and put Google Ads live, please complete/confirm the following QA and WhatsApp tracking changes.
+
+## 1. Floating WhatsApp button on `/reduza`
+
+The floating WhatsApp button on `/reduza` should use this pre-filled message:
+
+`Olá! Vi o site da Ótima Energia e gostaria de saber mais sobre desconto na conta de luz para minha empresa.`
+
+This must be different from the `/obrigado` WhatsApp messages because it fires before form submission.
+
+Use the real WhatsApp number everywhere:
+
+`5521997959777`
+
+Check:
+
+* `/reduza` floating button
+* `/reduza` footer
+* all three `/obrigado` variants
+* customer confirmation email WhatsApp button
+* any internal alert email WhatsApp button
+
+## 2. Floating button styling on `/reduza`
+
+Please make the floating WhatsApp button subtle on `/reduza` so it does not cannibalise the form conversion.
+
+Required styling:
+
+* 56x56px circle
+* icon only
+* no “WhatsApp” text label on `/reduza`
+* opacity 0.85 normally
+* opacity 1.0 on hover
+* bottom-right with normal padding
+
+On `/obrigado` pages, keep the existing prominent WhatsApp styling. The goal is:
+
+* `/reduza` = quiet support widget
+* `/obrigado` = active engagement tool
+
+## 3. GA4 event for floating WhatsApp button
+
+On click of the floating WhatsApp button, fire:
+
+```ts
+window.gtag?.("event", "whatsapp_click_floating", {
+  source: "landing_page",
+  page: window.location.pathname,
+});
+```
+
+However, if the app already uses a shared `fireEvent()` helper for GA4/GTM events, use that same helper instead of adding a separate tracking method.
+
+Expected event:
+
+`whatsapp_click_floating`
+
+Expected params:
+
+* `source: "landing_page"`
+* `page: window.location.pathname`
+
+## 4. GA4 event for `/obrigado` WhatsApp buttons
+
+Confirm the existing `/obrigado` WhatsApp buttons fire:
+
+`whatsapp_click_obrigado`
+
+Expected params:
+
+* `tipo`
+* `source: "thank_you_page"` or equivalent
+* `page: window.location.pathname`
+
+This event must be additive only. It must not replace or interfere with:
+
+* `lead_form_submit`
+* `lead_form_submit_no_bill`
+* `lead_form_submit_special_case`
+* `thank_you_page_view`
+
+Important:
+Do not import `whatsapp_click_floating` or `whatsapp_click_obrigado` as Google Ads conversions. They are GA4 engagement events only.
+
+## 5. Confirm `/reduza` submit redirect includes `empresa`
+
+Please confirm the `/reduza` submit redirect includes `empresa` in the `/obrigado` URL, especially for `tipo=sem-conta`.
+
+Expected:
+
+`/obrigado?tipo=sem-conta&nome={{name}}&empresa={{company}}`
+
+This is needed so the `/obrigado` WhatsApp pre-filled message can mention the company name.
+
+## 6. Confirm conversion events still work
+
+Do not change the conversion event logic while making the WhatsApp changes.
+
+These must remain:
+
+* `/obrigado?tipo=completo` → `lead_form_submit`, value 200, currency BRL
+* `/obrigado?tipo=sem-conta` → `lead_form_submit_no_bill`, value 60, currency BRL
+* `/obrigado?tipo=caso-especial` → `lead_form_submit_special_case`, no value/currency
+* all `/obrigado` visits → `thank_you_page_view`
+
+## 7. Confirm email behaviour
+
+Please confirm email failure behaviour:
+
+* Google Sheets failure remains hard fail.
+* Drive upload failure remains hard fail if a file was attached.
+* Customer email failure is logged but does not lose the lead.
+* Internal Callum email failure is logged loudly with lead ID but does not lose the lead.
+
+## 8. Confirm authorised sender
+
+Confirm whether `otto@otimaenergia.com` is an authorised SMTP sender/mailbox/alias.
+
+If SMTP auth is actually using `marketing@otimaenergia.com`, then send as:
+
+`"Otto - Ótima Energia" <marketing@otimaenergia.com>`
+
+unless `otto@otimaenergia.com` is definitely authorised.
+
+Please confirm which env vars are being used:
+
+* `OTIMA_EMAIL_FROM`
+* `OTIMA_SMTP_USER`
+* `OTIMA_SMTP_PASS`
+* `OTIMA_INTERNAL_LEAD_EMAIL`
+
+## 9. Acceptance tests before publish
+
+Please run or confirm these six tests before I publish:
+
+### Test 1 — `/reduza` floating WhatsApp button
+
+* Open `/reduza`
+* Confirm floating button is 56x56px, icon-only, subtle opacity
+* Click it
+* Confirm it opens WhatsApp to `5521997959777`
+* Confirm prefilled message is:
+  `Olá! Vi o site da Ótima Energia e gostaria de saber mais sobre desconto na conta de luz para minha empresa.`
+* Confirm GA4 event fires:
+  `whatsapp_click_floating`
+
+### Test 2 — `/obrigado?tipo=completo`
+
+* Open `/obrigado?tipo=completo&nome=Test&empresa=Otima%20Test`
+* Confirm `lead_form_submit` fires
+* Confirm `thank_you_page_view` fires
+* Click WhatsApp button
+* Confirm `whatsapp_click_obrigado` fires
+* Confirm correct WhatsApp number
+
+### Test 3 — `/obrigado?tipo=sem-conta`
+
+* Open `/obrigado?tipo=sem-conta&nome=Test&empresa=Otima%20Test`
+* Confirm `lead_form_submit_no_bill` fires
+* Confirm `thank_you_page_view` fires
+* Confirm prominent bill-send WhatsApp CTA appears
+* Click WhatsApp button
+* Confirm `whatsapp_click_obrigado` fires
+* Confirm correct WhatsApp number and prefilled bill-follow-up message
+
+### Test 4 — `/obrigado?tipo=caso-especial`
+
+* Open `/obrigado?tipo=caso-especial&nome=Test&empresa=Otima%20Test`
+* Confirm `lead_form_submit_special_case` fires
+* Confirm no value/currency is sent
+* Confirm `thank_you_page_view` fires
+* Click WhatsApp button
+* Confirm `whatsapp_click_obrigado` fires
+
+### Test 5 — real no-bill form path
+
+* Submit `/reduza` form using the no-bill path
+* Confirm redirect:
+  `/obrigado?tipo=sem-conta&nome=...&empresa=...`
+* Confirm Google Sheet row appears
+* Confirm internal Callum email arrives
+* Confirm customer email arrives
+* Confirm `lead_form_submit_no_bill` appears in GA4 Realtime
+
+### Test 6 — real bill-upload form path
+
+* Submit `/reduza` form with a bill
+* Confirm redirect:
+  `/obrigado?tipo=completo&nome=...&empresa=...`
+* Confirm Google Sheet row appears
+* Confirm Drive file appears
+* Confirm internal Callum email includes bill URL
+* Confirm customer email arrives
+* Confirm `lead_form_submit` appears in GA4 Realtime
+
+After these pass, report the results. Then I will publish and proceed with the Google Ads launch.

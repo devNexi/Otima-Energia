@@ -182,7 +182,7 @@ export async function sendLandingEmails(params: {
 
   const fromEmail = process.env.OTIMA_EMAIL_FROM || "marketing@otimaenergia.com";
   const internalLeadEmail = process.env.OTIMA_INTERNAL_LEAD_EMAIL || "callum@otimaenergia.com";
-  const ottoFrom = `"Otto - Ótima Energia" <otto@otimaenergia.com>`;
+  const ottoFrom = `"Otto - Ótima Energia" <${fromEmail}>`;
 
   const nodemailer = await import("nodemailer");
   const transporter = nodemailer.createTransport({

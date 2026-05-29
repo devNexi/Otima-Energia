@@ -57,7 +57,7 @@ function ContentCompleto({ nome, tipo }: { nome: string; tipo: string }) {
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page", page: window.location.pathname })}
           className="inline-flex items-center justify-center gap-2 font-semibold text-white rounded-lg px-6 py-3 transition-all"
           style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-completo"
@@ -100,7 +100,7 @@ function ContentSemConta({ nome, empresa, tipo }: { nome: string; empresa: strin
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page", page: window.location.pathname })}
           className="inline-flex items-center justify-center gap-2 font-bold text-white rounded-lg px-8 py-4 text-lg shadow-md transition-all"
           style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-sem-conta"
@@ -172,7 +172,7 @@ function ContentCasoEspecial({ nome, tipo }: { nome: string; tipo: string }) {
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page" })}
+          onClick={() => fireEvent("whatsapp_click_obrigado", { tipo, source: "thank_you_page", page: window.location.pathname })}
           className="inline-flex items-center justify-center gap-2 font-medium text-white rounded-lg px-6 py-3 transition-colors"
           style={{ background: "#25D366" }}
           data-testid="btn-whatsapp-especial"
