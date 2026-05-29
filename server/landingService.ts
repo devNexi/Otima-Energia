@@ -264,7 +264,7 @@ Atenciosamente,
 Equipe Ótima Energia`;
 
   await transporter.sendMail({
-    from: `"Ótima Energia" <${fromEmail}>`,
+    from: `"Otto da Ótima Energia" <otto@otimaenergia.com>`,
     replyTo: internalLeadEmail,
     to: params.email,
     subject: "Recebemos sua solicitação — Ótima Energia",
