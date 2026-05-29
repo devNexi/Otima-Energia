@@ -1,0 +1,176 @@
+# Ótima Energia — Colour Swap Brief
+
+## The single instruction
+The current design is correct. The layouts, components, typography sizes, card structures, animations, section structures, ghost numbers, icon wraps, checklist cards, step cards, navbar, hero, ECOS™ card, CTA band, footer — ALL of it stays exactly as built. 
+
+Do not change any layout, structure, spacing, or component design.
+
+**Change only colours.** Replace every dark background colour with the correct brand light equivalent, and every off-brand colour with the correct brand colour from the palette below.
+
+Apply these changes to every public-facing page:
+/, /parceiros, /seja-cliente, /diagnostico, /faq, /ecos, /sobre, /insights, /lei-mercado-livre, /renovacao-contrato, /gd-para-empresas, /mercado-livre-acl, /gestao-de-energia, /otimizacao-energetica
+
+Do NOT touch: /admin, /portal, /proposta, any auth pages.
+
+---
+
+## Official brand palette
+
+```
+#9e3ffd  — Brand Purple (primary accent)
+#ffffff  — White
+#000000  — Black
+#eff1ea  — Off-white / Cream
+#c88ff5  — Medium Purple
+#dfbaf2  — Light Purple
+#eee7f1  — Palest Lavender
+#736d77  — Muted Grey-Purple
+#431a6d  — Deep Dark Purple
+```
+
+---
+
+## Colour replacement rules
+
+### Section backgrounds
+| Current colour | Replace with |
+|---|---|
+| `#09081e` | `#ffffff` |
+| `#0d0c2b` | `#ffffff` |
+| `#13112a` | `#eee7f1` |
+| `#1a1833` | `#eee7f1` |
+| `#16163f` | `#eee7f1` |
+| `#0f0e24` | `#eff1ea` |
+| Any other near-black or dark navy used as a section background | `#ffffff` or `#eee7f1` (alternate for rhythm) |
+
+**Exceptions — these two sections keep a dark background:**
+1. **Hero section** (the one with the plasma WebGL shader) — keep `#09081e`, do not change
+2. **CTA conversion band** ("Descubra qual é o melhor caminho...") — change from current dark to `#431a6d`
+
+### Text colours
+| Current colour | Replace with |
+|---|---|
+| `#ffffff` (body text on dark backgrounds) | `#000000` (headings) or `#736d77` (body/paragraphs) |
+| `rgba(255,255,255,0.6)` | `#736d77` |
+| `rgba(255,255,255,0.55)` | `#736d77` |
+| `rgba(255,255,255,0.45)` | `#736d77` |
+| `rgba(255,255,255,0.75)` | `#736d77` |
+| `rgba(255,255,255,0.3)` | `#736d77` at 60% opacity |
+| White headings (h1, h2, h3 on newly-light sections) | `#000000` |
+| White sub-headings | `#000000` |
+
+**Exceptions — these keep white text:**
+1. Hero section text — keep white (hero stays dark)
+2. CTA band text — keep white (stays on `#431a6d` dark background)
+3. Footer text — keep white/muted white (footer stays `#000000` background)
+4. ECOS™ card (the right-side UI mockup card) — keep entirely as-is, dark card on light section is intentional
+
+### Card backgrounds and borders
+| Current | Replace with |
+|---|---|
+| `#1a1833` (card background) | `#ffffff` |
+| `rgba(255,255,255,0.05)` (card background) | `#ffffff` |
+| `rgba(158,63,253,0.15)` (card border) | `#dfbaf2` |
+| `rgba(158,63,253,0.12)` (card border) | `#dfbaf2` |
+| `rgba(255,255,255,0.1)` (card border) | `#dfbaf2` |
+| `rgba(255,255,255,0.07)` (card border) | `#dfbaf2` |
+| Card hover border `rgba(158,63,253,0.4)` | `#c88ff5` |
+| Card hover shadow | `0 4px 24px rgba(158,63,253,0.12)` |
+
+### Section tag pills
+| Current | Replace with |
+|---|---|
+| `rgba(158,63,253,0.12)` background | `rgba(158,63,253,0.08)` |
+| `rgba(158,63,253,0.3)` border | `rgba(158,63,253,0.25)` |
+| `#c88ff5` text | `#9e3ffd` |
+
+### Icon wraps
+| Current | Replace with |
+|---|---|
+| `rgba(158,63,253,0.12)` background | `rgba(158,63,253,0.1)` |
+| `rgba(158,63,253,0.25)` border | `#dfbaf2` |
+| Icon colour (keep `#9e3ffd`) | unchanged |
+
+### Ghost step numbers (01, 02, 03, 04)
+| Current | Replace with |
+|---|---|
+| `rgba(158,63,253,0.1)` | `rgba(158,63,253,0.07)` |
+*(These are already very subtle — just ensure they're visible on the new light card backgrounds)*
+
+### Highlight spans (inline headline highlights)
+- Keep `#9e3ffd` background, white text — unchanged
+- Rule: maximum one highlighted phrase per headline, 4 words or fewer
+- On "A maioria das empresas..." headline: highlight covers ONLY "por falta de clareza" — remove highlight from the preceding words if currently over-highlighted
+
+### Checklist / differentiator cards
+| Current | Replace with |
+|---|---|
+| Dark card background | `#ffffff` |
+| `rgba(158,63,253,0.12)` border | `#dfbaf2` |
+| White title text | `#000000` |
+| Muted white body text | `#736d77` |
+| Check icon circle background | `rgba(158,63,253,0.1)` |
+| Check icon circle border | `#dfbaf2` |
+| Checkmark colour (keep `#9e3ffd`) | unchanged |
+
+### Pull-quote ("Nós existimos para nivelar esse campo.")
+| Current | Replace with |
+|---|---|
+| `#c88ff5` text colour | `#9e3ffd` |
+| `#9e3ffd` left border | unchanged |
+
+### Form fields (contact section, /seja-cliente, /diagnostico)
+| Current | Replace with |
+|---|---|
+| `rgba(255,255,255,0.05)` background | `#ffffff` |
+| `rgba(255,255,255,0.1)` border | `#dfbaf2` |
+| White input text | `#000000` |
+| `rgba(255,255,255,0.25)` placeholder | `#736d77` at 60% opacity |
+| Focus border `rgba(158,63,253,0.5)` | `#9e3ffd` |
+| Focus glow `rgba(158,63,253,0.05)` | `rgba(158,63,253,0.06)` |
+| Form section background | `#ffffff` |
+| Field labels | `#736d77`, uppercase, small |
+
+### Navbar
+- Default state (floating over hero): keep transparent, keep white text — hero is still dark
+- Scrolled state: `background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid #eee7f1`
+- Scrolled nav links: `#000000`, hover `#9e3ffd`
+- "ECOS™" link: always `#9e3ffd`
+- "Solicitar Diagnóstico" button: `#9e3ffd` background, white text — unchanged
+
+### CTA band ("Descubra qual é o melhor caminho...")
+- Background: `#431a6d` (replaces whatever dark colour is currently used)
+- Headline: white — unchanged
+- Trust strip text: `rgba(255,255,255,0.65)` — unchanged
+- ✦ bullets: `#c88ff5`
+- CTA button: **inverted** — `background: #ffffff; color: #431a6d; font-weight: 700`
+
+### Footer
+- Background: `#000000` — keep as-is
+- Column headings: `#9e3ffd`
+- Links: `rgba(255,255,255,0.5)`, hover `rgba(255,255,255,0.9)`
+- Tagline: `rgba(255,255,255,0.55)`
+- Copyright: `rgba(255,255,255,0.3)`
+- Social icons: `rgba(255,255,255,0.4)`, hover `#9e3ffd`
+- Top border: `1px solid rgba(255,255,255,0.08)`
+
+### /parceiros specific
+This page uses its own structure. Apply the same colour swap logic:
+- All dark section backgrounds → `#ffffff` or `#eee7f1`
+- All white text on dark → `#000000` (headings) or `#736d77` (body)
+- Comparison table: left column `background: #fef2f2; color: #991b1b`, right column `background: #f0fdf4; color: #166534`
+- Pricing box: KEEP dark — `background: #431a6d`, white text (this is intentional, equivalent to the CTA band)
+- All buttons: `#9e3ffd` background, white text
+
+---
+
+## What stays completely unchanged
+- Every layout, grid, flexbox structure
+- Every component shape, border-radius, padding, margin
+- Every font size, font weight, line height
+- Every animation (plasma hero, hover transitions, toggles)
+- The ECOS™ card (right side UI mockup) — entirely unchanged
+- The plasma WebGL hero shader — entirely unchanged
+- Hero section content, layout, and colours — entirely unchanged
+- All functionality (forms, toggles, file upload, navigation)
+- All copy/text content
