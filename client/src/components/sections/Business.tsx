@@ -48,7 +48,7 @@ export function Business() {
             Cada empresa tem um perfil diferente. Identificamos qual caminho gera mais economia para o seu caso específico.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {solutions.map((s, i) => (
               <Link
                 key={i}
