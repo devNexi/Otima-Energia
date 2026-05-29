@@ -63,21 +63,25 @@ function DifferentiationSection() {
 function WhyOtimaSection() {
   const cards = [
     {
+      num: "01",
       label: "Independência",
       title: "Independência real",
       desc: "Não temos vínculo com nenhuma comercializadora, geradora ou usina. Somos remunerados apenas quando nossa recomendação gera valor real para o cliente.",
     },
     {
+      num: "02",
       label: "Transparência",
       title: "Transparência radical",
       desc: "Você sabe exatamente como ganhamos, quando ganhamos e por que recomendamos cada solução. Nada fica escondido.",
     },
     {
+      num: "03",
       label: "Tecnologia",
       title: "ECOS™ como inteligência",
       desc: "Nosso sistema proprietário analisa consumo, compara ofertas e monitora oportunidades de mercado com IA e automação — sem viés, sem conflito.",
     },
     {
+      num: "04",
       label: "Execução",
       title: "Do diagnóstico à implementação",
       desc: "Não entregamos só um relatório. Cuidamos de toda a execução — migração, contratos, créditos, renovação — em qualquer frente.",
@@ -85,15 +89,85 @@ function WhyOtimaSection() {
   ];
 
   return (
-    <section className="bg-[#eee7f1] py-16 lg:py-20 border-t border-gray-200">
+    <section
+      style={{ background: "#0d0c24" }}
+      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <h2 className="dcvc-section-title mb-16 text-center">Por que a Ótima Energia</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="mb-14 text-center">
+          <div
+            className="inline-block mb-4"
+            style={{
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              padding: "5px 14px",
+              borderRadius: "99px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Por que a Ótima Energia
+          </div>
+          <h2
+            className="text-white"
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700,
+              fontSize: "clamp(1.75rem, 3vw, 2.5rem)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Construída para ser diferente
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {cards.map((card, i) => (
-            <div key={i} className="bg-white p-6 rounded-xl">
-              <p className="text-xs tracking-wide text-[#df0af2] uppercase mb-3 font-semibold">{card.label}</p>
-              <h3 className="text-lg font-semibold text-[#16163f] mb-3">{card.title}</h3>
-              <p className="text-[#736d77] text-sm leading-relaxed">{card.desc}</p>
+            <div
+              key={i}
+              className="relative p-7 rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(158,63,253,0.18)",
+              }}
+            >
+              <span
+                className="absolute top-2 right-4 select-none pointer-events-none font-black"
+                style={{
+                  color: "rgba(158,63,253,0.08)",
+                  fontSize: "5.5rem",
+                  lineHeight: 1,
+                  fontFamily: "'Outfit', sans-serif",
+                }}
+              >
+                {card.num}
+              </span>
+              <p
+                className="text-xs tracking-widest uppercase mb-3 font-semibold relative z-10"
+                style={{ color: "#df0af2" }}
+              >
+                {card.label}
+              </p>
+              <h3
+                className="font-bold mb-3 relative z-10"
+                style={{
+                  color: "rgba(255,255,255,0.92)",
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: "1.05rem",
+                  lineHeight: 1.3,
+                }}
+              >
+                {card.title}
+              </h3>
+              <p
+                className="text-sm leading-relaxed relative z-10"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
+                {card.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -115,19 +189,69 @@ function SegmentsSection() {
   ];
 
   return (
-    <section className="bg-white py-16 lg:py-20 border-t border-gray-200">
+    <section
+      style={{ background: "#09081e" }}
+      className="py-20 lg:py-28 border-t border-[rgba(158,63,253,0.15)]"
+    >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <h2 className="text-2xl lg:text-3xl font-normal tracking-tight text-[#16163f] mb-4 text-center">
-          Quem atendemos
-        </h2>
-        <p className="text-center text-[#736d77] text-lg mb-12 max-w-xl mx-auto">
-          Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
-        </p>
+        <div className="mb-14 text-center">
+          <div
+            className="inline-block mb-4"
+            style={{
+              background: "rgba(158,63,253,0.12)",
+              border: "1px solid rgba(158,63,253,0.3)",
+              color: "#c88ff5",
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              padding: "5px 14px",
+              borderRadius: "99px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Quem Atendemos
+          </div>
+          <h2
+            className="text-white"
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700,
+              fontSize: "clamp(1.75rem, 3vw, 2.5rem)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Qualquer empresa com energia relevante
+          </h2>
+          <p
+            className="mt-3 text-base max-w-xl mx-auto"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            Qualquer empresa com uma conta de energia relevante pode se beneficiar do nosso diagnóstico.
+          </p>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {segments.map((s, i) => (
-            <div key={i} className="bg-[#eee7f1] rounded-xl p-5" data-testid={`segment-${i}`}>
-              <p className="font-semibold text-[#16163f] text-sm mb-1">{s.name}</p>
-              <p className="text-[#736d77] text-xs leading-relaxed">{s.detail}</p>
+            <div
+              key={i}
+              className="p-5 rounded-xl transition-all duration-200 hover:border-[rgba(158,63,253,0.4)]"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(158,63,253,0.18)",
+              }}
+              data-testid={`segment-${i}`}
+            >
+              <p
+                className="font-semibold text-sm mb-1"
+                style={{ color: "rgba(255,255,255,0.88)" }}
+              >
+                {s.name}
+              </p>
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.42)" }}
+              >
+                {s.detail}
+              </p>
             </div>
           ))}
         </div>
