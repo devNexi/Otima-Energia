@@ -96,7 +96,7 @@ function ContentCompleto({ nome, tipo }: { nome: string; tipo: string }) {
         {nome ? `Obrigado, ${nome}!` : "Obrigado!"}
       </p>
       <p className="text-base leading-relaxed mb-8" style={bodyText}>
-        Nossa equipe de especialistas já está analisando sua conta de luz. Você receberá sua análise personalizada e proposta de economia em até 24 horas úteis, pelo email cadastrado ou WhatsApp.
+        Um dos nossos especialistas entrará em contato em até 1 dia útil.
       </p>
 
       <div style={{ ...cardStyle, borderLeft: `3px solid ${BRAND}`, textAlign: "left" }} className="mb-8">
