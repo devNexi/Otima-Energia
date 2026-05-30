@@ -141,8 +141,8 @@ const EMAIL_FOOTER = `
         <tr>
           <td style="padding-top:20px;color:#666;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
             <p style="margin:0 0 4px 0;">—</p>
-            <p style="margin:4px 0;"><strong>Otto</strong></p>
-            <p style="margin:0;color:#888;">Agente de IA da Ótima Energia</p>
+            <p style="margin:4px 0;"><strong>Equipe Ótima Energia</strong></p>
+            <p style="margin:0;color:#888;">Especialistas em Geração Distribuída e Mercado Livre de Energia</p>
             <p style="margin:8px 0;">
               <a href="https://otimaenergia.com" style="color:${EMAIL_BRAND_PURPLE};text-decoration:none;">otimaenergia.com</a>
               &nbsp;·&nbsp;
@@ -255,6 +255,7 @@ export async function sendLandingEmails(params: {
   const fromEmail = process.env.OTIMA_EMAIL_FROM || "marketing@otimaenergia.com";
   const internalLeadEmail = process.env.OTIMA_INTERNAL_LEAD_EMAIL || "callum@otimaenergia.com";
   const ottoFrom = `"Otto - Ótima Energia" <${fromEmail}>`;
+  const marketingFrom = `"Ótima Energia" <${fromEmail}>`;
 
   const smtpHost = process.env.OTIMA_SMTP_HOST || "smtp.gmail.com";
   const smtpPort = parseInt(process.env.OTIMA_SMTP_PORT || "587");
@@ -390,7 +391,7 @@ ${waButton(waCompleto)}`);
   }
 
   await transporter.sendMail({
-    from: ottoFrom,
+    from: marketingFrom,
     replyTo: internalLeadEmail,
     to: params.email,
     subject: "Recebemos sua solicitação — Ótima Energia",

@@ -1,0 +1,52 @@
+REVISION: Customer emails from marketing@ instead of otto@
+The otto@ alias doesn't reliably show a profile photo in Gmail because it's just a send-as alias, not a real Workspace user. The profile photo on marketing@'s Workspace account doesn't propagate to alias-sent emails consistently across email clients.
+Rather than complicate the Workspace setup, change the customer email from-address.
+Required changes
+Customer confirmation emails (all 3 tipo variants)
+Current: "Otto - Ótima Energia" <otto@otimaenergia.com>
+Change to: "Ótima Energia" <marketing@otimaenergia.com>
+Internal lead alert email (to Callum + Renan)
+KEEP AS IS: "Otto - Ótima Energia" <otto@otimaenergia.com>
+Otto persona is useful internally for scanning/filtering. Just the customer-facing emails change.
+Email signature in customer emails
+Update the signature block in customer emails to reflect the new sender:
+html<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; color: #666; font-size: 14px;">
+  <p style="margin: 0 0 4px 0;">—</p>
+  <p style="margin: 4px 0;"><strong>Equipe Ótima Energia</strong></p>
+  <p style="margin: 0; color: #888;">Especialistas em Geração Distribuída e Mercado Livre de Energia</p>
+  <p style="margin: 4px 0;">
+    <a href="https://otimaenergia.com" style="color: #5B3FBA; text-decoration: none;">otimaenergia.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://wa.me/5521997959777" style="color: #5B3FBA; text-decoration: none;">WhatsApp</a>
+  </p>
+</div>
+Remove the "Otto / Agente de IA" framing from customer emails. Replace with "Equipe Ótima Energia" — feels human-team rather than automated, which is the trust signal a new customer wants from a transactional email.
+Internal email signature
+KEEP the Otto signature on internal emails to Callum and Renan. Otto is the "agent" managing leads internally — that framing is useful for our team.
+Continue with the previous redesign brief
+The visual redesign requested in the earlier brief (header with logo, branded container, info boxes, professional footer) still applies. Just swap the from-address and signature as specified above.
+Logo display
+Now that customer emails come from marketing@ which HAS the Otima logo as profile photo in Google Workspace, Gmail will reliably show the logo in the sender area. No Workspace changes needed.
+Acceptance test additions
+
+Send test customer email via /api/admin/test-lead-email
+Open in Gmail
+Verify:
+
+Sender shows as "Ótima Energia" ✓
+Profile photo shows the Otima logo (not generic avatar) ✓
+Signature shows "Equipe Ótima Energia" not "Otto" ✓
+
+
+Submit a real form to trigger internal alert
+Verify internal alert STILL shows:
+
+Sender as "Otto - Ótima Energia" ✓
+Otto signature ✓
+
+
+
+
+Logo URLs while you're at it
+Quick check: when Replit references logo URLs in the email design (header logo, signature logo), they should pull from your actual otimaenergia.com site, not a placeholder.
+Reply to Replit with: "The header logo should match the one used in the /reduza page header. Please pull the URL/file from there. Don't introduce a new logo file — use what exists."
