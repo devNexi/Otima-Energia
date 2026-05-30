@@ -184,12 +184,16 @@ export async function sendLandingEmails(params: {
   const internalLeadEmail = process.env.OTIMA_INTERNAL_LEAD_EMAIL || "callum@otimaenergia.com";
   const ottoFrom = `"Otto - Ótima Energia" <${fromEmail}>`;
 
+  const smtpHost = process.env.OTIMA_SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = parseInt(process.env.OTIMA_SMTP_PORT || "587");
+  const smtpUser = process.env.OTIMA_SMTP_USER || fromEmail;
+
   const nodemailer = await import("nodemailer");
   const transporter = nodemailer.createTransport({
-    host: "smtp.zoho.com",
-    port: 465,
-    secure: true,
-    auth: { user: fromEmail, pass: smtpPass },
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPass },
   });
 
   const companyOrName = params.empresa?.trim() || params.nome;
