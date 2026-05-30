@@ -21,7 +21,7 @@ export default function HeroBackground() {
     const vs = `attribute vec2 p; void main(){ gl_Position=vec4(p,0,1); }`;
 
     const fs = `
-precision highp float;
+precision mediump float;
 uniform float t;
 uniform vec2 res;
 
@@ -33,7 +33,7 @@ vec3 hash3(vec2 p){
 float voronoi(vec2 x, float spd){
   vec2 n=floor(x), f=fract(x);
   float md=8.;
-  for(int j=-2;j<=2;j++) for(int i=-2;i<=2;i++){
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
     vec2 g=vec2(float(i),float(j));
     vec3 o=hash3(n+g);
     vec2 r=g-f+vec2(sin(o.x*6.28+t*spd),sin(o.y*6.28+t*spd*0.7))*0.5;
@@ -46,7 +46,7 @@ float voronoi(vec2 x, float spd){
 float fbm(vec2 p, float spd){
   float v=0., a=0.5;
   mat2 rot=mat2(cos(.5),sin(.5),-sin(.5),cos(.5));
-  for(int i=0;i<4;i++){
+  for(int i=0;i<3;i++){
     v+=a*voronoi(p,spd);
     p=rot*p*2.1;
     a*=0.5;
@@ -114,8 +114,10 @@ void main(){
 
     let start: number | null = null;
     let rafId: number;
+    let visible = true;
 
     function frame(ts: number) {
+      if (!visible) { rafId = requestAnimationFrame(frame); return; }
       if (!start) start = ts;
       const elapsed = (ts - start) / 1000;
       gl!.uniform1f(tLoc, elapsed);
@@ -126,8 +128,15 @@ void main(){
 
     rafId = requestAnimationFrame(frame);
 
+    const observer = new IntersectionObserver(
+      ([entry]) => { visible = entry.isIntersecting; },
+      { threshold: 0 }
+    );
+    observer.observe(canvas);
+
     return () => {
       cancelAnimationFrame(rafId);
+      observer.disconnect();
       window.removeEventListener('resize', resize);
     };
   }, []);

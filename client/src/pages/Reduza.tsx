@@ -368,17 +368,15 @@ function RedzaInner() {
             </p>
           </div>
 
-          {/* Right 2/5 — WebGL card with result callout (desktop only) */}
+          {/* Right 2/5 — Result callout card (desktop only) */}
           <div className="md:col-span-2 hidden md:flex justify-center">
             <div
               className="relative rounded-2xl overflow-hidden w-full max-w-sm"
               style={{ minHeight: 420, border: "1px solid rgba(255,255,255,0.12)" }}
             >
-              {/* Inner canvas — re-uses WebGL but as a contained card */}
-              <div className="absolute inset-0">
-                <HeroBackground />
-              </div>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(9,8,30,0.15) 0%, rgba(9,8,30,0.72) 55%, rgba(9,8,30,0.88) 100%)" }} />
+              {/* CSS gradient instead of a second WebGL context */}
+              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 35% 25%, rgba(158,63,253,0.65) 0%, rgba(80,15,170,0.5) 45%, rgba(9,8,30,0.97) 100%)" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(9,8,30,0.05) 0%, rgba(9,8,30,0.65) 55%, rgba(9,8,30,0.88) 100%)" }} />
               <div className="absolute inset-0 flex flex-col px-7 pt-12 pb-7 text-white">
                 {/* Label pinned to top */}
                 <p className="text-white/55 text-xs font-semibold uppercase tracking-widest">Exemplo de resultado</p>
