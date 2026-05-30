@@ -345,7 +345,6 @@ Chamar no WhatsApp imediatamente.`;
   <div style="background:#f3f0f8;padding:12px 24px;font-size:11px;color:#999;border-radius:0 0 8px 8px;">
     Ótima Energia · otto@otimaenergia.com · otimaenergia.com
   </div>
-  ${OTTO_SIGNATURE.replace('style="', 'style="padding:0 24px 16px;')}
 </body>
 </html>`;
 
