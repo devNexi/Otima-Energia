@@ -17,6 +17,7 @@ const navLinks = [
   { name: "SOBRE", href: "/sobre", hasSub: false },
   { name: "PARCEIROS", href: "/parceiros", hasSub: false },
   { name: "INSIGHTS", href: "/insights", hasSub: false },
+  { name: "CONTATO", href: "/contato", hasSub: false },
 ];
 
 export function Navbar() {
@@ -200,6 +201,7 @@ export function Navbar() {
                   { name: "FAQ", href: "/faq" },
                   { name: "Parceiros", href: "/parceiros" },
                   { name: "Insights", href: "/insights" },
+                  { name: "Contato", href: "/contato" },
                   { name: "Portal do Cliente", href: "/portal-cliente" },
                 ].map((link) => (
                   <Link

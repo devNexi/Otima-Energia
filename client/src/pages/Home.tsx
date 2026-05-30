@@ -4,7 +4,6 @@ import { Footer } from "@/components/layout/Footer";
 import { Hero } from "@/components/sections/Hero";
 import { Process } from "@/components/sections/Process";
 import { Business } from "@/components/sections/Business";
-import { Contact } from "@/components/sections/Contact";
 import { CheckCircle, ArrowRight, Building2, GraduationCap, HeartPulse, Hotel, ShoppingCart, Layers, Factory, Building } from "lucide-react";
 import { Link } from "wouter";
 
@@ -592,16 +591,6 @@ function FinalCta() {
       className="border-t border-[rgba(255,255,255,0.04)]"
       style={{ background: "#2d0f52", position: "relative", overflow: "hidden", minHeight: "380px" }}
     >
-      {/* Grid texture */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: [
-            "repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 80px)",
-            "repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 80px)",
-          ].join(", "),
-        }}
-      />
       {/* Glow orb 1 */}
       <div
         className="absolute pointer-events-none"
@@ -795,7 +784,6 @@ export default function Home() {
         <EcosSection />
         <GoogleReviews />
         <FinalCta />
-        <Contact />
       </main>
       <Footer />
     </div>
