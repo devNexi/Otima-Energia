@@ -15,12 +15,12 @@ function DifferentiationSection() {
       desc: "Só colocamos na mesa comercializadoras e geradores com capacidade financeira sólida, histórico comprovado e contratos transparentes. Nenhum player duvidoso, nenhuma oferta sem sustentação.",
     },
     {
-      title: "Mostramos o quadro completo — não uma solução empurrada",
+      title: "Mostramos o quadro completo, não uma solução empurrada",
       desc: "Analisamos GD, ACL, Gestão de Energia e otimização no local. Você vê todas as opções viáveis e escolhe com clareza. Nunca com pressão.",
     },
     {
       title: "Para sua empresa, o serviço é gratuito",
-      desc: "O diagnóstico não tem custo. Somos remunerados pelos fornecedores quando nossa recomendação gera valor real — e você sempre sabe exatamente como e por quem somos pagos.",
+      desc: "O diagnóstico não tem custo. Somos remunerados pelos fornecedores quando nossa recomendação gera valor real, e você sempre sabe exatamente como e por quem somos pagos.",
     },
     {
       title: "Você decide com informação, não com urgência",
@@ -31,7 +31,7 @@ function DifferentiationSection() {
   return (
     <section
       style={{ background: "#09081e" }}
-      className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.04)]"
+      className="py-16 lg:py-20 border-t border-[rgba(255,255,255,0.05)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-start">
@@ -128,20 +128,20 @@ function WhyOtimaSection() {
       num: "03",
       label: "Tecnologia",
       title: "ECOS™ como inteligência",
-      desc: "Nosso sistema proprietário analisa consumo, compara ofertas e monitora oportunidades de mercado com IA e automação — sem viés, sem conflito.",
+      desc: "Nosso sistema proprietário analisa consumo, compara ofertas e monitora oportunidades de mercado com IA e automação, sem viés, sem conflito.",
     },
     {
       num: "04",
       label: "Execução",
       title: "Do diagnóstico à implementação",
-      desc: "Não entregamos só um relatório. Cuidamos de toda a execução — migração, contratos, créditos, renovação — em qualquer frente.",
+      desc: "Não entregamos só um relatório. Cuidamos de toda a execução: migração, contratos, créditos, renovação, em qualquer frente.",
     },
   ];
 
   return (
     <section
       style={{ background: "#13112a" }}
-      className="py-20 lg:py-28 border-t border-[rgba(255,255,255,0.04)]"
+      className="py-20 lg:py-28 border-t border-[rgba(255,255,255,0.05)]"
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="mb-14 text-center">
@@ -424,9 +424,9 @@ function EcosSection() {
     { label: "ECONOMIA POTENCIAL EST.", val: "R$ 7.234/mês", green: true },
   ];
   const gdOffers = [
-    { name: "Gerador Solar — Região Sudeste", badge: "Melhor desconto", val: "35% desc.", hi: true },
-    { name: "Gerador Solar — Interior SP", badge: null, val: "28% desc.", hi: false },
-    { name: "Gerador Eólico — Região Nordeste", badge: null, val: "22% desc.", hi: false },
+    { name: "Gerador Solar, Região Sudeste", badge: "Melhor desconto", val: "35% desc.", hi: true },
+    { name: "Gerador Solar, Interior SP", badge: null, val: "28% desc.", hi: false },
+    { name: "Gerador Eólico, Região Nordeste", badge: null, val: "22% desc.", hi: false },
   ];
   const aclOffers = [
     { name: "Comercializadora A", badge: "Melhor preço", val: "R$ 678/MWh", hi: true },
@@ -441,8 +441,8 @@ function EcosSection() {
     ? "* Nomes dos geradores são ilustrativos. Os parceiros reais são apresentados após o diagnóstico, preservando a confidencialidade comercial."
     : "* Nomes das comercializadoras são ilustrativos. As ofertas reais são apresentadas após o diagnóstico, preservando a confidencialidade comercial.";
   const verdict = tab === 'gd'
-    ? "Desconto disponível — oportunidade identificada"
-    : "Abaixo da média — oportunidade identificada";
+    ? "Desconto disponível. Oportunidade identificada"
+    : "Abaixo da média. Oportunidade identificada";
 
   return (
     <section className="relative overflow-hidden py-16 lg:py-24" style={{ background: "linear-gradient(135deg, #0a0920 0%, #16163f 60%, #1a0835 100%)" }}>
@@ -464,7 +464,7 @@ function EcosSection() {
               Inteligência que orienta cada decisão
             </p>
             <p className="text-lg leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.65)", maxWidth: "480px" }}>
-              O sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para garantir que cada decisão seja tomada no momento certo, com as informações certas — sem conflito, sem viés.
+              O sistema proprietário da Ótima Energia que combina IA, automação e dados de mercado para garantir que cada decisão seja tomada no momento certo, com as informações certas. Sem conflito, sem viés.
             </p>
             <ul className="space-y-4 mb-10">
               {[
@@ -586,59 +586,137 @@ function EcosSection() {
 }
 
 function FinalCta() {
+  const [hovered, setHovered] = useState(false);
   return (
     <section
-      style={{ background: "#431a6d" }}
-      className="py-24 lg:py-32 border-t border-[rgba(255,255,255,0.04)]"
+      className="border-t border-[rgba(255,255,255,0.04)]"
+      style={{ background: "#2d0f52", position: "relative", overflow: "hidden", minHeight: "380px" }}
     >
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12 text-center">
-        <h2
-          className="mb-6 mx-auto max-w-3xl"
+      {/* Grid texture */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            "repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 80px)",
+            "repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 80px)",
+          ].join(", "),
+        }}
+      />
+      {/* Glow orb 1 */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(158,63,253,0.4) 0%, transparent 65%)",
+          top: -120, left: -80,
+        }}
+      />
+      {/* Glow orb 2 */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: 300, height: 300, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(200,143,245,0.25) 0%, transparent 65%)",
+          bottom: -80, right: -40,
+        }}
+      />
+
+      {/* Two-column layout */}
+      <div
+        className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2"
+        style={{ minHeight: 380 }}
+      >
+        {/* LEFT COLUMN */}
+        <div
+          className="flex flex-col justify-center"
           style={{
-            fontFamily: "'Outfit', sans-serif",
-            fontWeight: 700,
-            fontSize: "clamp(1.5rem, 3vw, 2rem)",
-            letterSpacing: "-0.02em",
-            color: "#ffffff",
+            padding: "56px 48px 56px 52px",
+            borderRight: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          Descubra qual é o melhor caminho para reduzir a conta de energia da sua empresa.
-        </h2>
-
-        <div
-          className="flex flex-wrap justify-center gap-6 mb-10"
-          style={{ marginTop: "24px" }}
-        >
-          {[
-            "Diagnóstico gratuito",
-            "Sem compromisso",
-            "Em até 5 dias úteis",
-          ].map((item) => (
-            <span
-              key={item}
-              className="flex items-center gap-1.5"
-              style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.7)" }}
-            >
-              <span style={{ color: "#c88ff5" }}>✦</span> {item}
-            </span>
-          ))}
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c88ff5", marginBottom: 16, fontFamily: "'Sora', sans-serif" }}>
+            Análise 100% neutra
+          </p>
+          <h2 style={{ fontSize: "clamp(1.4rem, 3vw, 1.9rem)", fontWeight: 800, color: "#ffffff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 20, fontFamily: "'Outfit', sans-serif" }}>
+            Pare de pagar mais do que deveria. Descubra isso agora,{" "}
+            <span style={{ color: "#c88ff5" }}>de graça.</span>
+          </h2>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>
+            Trabalhamos com todas as principais comercializadoras e geradores do país. Não temos preferência por nenhuma delas. O que importa é o que é certo para{" "}
+            <span style={{ color: "#ffffff", fontWeight: 700 }}>você</span>.
+          </p>
         </div>
 
-        <Link
-          href="/seja-cliente"
-          className="inline-flex items-center gap-3 px-8 py-4 text-base font-bold transition-all hover:opacity-90 hover:-translate-y-0.5"
-          style={{
-            background: "#ffffff",
-            color: "#431a6d",
-            borderRadius: "8px",
-            fontFamily: "'Sora', sans-serif",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-          }}
-          data-testid="home-final-cta"
-        >
-          Solicitar Diagnóstico Gratuito
-          <ArrowRight className="w-5 h-5" />
-        </Link>
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col justify-center" style={{ padding: "56px 48px 56px 52px" }}>
+          {/* Neutral badge */}
+          <div
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 8, padding: "10px 14px", marginBottom: 28, width: "fit-content",
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 6px rgba(74,222,128,0.6)", flexShrink: 0, display: "inline-block" }} />
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 500, lineHeight: 1.4 }}>
+              Parceiros em todas as frentes: GD, ACL, Gestão e Otimização. Sem vínculo, sem comissão escondida.
+            </span>
+          </div>
+
+          {/* Proof points */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
+            {[
+              "Diagnóstico completo sem custo algum para sua empresa",
+              "Você escolhe o fornecedor. Nós só mostramos o quadro completo",
+              "Se não houver economia, você saberá disso também. Sem pressão",
+              "Resultado em até 5 dias úteis, sem burocracia",
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: "rgba(158,63,253,0.2)", border: "1px solid rgba(158,63,253,0.4)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, fontSize: 10, color: "#c88ff5",
+                }}>✓</span>
+                {item}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Button */}
+          <Link
+            href="/seja-cliente"
+            data-testid="home-final-cta"
+            style={{
+              background: hovered ? "#f0e8ff" : "#ffffff",
+              color: "#2d0f52",
+              fontWeight: 800,
+              fontSize: 15,
+              padding: "16px 28px",
+              borderRadius: 8,
+              border: "none",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+              display: "block",
+              textAlign: "center",
+              marginBottom: 12,
+              cursor: "pointer",
+              transition: "all 0.2s",
+              fontFamily: "'Sora', sans-serif",
+              transform: hovered ? "translateY(-1px)" : "translateY(0)",
+              textDecoration: "none",
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+          >
+            Quero saber se estou pagando certo →
+          </Link>
+
+          {/* Reassurance line */}
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", textAlign: "center", lineHeight: 1.5 }}>
+            Gratuito · Sem compromisso ·{" "}
+            <span style={{ color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>Sem conflito de interesse</span>
+          </p>
+        </div>
       </div>
     </section>
   );

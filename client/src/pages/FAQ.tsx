@@ -102,7 +102,7 @@ export default function FAQ() {
                       <button
                         onClick={() => toggleFaq(sectionIdx, itemIdx)}
                         className="w-full flex items-center justify-between p-6 text-left transition-colors"
-                        style={{ background: openIndex === key ? "rgba(158,63,253,0.08)" : "rgba(255,255,255,0.06)" }}
+                        style={{ background: openIndex === key ? "rgba(158,63,253,0.08)" : "rgba(255,255,255,0.07)" }}
                         data-testid={`faq-question-${sectionIdx}-${itemIdx}`}
                       >
                         <span className="text-lg font-medium text-white pr-4">

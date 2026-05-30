@@ -123,8 +123,8 @@ function PartnerForm() {
         <button key={o.val} type="button" onClick={() => onChange(o.val)}
           className="rounded-xl px-3 py-2.5 text-xs font-medium text-left transition-all duration-200"
           style={{
-            background: value === o.val ? "rgba(158,63,253,0.15)" : "rgba(255,255,255,0.04)",
-            border: value === o.val ? "1px solid #9e3ffd" : "1px solid rgba(255,255,255,0.1)",
+            background: value === o.val ? "rgba(158,63,253,0.15)" : "rgba(255,255,255,0.07)",
+            border: value === o.val ? "1px solid #9e3ffd" : "1px solid rgba(255,255,255,0.12)",
             color: value === o.val ? "#c88ff5" : "rgba(255,255,255,0.55)",
           }}
         >
@@ -234,7 +234,7 @@ function PartnerForm() {
             {radioOpts("rede", [{ val: "sim", label: "Sim" }, { val: "parcialmente", label: "Parcialmente" }, { val: "nao", label: "Ainda não" }], f2.rede, v => setF2({ ...f2, rede: v }))}
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>Voltar</button>
+            <button onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}>Voltar</button>
             <button onClick={() => { if (!f2.vendeuB2b || !f2.experiencia || !f2.horas || !f2.rede) return; setStep(3); }}
               className="flex-[2] py-3 rounded-xl text-sm font-semibold" style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
               Continuar candidatura <ChevronRight className="inline w-4 h-4" />
@@ -254,8 +254,8 @@ function PartnerForm() {
             <button key={item.key} type="button" onClick={() => setF3({ ...f3, [item.key]: !(f3 as any)[item.key] })}
               className="w-full flex items-start gap-3 p-4 rounded-xl text-left transition-all"
               style={{
-                background: (f3 as any)[item.key] ? "rgba(158,63,253,0.12)" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${(f3 as any)[item.key] ? "rgba(158,63,253,0.4)" : "rgba(255,255,255,0.1)"}`,
+                background: (f3 as any)[item.key] ? "rgba(158,63,253,0.12)" : "rgba(255,255,255,0.07)",
+                border: `1px solid ${(f3 as any)[item.key] ? "rgba(158,63,253,0.4)" : "rgba(255,255,255,0.12)"}`,
               }}>
               <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                 style={{ background: (f3 as any)[item.key] ? "#9e3ffd" : "rgba(255,255,255,0.06)", border: `1px solid ${(f3 as any)[item.key] ? "#9e3ffd" : "rgba(255,255,255,0.15)"}` }}>
@@ -271,7 +271,7 @@ function PartnerForm() {
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <div className="flex gap-3">
-            <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>Voltar</button>
+            <button onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)" }}>Voltar</button>
             <button onClick={submit} disabled={loading}
               className="flex-[2] py-3 rounded-xl text-sm font-semibold disabled:opacity-60 transition-all"
               style={{ background: "linear-gradient(135deg,#9e3ffd,#c88ff5)", color: "#fff" }}>
@@ -290,7 +290,7 @@ export default function Parceiros() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const cardBg = "rgba(255,255,255,0.07)";
-  const cardBorder = "1px solid rgba(255,255,255,0.1)";
+  const cardBorder = "1px solid rgba(255,255,255,0.12)";
 
   return (
     <div className="parceiros-page" style={{ background: "#09081e", color: "#ffffff", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>

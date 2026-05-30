@@ -128,7 +128,7 @@ export default function MercadoLivreAcl() {
                   <p className="text-sm uppercase tracking-wide font-medium text-white/80">{phase.phase}</p>
                   <p className="text-lg font-medium text-white">{phase.title}</p>
                 </div>
-                <div className="p-6" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <div className="p-6" style={{ background: "rgba(255,255,255,0.07)" }}>
                   <ul className="space-y-3">
                     {phase.items.map((item, j) => (
                       <li key={j} className="flex items-start gap-3">

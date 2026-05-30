@@ -100,7 +100,7 @@ export default function Ecos() {
                     Sem conflito. Sem viés.
                   </h3>
                   <p className="text-white/80" style={{ fontSize: "1rem", lineHeight: 1.7 }}>
-                    O ECOS™ não tem interesse em qual solução você escolhe. Ele só recomenda uma mudança quando há ganho real projetado — e você sempre vê os dados que sustentam a recomendação.
+                    O ECOS™ não tem interesse em qual solução você escolhe. Ele só recomenda uma mudança quando há ganho real projetado. Você sempre vê os dados que sustentam a recomendação.
                   </p>
                 </div>
                 <ul className="space-y-3">
@@ -108,7 +108,7 @@ export default function Ecos() {
                     "Recomendações documentadas e rastreáveis",
                     "Dados de mercado atualizados em tempo real",
                     "Cobertura de GD, ACL, Gestão e Otimização",
-                    "Análise independente — sem vínculo com fornecedores",
+                    "Análise independente, sem vínculo com fornecedores",
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#9e3ffd" }} />

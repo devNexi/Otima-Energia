@@ -20,7 +20,7 @@ export default function Solutions() {
                 Não existe uma única resposta para todos. Cada empresa tem um perfil de consumo, uma tarifa de distribuidora e objetivos diferentes.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
-                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico — seja via Geração Distribuída (GD), no Mercado Livre (ACL), na gestão contínua de contratos ou na otimização no local.
+                A Ótima Energia existe para encontrar a rota mais econômica para o seu caso específico: seja via Geração Distribuída (GD), no Mercado Livre (ACL), na gestão contínua de contratos ou na otimização no local.
               </p>
               <p className="text-lg lg:text-xl text-[#736d77] leading-relaxed mb-4">
                 Atuamos como seu consultor independente: analisamos todas as opções com dados reais, recomendamos o melhor caminho e executamos toda a implementação. Sem viés. Sem conflito.
@@ -199,7 +199,7 @@ export default function Solutions() {
                   Menos desperdício | Mais resultado na operação
                 </p>
                 <p className="text-[#736d77] leading-relaxed mb-6">
-                  Identificamos desperdícios na operação, revisamos o perfil de consumo e a adequação tarifária, e entregamos um plano concreto de redução — com as ações de maior impacto priorizadas.
+                  Identificamos desperdícios na operação, revisamos o perfil de consumo e a adequação tarifária, e entregamos um plano concreto de redução, com as ações de maior impacto priorizadas.
                 </p>
                 <Link 
                   href="/otimizacao-energetica"
