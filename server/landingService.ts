@@ -125,9 +125,9 @@ const EMAIL_LOGO_URL = "https://otimaenergia.com/logo-email.png";
 const EMAIL_BRAND_PURPLE = "#5B3FBA";
 
 const EMAIL_HEADER = `
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${EMAIL_BRAND_PURPLE};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0ebff;">
   <tr>
-    <td align="center" style="padding:24px;">
+    <td align="center" style="padding:28px 24px;">
       <img src="${EMAIL_LOGO_URL}" alt="Ótima Energia" width="140" style="display:block;width:140px;max-width:140px;height:auto;" />
     </td>
   </tr>
