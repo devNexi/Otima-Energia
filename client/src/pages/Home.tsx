@@ -184,7 +184,7 @@ function WhyOtimaSection() {
               }}
             >
               <span
-                className="absolute top-2 right-4 select-none pointer-events-none font-black"
+                className="absolute top-8 right-4 select-none pointer-events-none font-black"
                 style={{
                   color: "rgba(255,255,255,0.05)",
                   fontSize: "5.5rem",
