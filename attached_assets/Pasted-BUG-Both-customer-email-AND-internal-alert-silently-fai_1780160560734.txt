@@ -1,0 +1,93 @@
+BUG: Both customer email AND internal alert silently failing on real form submissions
+Symptom
+A real form submission via https://otimaenergia.com/reduza on 30 May 2026 completed successfully:
+
+✅ Lead saved to Google Sheet with all data (verified)
+❌ Customer confirmation email to lead's email address: NOT received
+❌ Internal lead alert to callum@otimaenergia.com and Renan: NOT received
+
+Both emails should be sent by sendLandingEmails in landingService.ts. Per the original architecture, email failures after Sheet success are non-fatal but should be logged loudly.
+What I need you to investigate
+Step 1 — Pull the server logs for the failed submission
+The Lead ID for the failed test is in the Google Sheet — it's the most recent row dated 30 May 2026. Use the Lead ID to find the corresponding server log entries.
+Look specifically for:
+
+[Landing] CRITICAL: Email failed for lead ${leadId} — confirms email function ran but failed
+Any error stack trace around the time of the submission
+Any SMTP connection errors
+Any auth failures (otto@otimaenergia.com is configured as a send-as alias via marketing@'s SMTP credentials)
+
+Step 2 — Test the admin test endpoint
+Hit POST /api/admin/test-lead-email with an admin session.
+Two possible outcomes:
+
+Test email arrives → the email function works in isolation, the bug is in how sendLandingEmails is being called from the real form submission path
+Test email also fails → the email infrastructure itself is broken (SMTP credentials, domain authentication, alias config)
+
+Tell me which outcome you got.
+Step 3 — Check these specific failure modes
+A) SMTP credentials
+Verify the secrets are still valid:
+
+OTIMA_SMTP_HOST
+OTIMA_SMTP_PORT
+OTIMA_SMTP_USER (should be marketing@otimaenergia.com)
+OTIMA_SMTP_PASS
+OTIMA_EMAIL_FROM (should be otto@otimaenergia.com or have the Otto alias configured in code)
+OTIMA_INTERNAL_LEAD_EMAIL (should be callum@otimaenergia.com)
+
+If marketing@'s password was changed/rotated recently OR if 2FA was added without an app password, SMTP auth will fail silently.
+B) Send-As alias for otto@
+We configured Otto to send via marketing@'s SMTP auth. If the Google Workspace "Send mail as" setting for otto@ was changed, revoked, or never properly verified, the SMTP server may be rejecting sends with that From header.
+Test directly from Gmail web interface:
+
+Log into marketing@otimaenergia.com
+Compose new email
+Click the From dropdown → select otto@otimaenergia.com
+Send a test to callum@otimaenergia.com
+If it arrives → alias works, problem is in the code's auth handling
+If it bounces or doesn't arrive → alias is broken at the Workspace level, needs reconfiguration
+
+C) Recent code changes that may have broken email
+Did anything change after the last successful email test (which was earlier on 30 May 2026)? Specifically:
+
+Any environment variable rotations
+Any deploy that touched landingService.ts, email config, or routes.ts
+Any DNS changes to otimaenergia.com (SPF/DKIM/DMARC records)
+Any Google Workspace setting changes
+
+Step 4 — Verify the email function is actually being called
+Add temporary debug logging at the top of sendLandingEmails in landingService.ts:
+typescriptconsole.log(`[Landing] sendLandingEmails called for lead ${leadId} with tipo=${tipo}`);
+And at the start of each email send within that function:
+typescriptconsole.log(`[Landing] Attempting to send internal alert for ${leadId}`);
+// ... send code ...
+console.log(`[Landing] Internal alert send result for ${leadId}:`, result);
+
+console.log(`[Landing] Attempting to send customer email for ${leadId}`);
+// ... send code ...
+console.log(`[Landing] Customer email send result for ${leadId}:`, result);
+Then do another test form submission. Check logs.
+If you see NO sendLandingEmails called log for the submission → the function isn't being invoked at all from the route handler. Bug is in routes.ts.
+If you see the log but no "send result" logs → it's crashing somewhere inside before reaching either send call.
+If you see "send result" logs with error/null values → SMTP is failing on send.
+Step 5 — Check spam folders ONE more time
+Just to rule it out:
+
+callum@otimaenergia.com spam folder — search for "Novo lead" or "Ótima"
+Renan's spam folder — same search
+The test lead's email address used in the form — spam folder for "Recebemos sua solicitação" or "otima"
+
+Sometimes new from-addresses (otto@) hit spam initially even when delivery technically succeeded. If found in spam, the bug isn't email failure but deliverability — different fix.
+Required output from you
+Reply with:
+
+Did the test endpoint succeed or fail?
+What's in the server logs for the failed real submission?
+Result of the manual Gmail send-as-otto test
+Confirmation that all 6 environment variables in 3A are still set correctly
+Whether anything was deployed/changed between the last working email test and now
+
+Priority
+Critical — campaigns are LIVE. Real leads from paid traffic can arrive any moment. If they all go to the Sheet but neither customer nor internal alerts fire, every lead is at risk of being missed and the customer's first impression of Otima is zero communication.
+Until this is fixed, I am manually monitoring the Sheet every 30 minutes to catch new leads, but this isn't sustainable.
