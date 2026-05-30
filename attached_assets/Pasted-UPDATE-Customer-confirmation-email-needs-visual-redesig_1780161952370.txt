@@ -1,0 +1,173 @@
+UPDATE: Customer confirmation email needs visual redesign
+The current customer email is functional but looks like a plain transactional system message. It needs to be redesigned as a branded B2B communication that matches the quality of the /reduza landing page.
+Required design changes
+1. Header section (NEW)
+Add a header at the top of every customer email (all 3 tipo variants) with:
+
+Ótima Energia logo centered, ~140px wide
+Brand purple background bar (#5B3FBA or whatever the actual brand purple hex is on /reduza — pull from the live site CSS to match exactly)
+Padding: 24px top/bottom
+Logo should be hosted on otimaenergia.com (NOT inlined as base64 — keeps email size small and renders reliably). Use the same logo file that's on the /reduza landing page.
+
+2. Body styling
+Wrap the existing body content in a styled container:
+
+Max-width: 600px, centered
+White background
+Padding: 32px
+Font family: system fonts (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)
+Font size: 16px body, 24px any inline headings
+Line height: 1.6
+Text color: #222 for body, #666 for secondary
+
+3. CTA button styling (already styled — verify)
+The green WhatsApp button is fine. Keep it. Just confirm:
+
+Centered alignment with padding above/below the button
+Adequate spacing from surrounding text (24px top/bottom margin on the button container)
+
+4. Otto signature — keep with one fix
+Current signature is correct. But add the Otima logo BELOW the signature as well (smaller, ~80px wide, opacity 0.7 for visual subtlety):
+html<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; color: #666; font-size: 14px;">
+  <p style="margin: 0 0 4px 0;">—</p>
+  <p style="margin: 4px 0;"><strong>Otto</strong></p>
+  <p style="margin: 0; color: #888;">Agente de IA da Ótima Energia</p>
+  <p style="margin: 4px 0;">
+    <a href="https://otimaenergia.com" style="color: #5B3FBA; text-decoration: none;">otimaenergia.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://wa.me/5521997959777" style="color: #5B3FBA; text-decoration: none;">WhatsApp</a>
+  </p>
+  <div style="margin-top: 20px;">
+    <img src="https://otimaenergia.com/logo-small.png" alt="Ótima Energia" style="width: 80px; opacity: 0.7;" />
+  </div>
+</div>
+5. NEW — Footer section
+Add a footer below Otto's signature with company info:
+html<div style="margin-top: 32px; padding: 24px; background-color: #f5f5f5; color: #888; font-size: 12px; text-align: center; line-height: 1.5;">
+  <p style="margin: 0 0 4px 0;">Ótima Energia</p>
+  <p style="margin: 0 0 4px 0;">Especialistas em Geração Distribuída e Mercado Livre de Energia</p>
+  <p style="margin: 0 0 4px 0;">Atendemos empresas em 23 estados do Brasil</p>
+  <p style="margin: 8px 0 0 0;">
+    <a href="https://otimaenergia.com" style="color: #5B3FBA; text-decoration: none;">otimaenergia.com</a>
+  </p>
+</div>
+If you have an actual company address/CNPJ to include, add it. Brazilian B2B emails benefit from explicit company info for trust.
+6. Visual hierarchy fixes per tipo variant
+tipo=completo body should be:
+[HEADER WITH LOGO]
+
+Olá [Nome],
+
+Recebemos sua conta de luz e seus dados!
+
+Nossa equipe de especialistas vai analisar tudo e entrar em contato em até 24 horas úteis.
+
+[INFO BOX with light purple background and border]
+Não precisa fazer mais nada agora. Vamos cuidar de tudo a partir daqui.
+
+[Subtle WhatsApp section]
+Se preferir falar conosco agora pelo WhatsApp:
+
+[WHATSAPP BUTTON]
+
+[OTTO SIGNATURE]
+
+[FOOTER]
+tipo=sem-conta body should be:
+[HEADER WITH LOGO]
+
+Olá [Nome],
+
+Recebemos seus dados!
+
+[INFO BOX - YELLOW/ORANGE background to convey "action needed"]
+Para fazermos sua análise gratuita o mais rápido possível, precisamos da sua conta de luz mais recente.
+
+A forma mais rápida é enviar agora pelo WhatsApp:
+
+[WHATSAPP BUTTON - LARGE, prominent]
+
+Ou responda este email anexando o PDF/foto da conta.
+
+[Small text]
+Sem a conta, nossa equipe entrará em contato pelo telefone informado para coletar as informações necessárias.
+
+[OTTO SIGNATURE]
+
+[FOOTER]
+tipo=caso-especial body should be:
+[HEADER WITH LOGO]
+
+Olá [Nome],
+
+Recebemos sua solicitação.
+
+[INFO BOX - GRAY/NEUTRAL background]
+Seu caso está um pouco fora do perfil padrão que atendemos (empresas com conta de luz acima de R$ 5.000/mês), mas vamos fazer uma revisão individual para ver se conseguimos te ajudar.
+
+[Small text]
+Esse processo pode levar um pouco mais que o normal.
+
+Se tiver dúvidas, fale conosco pelo WhatsApp:
+
+[WHATSAPP BUTTON - smaller, secondary]
+
+[OTTO SIGNATURE]
+
+[FOOTER]
+7. Info box component (NEW)
+The "info box" referenced above should be a reusable component:
+html<div style="background-color: #f8f5ff; border-left: 4px solid #5B3FBA; padding: 16px 20px; margin: 24px 0; border-radius: 4px;">
+  [content]
+</div>
+Variants:
+
+tipo=completo info box: light purple (above) — "calm reassurance"
+tipo=sem-conta info box: light yellow (#fff8e1 background, #f5a623 border) — "action needed"
+tipo=caso-especial info box: light gray (#f5f5f5 background, #999 border) — "special handling"
+
+8. Logo asset
+Use the existing Ótima Energia logo from the /reduza landing page. Pull the URL from the live site. If there isn't a clean version available, create one:
+
+Header version: ~140px wide, white or transparent on purple background
+Footer signature version: ~80px wide, can be color version on light background
+
+If you need to create new logo URLs, host them at:
+
+https://otimaenergia.com/email/logo-header.png (for header, white version)
+https://otimaenergia.com/email/logo-small.png (for signature, color version)
+
+Internal email — minor update
+The internal alert email is fine functionally. Just add the same logo header to it for consistency. Don't redesign the body — Renan and Callum need the dense info layout to scan quickly.
+Mobile rendering
+Test rendered output on:
+
+Gmail mobile (iOS + Android)
+Outlook mobile
+Apple Mail
+Yahoo Mail
+
+Common issues to verify don't occur:
+
+Logo image breaking layout if it fails to load
+Info box border-radius not rendering on Outlook
+Button width not respecting padding on small screens
+
+If anything breaks, fix the HTML to use table-based layouts (more email-client compatible) instead of div-based.
+Acceptance test
+After deploying:
+
+Test endpoint: POST /api/admin/test-lead-email
+Verify email arrives with:
+
+Logo in header ✓
+Branded purple header bar ✓
+Body in styled container ✓
+Info box renders with correct background color ✓
+WhatsApp button renders correctly ✓
+Otto signature with small logo below ✓
+Footer renders ✓
+
+
+Test all 3 tipo variants via real form submission
+Verify mobile rendering on at least Gmail iOS

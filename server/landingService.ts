@@ -121,26 +121,98 @@ function buildWhatsAppLinks(rawPhone: string, nome: string, empresa: string): { 
 }
 
 // ── Email building blocks ──────────────────────────────────────────────────────
-const OTTO_SIGNATURE = `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e5e5;color:#666;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <p style="margin:0 0 4px 0;">—</p>
-  <p style="margin:4px 0;"><strong>Otto</strong></p>
-  <p style="margin:0;color:#888;">Agente de IA da Ótima Energia</p>
-  <p style="margin:4px 0;">
-    <a href="https://otimaenergia.com" style="color:${BRAND_PURPLE};text-decoration:none;">otimaenergia.com</a>
-    &nbsp;·&nbsp;
-    <a href="https://wa.me/${WA_BUSINESS}" style="color:${BRAND_PURPLE};text-decoration:none;">WhatsApp</a>
-  </p>
-</div>`;
+const EMAIL_LOGO_URL = "https://otimaenergia.com/logo-email.png";
+const EMAIL_BRAND_PURPLE = "#5B3FBA";
+
+const EMAIL_HEADER = `
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${EMAIL_BRAND_PURPLE};">
+  <tr>
+    <td align="center" style="padding:24px;">
+      <img src="${EMAIL_LOGO_URL}" alt="Ótima Energia" width="140" style="display:block;width:140px;max-width:140px;height:auto;" />
+    </td>
+  </tr>
+</table>`;
+
+const EMAIL_FOOTER = `
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="padding:24px 32px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e5e5;">
+        <tr>
+          <td style="padding-top:20px;color:#666;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            <p style="margin:0 0 4px 0;">—</p>
+            <p style="margin:4px 0;"><strong>Otto</strong></p>
+            <p style="margin:0;color:#888;">Agente de IA da Ótima Energia</p>
+            <p style="margin:8px 0;">
+              <a href="https://otimaenergia.com" style="color:${EMAIL_BRAND_PURPLE};text-decoration:none;">otimaenergia.com</a>
+              &nbsp;·&nbsp;
+              <a href="https://wa.me/${WA_BUSINESS}" style="color:${EMAIL_BRAND_PURPLE};text-decoration:none;">WhatsApp</a>
+            </p>
+            <div style="margin-top:16px;">
+              <img src="${EMAIL_LOGO_URL}" alt="Ótima Energia" width="80" style="width:80px;max-width:80px;height:auto;opacity:0.7;" />
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:32px 0 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5;">
+        <tr>
+          <td align="center" style="padding:24px;color:#888;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5;">
+            <p style="margin:0 0 4px 0;">Ótima Energia · CNPJ 65.023.912/0001-24</p>
+            <p style="margin:0 0 4px 0;">Especialistas em Geração Distribuída e Mercado Livre de Energia</p>
+            <p style="margin:0 0 4px 0;">Atendemos empresas em 23 estados do Brasil</p>
+            <p style="margin:8px 0 0 0;">
+              <a href="https://otimaenergia.com" style="color:${EMAIL_BRAND_PURPLE};text-decoration:none;">otimaenergia.com</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
+function infoBox(content: string, variant: "purple" | "yellow" | "gray"): string {
+  const styles = {
+    purple: { bg: "#f8f5ff", border: EMAIL_BRAND_PURPLE },
+    yellow: { bg: "#fff8e1", border: "#f5a623" },
+    gray:   { bg: "#f5f5f5", border: "#999999" },
+  }[variant];
+  return `<div style="background-color:${styles.bg};border-left:4px solid ${styles.border};padding:16px 20px;margin:24px 0;border-radius:4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${content}</div>`;
+}
 
 function waButton(url: string, label = "💬 Falar pelo WhatsApp"): string {
-  return `<a href="${url}" style="display:inline-block;padding:14px 28px;background-color:#25D366;color:white;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;margin:16px 0;">${label}</a>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+    <tr>
+      <td align="center">
+        <a href="${url}" style="display:inline-block;padding:14px 28px;background-color:#25D366;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;">${label}</a>
+      </td>
+    </tr>
+  </table>`;
 }
 
 function wrapEmail(body: string): string {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;color:#222;padding:24px;">
-${body}
-${OTTO_SIGNATURE}
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#f0f0f0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f0f0;">
+  <tr>
+    <td align="center" style="padding:24px 0;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td>${EMAIL_HEADER}</td></tr>
+        <tr>
+          <td style="padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.6;color:#222222;">
+            ${body}
+          </td>
+        </tr>
+        <tr><td>${EMAIL_FOOTER}</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body></html>`;
 }
 
@@ -295,25 +367,27 @@ Chamar no WhatsApp imediatamente.`;
   let confirmHtml: string;
   if (params.tipo === "sem-conta") {
     confirmHtml = wrapEmail(`
-<p>Olá ${params.nome},</p>
-<p>Recebemos seus dados! Para fazermos sua análise gratuita o mais rápido possível, precisamos da sua conta de luz mais recente.</p>
-<p>A forma mais rápida é enviar agora pelo WhatsApp:</p>
-<p style="text-align:center;">${waButton(waSemConta, "💬 Enviar conta pelo WhatsApp")}</p>
-<p>Ou responda este email anexando o PDF/foto da conta.</p>
-<p style="color:#666;">Sem a conta, nossa equipe entrará em contato pelo telefone informado para coletar as informações necessárias.</p>`);
+<p style="margin:0 0 16px;">Olá ${params.nome},</p>
+<p style="margin:0 0 16px;">Recebemos seus dados!</p>
+${infoBox(`<p style="margin:0 0 8px;font-weight:600;color:#b45309;">Próximo passo importante</p><p style="margin:0;color:#222;">Para fazermos sua análise gratuita o mais rápido possível, precisamos da sua conta de luz mais recente.</p>`, "yellow")}
+<p style="margin:0 0 8px;">A forma mais rápida é enviar agora pelo WhatsApp:</p>
+${waButton(waSemConta, "💬 Enviar conta pelo WhatsApp")}
+<p style="margin:0 0 16px;color:#444;">Ou responda este email anexando o PDF ou foto da conta.</p>
+<p style="margin:0;color:#666;font-size:14px;">Sem a conta, nossa equipe entrará em contato pelo telefone informado para coletar as informações necessárias.</p>`);
   } else if (params.tipo === "caso-especial") {
     confirmHtml = wrapEmail(`
-<p>Olá ${params.nome},</p>
-<p>Recebemos sua solicitação. Seu caso está um pouco fora do perfil padrão que atendemos (empresas com conta de luz acima de R$ 5.000/mês), mas vamos fazer uma revisão individual para ver se conseguimos te ajudar.</p>
-<p>Esse processo pode levar um pouco mais que o normal. Se tiver dúvidas, fale conosco pelo WhatsApp:</p>
-<p style="text-align:center;">${waButton(waCasoEspecial)}</p>`);
+<p style="margin:0 0 16px;">Olá ${params.nome},</p>
+<p style="margin:0 0 16px;">Recebemos sua solicitação.</p>
+${infoBox(`<p style="margin:0 0 8px;color:#555;">Seu caso está um pouco fora do perfil padrão que atendemos (empresas com conta de luz acima de R$ 5.000/mês), mas vamos fazer uma revisão individual para ver se conseguimos te ajudar.</p>`, "gray")}
+<p style="margin:0 0 8px;font-size:14px;color:#666;">Esse processo pode levar um pouco mais que o normal. Se tiver dúvidas, fale conosco pelo WhatsApp:</p>
+${waButton(waCasoEspecial)}`);
   } else {
     confirmHtml = wrapEmail(`
-<p>Olá ${params.nome},</p>
-<p>Recebemos sua conta de luz e seus dados! Nossa equipe de especialistas vai analisar tudo e entrar em contato em até 24 horas úteis.</p>
-<p>Não precisa fazer mais nada agora.</p>
-<p>Se preferir falar conosco agora pelo WhatsApp:</p>
-<p style="text-align:center;">${waButton(waCompleto)}</p>`);
+<p style="margin:0 0 16px;">Olá ${params.nome},</p>
+<p style="margin:0 0 16px;">Recebemos sua conta de luz e seus dados!</p>
+${infoBox(`<p style="margin:0;color:#3b1e7a;">Nossa equipe de especialistas vai analisar tudo e entrar em contato em até <strong>24 horas úteis</strong>. Não precisa fazer mais nada agora. Vamos cuidar de tudo a partir daqui.</p>`, "purple")}
+<p style="margin:0 0 8px;color:#444;">Se preferir falar conosco agora pelo WhatsApp:</p>
+${waButton(waCompleto)}`);
   }
 
   await transporter.sendMail({

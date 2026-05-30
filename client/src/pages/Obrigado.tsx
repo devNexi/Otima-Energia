@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { CheckCircle, ArrowRight, MessageCircle, ExternalLink, Clock, Mail, Shield } from "lucide-react";
-import logoFull from "@/assets/branding/logo-full-large.png";
 import HeroBackground from "@/components/HeroBackground";
+import { Navbar } from "@/components/layout/Navbar";
 
 declare global {
   interface Window { gtag?: (...args: any[]) => void; dataLayer?: any[]; }
@@ -259,20 +259,10 @@ export default function Obrigado() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#09081e", fontFamily: "'Inter', sans-serif" }}>
 
-      {/* Header */}
-      <header
-        className="sticky top-0 z-50 border-b"
-        style={{ background: "rgba(9,8,30,0.85)", backdropFilter: "blur(12px)", borderColor: "rgba(255,255,255,0.07)" }}
-      >
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center">
-          <a href="/">
-            <img src={logoFull} alt="Ótima Energia" className="h-10 w-auto" />
-          </a>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Hero glow area */}
-      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+      <div className="relative overflow-hidden pt-20" style={{ minHeight: 220 }}>
         <div className="absolute inset-0">
           <HeroBackground />
         </div>
