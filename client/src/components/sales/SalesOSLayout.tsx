@@ -1,5 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { PhoneCall, ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe } from "lucide-react";
+import { ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export function SalesOSLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +8,6 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
 
   const NAV = [
     { path: "/sales-os/queue", icon: ListChecks, label: t("salesos.nav.queue") },
-    { path: "/sales-os/dialer", icon: PhoneCall, label: t("salesos.nav.dialer") },
     { path: "/sales-os/replies", icon: MessageSquare, label: t("salesos.nav.replies") },
     { path: "/sales-os/manager", icon: BarChart3, label: t("salesos.nav.manager") },
   ];

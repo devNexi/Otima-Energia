@@ -15,6 +15,7 @@ import {
   Calendar, XCircle, Save, Copy, AlertTriangle, CheckCircle,
   Clock, FileText, Zap,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 type CenterTab = "assistencia" | "whatsapp" | "email" | "cobranca" | "interrupcao";
 type MsgTab = "whatsapp" | "email" | "cobranca" | "interrupcao";
@@ -80,6 +81,12 @@ export default function LeadCard() {
     { key: "interrupcao", label: t("salesos.lead.tab_pattern") },
   ];
 
+  const { toast } = useToast();
+
+  function openDialer() {
+    toast({ title: "Abrindo discador..." });
+  }
+
   const lead = getLeadById(id ?? "");
   if (!lead) {
     return (
@@ -109,7 +116,7 @@ export default function LeadCard() {
             <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{lead.city}/{lead.state}</span>
           </div>
           <button
-            onClick={() => navigate("/sales-os/dialer")}
+            onClick={openDialer}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
             style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)", color: "#fff" }}
           >
@@ -221,7 +228,7 @@ export default function LeadCard() {
 
             <AgentRecommendationCard
               recommendation={lead.agent_recommendation}
-              onPrimary={() => navigate("/sales-os/dialer")}
+              onPrimary={openDialer}
               onOverride={() => {}}
             />
           </div>
@@ -259,7 +266,7 @@ export default function LeadCard() {
             </div>
 
             <div className="shrink-0 px-4 py-3 border-t flex gap-2 flex-wrap" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.2)" }}>
-              <button onClick={() => navigate("/sales-os/dialer")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold" style={{ background: "#9e3ffd", color: "#fff" }}>
+              <button onClick={openDialer} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold" style={{ background: "#9e3ffd", color: "#fff" }}>
                 <Phone size={12} /> {t("salesos.common.call_now")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>

@@ -4,6 +4,7 @@ import { priorityConfig, type Lead } from "@/data/mockLeads";
 import { AgentRecommendationCard } from "./AgentRecommendationCard";
 import { useLocation } from "wouter";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 
 const sourceColors = {
   Julia: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
@@ -27,6 +28,11 @@ interface Props {
 export function QueueItem({ lead, index, selected, onClick }: Props) {
   const [, navigate] = useLocation();
   const { t } = useI18n();
+  const { toast } = useToast();
+
+  function openDialer() {
+    toast({ title: "Abrindo discador..." });
+  }
   const pConf = priorityConfig[lead.priority];
   const attemptWarning = lead.attempt_count >= 15;
 
@@ -114,7 +120,7 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
 
       <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
         <button
-          onClick={() => navigate(`/sales-os/dialer`)}
+          onClick={openDialer}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:opacity-90"
           style={{ background: "#9e3ffd", color: "#fff" }}
         >

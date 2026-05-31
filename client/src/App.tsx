@@ -51,7 +51,6 @@ import Reduza from "@/pages/Reduza";
 import Obrigado from "@/pages/Obrigado";
 import SalesOSQueue from "@/pages/SalesOS/Queue";
 import SalesOSLeadCard from "@/pages/SalesOS/LeadCard";
-import SalesOSDialer from "@/pages/SalesOS/Dialer";
 import SalesOSReplies from "@/pages/SalesOS/Replies";
 import SalesOSManager from "@/pages/SalesOS/Manager";
 import KeywordResearch from "@/pages/KeywordResearch";
@@ -163,7 +162,6 @@ function Router() {
       <Route path="/sales-os">{() => { window.location.replace("/sales-os/queue"); return null; }}</Route>
       <Route path="/sales-os/queue" component={SalesOSQueue} />
       <Route path="/sales-os/leads/:id" component={SalesOSLeadCard} />
-      <Route path="/sales-os/dialer" component={SalesOSDialer} />
       <Route path="/sales-os/replies" component={SalesOSReplies} />
       <Route path="/sales-os/manager" component={SalesOSManager} />
 

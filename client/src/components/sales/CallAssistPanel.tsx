@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Target, Zap, User, MessageSquare, AlertTriangle, HelpCircle, FileText, RotateCcw, Copy, ChevronDown, ChevronUp, CheckCircle, Phone } from "lucide-react";
 import type { Lead } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 
 const OBJECTIONS = [
   { key: "sem_tempo", label: "Sem tempo" },
@@ -37,6 +38,11 @@ export function CallAssistPanel({ lead, compact = false, onScriptViewed, scriptV
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [copiedObj, setCopiedObj] = useState(false);
   const { t } = useI18n();
+  const { toast } = useToast();
+
+  function openDialer() {
+    toast({ title: "Abrindo discador..." });
+  }
 
   function copyText(text: string, idx: number) {
     navigator.clipboard.writeText(text).catch(() => {});
@@ -180,6 +186,7 @@ export function CallAssistPanel({ lead, compact = false, onScriptViewed, scriptV
         <motion.button
           initial={{ scale: 0.97, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
+          onClick={openDialer}
           className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
           style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)", color: "#fff" }}
         >

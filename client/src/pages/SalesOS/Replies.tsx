@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { SalesOSLayout } from "@/components/sales/SalesOSLayout";
+import { useToast } from "@/hooks/use-toast";
 import { mockLeads, priorityConfig } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
 import { MessageSquare, Mail, Clock, AlertTriangle, CheckCircle, Phone, ArrowUpCircle, Eye } from "lucide-react";
@@ -45,6 +46,11 @@ export default function Replies() {
   const [responded, setResponded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Record<string, string>>({});
   const { t } = useI18n();
+  const { toast } = useToast();
+
+  function openDialer() {
+    toast({ title: "Abrindo discador..." });
+  }
   const hasSlaBreached = replies.some(l => (l.reply_sla_minutes ?? 60) < 30 && !responded.has(l.id));
 
   function getEditText(lead: typeof replies[0]) {
@@ -168,7 +174,7 @@ export default function Replies() {
                         <Eye size={12} /> {t("salesos.replies.view_lead")}
                       </button>
                       <button
-                        onClick={() => navigate("/sales-os/dialer")}
+                        onClick={openDialer}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
                         style={{ background: "#9e3ffd", color: "#fff" }}
                       >
