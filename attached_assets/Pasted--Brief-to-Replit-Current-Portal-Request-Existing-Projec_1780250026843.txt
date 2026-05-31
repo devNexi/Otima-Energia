@@ -1,0 +1,99 @@
+# Brief to Replit / Current Portal — Request Existing Project Context Before Building
+
+I want to build a Sales OS prototype that will eventually become a role-based mode inside the existing Otima Portal, not a separate random app.
+
+Before generating new code, please inspect the current portal project and give me a concise technical map of how it is built.
+
+## Please identify:
+
+1. Frontend framework
+
+* React / Next.js / Vite / other
+* routing structure
+* component structure
+* styling system
+* UI library, if any
+* current design tokens / colours / layout patterns
+
+2. Backend / API structure
+
+* backend framework
+* API routes
+* server functions
+* authentication/session handling
+* role/permission model
+* database used
+* ORM/query layer, if any
+
+3. Current portal modules
+
+* what screens exist now
+* which screens are for Ops / Alexandre
+* which screens are admin-only
+* which screens are customer-facing, if any
+* where sales-related screens could be added safely
+
+4. Integrations
+
+* Zoho integration
+* ECOS integration
+* Google Sheets integration, if any
+* Julia / AI voice integration, if any
+* enrichment API integration, if any
+* dialer integration, if any
+* existing webhooks
+* existing scheduled jobs
+
+5. Data model
+   Please map the current tables/models/collections for:
+
+* leads
+* contacts
+* accounts/companies
+* bills
+* proposals
+* deals
+* users
+* roles
+* tasks
+* logs
+* agent outputs, if any
+
+6. Deployment
+
+* where it is hosted
+* environment variables
+* build command
+* run command
+* branch/deployment process
+* anything fragile or risky
+
+7. Where Sales OS should live
+   Recommend the safest implementation path:
+
+Option A — build Sales OS as a new route inside current portal
+Option B — build as a separate prototype first and later merge
+Option C — build as a role-based mode using existing auth/layout
+Option D — another safer structure
+
+8. What not to touch
+   Please explicitly identify:
+
+* fragile files
+* critical flows
+* Ops workflows that should not be disrupted
+* authentication areas to avoid breaking
+* deployment risks
+
+## Output format
+
+Give me:
+
+1. **Current portal architecture summary**
+2. **Recommended Sales OS integration approach**
+3. **Files/folders likely involved**
+4. **Risks**
+5. **Suggested implementation plan**
+6. **Questions I need to answer before coding**
+
+Do not start rebuilding the app yet. First give me the map.
