@@ -1,0 +1,45 @@
+The content and functionality on the Lead Card is good. Do not change any of it. The problem is layout density and scrolling within panels. Fix this only.
+THE CORE PROBLEM
+Every column is independently scrollable with content crammed in. This creates a terrible UX where the rep is scrolling three different panels simultaneously trying to find information mid-call. A rep on a live call cannot be hunting through nested scroll areas. Everything they need for the call must be visible without scrolling.
+LEAD CARD — LAYOUT REBUILD
+Switch from three fixed columns to a two-zone layout:
+Zone 1 — LEFT SIDEBAR (320px fixed, scrollable as one unit):
+This is the lead profile. It never changes during a call. Scrolling here is fine because the rep reads it before calling.
+Keep everything currently in the left column: company info, DM section, best contact, bill status, attempts progress bar, score, Agent Recommendation Card.
+Make this one continuous scrollable panel with generous padding between sections.
+Zone 2 — MAIN AREA (everything right of sidebar, fills remaining width):
+This is the working area. Split into TOP and BOTTOM.
+TOP SECTION — CALL ASSIST (full width, no scroll, fixed height):
+This must be fully visible without any scrolling. It is what the rep reads during the call.
+Lay it out as a GRID not a vertical stack:
+Row 1 (full width): Objetivo da Chamada — large, prominent, single line
+Row 2 (full width): Por Que Agora — single line, muted
+Row 3 (two columns side by side):
+Left: Diga Isso Primeiro (with Copy button)
+Right: Aviso de Confiança (amber background)
+Row 4 (two columns side by side):
+Left: Primeira Pergunta (with Copy button)
+Right: Ângulo do Pedido de Conta (with Copy button)
+Row 5 (full width): Objeções Rápidas — horizontal chip row, each chip expands inline below (not in a scroll area) when clicked
+Row 6 (full width): Resumo da Última Interação — single line, collapsed, expand on click
+Below Call Assist: the message composer tabs (WhatsApp / Email / Bill Chase / Pattern Interrupt) as a tab switcher. Tab content shows the message textarea full width. No scroll needed — just the textarea.
+BOTTOM SECTION — TABBED PANELS (full width, below the fold, tabs at top):
+Move everything else into a clean horizontal tab bar:
+Tab 1: Sequências — the sequence trigger panel full width, card-style options, no scroll
+Tab 2: Enriquecimento DM — the DM enrichment panel full width
+Tab 3: Agentes SOP — the SOP agent activity panel full width, two-column grid
+Tab 4: Memória — the memory/timeline full width, clean timeline list
+Tab 5: Histórico — interaction history full width
+Each tab content fills the available height without internal scrolling. If content is long, the whole page scrolls, not the panel.
+ACTION BAR
+The bottom action buttons (Call Now / WhatsApp / Email / Bill Chase / Enrich / Escalate Renan / Callback / Lost / Save to Zoho) move to a STICKY BOTTOM BAR that is always visible regardless of scroll position. White background, border-top, full width, buttons centred. Never hidden by scrolling.
+The top 'Dial Now' button stays in the header — keep it.
+REMOVE
+Remove the floating WhatsApp button entirely from every page. It appears bottom right and covers content. Remove it completely.
+QUEUE PAGE
+Same issue — the preview panel on the right is a scrollable widget. Replace it with a clean side panel that shows only: company name, DM name, priority badge, status, last outcome, next action due, score, and one 'Open Full Lead' button. No scroll needed. Minimal, fast to read.
+GENERAL RULE
+No widget should have its own internal scroll. The page scrolls. The widgets do not. If a widget has too much content, it goes into a tab or accordion on the same page — never its own scroll container.
+DO NOT CHANGE
+All functionality, all data, all copy, all logic. Only layout and scroll behaviour changes.
+After changes show me the Lead Card at full viewport — I want to see the Call Assist grid and the sticky action bar in one screenshot.

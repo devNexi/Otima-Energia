@@ -329,10 +329,10 @@ export default function Queue() {
             )}
           </div>
 
-          {/* Preview panel */}
+          {/* Preview panel — minimal, no internal scroll */}
           <div
-            className="overflow-y-auto shrink-0"
-            style={{ width: "38%", background: "#FFFFFF" }}
+            className="shrink-0"
+            style={{ width: "38%", background: "#FFFFFF", overflowY: "hidden" }}
           >
             <PreviewPanel lead={selectedLead} />
           </div>

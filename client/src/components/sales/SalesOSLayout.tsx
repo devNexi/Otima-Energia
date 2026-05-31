@@ -1,6 +1,7 @@
 import { useLocation, Link } from "wouter";
-import { ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe, Bell, Plus } from "lucide-react";
+import { ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe, Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import logoIcon from "@/assets/branding/logo-icon-transparent.png";
 
 export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -21,12 +22,11 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-2 mb-6">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)" }}
-          >
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#fff" }}>OS</span>
-          </div>
+          <img
+            src={logoIcon}
+            alt="Ótima"
+            className="w-8 h-8 object-contain shrink-0"
+          />
           <div>
             <div className="font-bold text-sm leading-tight" style={{ color: "#16163f" }}>Ótima</div>
             <div className="text-[10px] font-medium" style={{ color: "#9CA3AF" }}>Sales OS</div>
