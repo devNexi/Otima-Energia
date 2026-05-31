@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, ChevronDown, ChevronUp } from "lucide-react";
 import type { Lead } from "@/data/mockLeads";
 
-/* ── Full SOP catalogue ─────────────────────────────────────────── */
-
 const SOP_CATALOGUE: { id: string; name: string; description: string }[] = [
   { id: "SOP-01", name: "Sales Intelligence", description: "Qualifica leads, gera score de prioridade, identifica segmento e barreira de confiança." },
   { id: "SOP-02", name: "Enriquecimento de Perfil", description: "Busca dados públicos de CNPJ, LinkedIn e portais de empresas para completar o cadastro." },
@@ -22,15 +20,13 @@ const SOP_CATALOGUE: { id: string; name: string; description: string }[] = [
   { id: "SOP-14", name: "Revisão Estratégica", description: "Analisa leads com 20+ tentativas e recomenda manter, mudar canal ou encerrar ciclo." },
 ];
 
-const STATUS_COLOR: Record<string, string> = {
-  "Concluído": "#22c55e",
-  "Executando": "#f59e0b",
-  "Pendente": "rgba(255,255,255,0.35)",
-  "Aguardando Acionamento": "rgba(255,255,255,0.35)",
-  "Erro": "#ef4444",
+const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+  "Concluído": { color: "#16a34a", bg: "#dcfce7", border: "#bbf7d0" },
+  "Executando": { color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+  "Pendente": { color: "#9CA3AF", bg: "#F8F9FC", border: "#E8EAED" },
+  "Aguardando Acionamento": { color: "#9CA3AF", bg: "#F8F9FC", border: "#E8EAED" },
+  "Erro": { color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
 };
-
-/* ── Build a merged view for a lead ────────────────────────────── */
 
 interface SopRow {
   id: string;
@@ -49,59 +45,32 @@ function buildRows(lead: Lead): SopRow[] {
     const match = s.sop.match(/SOP-\d+/);
     if (match) knownMap[match[0]] = s;
   }
-
   return SOP_CATALOGUE.map(cat => {
     const known = knownMap[cat.id];
     const isEnhanced = ["SOP-01", "SOP-03", "SOP-07", "SOP-13"].includes(cat.id);
     if (known) {
-      return {
-        id: cat.id,
-        name: cat.name,
-        description: cat.description,
-        status: known.status,
-        lastRun: known.last_run,
-        outputSummary: known.output_summary,
-        confidence: known.confidence,
-        enhanced: isEnhanced,
-      };
+      return { id: cat.id, name: cat.name, description: cat.description, status: known.status, lastRun: known.last_run, outputSummary: known.output_summary, confidence: known.confidence, enhanced: isEnhanced };
     }
-    // Special defaults for enhanced SOPs not in lead's known list
     if (cat.id === "SOP-13") {
       return {
-        id: cat.id,
-        name: cat.name,
-        description: cat.description,
+        id: cat.id, name: cat.name, description: cat.description,
         status: lead.dm_direct_phone_best ? "Concluído" : "Aguardando Acionamento",
         lastRun: lead.dm_direct_phone_best ? "30/05" : null,
-        outputSummary: lead.dm_direct_phone_best
-          ? `Rota encontrada — confiança ${lead.dm_direct_phone_confidence ?? "?"}% · Tipo: ${lead.dm_direct_phone_type ?? "Desconhecido"}`
-          : null,
-        confidence: lead.dm_direct_phone_confidence,
-        enhanced: true,
+        outputSummary: lead.dm_direct_phone_best ? `Rota encontrada — confiança ${lead.dm_direct_phone_confidence ?? "?"}% · Tipo: ${lead.dm_direct_phone_type ?? "Desconhecido"}` : null,
+        confidence: lead.dm_direct_phone_confidence, enhanced: true,
       };
     }
-    return {
-      id: cat.id,
-      name: cat.name,
-      description: cat.description,
-      status: "Pendente",
-      lastRun: null,
-      outputSummary: null,
-      confidence: null,
-      enhanced: isEnhanced,
-    };
+    return { id: cat.id, name: cat.name, description: cat.description, status: "Pendente", lastRun: null, outputSummary: null, confidence: null, enhanced: isEnhanced };
   });
 }
 
-/* ── Enhanced SOP detail blocks ─────────────────────────────────── */
-
 function SOP01Detail({ lead }: { lead: Lead }) {
   return (
-    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Prioridade:</span> <strong style={{ color: "#c88ff5" }}>{lead.priority_score}</strong></div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Segmento:</span> {lead.industry_segment}</div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Barreira:</span> {lead.likely_trust_barrier.level.charAt(0).toUpperCase() + lead.likely_trust_barrier.level.slice(1)}</div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Ângulo:</span> {lead.agent_recommendation.style}</div>
+    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "#6B7280" }}>
+      <div><span style={{ color: "#9CA3AF" }}>Prioridade:</span> <strong style={{ color: "#9e3ffd" }}>{lead.priority_score}</strong></div>
+      <div><span style={{ color: "#9CA3AF" }}>Segmento:</span> {lead.industry_segment}</div>
+      <div><span style={{ color: "#9CA3AF" }}>Barreira:</span> {lead.likely_trust_barrier.level.charAt(0).toUpperCase() + lead.likely_trust_barrier.level.slice(1)}</div>
+      <div><span style={{ color: "#9CA3AF" }}>Ângulo:</span> {lead.agent_recommendation.style}</div>
     </div>
   );
 }
@@ -109,63 +78,50 @@ function SOP01Detail({ lead }: { lead: Lead }) {
 function SOP03Detail({ lead }: { lead: Lead }) {
   const billChase = lead.sop_agent_statuses.find(s => s.sop.toLowerCase().includes("bill chase") || s.sop.includes("05"));
   return (
-    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Fase:</span> Fase 1 — Dia 2 de 3</div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Próximo toque:</span> Amanhã 09:00</div>
-      <div style={{ color: "rgba(255,255,255,0.45)" }}>
-        {billChase?.output_summary ?? "WhatsApp de remoção de fricção enviado. Próximo: interrupção de padrão se sem resposta."}
-      </div>
+    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "#6B7280" }}>
+      <div><span style={{ color: "#9CA3AF" }}>Fase:</span> Fase 1 — Dia 2 de 3</div>
+      <div><span style={{ color: "#9CA3AF" }}>Próximo toque:</span> Amanhã 09:00</div>
+      <div>{billChase?.output_summary ?? "WhatsApp de remoção de fricção enviado. Próximo: interrupção de padrão se sem resposta."}</div>
     </div>
   );
 }
 
 function SOP07Detail({ lead }: { lead: Lead }) {
   return (
-    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Rank:</span> #{lead.dialer_priority_rank}</div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Tipo:</span> {lead.dialer_queue_type.replace(/_/g, " ")}</div>
-      <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Janela:</span> {lead.last_time_window ?? "Qualquer"}</div>
-      <div style={{ color: "rgba(255,255,255,0.45)" }}>Requeue: janela diferente amanhã se sem atendimento</div>
+    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "#6B7280" }}>
+      <div><span style={{ color: "#9CA3AF" }}>Rank:</span> #{lead.dialer_priority_rank}</div>
+      <div><span style={{ color: "#9CA3AF" }}>Tipo:</span> {lead.dialer_queue_type.replace(/_/g, " ")}</div>
+      <div><span style={{ color: "#9CA3AF" }}>Janela:</span> {lead.last_time_window ?? "Qualquer"}</div>
+      <div>Requeue: janela diferente amanhã se sem atendimento</div>
     </div>
   );
 }
 
 function SOP13Detail({ lead, row }: { lead: Lead; row: SopRow }) {
   return (
-    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+    <div className="mt-2 space-y-1 text-[11px]" style={{ color: "#6B7280" }}>
       {row.status === "Concluído" ? (
         <>
-          <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Confiança:</span> <strong style={{ color: "#22c55e" }}>{lead.dm_direct_phone_confidence}%</strong></div>
-          <div><span style={{ color: "rgba(255,255,255,0.35)" }}>Tipo de rota:</span> {
-            lead.dm_direct_phone_type === "direct_mobile" ? "Celular Direto"
-            : lead.dm_direct_phone_type === "likely_mobile" ? "Provável Celular"
-            : lead.dm_direct_phone_type === "office_direct" ? "Ramal Direto"
-            : "Via Assistente"
-          }</div>
+          <div><span style={{ color: "#9CA3AF" }}>Confiança:</span> <strong style={{ color: "#16a34a" }}>{lead.dm_direct_phone_confidence}%</strong></div>
+          <div><span style={{ color: "#9CA3AF" }}>Tipo de rota:</span> {lead.dm_direct_phone_type === "direct_mobile" ? "Celular Direto" : lead.dm_direct_phone_type === "likely_mobile" ? "Provável Celular" : lead.dm_direct_phone_type === "office_direct" ? "Ramal Direto" : "Via Assistente"}</div>
         </>
       ) : (
-        <div style={{ color: "rgba(255,255,255,0.4)" }}>Aguardando acionamento para busca de contato direto.</div>
+        <div>Aguardando acionamento para busca de contato direto.</div>
       )}
     </div>
   );
 }
 
-/* ── Single SOP row ─────────────────────────────────────────────── */
-
-function SopRow({ row, lead }: { row: SopRow; lead: Lead }) {
+function SopRowItem({ row, lead }: { row: SopRow; lead: Lead }) {
   const [expanded, setExpanded] = useState(false);
-  const statusColor = STATUS_COLOR[row.status] ?? "rgba(255,255,255,0.35)";
+  const st = STATUS_STYLE[row.status] ?? STATUS_STYLE["Pendente"];
 
   return (
     <div
-      className="rounded-lg overflow-hidden"
+      className="rounded-xl overflow-hidden"
       style={{
-        background: row.enhanced && row.status !== "Pendente"
-          ? "rgba(158,63,253,0.05)"
-          : "rgba(255,255,255,0.02)",
-        border: row.enhanced && row.status !== "Pendente"
-          ? "1px solid rgba(158,63,253,0.15)"
-          : "1px solid rgba(255,255,255,0.06)",
+        background: row.enhanced && row.status !== "Pendente" ? "rgba(158,63,253,0.04)" : "#FFFFFF",
+        border: row.enhanced && row.status !== "Pendente" ? "1px solid rgba(158,63,253,0.15)" : "1px solid #E8EAED",
       }}
     >
       <button
@@ -175,38 +131,30 @@ function SopRow({ row, lead }: { row: SopRow; lead: Lead }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[10px] shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>{row.id}</span>
-              <span className="text-xs font-medium truncate" style={{ color: "rgba(255,255,255,0.7)" }}>{row.name}</span>
+              <span className="text-[10px] shrink-0 font-mono" style={{ color: "#9CA3AF" }}>{row.id}</span>
+              <span className="text-xs font-medium truncate" style={{ color: "#374151" }}>{row.name}</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <span
-                className="text-[10px] px-1.5 py-0.5 rounded"
-                style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}30` }}
+                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                style={{ background: st.bg, color: st.color, border: `1px solid ${st.border}` }}
               >
                 {row.status}
               </span>
               {row.enhanced && (
                 expanded
-                  ? <ChevronUp size={11} style={{ color: "rgba(255,255,255,0.3)" }} />
-                  : <ChevronDown size={11} style={{ color: "rgba(255,255,255,0.3)" }} />
+                  ? <ChevronUp size={11} style={{ color: "#9CA3AF" }} />
+                  : <ChevronDown size={11} style={{ color: "#9CA3AF" }} />
               )}
             </div>
           </div>
-
-          {/* Output or description */}
-          {row.outputSummary ? (
-            <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>{row.outputSummary}</div>
-          ) : (
-            <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>{row.description}</div>
-          )}
-
-          {row.lastRun && (
-            <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>{row.lastRun}</div>
-          )}
+          {row.outputSummary
+            ? <div className="text-[11px]" style={{ color: "#6B7280" }}>{row.outputSummary}</div>
+            : <div className="text-[11px]" style={{ color: "#9CA3AF" }}>{row.description}</div>}
+          {row.lastRun && <div className="text-[10px] mt-0.5" style={{ color: "#9CA3AF" }}>{row.lastRun}</div>}
         </div>
       </button>
 
-      {/* Enhanced detail */}
       <AnimatePresence>
         {expanded && row.enhanced && (
           <motion.div
@@ -226,8 +174,6 @@ function SopRow({ row, lead }: { row: SopRow; lead: Lead }) {
   );
 }
 
-/* ── Main panel ─────────────────────────────────────────────────── */
-
 interface Props { lead: Lead }
 
 export function SOPAgentPanel({ lead }: Props) {
@@ -237,46 +183,35 @@ export function SOPAgentPanel({ lead }: Props) {
   const pendingRows = rows.filter(r => r.status === "Pendente");
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+    <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "#E8EAED" }}>
         <Zap size={14} style={{ color: "#9e3ffd" }} />
-        <span className="font-semibold text-sm" style={{ color: "#fff" }}>SOP Agents</span>
+        <span className="font-semibold text-sm" style={{ color: "#16163f" }}>SOP Agents</span>
         <span
-          className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full"
-          style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" }}
+          className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+          style={{ background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0" }}
         >
           {activeRows.length} ativos
         </span>
       </div>
 
       <div className="p-3 space-y-1.5">
-        {/* Active SOPs */}
-        {activeRows.map(row => (
-          <SopRow key={row.id} row={row} lead={lead} />
-        ))}
+        {activeRows.map(row => <SopRowItem key={row.id} row={row} lead={lead} />)}
 
-        {/* Pending toggle */}
         {pendingRows.length > 0 && (
           <>
             <button
               onClick={() => setShowAll(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] w-full py-1"
-              style={{ color: "rgba(255,255,255,0.3)" }}
+              className="flex items-center gap-1.5 text-[11px] w-full py-1 font-medium"
+              style={{ color: "#9CA3AF" }}
             >
               {showAll ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
               {showAll ? "Ocultar" : `Ver ${pendingRows.length} SOPs pendentes`}
             </button>
             <AnimatePresence>
               {showAll && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-1.5"
-                >
-                  {pendingRows.map(row => (
-                    <SopRow key={row.id} row={row} lead={lead} />
-                  ))}
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-1.5">
+                  {pendingRows.map(row => <SopRowItem key={row.id} row={row} lead={lead} />)}
                 </motion.div>
               )}
             </AnimatePresence>

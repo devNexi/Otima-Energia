@@ -8,8 +8,6 @@ import type { Lead } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 
-/* ─── Objection definitions ─────────────────────────────────────── */
-
 const OBJECTIONS = [
   { key: "sem_tempo", label: "Sem tempo" },
   { key: "solar", label: "Já tem solar" },
@@ -33,31 +31,29 @@ const SOLAR_STEP1 = "Ótimo — a placa cobre 100% do consumo ou ainda recebem f
 const SOLAR_BRANCHES = [
   {
     label: "Ramo A — Se ainda tem fatura",
-    color: "#22c55e",
-    bg: "rgba(34,197,94,0.08)",
-    border: "rgba(34,197,94,0.2)",
+    color: "#16a34a",
+    bg: "#dcfce7",
+    border: "#bbf7d0",
     text: "Perfeito, é exatamente essa situação com que trabalhamos. O caminho mais simples é a conta — pode me mandar agora pelo WhatsApp?",
     tag: null,
   },
   {
     label: "Ramo B — 100% coberto, empresa grande",
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.08)",
-    border: "rgba(245,158,11,0.2)",
+    color: "#d97706",
+    bg: "#fffbeb",
+    border: "#fde68a",
     text: "Entendido. Qual é mais ou menos o gasto mensal de energia? Pode haver um programa separado que vale a pena ver e que a placa solar não substitui.",
     tag: "ACL — sinalizar ao Renan",
   },
   {
     label: "Ramo C — 100% coberto, empresa pequena",
-    color: "rgba(255,255,255,0.4)",
-    bg: "rgba(255,255,255,0.04)",
-    border: "rgba(255,255,255,0.12)",
+    color: "#9CA3AF",
+    bg: "#F8F9FC",
+    border: "#E8EAED",
     text: "Entendido, parece que estão bem servidos. Obrigada pelo tempo.",
     tag: "DNC genuíno",
   },
 ];
-
-/* ─── Copy hook ─────────────────────────────────────────────────── */
 
 function useCopy() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -69,13 +65,28 @@ function useCopy() {
   return { copiedKey, copy };
 }
 
-/* ─── Component ─────────────────────────────────────────────────── */
-
 interface Props {
   lead: Lead;
   compact?: boolean;
   onScriptViewed?: () => void;
   scriptViewed?: boolean;
+}
+
+function CopyButton({ text, copyKey, copiedKey, copy }: { text: string; copyKey: string; copiedKey: string | null; copy: (t: string, k: string) => void }) {
+  const done = copiedKey === copyKey;
+  return (
+    <button
+      onClick={() => copy(text, copyKey)}
+      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all mt-2"
+      style={{
+        background: done ? "#dcfce7" : "#F8F9FC",
+        color: done ? "#16a34a" : "#6B7280",
+        border: `1px solid ${done ? "#bbf7d0" : "#E8EAED"}`,
+      }}
+    >
+      <Copy size={10} />{done ? "Copiado!" : "Copiar"}
+    </button>
+  );
 }
 
 export function CallAssistPanel({ lead, compact = false }: Props) {
@@ -90,68 +101,14 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
   }
 
   const items = [
-    {
-      emoji: "🎯",
-      label: "Objetivo da Chamada",
-      content: lead.call_objective,
-      copyable: false,
-      variant: "normal" as const,
-    },
-    {
-      emoji: "⚡",
-      label: "Por Que Agora",
-      content: lead.call_why_now_angle,
-      copyable: false,
-      variant: "normal" as const,
-    },
-    {
-      emoji: "👤",
-      label: "Alvo",
-      content: lead.dm_name
-        ? `${lead.dm_name} · ${lead.dm_role}${lead.dm_direct_phone_best ? ` · ${lead.dm_direct_phone_best}` : " · Buscar número"}`
-        : "Decisor não identificado",
-      copyable: false,
-      variant: "normal" as const,
-    },
-    {
-      emoji: "🗣",
-      label: "Diga Isso Primeiro",
-      content: lead.suggested_opening_angle,
-      copyable: true,
-      copyKey: "opening",
-      variant: "normal" as const,
-    },
-    {
-      emoji: "⚠",
-      label: "Aviso de Confiança",
-      content: lead.call_trust_warning,
-      copyable: false,
-      variant: "amber" as const,
-    },
-    {
-      emoji: "❓",
-      label: "Primeira Pergunta",
-      content: lead.suggested_first_question,
-      copyable: true,
-      copyKey: "first_q",
-      variant: "normal" as const,
-    },
-    {
-      emoji: "💡",
-      label: "Ângulo do Pedido de Conta",
-      content: lead.suggested_bill_ask_angle,
-      copyable: true,
-      copyKey: "bill_ask",
-      variant: "normal" as const,
-    },
-    {
-      emoji: "🔄",
-      label: "Script para Gatekeeper",
-      content: lead.gatekeeper_script,
-      copyable: true,
-      copyKey: "gatekeeper",
-      variant: "normal" as const,
-    },
+    { emoji: "🎯", label: "Objetivo da Chamada", content: lead.call_objective, copyable: false, copyKey: "", variant: "normal" as const },
+    { emoji: "⚡", label: "Por Que Agora", content: lead.call_why_now_angle, copyable: false, copyKey: "", variant: "normal" as const },
+    { emoji: "👤", label: "Alvo", content: lead.dm_name ? `${lead.dm_name} · ${lead.dm_role}${lead.dm_direct_phone_best ? ` · ${lead.dm_direct_phone_best}` : " · Buscar número"}` : "Decisor não identificado", copyable: false, copyKey: "", variant: "normal" as const },
+    { emoji: "🗣", label: "Diga Isso Primeiro", content: lead.suggested_opening_angle, copyable: true, copyKey: "opening", variant: "normal" as const },
+    { emoji: "⚠", label: "Aviso de Confiança", content: lead.call_trust_warning, copyable: false, copyKey: "", variant: "amber" as const },
+    { emoji: "❓", label: "Primeira Pergunta", content: lead.suggested_first_question, copyable: true, copyKey: "first_q", variant: "normal" as const },
+    { emoji: "💡", label: "Ângulo do Pedido de Conta", content: lead.suggested_bill_ask_angle, copyable: true, copyKey: "bill_ask", variant: "normal" as const },
+    { emoji: "🔄", label: "Script para Gatekeeper", content: lead.gatekeeper_script, copyable: true, copyKey: "gatekeeper", variant: "normal" as const },
   ];
 
   const lastEntry = lead.activity_timeline[0];
@@ -162,39 +119,32 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
         if (compact && i > 4) return null;
         const isAmber = item.variant === "amber";
         return (
-          <div key={i}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-base leading-none" style={{ lineHeight: 1 }}>{item.emoji}</span>
+          <div key={i} className="rounded-xl overflow-hidden" style={{ border: isAmber ? "1px solid #fde68a" : "1px solid #E8EAED" }}>
+            <div
+              className="px-3 py-2 flex items-center gap-2 border-b"
+              style={{
+                background: isAmber ? "#fffbeb" : "#F8F9FC",
+                borderColor: isAmber ? "#fde68a" : "#E8EAED",
+              }}
+            >
+              <span className="text-sm leading-none">{item.emoji}</span>
               <span
-                className="text-[11px] font-semibold uppercase tracking-wide"
-                style={{ color: isAmber ? "#f59e0b" : "rgba(255,255,255,0.4)" }}
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: isAmber ? "#d97706" : "#9CA3AF" }}
               >
                 {item.label}
               </span>
             </div>
             <div
-              className="text-sm rounded-lg px-3 py-2.5"
+              className="px-3 py-2.5 text-sm"
               style={{
-                background: isAmber ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.04)",
-                border: isAmber ? "1px solid rgba(245,158,11,0.25)" : "1px solid rgba(255,255,255,0.07)",
-                color: isAmber ? "#fcd34d" : "rgba(255,255,255,0.75)",
+                background: "#FFFFFF",
+                color: isAmber ? "#92400e" : "#374151",
               }}
             >
               {item.content}
               {item.copyable && item.copyKey && (
-                <div className="mt-2">
-                  <button
-                    onClick={() => copy(item.content, item.copyKey!)}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all"
-                    style={{
-                      background: copiedKey === item.copyKey ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-                      color: copiedKey === item.copyKey ? "#22c55e" : "rgba(255,255,255,0.45)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    <Copy size={10} />{copiedKey === item.copyKey ? "Copiado!" : "Copiar"}
-                  </button>
-                </div>
+                <CopyButton text={item.content} copyKey={item.copyKey} copiedKey={copiedKey} copy={copy} />
               )}
             </div>
           </div>
@@ -203,18 +153,19 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
 
       {/* Last interaction summary */}
       {!compact && (
-        <div>
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #E8EAED" }}>
           <button
-            className="flex items-center gap-2 w-full text-left"
+            className="flex items-center gap-2 w-full px-3 py-2 text-left"
+            style={{ background: "#F8F9FC", borderBottom: showSummary ? "1px solid #E8EAED" : "none" }}
             onClick={() => setShowSummary(v => !v)}
           >
-            <span className="text-base leading-none">📋</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <span className="text-sm leading-none">📋</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider flex-1" style={{ color: "#9CA3AF" }}>
               Resumo da Última Interação
             </span>
             {showSummary
-              ? <ChevronUp size={12} style={{ color: "rgba(255,255,255,0.3)", marginLeft: "auto" }} />
-              : <ChevronDown size={12} style={{ color: "rgba(255,255,255,0.3)", marginLeft: "auto" }} />}
+              ? <ChevronUp size={12} style={{ color: "#9CA3AF" }} />
+              : <ChevronDown size={12} style={{ color: "#9CA3AF" }} />}
           </button>
           <AnimatePresence>
             {showSummary && (
@@ -222,11 +173,11 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="text-sm rounded-lg px-3 py-2.5 mt-1 space-y-1"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.65)" }}
+                className="px-3 py-2.5 text-sm"
+                style={{ background: "#FFFFFF", color: "#6B7280" }}
               >
                 {lastEntry && (
-                  <div className="flex items-center gap-2 text-[11px] mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <div className="flex items-center gap-2 text-[11px] mb-1.5" style={{ color: "#9CA3AF" }}>
                     <span style={{ color: "#9e3ffd" }}>{lastEntry.timestamp}</span>
                     <span>·</span>
                     <span>{lastEntry.outcome}</span>
@@ -245,8 +196,8 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
       {!compact && (
         <div>
           <div className="flex items-center gap-1.5 mb-2">
-            <span className="text-base leading-none">🤔</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <span className="text-sm leading-none">🤔</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
               Objeções Rápidas
             </span>
           </div>
@@ -255,11 +206,11 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
               <button
                 key={obj.key}
                 onClick={() => setOpenObjection(openObjection === obj.key ? null : obj.key)}
-                className="px-2.5 py-1 rounded-full text-xs transition-all"
+                className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
                 style={{
-                  background: openObjection === obj.key ? "rgba(158,63,253,0.2)" : "rgba(255,255,255,0.06)",
-                  border: openObjection === obj.key ? "1px solid rgba(158,63,253,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                  color: openObjection === obj.key ? "#c88ff5" : "rgba(255,255,255,0.55)",
+                  background: openObjection === obj.key ? "rgba(158,63,253,0.08)" : "#F8F9FC",
+                  border: openObjection === obj.key ? "1px solid rgba(158,63,253,0.3)" : "1px solid #E8EAED",
+                  color: openObjection === obj.key ? "#9e3ffd" : "#6B7280",
                 }}
               >
                 {obj.label}
@@ -274,24 +225,16 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="rounded-lg p-3 mt-2"
-                style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}
+                className="rounded-xl overflow-hidden mt-2"
+                style={{ border: "1px solid rgba(158,63,253,0.2)" }}
               >
-                <div className="text-xs mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>Resposta sugerida (Voss):</div>
-                <div className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.8)" }}>
-                  {simpleObjectionResponses[openObjection]}
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ background: "rgba(158,63,253,0.06)", color: "#9e3ffd", borderBottom: "1px solid rgba(158,63,253,0.15)" }}>
+                  Resposta sugerida (Voss)
                 </div>
-                <button
-                  onClick={() => copy(simpleObjectionResponses[openObjection], openObjection)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all"
-                  style={{
-                    background: copiedKey === openObjection ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-                    color: copiedKey === openObjection ? "#22c55e" : "rgba(255,255,255,0.45)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                  }}
-                >
-                  <Copy size={10} />{copiedKey === openObjection ? "Copiado!" : "Copiar"}
-                </button>
+                <div className="px-3 py-2.5">
+                  <div className="text-sm mb-2.5" style={{ color: "#374151" }}>{simpleObjectionResponses[openObjection]}</div>
+                  <CopyButton text={simpleObjectionResponses[openObjection]} copyKey={openObjection} copiedKey={copiedKey} copy={copy} />
+                </div>
               </motion.div>
             )}
 
@@ -301,57 +244,32 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="rounded-lg p-3 mt-2 space-y-3"
-                style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}
+                className="rounded-xl overflow-hidden mt-2 space-y-2"
+                style={{ border: "1px solid #fde68a" }}
               >
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "#f59e0b" }}>
+                <div className="px-3 py-1.5" style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a" }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#d97706" }}>
                     🌱 Diagnóstico Solar — 3 Ramos
                   </div>
-                  {/* Step 1 */}
-                  <div className="text-xs rounded-lg px-3 py-2.5 mb-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#fcd34d" }}>
-                    <div className="font-semibold mb-0.5 text-[11px] uppercase tracking-wide" style={{ color: "#f59e0b" }}>Passo 1 — Pergunta diagnóstica:</div>
-                    "{SOLAR_STEP1}"
-                    <div className="mt-2">
-                      <button
-                        onClick={() => copy(SOLAR_STEP1, "solar_step1")}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all"
-                        style={{
-                          background: copiedKey === "solar_step1" ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-                          color: copiedKey === "solar_step1" ? "#22c55e" : "rgba(255,255,255,0.45)",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                        }}
-                      >
-                        <Copy size={10} />{copiedKey === "solar_step1" ? "Copiado!" : "Copiar"}
-                      </button>
-                    </div>
+                </div>
+                <div className="px-3 pb-3 space-y-3">
+                  <div className="rounded-xl p-3" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "#d97706" }}>Passo 1 — Pergunta diagnóstica:</div>
+                    <div className="text-sm" style={{ color: "#92400e" }}>"{SOLAR_STEP1}"</div>
+                    <CopyButton text={SOLAR_STEP1} copyKey="solar_step1" copiedKey={copiedKey} copy={copy} />
                   </div>
-
-                  {/* Branches */}
                   {SOLAR_BRANCHES.map((branch, bi) => (
-                    <div key={bi} className="rounded-lg px-3 py-2.5 mb-2" style={{ background: branch.bg, border: `1px solid ${branch.border}` }}>
+                    <div key={bi} className="rounded-xl p-3" style={{ background: branch.bg, border: `1px solid ${branch.border}` }}>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: branch.color }}>↳ {branch.label}</span>
                         {branch.tag && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}>
                             {branch.tag}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.75)" }}>
-                        "{branch.text}"
-                      </div>
-                      <button
-                        onClick={() => copy(branch.text, `solar_branch_${bi}`)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all"
-                        style={{
-                          background: copiedKey === `solar_branch_${bi}` ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)",
-                          color: copiedKey === `solar_branch_${bi}` ? "#22c55e" : "rgba(255,255,255,0.45)",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                        }}
-                      >
-                        <Copy size={10} />{copiedKey === `solar_branch_${bi}` ? "Copiado!" : "Copiar"}
-                      </button>
+                      <div className="text-sm" style={{ color: "#374151" }}>"{branch.text}"</div>
+                      <CopyButton text={branch.text} copyKey={`solar_branch_${bi}`} copiedKey={copiedKey} copy={copy} />
                     </div>
                   ))}
                 </div>
@@ -361,13 +279,17 @@ export function CallAssistPanel({ lead, compact = false }: Props) {
         </div>
       )}
 
-      {/* Iniciar Chamada — always shown, no gate */}
+      {/* Call CTA */}
       <motion.button
         initial={{ scale: 0.97, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={openDialer}
-        className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
-        style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)", color: "#fff" }}
+        className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+        style={{
+          background: "linear-gradient(135deg,#9e3ffd,#df0af2)",
+          color: "#fff",
+          boxShadow: "0 4px 12px rgba(158,63,253,0.3)",
+        }}
       >
         <Phone size={15} /> Iniciar Chamada
       </motion.button>

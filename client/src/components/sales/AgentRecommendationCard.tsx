@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, CheckCircle, XCircle, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Zap, CheckCircle, XCircle, ChevronDown, ChevronUp, X, Sparkles } from "lucide-react";
 import type { AgentRecommendation } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
 
 const confidenceColors = {
-  Alta: { border: "#22c55e", badge: "rgba(34,197,94,0.2)", badgeText: "#22c55e", badgeBorder: "rgba(34,197,94,0.3)" },
-  Média: { border: "#f59e0b", badge: "rgba(245,158,11,0.2)", badgeText: "#f59e0b", badgeBorder: "rgba(245,158,11,0.3)" },
-  Baixa: { border: "#ef4444", badge: "rgba(239,68,68,0.2)", badgeText: "#ef4444", badgeBorder: "rgba(239,68,68,0.3)" },
+  Alta: { border: "#16a34a", badge: "#dcfce7", badgeText: "#16a34a", badgeBorder: "#bbf7d0" },
+  Média: { border: "#d97706", badge: "#fef3c7", badgeText: "#d97706", badgeBorder: "#fde68a" },
+  Baixa: { border: "#dc2626", badge: "#fef2f2", badgeText: "#dc2626", badgeBorder: "#fecaca" },
 };
 
 interface Props {
@@ -31,12 +31,12 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
   if (compact) {
     return (
       <div
-        className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg"
-        style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}
+        className="flex items-center gap-2 text-xs py-2 px-3 rounded-xl"
+        style={{ background: "rgba(158,63,253,0.06)", border: "1px solid rgba(158,63,253,0.15)" }}
       >
-        <Zap size={12} style={{ color: "#9e3ffd", flexShrink: 0 }} />
-        <span style={{ color: "rgba(255,255,255,0.7)" }}>
-          {t("salesos.agent.recommendation")}: <strong style={{ color: "#c88ff5" }}>{recommendation.action}</strong>
+        <Sparkles size={12} style={{ color: "#df0af2", flexShrink: 0 }} />
+        <span style={{ color: "#6B7280" }}>
+          {t("salesos.agent.recommendation")}: <strong style={{ color: "#16163f" }}>{recommendation.action}</strong>
         </span>
         <span
           className="px-1.5 py-0.5 rounded text-[10px] font-semibold ml-auto shrink-0"
@@ -48,10 +48,10 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
           <button
             onClick={allMet ? onPrimary : undefined}
             disabled={!allMet}
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 transition-opacity"
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 transition-all"
             style={{
-              background: allMet ? "#9e3ffd" : "rgba(255,255,255,0.08)",
-              color: allMet ? "#fff" : "rgba(255,255,255,0.3)",
+              background: allMet ? "#9e3ffd" : "#E8EAED",
+              color: allMet ? "#fff" : "#9CA3AF",
               cursor: allMet ? "pointer" : "not-allowed",
             }}
           >
@@ -68,21 +68,24 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl overflow-hidden"
       style={{
+        background: "#FFFFFF",
+        border: `1px solid #E8EAED`,
         borderLeft: `4px solid ${conf.border}`,
-        border: `1px solid ${conf.border}40`,
-        borderLeftWidth: 4,
-        background: `${conf.border}08`,
+        boxShadow: `0 1px 4px rgba(0,0,0,0.06), 0 0 0 0 ${conf.border}20`,
       }}
     >
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: conf.border }}>
-          Ação Recomendada pelo Agente
+        <div className="flex items-center gap-1.5 mb-2">
+          <Sparkles size={11} style={{ color: "#df0af2" }} />
+          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: conf.border }}>
+            Ação Recomendada pelo Agente
+          </div>
         </div>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <Zap size={15} style={{ color: conf.border, flexShrink: 0 }} />
-            <span className="font-bold text-sm leading-tight" style={{ color: "#fff" }}>
+            <Zap size={14} style={{ color: conf.border, flexShrink: 0 }} />
+            <span className="font-bold text-sm leading-tight" style={{ color: "#16163f" }}>
               {recommendation.action}
             </span>
           </div>
@@ -94,9 +97,8 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
           </span>
         </div>
 
-        {/* Reason paragraph */}
         {recommendation.reason && (
-          <div className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <div className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
             {recommendation.reason}
           </div>
         )}
@@ -107,25 +109,25 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
         {recommendation.preconditions.map((p, i) => (
           <div key={i} className="flex items-start gap-2 text-xs">
             {p.met
-              ? <CheckCircle size={13} className="shrink-0 mt-0.5" style={{ color: "#22c55e" }} />
-              : <XCircle size={13} className="shrink-0 mt-0.5" style={{ color: "#ef4444" }} />}
-            <span style={{ color: p.met ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)" }}>
+              ? <CheckCircle size={13} className="shrink-0 mt-0.5" style={{ color: "#16a34a" }} />
+              : <XCircle size={13} className="shrink-0 mt-0.5" style={{ color: "#dc2626" }} />}
+            <span style={{ color: p.met ? "#374151" : "#9CA3AF" }}>
               {p.label}
               {!p.met && (
-                <span style={{ color: "#ef4444" }}> — resolva antes de iniciar</span>
+                <span style={{ color: "#dc2626" }}> — resolva antes de iniciar</span>
               )}
             </span>
           </div>
         ))}
       </div>
 
-      {/* O que acontece a seguir — expandable */}
+      {/* O que acontece a seguir */}
       {recommendation.what_happens_next && (
         <div className="px-4 pb-3">
           <button
             onClick={() => setShowNext(v => !v)}
-            className="flex items-center gap-1.5 text-xs w-full text-left"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            className="flex items-center gap-1.5 text-xs w-full text-left transition-colors"
+            style={{ color: "#9CA3AF" }}
           >
             <span>O que acontece a seguir</span>
             {showNext ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
@@ -137,7 +139,7 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 className="text-xs rounded-lg px-3 py-2.5 mt-1.5 leading-relaxed"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.65)" }}
+                style={{ background: "#F8F9FC", border: "1px solid #E8EAED", color: "#6B7280" }}
               >
                 {recommendation.what_happens_next}
               </motion.div>
@@ -155,10 +157,10 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
               disabled={!allMet}
               className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
               style={{
-                background: allMet ? "#9e3ffd" : "rgba(255,255,255,0.07)",
-                color: allMet ? "#fff" : "rgba(255,255,255,0.3)",
+                background: allMet ? "#9e3ffd" : "#F3F4F6",
+                color: allMet ? "#fff" : "#9CA3AF",
                 cursor: allMet ? "pointer" : "not-allowed",
-                border: allMet ? "none" : "1px solid rgba(255,255,255,0.1)",
+                border: allMet ? "none" : "1px solid #E8EAED",
               }}
               title={!allMet ? `Pré-condições não atendidas: ${blockedPreconditions.map(p => p.label).join(", ")}` : undefined}
             >
@@ -167,9 +169,9 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
             <button
               onClick={() => setShowOverride(true)}
               className="px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-              style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+              style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}
             >
-              Substituir com Motivo
+              Substituir
             </button>
           </div>
         ) : overrideSubmitted ? (
@@ -177,7 +179,7 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5"
-            style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e" }}
+            style={{ background: "#dcfce7", border: "1px solid #bbf7d0", color: "#16a34a" }}
           >
             <CheckCircle size={12} /> Substituição registrada — motivo salvo
           </motion.div>
@@ -188,8 +190,8 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
             className="space-y-2"
           >
             <div className="flex items-center justify-between text-xs mb-1">
-              <span style={{ color: "rgba(255,255,255,0.5)" }}>Motivo da substituição (obrigatório)</span>
-              <button onClick={() => setShowOverride(false)} style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span style={{ color: "#6B7280" }}>Motivo da substituição (obrigatório)</span>
+              <button onClick={() => setShowOverride(false)} style={{ color: "#9CA3AF" }}>
                 <X size={12} />
               </button>
             </div>
@@ -200,9 +202,9 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
               rows={3}
               className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,255,255,0.8)",
+                background: "#F8F9FC",
+                border: "1px solid #E8EAED",
+                color: "#374151",
                 fontFamily: "inherit",
                 lineHeight: 1.5,
               }}
@@ -218,9 +220,9 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
                 }}
                 className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
                 style={{
-                  background: overrideText.trim().length >= 10 ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.05)",
-                  color: overrideText.trim().length >= 10 ? "#f59e0b" : "rgba(255,255,255,0.25)",
-                  border: `1px solid ${overrideText.trim().length >= 10 ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
+                  background: overrideText.trim().length >= 10 ? "#fef3c7" : "#F3F4F6",
+                  color: overrideText.trim().length >= 10 ? "#d97706" : "#9CA3AF",
+                  border: `1px solid ${overrideText.trim().length >= 10 ? "#fde68a" : "#E8EAED"}`,
                   cursor: overrideText.trim().length >= 10 ? "pointer" : "not-allowed",
                 }}
               >
@@ -229,13 +231,13 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
               <button
                 onClick={() => setShowOverride(false)}
                 className="px-3 py-1.5 rounded-lg text-xs"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
+                style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}
               >
                 Cancelar
               </button>
             </div>
             {overrideText.trim().length > 0 && overrideText.trim().length < 10 && (
-              <div className="text-[11px]" style={{ color: "rgba(245,158,11,0.7)" }}>
+              <div className="text-[11px]" style={{ color: "#d97706" }}>
                 Mínimo de 10 caracteres necessário
               </div>
             )}

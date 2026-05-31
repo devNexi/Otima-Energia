@@ -1,0 +1,75 @@
+Major design overhaul. Do not change any functionality or data. Change the visual design and UX only.
+DESIGN DIRECTION
+Switch from dark theme to light theme throughout. White background (#FFFFFF), not #16163f. The dark theme feels heavy and moody — this needs to feel fast, clean, and energising. The reps open this at 9am and it needs to make them want to work, not feel like they're in a control room.
+Take design and UX inspiration from the two reference images provided — specifically:
+From the first image (Salezy dashboard): the clean white card surfaces, the soft shadow depth on cards, the clear stat chip row at the top, the left sidebar with clear active state highlight, the clean typography hierarchy, the subtle blue/grey chart styling, the search bar in the header, the filter/sort controls on list views, the status badges with soft colour fills (not harsh solid colours).
+From the second image (Noteflow): the kanban-style card layout with progress indicators, the top navigation tab bar, the folder/section grid layout, the task cards with due date chips and progress bars, the avatar stacking for ownership, the 'Create Task' style primary action button, the clean board/timeline/spreadsheet view switcher, the AI action button styling.
+Do not copy any content, layout structure, or functionality from either. Take only: the visual language, card depth, typography scale, badge styling, button design, spacing rhythm, and the feeling of a premium but fast B2B SaaS tool.
+BRAND COLOURS — apply throughout
+Primary purple: #9e3ffd
+Dark accent: #16163f (use for text, sidebar active states, headers — not backgrounds)
+Pink accent: #df0af2 (use sparingly for highlights, hover states, AI-related elements)
+Light purple: #c88ff5 (use for secondary badges, soft backgrounds on cards)
+Background: #FFFFFF
+Card surface: #F8F9FC (very light grey — same feel as the reference images)
+Border: #E8EAED (subtle, not harsh)
+Text primary: #16163f
+Text secondary: #6B7280
+Text muted: #9CA3AF
+Priority colours stay as defined: P1=red, P2=orange, P3=amber, P4-P5=blue, P6=slate, P7=purple, P8=dark red — but use soft fill versions (e.g. red-50 background with red-600 text) not harsh solid badges.
+LAYOUT CHANGES
+Sidebar: white background, #9e3ffd left border on active item, icon + label, subtle hover state. Logo 'Ótima' at top in #16163f bold. Bottom: rep avatar, name, role chip.
+Top header bar: white, search bar centre (like Salezy reference — 'Buscar leads, empresas, decisores...'), notification bell, rep profile right.
+Page headers: clean, generous padding, page title in #16163f, subtitle in muted grey, primary action button in #9e3ffd on right.
+Stat chips row (Queue page top): white cards with soft shadow, icon left in light purple circle, number large in #16163f, label below in muted grey, trend indicator. Exact same visual language as the Salezy stat row.
+QUEUE PAGE CHANGES
+Each queue item card: white card, rounded-xl, soft shadow (shadow-sm hover:shadow-md), left coloured border in priority colour (4px). Inside: company name bold top left, city/state muted top right, DM name below company, then a row of chips (priority badge, source badge, last outcome badge), then next action due with clock icon, then attempt count progress bar (like the Noteflow progress bars — shows X of 20 attempts as a thin progress bar), then action buttons row at bottom of card.
+Add a search bar above the queue list: 'Buscar na fila...' with filter dropdowns for Priority / Owner / Status.
+Add view toggle above queue: Board view (kanban by status) | List view (current queue) | Timeline view (next actions by date). Default to List view.
+Right preview panel: white card, clean sections with dividers, same card language.
+LEAD CARD PAGE CHANGES
+Three columns remain but redesign each:
+Left column: white card, sections separated by subtle dividers not harsh borders. Company name as large H1 in #16163f. Each data field: label small muted grey above, value bold below. DM section gets a dedicated card within the column with a #c88ff5 left border. Attempt count shows as a progress bar (X/20) with colour shifting from green → amber → red as it climbs.
+Centre column tabs: clean pill tab switcher, not heavy tab borders. Active tab: #9e3ffd text with thin bottom border. Tab content: white, generous padding.
+Agent Recommendation Card: white card with left border in recommendation colour, soft purple shadow. Header 'Agente Recomenda' with small AI sparkle icon in #df0af2. Clean typographic hierarchy inside.
+Right column: white card, activity timeline with connecting vertical line (like a proper timeline component), each entry has a coloured icon dot.
+REPLIES PAGE CHANGES
+Each reply card: white card, left border colour by urgency (red for trust/commercial, amber for scheduling, grey for logistics). SLA countdown large and prominent — red when breached with a pulse animation. Reply type badge soft fill. Suggested response in a clean textarea with character count.
+Add header stat row: Respostas Pendentes / SLA Violados / Respondidas Hoje — same chip style as Queue page.
+MANAGER PAGE CHANGES
+Top area: rep performance cards side by side (one for Elayne, one for Thaina). Each card: white, soft shadow, rep name + avatar placeholder, today's stats in a mini grid (Chamadas / DMs / Contas / Callbacks), a small sparkline or progress bar for each metric, coaching flag count badge in red if any.
+Six section accordions below: clean accordion style, count badge in priority colour, expand arrow right. Inside each: clean table-style list not just divs.
+Huddle Mode modal: white modal, clean header with timer large and prominent in #9e3ffd, section progress indicator (1 of 4) as dots or steps, generous padding, primary button #9e3ffd.
+TYPOGRAPHY
+Font: Inter or the existing portal font. Never system-ui.
+H1: 24px, weight 700, #16163f
+H2: 18px, weight 600, #16163f
+Body: 14px, weight 400, #374151
+Label: 12px, weight 500, #6B7280 uppercase tracking-wide
+Numbers/stats: 28px, weight 700, #16163f
+MICRO-INTERACTIONS
+Every card: hover lifts slightly (shadow-md, translate-y-px)
+Priority badges: subtle pulse animation on P1 cards only
+Stat counters: count up animation on page load
+SLA countdown: smooth tick animation
+Queue items: slide in from left on first load with stagger (Framer Motion)
+Agent Recommendation Card: subtle glow on the left border in priority colour
+Copy buttons: flash green tick for 1.5 seconds after copying then reset
+Progress bars: animated fill on load
+UX ADDITIONS SPOTTED IN REFERENCES
+Add these that are currently missing:
+
+Search bar in page header (global search across all leads)
+Progress bars on attempt counts (X of 20 attempts — visual urgency as it fills)
+Due date chips on queue cards with relative time ('Hoje 14:00' / 'Atrasado 2 dias')
+Filter and sort controls above the queue list
+View mode switcher (List / Board / Timeline) on Queue page
+Rep avatar/ownership indicator on each card
+Notification bell in header with unread count badge
+'Criar Tarefa' style quick action button in header
+Keyboard shortcut hints on primary buttons (like the Salezy search bar)
+Empty state illustrations — not just text, a simple SVG illustration for empty queue, no replies, etc.
+
+WHAT NOT TO CHANGE
+All functionality stays exactly as it is. All mock data stays. All Portuguese copy stays. All component logic stays. Only visual design changes. Do not remove any panels, sections, or features.
+After the redesign, show me screenshots of the Queue page, one Lead Card, and the Manager page.

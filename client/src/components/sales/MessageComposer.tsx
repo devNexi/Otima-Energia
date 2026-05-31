@@ -120,13 +120,13 @@ export function MessageComposer({ lead, activeTab }: Props) {
       {/* Style badge */}
       <div className="flex items-center gap-2 flex-wrap">
         <span
-          className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: "rgba(158,63,253,0.15)", color: "#c88ff5", border: "1px solid rgba(158,63,253,0.25)" }}
+          className="text-xs px-2.5 py-1 rounded-full font-medium"
+          style={{ background: "rgba(158,63,253,0.08)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.2)" }}
         >
           Estilo: {ctx.style}
         </span>
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>CTA: {ctx.cta}</span>
+        <span className="text-xs" style={{ color: "#D1D5DB" }}>·</span>
+        <span className="text-xs" style={{ color: "#9CA3AF" }}>CTA: {ctx.cta}</span>
       </div>
 
       {/* Textarea */}
@@ -137,12 +137,15 @@ export function MessageComposer({ lead, activeTab }: Props) {
           rows={activeTab === "email" ? 12 : 8}
           className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-all"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: isBlocked ? "1.5px solid #ef4444" : "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.85)",
+            background: "#FFFFFF",
+            border: isBlocked ? "1.5px solid #dc2626" : "1px solid #E8EAED",
+            color: "#374151",
             fontFamily: "inherit",
             lineHeight: 1.6,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
           }}
+          onFocus={e => { if (!isBlocked) e.target.style.borderColor = "#9e3ffd"; }}
+          onBlur={e => { if (!isBlocked) e.target.style.borderColor = "#E8EAED"; }}
           placeholder="Digite sua mensagem..."
         />
 
@@ -152,11 +155,11 @@ export function MessageComposer({ lead, activeTab }: Props) {
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 mt-1.5"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 mt-1.5"
+              style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
             >
-              <AlertCircle size={13} style={{ color: "#ef4444", flexShrink: 0 }} />
-              <span className="text-xs" style={{ color: "#fca5a5" }}>
+              <AlertCircle size={13} style={{ color: "#dc2626", flexShrink: 0 }} />
+              <span className="text-xs" style={{ color: "#dc2626" }}>
                 ⚠ Linguagem genérica detectada. Use o ângulo sugerido acima.{" "}
                 <strong>Frase: "{bannedPhrase}"</strong>
               </span>
@@ -169,8 +172,8 @@ export function MessageComposer({ lead, activeTab }: Props) {
       <div>
         <button
           onClick={() => setShowContext(!showContext)}
-          className="flex items-center gap-1.5 text-xs"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+          style={{ color: "#9CA3AF" }}
         >
           Contexto utilizado {showContext ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
         </button>
@@ -180,18 +183,18 @@ export function MessageComposer({ lead, activeTab }: Props) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="rounded-lg p-3 mt-2 text-xs space-y-1"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}
+              className="rounded-xl p-3 mt-2 text-xs space-y-1"
+              style={{ background: "#F8F9FC", border: "1px solid #E8EAED", color: "#6B7280" }}
             >
-              <div>Segmento: <span style={{ color: "rgba(255,255,255,0.7)" }}>{lead.industry_segment}</span></div>
+              <div>Segmento: <span style={{ color: "#374151" }}>{lead.industry_segment}</span></div>
               <div>
                 Barreira de confiança:{" "}
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>
+                <span style={{ color: "#374151" }}>
                   {lead.likely_trust_barrier.level} — {lead.likely_trust_barrier.explanation}
                 </span>
               </div>
-              <div>Ângulo SOP: <span style={{ color: "rgba(255,255,255,0.7)" }}>{ctx.angle}</span></div>
-              <div>CTA: <span style={{ color: "rgba(255,255,255,0.7)" }}>{ctx.cta}</span></div>
+              <div>Ângulo SOP: <span style={{ color: "#374151" }}>{ctx.angle}</span></div>
+              <div>CTA: <span style={{ color: "#374151" }}>{ctx.cta}</span></div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -202,37 +205,38 @@ export function MessageComposer({ lead, activeTab }: Props) {
         <button
           onClick={doCopy}
           disabled={isBlocked}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
           style={{
-            background: isBlocked ? "rgba(255,255,255,0.04)" : copied ? "rgba(34,197,94,0.2)" : "#9e3ffd",
-            color: isBlocked ? "rgba(255,255,255,0.2)" : copied ? "#22c55e" : "#fff",
+            background: isBlocked ? "#F3F4F6" : copied ? "#dcfce7" : "#9e3ffd",
+            color: isBlocked ? "#9CA3AF" : copied ? "#16a34a" : "#fff",
             cursor: isBlocked ? "not-allowed" : "pointer",
+            boxShadow: isBlocked ? "none" : copied ? "none" : "0 2px 8px rgba(158,63,253,0.25)",
           }}
         >
           <Copy size={13} /> {copied ? "Copiado!" : "Copiar"}
         </button>
         <button
           disabled={isBlocked}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: "rgba(255,255,255,0.05)",
-            color: isBlocked ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)",
-            border: `1px solid ${isBlocked ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.1)"}`,
-            cursor: isBlocked ? "not-allowed" : "not-allowed",
+            background: "#F8F9FC",
+            color: isBlocked ? "#9CA3AF" : "#6B7280",
+            border: `1px solid ${isBlocked ? "#fecaca" : "#E8EAED"}`,
+            cursor: "not-allowed",
           }}
           title={isBlocked ? "Remova a linguagem genérica antes de enviar" : "Indisponível no protótipo"}
         >
           {isBlocked ? "⚠ Enviar bloqueado" : "Enviar"}
         </button>
         <button
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium"
-          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium"
+          style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}
         >
           <Clock size={13} /> Agendar
         </button>
         <button
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium"
-          style={{ background: "rgba(158,63,253,0.1)", color: "#c88ff5", border: "1px solid rgba(158,63,253,0.2)" }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium"
+          style={{ background: "rgba(158,63,253,0.08)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.2)" }}
         >
           <Zap size={13} /> Acionar Sequência
         </button>
