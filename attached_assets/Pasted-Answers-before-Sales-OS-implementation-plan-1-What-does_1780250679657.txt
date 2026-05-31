@@ -1,0 +1,208 @@
+Answers before Sales OS implementation plan:
+
+## 1. What does the sales rep actually do in Sales OS?
+
+Eventually: all of the above.
+
+But for v0.1, Sales OS should focus on **execution**, not generic CRM.
+
+The sales rep’s primary workflow is:
+
+1. Open **Minha Fila / Today’s Queue**
+2. See the next best lead/contact to work
+3. Open the lead action card
+4. See:
+
+   * call objective
+   * DM details
+   * best contact route
+   * Julia/SOP intelligence
+   * opening line
+   * trust warning
+   * first question
+   * bill ask angle
+   * current blocker
+5. Call via dialer / open dialer context
+6. Log outcome
+7. Set next action/date/objective
+8. Trigger the correct follow-up/chase sequence if needed
+
+So v0.1 should include:
+
+* Call queue / task queue
+* Lead detail/action card
+* Call assist panel
+* WhatsApp/email copy composer
+* Trigger sequence buttons
+* DM enrichment panel
+* Basic activity/outcome logging mock
+* Manager view for Renan
+
+It should **not** try to become a full CRM replacement yet.
+
+## 2. Does Sales OS replace the current `/admin/deals` view for sales role, or sit alongside it?
+
+For now, **sit alongside it**.
+
+Do not replace existing portal/admin/deals functionality yet.
+
+Sales OS should be a new role-based mode/route, something like:
+
+* `/sales-os`
+* `/sales-os/queue`
+* `/sales-os/leads/:id`
+* `/sales-os/manager`
+* `/sales-os/dialer`
+
+Long term it may become the primary sales interface, but not until it is stable and connected properly.
+
+## 3. Is there a lead queue / dialler workflow, or is it purely CRM-style pipeline management?
+
+There is definitely a **lead queue / dialer workflow**.
+
+This is not primarily pipeline management.
+
+The core workflow is:
+
+1. Julia qualifies leads and sends qualified leads into Zoho.
+2. Zoho remains source of truth for contacts/statuses/next actions/tasks for now.
+3. The system prioritises:
+
+   * exact callbacks
+   * overdue callbacks
+   * bill chase
+   * proposal chase
+   * DM identified but not reached
+   * DM reached but no bill
+   * stale active leads
+   * new Julia leads
+4. The Power Dialer should eventually serve the next best call.
+5. The Call Assist panel should appear inside the dialer flow.
+6. Call outcome writes back to Zoho.
+
+So Sales OS should be designed around a **queue-first / dialer-first execution model**, not a generic kanban/pipeline-first model.
+
+Pipeline visibility is useful, but secondary.
+
+## 4. Should sales users see deal financials?
+
+Restrict most financials from reps.
+
+Sales reps can see:
+
+* rough opportunity priority
+* bill size band
+* lead priority
+* likely value band
+* product/track
+* bill/proposal/deal stage
+* their own commission estimate if we later decide to show it
+
+Sales reps should not see:
+
+* full company financials
+* detailed margin
+* supplier commission mechanics
+* P&L
+* company cashflow
+* other reps’ pay
+* sensitive pricing internals unless required
+
+Renan can see more than reps, but still not full founder/finance view.
+
+Callum/Admin can see everything.
+
+So build role-based visibility from the start:
+
+* Rep
+* Sales Manager
+* Founder/Admin
+* Ops
+* Finance later
+
+## 5. Is the data source existing leads/deals tables, or does Zoho remain source of truth?
+
+Zoho remains the sales source of truth for now.
+
+For v0.1 prototype, use mock data that mirrors Zoho fields.
+
+Production should read from:
+
+* Zoho Contacts
+* Zoho Tasks/Activities
+* Zoho sales execution fields
+* Julia outputs
+* Dialer events
+* SOP agent outputs
+* Enrichment outputs
+* Portal/Ops status where relevant
+
+Do not create a competing sales database for manual updates.
+
+The safe architecture is:
+
+* Zoho = current operational sales source of truth
+* Portal = role-based operating layer
+* Sales OS = UI/execution surface
+* Dialer = live call execution surface
+* SOP agents = intelligence/orchestration
+* Warehouse/memory = durable agent output/history
+* Portal DB may cache/mirror data for speed/reporting, but must not silently become a conflicting source of truth
+
+Writebacks should be deliberate and limited:
+
+* update Zoho next action
+* update Zoho outcome/status
+* create Zoho task
+* save enriched DM details back to Zoho
+* trigger sequence
+* record call/dialer outcome
+
+## 6. Will there be a mobile use case?
+
+Not for v0.1.
+
+Desktop-first.
+
+Sales reps are working from laptops/desktops with web dialer and Zoho.
+
+The interface should be responsive enough not to break on tablet, but do not optimise for mobile yet.
+
+Mobile can come later for:
+
+* founder dashboard
+* Renan quick check
+* task alerts
+* WhatsApp-style review
+
+But v0.1 should be desktop-first and speed-of-execution-first.
+
+## Summary of implementation direction
+
+Build Sales OS as a **new role-based portal mode sitting alongside current portal views**, not replacing anything yet.
+
+Priority is:
+
+1. Rep Workbench / Today’s Queue
+2. Lead Action Card
+3. Call Assist Panel
+4. One-click WhatsApp/email composer
+5. DM Direct Enrichment panel
+6. Sequence Trigger panel
+7. Renan Manager Console
+8. Power Dialer-ready call card
+9. SOP Agent output/status panel
+
+Use mock data first, but use real Otima/Zoho field names and statuses.
+
+Design it so the dev team can later connect:
+
+* Zoho
+* Julia
+* Dialer
+* SOP agents
+* Enrichment API
+* Portal auth/roles
+* Warehouse/memory
+
+Main aim: help the sales team close more by putting agent intelligence directly into their workflow, especially before and during calls.
