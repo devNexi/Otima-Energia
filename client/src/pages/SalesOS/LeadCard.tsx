@@ -7,13 +7,14 @@ import { MessageComposer } from "@/components/sales/MessageComposer";
 import { AgentRecommendationCard } from "@/components/sales/AgentRecommendationCard";
 import { DMEnrichmentPanel } from "@/components/sales/DMEnrichmentPanel";
 import { MemoryPanel } from "@/components/sales/MemoryPanel";
+import { SOPAgentPanel } from "@/components/sales/SOPAgentPanel";
 import { SequenceTriggerPanel } from "@/components/sales/SequenceTriggerPanel";
 import { getLeadById, priorityConfig } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
 import {
   Phone, MessageCircle, Mail, RotateCcw, Search, ArrowUpCircle,
   Calendar, XCircle, Save, Copy, AlertTriangle, CheckCircle,
-  Clock, FileText, Zap,
+  Clock, FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -69,7 +70,6 @@ export default function LeadCard() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const [centerTab, setCenterTab] = useState<CenterTab>("assistencia");
-  const [scriptViewed, setScriptViewed] = useState(false);
   const [saved, setSaved] = useState(false);
   const { t } = useI18n();
 
@@ -254,11 +254,7 @@ export default function LeadCard() {
 
             <div className="flex-1 overflow-y-auto p-5">
               {centerTab === "assistencia" && (
-                <CallAssistPanel
-                  lead={lead}
-                  scriptViewed={scriptViewed}
-                  onScriptViewed={() => setScriptViewed(true)}
-                />
+                <CallAssistPanel lead={lead} />
               )}
               {(centerTab === "whatsapp" || centerTab === "email" || centerTab === "cobranca" || centerTab === "interrupcao") && (
                 <MessageComposer lead={lead} activeTab={centerTab as MsgTab} />
@@ -332,35 +328,7 @@ export default function LeadCard() {
             </div>
 
             <DMEnrichmentPanel lead={lead} />
-
-            <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={13} style={{ color: "#9e3ffd" }} />
-                <span className="text-sm font-semibold" style={{ color: "#fff" }}>SOP Agents</span>
-              </div>
-              <div className="space-y-2">
-                {lead.sop_agent_statuses.map((sop, i) => {
-                  const statusColor = { Concluído: "#22c55e", Executando: "#f59e0b", Pendente: "rgba(255,255,255,0.4)", Erro: "#ef4444" }[sop.status];
-                  return (
-                    <div key={i} className="text-xs">
-                      <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <span style={{ color: "rgba(255,255,255,0.65)" }}>{sop.sop}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] shrink-0" style={{ background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}30` }}>
-                          {sop.status}
-                        </span>
-                      </div>
-                      {sop.output_summary && (
-                        <div style={{ color: "rgba(255,255,255,0.4)" }}>{sop.output_summary}</div>
-                      )}
-                      {sop.last_run && (
-                        <div style={{ color: "rgba(255,255,255,0.3)" }}>{sop.last_run}</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
+            <SOPAgentPanel lead={lead} />
             <SequenceTriggerPanel />
             <MemoryPanel lead={lead} />
           </div>

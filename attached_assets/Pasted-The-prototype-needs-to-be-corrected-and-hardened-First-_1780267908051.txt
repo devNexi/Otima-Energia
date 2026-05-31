@@ -1,0 +1,113 @@
+The prototype needs to be corrected and hardened. First: delete /sales-os/dialer and Dialer.tsx entirely and remove its route from App.tsx. The dialer is a separate external application on Lovable and does not belong here. Do not replace it with anything.
+The 'Ligar Agora' button on every page should show a toast notification only: 'Abrindo discador...' — nothing more. The Call Assist panel on the Lead Card stays exactly where it is — it is a pre-call reference panel the rep reads before switching to the external dialer.
+Now harden the four remaining pages — Queue, LeadCard, Replies, Manager — as follows:
+
+1. AGENT RECOMMENDATION CARD — rebuild if it is just a button or chip
+Every Lead Card must have a prominent Agent Recommendation Card. It must show all of:
+
+Header: 'Ação Recomendada pelo Agente'
+Recommended action (large, bold): e.g. 'Iniciar Bill Chase'
+Reason paragraph: e.g. 'Conta solicitada há 36h. WhatsApp confirmado. Decisor alcançado. Sem resposta até agora.'
+Confidence badge: 'Alta' (green) / 'Média' (amber) / 'Baixa' (grey)
+Preconditions checklist: each as a row with green tick ✓ or red block ✗ and label. E.g: '✓ Conta solicitada' / '✓ Canal de contato existe' / '✗ Flag de resposta humana pendente — resolva antes de iniciar'
+Expandable 'O que acontece a seguir' section: 'Sequência de 3 toques: Ligação D+1 → WhatsApp D+1 tarde → Ligação D+2 urgente'
+Two buttons: primary action (e.g. 'Iniciar Bill Chase') + 'Substituir com Motivo' which opens a required text field
+If any precondition has ✗, the primary button is disabled and shows 'Pré-condições não atendidas'
+Visually distinct: left border in priority colour, slightly different background from surrounding panel
+
+
+2. CALL ASSIST PANEL — on the Lead Card only, as a pre-call reference
+The Call Assist tab on the Lead Card must show all of these sections with icon prefix. Every copyable element must have a working Copy button:
+🎯 Objetivo da Chamada (1 line, from mock call_objective field)
+⚡ Por Que Agora (1-2 lines, from mock call_why_now_angle field)
+👤 Alvo (DM name + best route from mock dm_direct_phone_best)
+🗣 Diga Isso Primeiro (from mock suggested_opening_angle — Portuguese — Copy button)
+⚠ Aviso de Confiança (amber block, from mock call_trust_warning)
+❓ Primeira Pergunta (from mock suggested_first_question — Copy button)
+💡 Ângulo do Pedido de Conta (from mock suggested_bill_ask_angle — Copy button)
+🔄 Script para Gatekeeper (standard script — Copy button)
+📋 Resumo da Última Interação (from mock activity_timeline — last entry)
+🤔 Objeções Rápidas — expandable chips. Each chip expands to show a Voss-framed Portuguese response. The 'solar' chip must expand to show the full 3-branch diagnostic:
+'Passo 1: "Ótimo — a placa cobre 100% do consumo ou ainda recebem fatura de energia?"
+Se ainda tem fatura → "Perfeito, é exatamente essa situação com que trabalhamos. O caminho mais simples é a conta — pode me mandar agora pelo WhatsApp?"
+Se 100% coberto, empresa grande → "Entendido. Qual é mais ou menos o gasto mensal de energia? Pode haver um programa separado que vale a pena ver e que a placa solar não substitui." [ACL — sinalizar ao Renan]
+Se 100% coberto, empresa pequena → "Entendido, parece que estão bem servidos. Obrigada pelo tempo." [DNC genuíno]'
+Each branch must have its own Copy button.
+There is NO 'Marcar script visualizado' gate on the Lead Card. That gate belongs inside the Lovable dialer, not here. The Lead Card Call Assist is a reference panel — always accessible, no gate.
+
+3. BANNED PHRASE DETECTION — must be functional in all message tabs
+In every message textarea (WhatsApp, Email, Cobrar Conta, Interrupção de Padrão tabs on the Lead Card):
+
+Detect these strings case-insensitively: 'só estou verificando', 'alguma atualização', 'voltando a entrar em contato', 'qualquer coisa estou à disposição', 'só passando para verificar', 'circling back', 'following up', 'checking in'
+When detected: textarea border turns red, inline warning appears below: '⚠ Linguagem genérica detectada. Use o ângulo sugerido acima.'
+Enviar button disables while banned phrase is present
+Warning disappears when the phrase is removed
+
+
+4. MESSAGE COMPOSER — agent-written, context-aware defaults
+Every message tab must be pre-filled with a strong Portuguese message generated from the mock data for that lead. Not placeholder text. The message must:
+
+Reference the specific industry segment from mock data
+Reference the trust barrier level
+Use the correct style for the tab: WhatsApp = Remoção de Fricção / Email = Value Drop / Cobrar Conta = Friction Removal escalating to Pattern Interrupt / Interrupção de Padrão = short, sharp, unexpected
+Show the style label: 'Estilo: Remoção de Fricção'
+Show collapsed 'Contexto utilizado' section listing: segment used, trust barrier level, SOP angle, CTA type
+
+
+5. DM ENRICHMENT PANEL — three interactive states
+On the Lead Card right column, the DMEnrichmentPanel must have three states based on mock data:
+State A — DM known, dm_direct_phone_best is null:
+Amber alert: '⚠ Problema de acesso: [DM name] identificado sem rota direta'
+Button: 'Encontrar Melhor Rota'
+Clicking triggers a fake 2-second loading state with spinner then resolves to State B or C
+State B — Result found (use for leads where mock has dm_direct_phone_best populated):
+Phone shown large, confidence % badge, route type chip: 'Celular Direto' (green) / 'Provável Celular' (amber) / 'Rota via Assistente' (grey)
+WhatsApp likely: green tick or grey question mark
+Alternative route shown below in smaller text
+Buttons: 'Usar Este Número' / 'Copiar WhatsApp' / 'Salvar no Zoho' / 'Solicitar Busca Mais Profunda' / 'Marcar Não Confiável'
+State C — No reliable route:
+Grey state: 'Nenhuma rota direta confiável encontrada'
+Gatekeeper script shown: 'Entendo. Só preciso confirmar com quem cuida da conta de energia — você sabe quem seria a melhor pessoa?'
+Copy button on the script
+Button: 'Solicitar Busca Mais Profunda'
+
+6. REPLIES PAGE — SLA must count down in real time
+
+SLA countdown on each reply card must use setInterval and count down live
+When it hits zero: badge turns red, label changes to 'SLA VIOLADO', card gets a pulsing red left border
+'Automação pausada' badge must appear on every reply card
+Each reply card pre-filled response textarea must contain a real Portuguese suggested response, not placeholder text — editable
+'Marcar como Respondido' moves the card to a resolved section at the bottom with green resolved state and timestamp
+
+
+7. MANAGER PAGE — huddle mode timer and section gates
+Huddle Mode modal (opens on 'Iniciar Huddle das 9h'):
+
+15-minute countdown timer visible and counting from moment modal opens
+4 sections: Placar / Ações em Falta / Foco de Coaching / Compromissos
+Each section has a 'Próxima Seção' button that only activates after the rep interacts (clicks an item in sections 1-3, or fills all three fields in section 4)
+Section 4 Compromissos: each rep has three required fields: meta de chamadas hoje / lead prioritário / o que farei diferente hoje — all required before 'Encerrar Huddle' activates
+On 'Encerrar Huddle': show a commitment summary card with a 'Copiar para WhatsApp' button that copies a formatted summary in Portuguese
+
+
+8. MEMORY PANEL — real structure
+MemoryPanel on Lead Card right column:
+
+First entry always: Julia's original qualification summary from mock data, with a purple 'Julia' badge
+Subsequent entries chronological: each call outcome, each WhatsApp sent showing style used (e.g. 'Estilo: Remoção de Fricção' / 'CTA: Enviar conta por WhatsApp'), each email sent, each note
+Collapsed 'Histórico de Agentes' section at bottom showing which SOPs ran, when, key output summary
+Collapsed 'Substituições pelo Representante' section: any agent recommendations that were overridden, with the reason given
+
+
+9. SOP AGENT ACTIVITY PANEL — meaningful mock content
+Must show at minimum these four with real content, not just status chips:
+SOP 1 — Sales Intelligence: status 'Concluído', last run '2 dias atrás'. Summary: 'Prioridade: 82 | Segmento: Hotel | Barreira: Alta | Ângulo: Revisão sem compromisso'
+SOP 3 — Bill Chase: status 'Executando'. Phase: 'Fase 1 — Dia 2 de 3'. Next touch: 'Amanhã 09:00'. Summary: 'WhatsApp de remoção de fricção enviado. Próximo: interrupção de padrão se sem resposta.'
+SOP 7 — Call Tasking: status 'Concluído'. Summary: 'Rank: #3 | Tipo: Bill Chase Priority | Janela: Tarde | Requeue: janela diferente amanhã'
+SOP 13 — DM Enrichment: status 'Concluído' if dm_direct_phone_best exists in mock, or 'Aguardando Acionamento' if null. If concluído: show confidence % and route type.
+Remaining SOPs 2, 4, 5, 6, 8, 9, 10, 11, 12, 14: status 'Pendente' with a one-line Portuguese description of what each does.
+
+10. MOCK DATA — verify depth
+Confirm every mock contact has all of these populated with real Portuguese content (not empty strings or placeholder text):
+rep_call_brief / suggested_opening_angle / suggested_first_question / suggested_bill_ask_angle / likely_trust_barrier with explanation / why_this_account_may_be_worth_reviewing_now / call_objective / call_trust_warning / call_why_now_angle / activity_timeline with 3-6 real entries / messages_sent with style and CTA recorded
+Also confirm: at least 3 contacts have human_response_required = true with real reply_snippet content, at least 3 contacts have DM name known but dm_direct_phone_best = null, at least 2 contacts have solar objection in activity_timeline.

@@ -16,8 +16,10 @@ export interface MessageSent {
 export interface AgentRecommendation {
   action: string;
   confidence: "Alta" | "Média" | "Baixa";
+  reason: string;
   preconditions: { label: string; met: boolean }[];
   next_step: string;
+  what_happens_next: string;
   style: string;
   compact_label: string;
 }
@@ -133,6 +135,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Iniciar Bill Chase",
       confidence: "Alta",
+      reason: "Conta solicitada há 36h. WhatsApp confirmado. Decisor alcançado. Sem resposta até agora.",
       compact_label: "Iniciar Bill Chase — Confiança: Alta",
       preconditions: [
         { label: "Decisor alcançado", met: true },
@@ -141,6 +144,7 @@ export const mockLeads: Lead[] = [
         { label: "Janela de callback ativa", met: false },
       ],
       next_step: "Ligar agora — Carlos está disponível pela manhã. Se não atender, WhatsApp com link de upload direto.",
+      what_happens_next: "Sequência de 3 toques: Ligação D+1 → WhatsApp D+1 tarde → Ligação D+2 urgente com link direto de upload.",
       style: "Bill Chase — Gentil e Direto",
     },
     activity_timeline: [
@@ -215,6 +219,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Ligar Agora — Callback Combinado",
       confidence: "Alta",
+      reason: "Callback combinado com o decisor. Horário exato definido pelo próprio DM — janela de oportunidade ativa.",
       compact_label: "Callback Combinado — Confiança: Alta",
       preconditions: [
         { label: "Callback prometido pelo DM", met: true },
@@ -223,6 +228,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta enviada", met: false },
       ],
       next_step: "Ligar agora. Se não atender, aguardar 30 min e tentar WhatsApp.",
+      what_happens_next: "Ligar agora → Sem resposta: WhatsApp 30 min depois → Sem resposta: reagendar para amanhã cedo com mensagem de interrupção.",
       style: "Rapport + Bill Ask",
     },
     activity_timeline: [
@@ -296,6 +302,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Tentar Contato Direto — Ligação Manhã",
       confidence: "Média",
+      reason: "Conta analisada e elegível para GD. Sem apresentação há 12 dias — lead esfriando. Síndica difícil de alcançar via gatekeeper.",
       compact_label: "Contato Direto — Confiança: Média",
       preconditions: [
         { label: "Conta analisada", met: true },
@@ -304,6 +311,7 @@ export const mockLeads: Lead[] = [
         { label: "Script anti-solar preparado", met: true },
       ],
       next_step: "Ligar às 8h30. Se porteiro filtrar, usar script de apresentação de resultado.",
+      what_happens_next: "Tentar ligação às 8h30 → Gatekeeper: usar script de resultado → Sem acesso: WhatsApp direto no número identificado.",
       style: "Resultado + Neutralização de Objeção Solar",
     },
     activity_timeline: [
@@ -377,6 +385,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Primeiro Contato — Abordagem Consultiva",
       confidence: "Média",
+      reason: "DM identificado e com telefone direto. WhatsApp lido sem resposta — janela de confiança curta.",
       compact_label: "Primeiro Contato DM — Confiança: Média",
       preconditions: [
         { label: "DM identificado", met: true },
@@ -385,6 +394,7 @@ export const mockLeads: Lead[] = [
         { label: "WhatsApp respondido", met: false },
       ],
       next_step: "Ligar às 15h. Abordagem: consultoria, não venda.",
+      what_happens_next: "Ligação às 15h → Sem resposta: WhatsApp com script consultivo → Sem resposta: sequência de email + novo WhatsApp D+2.",
       style: "Consultivo — Custo Operacional",
     },
     activity_timeline: [
@@ -456,6 +466,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Tentar Rota LinkedIn + Email Direto",
       confidence: "Baixa",
+      reason: "6 tentativas sem contato com DM. Gatekeeper ativo. Nova rota via LinkedIn identificada — última janela antes de arquivar.",
       compact_label: "Nova Rota DM — Confiança: Baixa",
       preconditions: [
         { label: "DM identificado", met: true },
@@ -464,6 +475,7 @@ export const mockLeads: Lead[] = [
         { label: "LinkedIn identificado", met: true },
       ],
       next_step: "Solicitar enriquecimento de DM para encontrar contato direto.",
+      what_happens_next: "Mensagem LinkedIn → Email direto se encontrado → Sem resposta em 5 dias: arquivar e notificar Renan.",
       style: "Interrupção de Padrão — Nova Rota",
     },
     activity_timeline: [
@@ -536,6 +548,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Neutralizar Objeção Solar — Abordagem Complementar",
       confidence: "Média",
+      reason: "Lead parado 7 dias. Objeção solar levantada — proposta solar concorrente em andamento. Janela fechando.",
       compact_label: "Neutralizar Solar — Confiança: Média",
       preconditions: [
         { label: "Objeção solar identificada", met: true },
@@ -544,6 +557,7 @@ export const mockLeads: Lead[] = [
         { label: "Lead responsivo", met: false },
       ],
       next_step: "Tentar WhatsApp com abordagem de complementaridade antes de ligar.",
+      what_happens_next: "WhatsApp com abordagem de complementaridade → Sem resposta: ligar com script GD+solar → Sem resposta: aguardar 72h para tentativa final.",
       style: "Objeção Solar — Posicionamento Complementar",
     },
     activity_timeline: [
@@ -615,6 +629,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Identificar Decisor — Primeiro Contato",
       confidence: "Média",
+      reason: "Lead novo da Julia. Decisor ainda não identificado. Primeiro a ligar tem vantagem de posicionamento.",
       compact_label: "Identificar DM — Confiança: Média",
       preconditions: [
         { label: "Lead qualificado pela Julia", met: true },
@@ -623,6 +638,7 @@ export const mockLeads: Lead[] = [
         { label: "Horário comercial", met: true },
       ],
       next_step: "Ligar para número da loja. Objetivo: identificar DM, não vender ainda.",
+      what_happens_next: "Ligar para número da loja → Identificar DM → Transferência ou agendamento de callback direto.",
       style: "Identificação de DM — Triagem",
     },
     activity_timeline: [
@@ -690,6 +706,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Identificar Síndico — Primeiro Contato",
       confidence: "Média",
+      reason: "Condomínio recém-qualificado. Síndico sem proposta concorrente. Oportunidade de ser o primeiro fornecedor.",
       compact_label: "Identificar DM — Confiança: Média",
       preconditions: [
         { label: "Lead qualificado pela Julia", met: true },
@@ -698,6 +715,7 @@ export const mockLeads: Lead[] = [
         { label: "Horário comercial", met: true },
       ],
       next_step: "Ligar para portaria. Objetivo: nome do síndico e contato direto.",
+      what_happens_next: "Ligar para portaria → Obter nome do síndico → Tentar conexão direta ou agendar visita.",
       style: "Identificação de DM — Portaria",
     },
     activity_timeline: [
@@ -765,6 +783,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Escalar para Renan — Decisão Estratégica",
       confidence: "Baixa",
+      reason: "21 tentativas em 60 dias sem evolução. Padrão de não-decisão confirmado. Revisão estratégica obrigatória.",
       compact_label: "Escalar para Renan — 20+ tentativas",
       preconditions: [
         { label: "DM alcançado (histórico)", met: true },
@@ -773,6 +792,7 @@ export const mockLeads: Lead[] = [
         { label: "Nova abordagem disponível", met: false },
       ],
       next_step: "Marcar para revisão com Renan. Opções: mudar canal, mudar abordagem, fechar como perdido.",
+      what_happens_next: "Agendar reunião com Renan → Decidir entre nova abordagem radical, mudança de canal ou encerrar ciclo.",
       style: "Escalação Estratégica",
     },
     activity_timeline: [
@@ -847,6 +867,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "WhatsApp Direto — Bill Chase Suave",
       confidence: "Alta",
+      reason: "Conta solicitada há 36h. WhatsApp confirmado como canal preferido. Dra. Luciana comprometida mas logística com contabilidade.",
       compact_label: "Bill Chase WhatsApp — Confiança: Alta",
       preconditions: [
         { label: "Decisor alcançado", met: true },
@@ -855,6 +876,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta recebida", met: false },
       ],
       next_step: "Enviar WhatsApp às 7h30. Se sem resposta em 2h, ligar brevemente.",
+      what_happens_next: "WhatsApp às 7h30 → Sem resposta em 2h: ligar brevemente → Sem resposta: propor link de upload para a secretária.",
       style: "Bill Chase — Suave via WhatsApp",
     },
     activity_timeline: [
@@ -926,6 +948,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Pedir WhatsApp Direto + Conta",
       confidence: "Alta",
+      reason: "DM alcançada mas sem WhatsApp direto. Influenciadora — precisa de material para apresentar ao dono.",
       compact_label: "Obter WhatsApp + Conta — Confiança: Alta",
       preconditions: [
         { label: "DM identificada", met: true },
@@ -934,6 +957,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta recebida", met: false },
       ],
       next_step: "Ligar no fixo. Prioridade 1: obter WhatsApp. Prioridade 2: pedir conta.",
+      what_happens_next: "Ligar no fixo → Obter WhatsApp → Enviar análise visual para apresentar ao proprietário → Acompanhar decisão.",
       style: "Consolidação de Relacionamento",
     },
     activity_timeline: [
@@ -1003,6 +1027,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Proposal Chase — Criar Urgência Legítima",
       confidence: "Média",
+      reason: "Proposta enviada há 10 dias sem resposta. Supermercado 2 unidades — decisão pendente com contador.",
       compact_label: "Proposal Chase — Confiança: Média",
       preconditions: [
         { label: "Proposta enviada", met: true },
@@ -1011,6 +1036,7 @@ export const mockLeads: Lead[] = [
         { label: "Prazo comunicado", met: false },
       ],
       next_step: "Ligar e comunicar prazo de validade da proposta.",
+      what_happens_next: "Ligar e comunicar prazo de validade → Oferecer suporte ao contador → Sem resposta: proposta revisada com desconto simbólico.",
       style: "Urgência Legítima — Prazo de Validade",
     },
     activity_timeline: [
@@ -1082,6 +1108,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Solicitar Enriquecimento — Obter Telefone Direto",
       confidence: "Média",
+      reason: "DM identificado via LinkedIn — telefone direto ausente. Condomínio com processo decisório coletivo.",
       compact_label: "Enriquecer DM — Confiança: Média",
       preconditions: [
         { label: "DM identificado", met: true },
@@ -1090,6 +1117,7 @@ export const mockLeads: Lead[] = [
         { label: "Primeira tentativa realizada", met: true },
       ],
       next_step: "Solicitar busca de telefone direto via enriquecimento. Enquanto isso, mensagem LinkedIn.",
+      what_happens_next: "Solicitar enriquecimento de DM → Enquanto isso: mensagem LinkedIn → Após número obtido: ligar com abordagem de conveniência.",
       style: "Enriquecimento + LinkedIn",
     },
     activity_timeline: [
@@ -1160,6 +1188,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Tentar WhatsApp no Número Identificado",
       confidence: "Baixa",
+      reason: "Número identificado com 65% de confiança. Gatekeeper ativo. Nova rota via WhatsApp disponível.",
       compact_label: "Nova Rota — Confiança: Baixa",
       preconditions: [
         { label: "DM identificada", met: true },
@@ -1168,6 +1197,7 @@ export const mockLeads: Lead[] = [
         { label: "WhatsApp confirmado", met: false },
       ],
       next_step: "Enviar WhatsApp no número identificado. Se não entregar, solicitar nova busca.",
+      what_happens_next: "WhatsApp no número identificado → Sem entrega: solicitar nova busca → Número confirmado: iniciar sequência padrão.",
       style: "Nova Rota — WhatsApp Direto",
     },
     activity_timeline: [
@@ -1239,6 +1269,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Interrupção de Padrão — Abordagem 90 Segundos",
       confidence: "Baixa",
+      reason: "8 tentativas sem resposta. Abordagem de 90 segundos preparada — última chance antes de arquivar.",
       compact_label: "Interrupção de Padrão — Confiança: Baixa",
       preconditions: [
         { label: "DM identificado", met: true },
@@ -1247,6 +1278,7 @@ export const mockLeads: Lead[] = [
         { label: "Lead responsivo recentemente", met: false },
       ],
       next_step: "Tentar abordagem 90 segundos. Se sem sucesso, arquivar.",
+      what_happens_next: "Tentar abordagem 90 segundos → Sem resposta: arquivar e notificar Renan com sumário de todas as tentativas.",
       style: "Interrupção de Padrão",
     },
     activity_timeline: [
@@ -1319,6 +1351,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Proposal Chase Urgente — Prazo 72h",
       confidence: "Alta",
+      reason: "Proposta vence em 72h. Maior oportunidade da carteira — câmara fria R$45k. DM receptivo mas dependente de sócios.",
       compact_label: "Proposal Chase Urgente — Confiança: Alta",
       preconditions: [
         { label: "Proposta enviada", met: true },
@@ -1327,6 +1360,7 @@ export const mockLeads: Lead[] = [
         { label: "Decisão recebida", met: false },
       ],
       next_step: "Ligar agora. Comunicar prazo real de 3 dias. Oferecer ajuda para processo interno.",
+      what_happens_next: "Ligar agora → Comunicar prazo real → Oferecer suporte ao processo de aprovação → Sem resposta: WhatsApp urgente.",
       style: "Urgência Legítima — Prazo de Proposta",
     },
     activity_timeline: [
@@ -1398,6 +1432,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Ligar Agora — Callback Prometido",
       confidence: "Alta",
+      reason: "DM identificado sem contato prévio. Score alto — hotel grande em SP com consumo significativo.",
       compact_label: "Callback + Obter WhatsApp — Confiança: Alta",
       preconditions: [
         { label: "DM alcançado", met: true },
@@ -1406,6 +1441,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta recebida", met: false },
       ],
       next_step: "Ligar às 14h30 conforme combinado. Prioridade: obter WhatsApp e pedir conta.",
+      what_happens_next: "Primeiro contato via ligação → Apresentar análise gratuita → Se receptivo: pedir conta no mesmo call.",
       style: "Consolidação + Bill Ask",
     },
     activity_timeline: [
@@ -1475,6 +1511,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Ligar e Mapear Decisor Real",
       confidence: "Média",
+      reason: "Contato realizado, interesse demonstrado, conta prometida. Médico com agenda difícil — janela curta.",
       compact_label: "Mapear Decisor — Confiança: Média",
       preconditions: [
         { label: "DM identificada", met: true },
@@ -1483,6 +1520,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta recebida", met: false },
       ],
       next_step: "Ligar para Cláudia. Objetivo: identificar o decisor financeiro e obter introdução.",
+      what_happens_next: "WhatsApp de acompanhamento → Ligação no horário combinado → Se sem conta em 48h: escalar urgência.",
       style: "Mapeamento de Organograma",
     },
     activity_timeline: [
@@ -1553,6 +1591,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Posicionamento de Parceria — Síndico Profissional",
       confidence: "Alta",
+      reason: "Lead parado com objeção de 'vou pensar'. Risco de perda por inação. Abordagem de interrupção necessária.",
       compact_label: "Abordagem Parceiro — Confiança: Alta",
       preconditions: [
         { label: "DM identificado", met: true },
@@ -1561,6 +1600,7 @@ export const mockLeads: Lead[] = [
         { label: "Contato iniciado", met: true },
       ],
       next_step: "Ligar com pitch de parceria, não de venda individual.",
+      what_happens_next: "Mensagem de interrupção de padrão → Sem resposta 48h: ligação direta com nova oferta de valor.",
       style: "Parceria Estratégica",
     },
     activity_timeline: [
@@ -1631,6 +1671,7 @@ export const mockLeads: Lead[] = [
     agent_recommendation: {
       action: "Entender Bloqueio Real — Oferecer Contato com Secretária",
       confidence: "Média",
+      reason: "Decisor alcançado e proposta recebida. DM consultando equipe técnica — processo de decisão ativo.",
       compact_label: "Diagnóstico de Bloqueio — Confiança: Média",
       preconditions: [
         { label: "DM comprometida", met: true },
@@ -1639,6 +1680,7 @@ export const mockLeads: Lead[] = [
         { label: "Conta recebida", met: false },
       ],
       next_step: "Ligar e propor contato direto com secretária ou contabilidade.",
+      what_happens_next: "Ligar e perguntar sobre dúvidas técnicas → Oferecer reunião com especialista → Acompanhar decisão em 48h.",
       style: "Remoção de Fricção — Delegação",
     },
     activity_timeline: [
