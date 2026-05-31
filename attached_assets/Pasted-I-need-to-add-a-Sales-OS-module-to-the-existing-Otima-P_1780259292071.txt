@@ -1,0 +1,246 @@
+I need to add a Sales OS module to the existing Otima Portal. Do not touch any existing code. Append new routes only.
+CONTEXT:
+
+Stack: React 18 + TypeScript + Vite + Tailwind v4 + Radix/Shadcn + wouter + Framer Motion
+Design tokens: purple #9e3ffd, dark bg #16163f, pink accent #df0af2, light purple #c88ff5
+Existing roles: admin, ops, sales. Sales OS is gated to sales + admin roles.
+Auth: existing session-based. Do not change anything in auth.
+Data: mock data only. No backend calls. Use real Zoho BR field names and real SOP output field names.
+
+WHAT TO BUILD — 5 pages:
+/sales-os/queue → Rep Workbench (Minha Fila)
+/sales-os/leads/:id → Lead Action Card
+/sales-os/dialer → Power Dialer Call Card
+/sales-os/replies → Human Reply Required Queue
+/sales-os/manager → Renan Manager Console
+NEW FILES (append to existing project):
+client/src/pages/SalesOS/Queue.tsx
+client/src/pages/SalesOS/LeadCard.tsx
+client/src/pages/SalesOS/Dialer.tsx
+client/src/pages/SalesOS/Replies.tsx
+client/src/pages/SalesOS/Manager.tsx
+client/src/components/sales/CallAssistPanel.tsx
+client/src/components/sales/AgentRecommendationCard.tsx
+client/src/components/sales/QueueItem.tsx
+client/src/components/sales/DMEnrichmentPanel.tsx
+client/src/components/sales/MessageComposer.tsx
+client/src/components/sales/SequenceTriggerPanel.tsx
+client/src/components/sales/MemoryPanel.tsx
+client/src/components/sales/HuddleMode.tsx
+client/src/data/mockLeads.ts
+DO NOT: touch App.tsx (except to append new routes), touch any existing components, make any API calls, use any backend data.
+
+PAGE 1: /sales-os/queue — REP WORKBENCH (MINHA FILA)
+Layout: dark sidebar (60px icon rail), main area two columns (65% queue list, 35% preview panel).
+Top bar: 5 stat chips — Chamadas Hoje / DMs Alcançados / Contas Solicitadas / Contas Recebidas / Callbacks Pendentes. All mock numbers.
+Queue items sorted P1→P8. Each QueueItem card shows:
+
+Company name (bold) + City/State (muted)
+Contact/DM name — if unknown: 'Decisor não identificado' in grey italic
+Priority badge: P1=red-500, P2=orange-500, P3=amber-500, P4-P5=blue-500, P6=slate-400, P7=purple-500, P8=red-900
+Priority label: P1='COBRAR CONTA' / P2='DECISOR SEM CONTA' / P3='FOLLOW-UP PENDENTE' / P4='DECISOR IDENTIFICADO' / P5='GATEKEEPER' / P6='LEAD PARADO' / P7='NOVO LEAD JULIA' / P8='REVISÃO 20 TENTATIVAS'
+Next action due: overdue shows '⏰ Atrasado X dias' in red; today shows '📅 Hoje HH:MM' in amber
+Last outcome chip (e.g. 'WhatsApp Enviado', 'Gatekeeper', 'Decisor Alcançado')
+Attempt count: 'X tentativas' — warning at 15+
+Source chip: Julia=purple, Manual=grey, Parceiro=blue
+Agent Recommendation inline (compact): 'Recomendação: Iniciar Bill Chase — Confiança: Alta' with action button
+Row buttons: 📞 Ligar Agora / 💬 WhatsApp / ✉ Email / ⏸ Adiar / ⋯ More
+
+RIGHT PREVIEW PANEL: on hover/click, shows compact lead card — company, DM, status, last outcome, next action, priority score badge, fast_access chip. No navigation needed for preview.
+EMPTY STATES:
+
+P1-P3 all clear: green banner 'Fila de prioridade limpa — você pode trabalhar novos leads da Julia agora. Ótimo trabalho.'
+No leads assigned: 'Nenhum lead atribuído. Fale com o Renan.'
+Loading: 3 skeleton cards
+
+
+PAGE 2: /sales-os/leads/:id — LEAD ACTION CARD
+Three-column layout.
+LEFT COLUMN:
+
+Company name (H1, large, bold) + CNPJ (mono, copyable) + City/State
+Segment chip (e.g. 'Supermercado', 'Hotel', 'Condomínio')
+Lead status badge + Priority badge (P1-P8) + fast_access chip ('Acesso Rápido' green / 'Queima Lenta' blue / 'Estratégico' purple)
+Source chip (Julia/Manual/Parceiro)
+Decision-maker section: DM name (bold if known) + role + DM status badge ('Identificado' / 'Alcançado' / 'Não identificado')
+IF DM known, no direct route: amber alert '⚠ Problema de acesso detectado — sem rota direta para [DM name]'
+Best phone (large, click to copy) + WhatsApp likely indicator (green tick or grey ?)
+Bill status chip with date
+Attempt count with ⚠ at 15+ and 🚨 at 19+
+Last touch (relative: '4 dias atrás')
+Last time window called (chip)
+Current blocker (amber box if set)
+Agent Recommendation Card (large, prominent) — recommended next action, confidence level, preconditions (green ticks / red blocks), what happens next, two buttons: primary action + 'Substituir com Motivo'
+
+CENTRE COLUMN — Tabs: [Assistência de Chamada] [WhatsApp] [Email] [Cobrar Conta] [Interrupção de Padrão]
+ASSISTÊNCIA DE CHAMADA TAB — must show ALL of these with icon prefix:
+🎯 Objetivo da Chamada (1 line)
+⚡ Por Que Agora (1-2 lines, why this call today)
+👤 Alvo (DM name + best route)
+🗣 Diga Isso Primeiro (opening line, Portuguese, Copy button)
+⚠ Aviso de Confiança (amber block, trust warning)
+❓ Primeira Pergunta (Portuguese, Copy button)
+💡 Ângulo do Pedido de Conta (Portuguese, Copy button)
+🔄 Script para Gatekeeper (Portuguese, Copy button)
+📋 Resumo da Última Interação (1-2 lines)
+🤔 Objeções Rápidas (expandable chips: sem tempo / solar / mercado livre / mandar email / chefe não está / scam / não tenho interesse — each chip reveals a Voss-framed Portuguese response)
+'Marcar script visualizado' button → activates 'Iniciar Chamada' (grayed until clicked)
+'Iniciar Chamada' (primary, large) + 'Pular com Motivo' (secondary, small)
+MESSAGE TABS (WhatsApp / Email / Cobrar Conta / Interrupção de Padrão):
+Each tab shows:
+
+Generated message (Portuguese, editable textarea, strong default — no generic language)
+Style label: 'Estilo: Remoção de Fricção' etc
+'Contexto utilizado:' collapsed section — shows segment, trust barrier, SOP used, angle
+Red warning if user types banned phrases: 'só estou verificando' / 'alguma atualização?' / 'voltando a entrar em contato' / 'qualquer coisa estou à disposição'
+Buttons: Copiar / Enviar (disabled in prototype) / Agendar / Acionar Sequência
+
+ACTION BAR below centre:
+📞 Ligar Agora | 💬 WhatsApp | ✉ Email | 🔄 Acionar Bill Chase | 🔄 Acionar Follow-Up | 🔎 Enriquecer Decisor | ⬆ Escalar para Renan | 📅 Agendar Callback | ❌ Solicitar Perdido | 💾 Salvar no Zoho
+RIGHT COLUMN:
+
+Activity Timeline: chronological, icon per type (call ☎ / email ✉ / WhatsApp 💬 / note 📝). Each entry: timestamp, type, outcome, rep name, note.
+DM Enrichment Panel (DMEnrichmentPanel component): search status, best route found (phone + confidence % + route type chip), WhatsApp likely flag, alternative route, action buttons (Usar Este Número / Ligar via Dialer / Copiar WhatsApp / Salvar no Zoho / Solicitar Busca Mais Profunda / Marcar Não Confiável). States: loading / high-confidence result / medium-confidence / no reliable route / escalation recommended.
+SOP Agent Activity Panel: for each SOP 1-14: status chip (Pendente / Executando / Concluído / Erro), last run time, key output summary, confidence. Collapsible.
+Memory Panel (MemoryPanel component): Julia summary, call summaries, objections captured, DM findings, messages sent (style + CTA used), bill/proposal chase history, agent recommendations, rep overrides, QA flags.
+
+
+PAGE 3: /sales-os/dialer — POWER DIALER CALL CARD
+Full-screen dark overlay. Two-panel layout.
+LEFT PANEL — Who You're Calling:
+
+Company name (large, white, bold)
+DM name / contact name
+Phone number (large, formatted: +55 11 9XXXX-XXXX)
+Why this call is being served now: badge + explanation ('CALLBACK ATRASADO — prometeu retorno ontem às 10h' / 'COBRAR CONTA — solicitada há 36h sem resposta')
+Task type chip: Callback / Cobrar Conta / Alcançar Decisor / Gatekeeper / Novo Lead
+Priority badge (P1-P8 coloured)
+Attempt count + last time window called
+Last interaction summary (1-2 lines)
+Call timer (00:00 counting up when active)
+
+RIGHT PANEL — Call Assist (compressed):
+Same content as Lead Card Call Assist tab, compact form:
+
+Objetivo (1 line)
+Diga Isso Primeiro (copyable)
+Aviso de Confiança (amber, compact)
+Primeira Pergunta (copyable)
+Ângulo da Conta (copyable)
+Objeções (expandable chips)
+
+BUTTONS:
+'Marcar script visualizado' → enables 'Iniciar Chamada'
+'Iniciar Chamada' (green, large)
+During call: 'Mudo' / 'Em Espera' / 'Encerrar Chamada'
+Also: 'Pular com Motivo' / 'Adiar 15 min'
+POST-CALL OUTCOME MODAL (appears immediately after ending call, blocks next call):
+Title: 'Como foi a chamada?'
+Fields:
+
+Resultado (dropdown — required)
+Próxima Ação (dropdown — required)
+Data/Hora Próxima Ação (datetime picker — required)
+Objetivo da Próxima Ação (text, 100 chars — required)
+Janela de Horário Chamada: Manhã / Meio-dia / Tarde / Fim do Dia (dropdown — required)
+Notas (textarea — optional)
+Compliance checkboxes (optional but tracked): ☐ Usei o briefing / ☐ Pedi a conta / ☐ Defini próximo passo
+Sequence trigger options (optional): ☐ Iniciar Bill Chase / ☐ Follow-Up Comercial / ☐ Enriquecer Decisor / ☐ Escalar para Renan
+'Salvar e Próxima Chamada' button — disabled until required fields filled.
+
+
+PAGE 4: /sales-os/replies — HUMAN REPLY REQUIRED QUEUE
+Full-width urgent screen. Red header banner if any replies are past SLA.
+Each reply card shows:
+
+Contact name + Company (bold)
+Reply snippet (first 120 chars)
+Channel chip: WhatsApp / Email
+Reply type: 'Logístico' (grey) / 'Comercial / Nuançado' (orange) / 'Confiança / Ceticismo' (red) / 'Decisão / Objeção' (red)
+Time received (relative)
+SLA countdown ('Resposta necessária em 37 min' → turns red when breached)
+Priority band chip
+'Automação pausada' indicator
+Suggested response mode: 'Recomendado: Ligar' or 'Recomendado: Responder por mensagem'
+Pre-written suggested response (editable)
+Buttons: Ver Lead / Ligar Agora / Responder por WhatsApp / Marcar como Respondido / Escalar para Renan
+
+Empty state: '✓ Nenhuma resposta pendente. Automações ativas.' green banner.
+
+PAGE 5: /sales-os/manager — RENAN MANAGER CONSOLE
+Top strip: 8 live stat chips (all mock numbers).
+3 action buttons: 'Iniciar Huddle das 9h' / 'Relatório das 16h' / 'Relatório EOD'
+HUDDLE MODE MODAL (opens on Iniciar Huddle button):
+4-section guided screen with 15-min countdown timer. Cannot skip sections.
+Section 1 — Scoreboard: yesterday's numbers per rep, read aloud.
+Section 2 — Ações em Falta: overdue items per rep by priority. Agent adds pattern note: 'Elayne: 6 leads com decisor alcançado sem pedido de conta.'
+Section 3 — Foco de Coaching do Dia: SOP 9 QA flag for today with specific roleplay suggestion.
+Section 4 — Compromissos: each rep types their call target + priority contact + specific change for today.
+6 MAIN SECTIONS (collapsible, count badge):
+🔴 Fila Suja — Sem Próxima Ação
+🟠 Callbacks Perdidos
+🟠 Decisores Sem Pedido de Conta
+🟡 Perdidos Aguardando Aprovação Renan
+🔵 Leads Parados 48h+
+📊 Desempenho de Hoje por Rep
+Each section: list of contacts with name + owner + company + last touch + specific issue. Per contact action buttons: Abrir Lead / Reatribuir / Aprovar Perdido / Reabrir / Enviar Nota de Coaching.
+COACHING PANEL below each rep performance card:
+
+SOP 9 QA flags for today — specific, not generic ('Não usou briefing em 8 chamadas' / 'Solar aceito sem diagnóstico' / 'Gatekeeper fechado como Perdido')
+'Renan deve fazer isso agora' — one specific agent-generated action (not just 'review performance')
+'Enviar nota de coaching' text field — sends notification to rep in their queue
+
+
+MOCK DATA (mockLeads.ts) — CREATE 20 CONTACTS:
+Mix of all P1-P8 priorities. Mix of Elayne Nunes and Thaina Domet as owners. Real Brazilian company types: hotels, supermarkets, condominiums, clinics, laundries, cold storage. Cities: São Paulo, Campinas, Belo Horizonte, Curitiba, Rio de Janeiro.
+Each contact must include these SOP output fields:
+
+industry_segment (specific: 'Hotel', 'Supermercado', 'Condomínio', 'Clínica de Diagnóstico', 'Lavanderia Industrial')
+rep_call_brief (short paragraph, Portuguese, commercially useful)
+suggested_opening_angle (1 sentence, Portuguese)
+suggested_first_question (1 question, Portuguese, consultative)
+suggested_bill_ask_angle (1 sentence, Portuguese, friction-reducing)
+likely_trust_barrier ('baixa' / 'média' / 'alta' + short explanation)
+why_this_account_may_be_worth_reviewing_now (1-2 sentences, real commercial reason)
+priority_score (0-100)
+priority_band ('high' / 'medium' / 'low')
+fast_access_vs_slow_burn ('fast_access' / 'slow_burn' / 'strategic')
+call_objective (1 line, task-specific)
+call_trust_warning (1 line)
+call_why_now_angle (1 line)
+dialer_queue_type (exact_callback / bill_chase_priority / dm_reached_no_bill / etc)
+dialer_priority_rank (1-20)
+dm_direct_phone_best (Brazilian phone or null)
+dm_direct_phone_confidence (0-100 or null)
+dm_direct_phone_type ('direct_mobile' / 'likely_mobile' / 'office_direct' / 'assistant_route' / null)
+dm_whatsapp_likely (true / false / 'unknown')
+activity_timeline (array of 3-6 entries: timestamp, type, outcome, rep, note)
+messages_sent (array of 2-3: style, CTA, context_used, sent_at)
+blocker (null or string)
+blocker_category ('A_sales' / 'B_ops' / 'C_supplier' / null)
+human_response_required (true / false)
+reply_snippet (string or null — if human_response_required = true)
+reply_type ('logistics' / 'commercial' / 'trust' / 'decision' / null)
+
+Specific requirements:
+
+At least 3 contacts with human_response_required = true (for Replies page)
+At least 3 contacts with DM name known but dm_direct_phone_best = null (for enrichment panel demo)
+At least 2 contacts with solar objection in activity timeline
+At least 2 contacts with proposal chase in progress
+At least 1 contact with 'Alcançado' DM status but no bill requested (P2)
+At least 1 contact that is a callback overdue (P1, exact callback promised)
+At least 2 Julia-sourced leads ('novo lead Julia' type, P7)
+
+
+STYLE:
+
+Dark theme (#16163f background throughout)
+Purple (#9e3ffd) primary action colour
+Cards: rounded-xl, border border-white/10, hover:shadow-lg hover:shadow-purple-500/10
+Priority badge colours strictly enforced (see above)
+Portuguese copy everywhere. No English placeholder text. No lorem ipsum.
+Framer Motion: card entrance animations, panel transitions, stat counter updates
+Agent Recommendation Cards: visually distinct — prominent border in recommendation colour, confidence badge, precondition checklist, two action buttons
+Banned phrase detection in message textarea: red border + inline warning when triggered
+'Marcar script visualizado' → 'Iniciar Chamada' unlock pattern: enforced in both Lead Card and Dialer
