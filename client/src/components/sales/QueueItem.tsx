@@ -3,6 +3,7 @@ import { Phone, MessageCircle, Mail, PauseCircle, MoreHorizontal, Clock, AlertTr
 import { priorityConfig, type Lead } from "@/data/mockLeads";
 import { AgentRecommendationCard } from "./AgentRecommendationCard";
 import { useLocation } from "wouter";
+import { useI18n } from "@/lib/i18n";
 
 const sourceColors = {
   Julia: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
@@ -16,12 +17,6 @@ const fastAccessColors = {
   strategic: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
 };
 
-const fastAccessLabels = {
-  fast_access: "Acesso Rápido",
-  slow_burn: "Queima Lenta",
-  strategic: "Estratégico",
-};
-
 interface Props {
   lead: Lead;
   index: number;
@@ -31,8 +26,15 @@ interface Props {
 
 export function QueueItem({ lead, index, selected, onClick }: Props) {
   const [, navigate] = useLocation();
+  const { t } = useI18n();
   const pConf = priorityConfig[lead.priority];
   const attemptWarning = lead.attempt_count >= 15;
+
+  const fastAccessLabels = {
+    fast_access: t("salesos.queueitem.fast_access"),
+    slow_burn: t("salesos.queueitem.slow_burn"),
+    strategic: t("salesos.queueitem.strategic"),
+  };
 
   return (
     <motion.div
@@ -46,10 +48,8 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
         border: selected ? "1px solid rgba(158,63,253,0.4)" : "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {/* Header row */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          {/* Priority badge */}
           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 text-white ${pConf.color}`}>
             {lead.priority}
           </span>
@@ -66,30 +66,26 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
         </div>
       </div>
 
-      {/* Priority label */}
       <div className="mb-2">
         <span className={`text-[11px] font-semibold uppercase tracking-wide ${pConf.textColor}`}>
           {pConf.label}
         </span>
       </div>
 
-      {/* DM row */}
       <div className="flex items-center gap-2 mb-2">
         <div className="text-sm" style={{ color: lead.dm_name ? "rgba(255,255,255,0.75)" : undefined }}>
           {lead.dm_name
             ? <span><strong>{lead.dm_name}</strong> · {lead.dm_role}</span>
-            : <em style={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>Decisor não identificado</em>
+            : <em style={{ color: "rgba(255,255,255,0.35)", fontSize: 13 }}>{t("salesos.queueitem.dm_unknown")}</em>
           }
         </div>
       </div>
 
-      {/* Status row */}
       <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
-        {/* Next action timing */}
         {lead.next_action_overdue ? (
           <span className="flex items-center gap-1" style={{ color: "#ef4444" }}>
             <Clock size={11} />
-            ⏰ Atrasado {lead.next_action_overdue_days}d
+            ⏰ {t("salesos.queueitem.overdue")} {lead.next_action_overdue_days}d
           </span>
         ) : (
           <span className="flex items-center gap-1" style={{ color: "#f59e0b" }}>
@@ -98,19 +94,16 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
           </span>
         )}
 
-        {/* Last outcome */}
         <span className="px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.55)" }}>
           {lead.last_outcome}
         </span>
 
-        {/* Attempt count */}
         <span className={`flex items-center gap-1 ${attemptWarning ? "text-amber-400" : ""}`} style={!attemptWarning ? { color: "rgba(255,255,255,0.4)" } : {}}>
           {attemptWarning && <AlertTriangle size={11} />}
-          {lead.attempt_count} tentativas
+          {lead.attempt_count} {t("salesos.common.attempts_label")}
         </span>
       </div>
 
-      {/* Agent recommendation */}
       <div className="mb-3">
         <AgentRecommendationCard
           recommendation={lead.agent_recommendation}
@@ -119,14 +112,13 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
         />
       </div>
 
-      {/* Action buttons */}
       <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
         <button
           onClick={() => navigate(`/sales-os/dialer`)}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:opacity-90"
           style={{ background: "#9e3ffd", color: "#fff" }}
         >
-          <Phone size={12} /> Ligar
+          <Phone size={12} /> {t("salesos.common.call")}
         </button>
         <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors" style={{ background: "rgba(37,211,102,0.15)", color: "#25D366", border: "1px solid rgba(37,211,102,0.3)" }}>
           <MessageCircle size={12} /> WhatsApp
@@ -135,7 +127,7 @@ export function QueueItem({ lead, index, selected, onClick }: Props) {
           <Mail size={12} /> Email
         </button>
         <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
-          <PauseCircle size={12} /> Adiar
+          <PauseCircle size={12} /> {t("salesos.common.postpone")}
         </button>
         <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors ml-auto" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
           <MoreHorizontal size={12} />

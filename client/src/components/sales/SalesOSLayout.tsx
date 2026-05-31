@@ -1,28 +1,27 @@
 import { useLocation, Link } from "wouter";
-import { PhoneCall, ListChecks, MessageSquare, BarChart3, ChevronLeft } from "lucide-react";
-
-const NAV = [
-  { path: "/sales-os/queue", icon: ListChecks, label: "Fila" },
-  { path: "/sales-os/dialer", icon: PhoneCall, label: "Discador" },
-  { path: "/sales-os/replies", icon: MessageSquare, label: "Respostas" },
-  { path: "/sales-os/manager", icon: BarChart3, label: "Gerente" },
-];
+import { PhoneCall, ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { t, language, setLanguage } = useI18n();
+
+  const NAV = [
+    { path: "/sales-os/queue", icon: ListChecks, label: t("salesos.nav.queue") },
+    { path: "/sales-os/dialer", icon: PhoneCall, label: t("salesos.nav.dialer") },
+    { path: "/sales-os/replies", icon: MessageSquare, label: t("salesos.nav.replies") },
+    { path: "/sales-os/manager", icon: BarChart3, label: t("salesos.nav.manager") },
+  ];
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#16163f", fontFamily: "'Inter', sans-serif" }}>
-      {/* Sidebar icon rail */}
       <aside className="flex flex-col items-center py-4 gap-1 border-r shrink-0 z-20" style={{ width: 60, background: "#0f0e2a", borderColor: "rgba(255,255,255,0.07)" }}>
-        {/* Back to portal */}
         <Link href="/admin/deals">
-          <div className="flex items-center justify-center rounded-lg mb-4 transition-colors cursor-pointer" style={{ width: 40, height: 40, color: "rgba(255,255,255,0.35)" }} title="Voltar ao Portal">
+          <div className="flex items-center justify-center rounded-lg mb-4 transition-colors cursor-pointer" style={{ width: 40, height: 40, color: "rgba(255,255,255,0.35)" }} title={t("salesos.nav.back")}>
             <ChevronLeft size={18} />
           </div>
         </Link>
 
-        {/* Logo pip */}
         <div className="w-7 h-7 rounded-full mb-3 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)" }}>
           <span style={{ fontSize: 10, fontWeight: 800, color: "#fff" }}>OS</span>
         </div>
@@ -47,9 +46,20 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+
+        <div className="flex-1" />
+
+        <button
+          onClick={() => setLanguage(language === "pt" ? "en" : "pt")}
+          className="flex flex-col items-center justify-center rounded-lg transition-all gap-0.5 cursor-pointer mb-2"
+          style={{ width: 48, height: 40, color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
+          title={language === "pt" ? "Switch to English" : "Mudar para Português"}
+        >
+          <Globe size={14} />
+          <span style={{ fontSize: 9, fontWeight: 600 }}>{t("salesos.nav.lang_toggle")}</span>
+        </button>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto">
         {children}
       </main>

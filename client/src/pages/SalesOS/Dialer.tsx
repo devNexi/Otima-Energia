@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { SalesOSLayout } from "@/components/sales/SalesOSLayout";
 import { CallAssistPanel } from "@/components/sales/CallAssistPanel";
 import { mockLeads, priorityConfig } from "@/data/mockLeads";
+import { useI18n } from "@/lib/i18n";
 import {
   Phone, PhoneOff, Mic, MicOff, Clock, SkipForward,
   X, ChevronDown, CheckCircle, AlertTriangle,
@@ -71,6 +72,7 @@ export default function Dialer() {
   const [submitted, setSubmitted] = useState(false);
   const [skipReason, setSkipReason] = useState("");
   const [showSkip, setShowSkip] = useState(false);
+  const { t } = useI18n();
 
   const timer = useTimer(callState === "in_call");
   const lead = activeLead;
@@ -103,10 +105,9 @@ export default function Dialer() {
   return (
     <SalesOSLayout>
       <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#0f0e2a" }}>
-        {/* Header strip */}
         <div className="shrink-0 px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.3)" }}>
           <button onClick={() => navigate("/sales-os/queue")} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
-            ← Fila
+            {t("salesos.dialer.back")}
           </button>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -114,7 +115,7 @@ export default function Dialer() {
                 <div key={l.id} className="w-2 h-2 rounded-full" style={{ background: i === 0 ? "#9e3ffd" : "rgba(255,255,255,0.2)" }} />
               ))}
             </div>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{QUEUE.length} na fila</span>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{QUEUE.length} {t("salesos.dialer.in_queue")}</span>
           </div>
           <div className="flex items-center gap-2 font-mono font-bold" style={{ color: callState === "in_call" ? "#22c55e" : "rgba(255,255,255,0.4)" }}>
             <Clock size={14} />
@@ -122,13 +123,10 @@ export default function Dialer() {
           </div>
         </div>
 
-        {/* Two panels */}
         <div className="flex flex-1 overflow-hidden">
-          {/* LEFT — Who you're calling */}
           <div className="overflow-y-auto p-8 flex flex-col gap-6" style={{ width: "45%", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Who */}
             <div>
-              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>Você está ligando para</div>
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.dialer.calling")}</div>
               <h1 className="text-2xl font-bold mb-1" style={{ color: "#fff" }}>{lead.company}</h1>
               {lead.dm_name && (
                 <div className="text-lg mb-2" style={{ color: "rgba(255,255,255,0.7)" }}>{lead.dm_name} · <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>{lead.dm_role}</span></div>
@@ -138,7 +136,6 @@ export default function Dialer() {
               )}
             </div>
 
-            {/* Why this call */}
             <div className="rounded-2xl p-4" style={{ background: `${queueConf.color}14`, border: `1px solid ${queueConf.color}33` }}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide" style={{ background: `${queueConf.color}22`, color: queueConf.color }}>
@@ -149,10 +146,9 @@ export default function Dialer() {
               <div className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{lead.call_why_now_angle}</div>
             </div>
 
-            {/* Attempt + Last window */}
             <div className="flex gap-4">
               <div>
-                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Tentativas</div>
+                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.dialer.attempts")}</div>
                 <div className="font-bold text-lg" style={{ color: lead.attempt_count >= 15 ? "#f59e0b" : "rgba(255,255,255,0.7)" }}>
                   {lead.attempt_count}
                   {lead.attempt_count >= 15 && <AlertTriangle size={14} className="inline ml-1" style={{ color: "#f59e0b" }} />}
@@ -160,19 +156,17 @@ export default function Dialer() {
               </div>
               {lead.last_time_window && (
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Melhor Janela</div>
+                  <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.dialer.best_window")}</div>
                   <div className="text-sm px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.65)" }}>{lead.last_time_window}</div>
                 </div>
               )}
             </div>
 
-            {/* Last interaction */}
             <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="text-[10px] uppercase tracking-wide mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>Última Interação</div>
+              <div className="text-[10px] uppercase tracking-wide mb-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.dialer.last_interaction")}</div>
               <div className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>{lead.last_interaction_summary}</div>
             </div>
 
-            {/* Call controls */}
             <div className="flex flex-col gap-3">
               {callState === "pre_call" && (
                 <>
@@ -182,7 +176,7 @@ export default function Dialer() {
                       className="w-full py-3 rounded-2xl text-sm font-semibold transition-all"
                       style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.12)" }}
                     >
-                      ✓ Marcar script visualizado
+                      {t("salesos.dialer.mark_script")}
                     </button>
                   ) : (
                     <motion.button
@@ -192,7 +186,7 @@ export default function Dialer() {
                       className="w-full py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-3 transition-all hover:scale-105"
                       style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", boxShadow: "0 8px 32px rgba(34,197,94,0.3)" }}
                     >
-                      <Phone size={20} /> Iniciar Chamada
+                      <Phone size={20} /> {t("salesos.dialer.start_call")}
                     </motion.button>
                   )}
                   <div className="flex gap-2">
@@ -201,13 +195,13 @@ export default function Dialer() {
                       className="flex-1 py-2.5 rounded-xl text-sm font-medium"
                       style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.1)" }}
                     >
-                      <SkipForward size={14} className="inline mr-1.5" /> Pular com Motivo
+                      <SkipForward size={14} className="inline mr-1.5" /> {t("salesos.dialer.skip")}
                     </button>
                     <button
                       className="flex-1 py-2.5 rounded-xl text-sm font-medium"
                       style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.1)" }}
                     >
-                      <Clock size={14} className="inline mr-1.5" /> Adiar 15 min
+                      <Clock size={14} className="inline mr-1.5" /> {t("salesos.dialer.postpone")}
                     </button>
                   </div>
                   <AnimatePresence>
@@ -216,7 +210,7 @@ export default function Dialer() {
                         <input
                           value={skipReason}
                           onChange={e => setSkipReason(e.target.value)}
-                          placeholder="Motivo para pular..."
+                          placeholder={t("salesos.dialer.skip_reason")}
                           className="w-full px-3 py-2 rounded-xl text-sm outline-none mb-2"
                           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}
                         />
@@ -226,7 +220,7 @@ export default function Dialer() {
                           className="w-full py-2 rounded-xl text-sm font-semibold"
                           style={{ background: skipReason.trim() ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)", color: skipReason.trim() ? "#f59e0b" : "rgba(255,255,255,0.3)", border: `1px solid ${skipReason.trim() ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.08)"}` }}
                         >
-                          Confirmar Pulo
+                          {t("salesos.dialer.confirm_skip")}
                         </button>
                       </motion.div>
                     )}
@@ -246,20 +240,20 @@ export default function Dialer() {
                       style={{ background: muted ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.08)", color: muted ? "#fca5a5" : "rgba(255,255,255,0.65)", border: muted ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(255,255,255,0.1)" }}
                     >
                       {muted ? <MicOff size={16} /> : <Mic size={16} />}
-                      {muted ? "Mudo" : "Mudo"}
+                      {t("salesos.dialer.mute")}
                     </button>
                     <button
                       className="flex-1 py-3 rounded-2xl text-sm font-semibold"
                       style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.1)" }}
                     >
-                      Em Espera
+                      {t("salesos.dialer.hold")}
                     </button>
                     <button
                       onClick={() => setCallState("post_call")}
                       className="flex-1 py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
                       style={{ background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.3)" }}
                     >
-                      <PhoneOff size={16} /> Encerrar
+                      <PhoneOff size={16} /> {t("salesos.dialer.end_call")}
                     </button>
                   </div>
                 </div>
@@ -267,10 +261,9 @@ export default function Dialer() {
             </div>
           </div>
 
-          {/* RIGHT — Call Assist (compact) */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
-              Assistência de Chamada
+              {t("salesos.dialer.call_assist")}
             </div>
             <CallAssistPanel
               lead={lead}
@@ -299,12 +292,12 @@ export default function Dialer() {
                 style={{ background: "#16163f", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "90vh", overflowY: "auto" }}
               >
                 <div className="px-6 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)" }}>
-                  <h2 className="text-lg font-bold" style={{ color: "#fff" }}>Como foi a chamada?</h2>
+                  <h2 className="text-lg font-bold" style={{ color: "#fff" }}>{t("salesos.dialer.modal_title")}</h2>
                   <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{lead.company} · {lead.dm_name}</div>
                 </div>
 
                 <div className="p-6 space-y-4">
-                  <Field label="Resultado">
+                  <Field label={t("salesos.dialer.outcome")}>
                     <div className="relative">
                       <select
                         value={form.outcome}
@@ -312,14 +305,14 @@ export default function Dialer() {
                         className="w-full px-3 py-2.5 rounded-xl text-sm outline-none appearance-none"
                         style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: form.outcome ? "#fff" : "rgba(255,255,255,0.4)" }}
                       >
-                        <option value="">Selecionar resultado...</option>
+                        <option value="">{t("salesos.dialer.select_outcome")}</option>
                         {OUTCOMES.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.4)" }} />
                     </div>
                   </Field>
 
-                  <Field label="Próxima Ação">
+                  <Field label={t("salesos.dialer.next_action")}>
                     <div className="relative">
                       <select
                         value={form.nextAction}
@@ -327,14 +320,14 @@ export default function Dialer() {
                         className="w-full px-3 py-2.5 rounded-xl text-sm outline-none appearance-none"
                         style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: form.nextAction ? "#fff" : "rgba(255,255,255,0.4)" }}
                       >
-                        <option value="">Selecionar próxima ação...</option>
+                        <option value="">{t("salesos.dialer.select_next")}</option>
                         {NEXT_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.4)" }} />
                     </div>
                   </Field>
 
-                  <Field label="Data/Hora Próxima Ação">
+                  <Field label={t("salesos.dialer.next_date")}>
                     <input
                       type="datetime-local"
                       value={form.nextDate}
@@ -344,11 +337,11 @@ export default function Dialer() {
                     />
                   </Field>
 
-                  <Field label="Objetivo da Próxima Ação">
+                  <Field label={t("salesos.dialer.next_objective")}>
                     <input
                       value={form.nextObjective}
                       onChange={e => setForm(f => ({ ...f, nextObjective: e.target.value.slice(0, 100) }))}
-                      placeholder="Descreva o objetivo em até 100 caracteres..."
+                      placeholder={t("salesos.dialer.objective_placeholder")}
                       maxLength={100}
                       className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                       style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff" }}
@@ -356,7 +349,7 @@ export default function Dialer() {
                     <div className="text-[10px] text-right mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{form.nextObjective.length}/100</div>
                   </Field>
 
-                  <Field label="Janela de Horário da Chamada">
+                  <Field label={t("salesos.dialer.time_window")}>
                     <div className="grid grid-cols-4 gap-2">
                       {TIME_WINDOWS.map(w => (
                         <button
@@ -374,20 +367,19 @@ export default function Dialer() {
                   </Field>
 
                   <div>
-                    <label className="text-xs mb-1.5 block font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>Notas (opcional)</label>
+                    <label className="text-xs mb-1.5 block font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>{t("salesos.dialer.notes")}</label>
                     <textarea
                       value={form.notes}
                       onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                       rows={2}
-                      placeholder="Observações da chamada..."
+                      placeholder={t("salesos.dialer.notes_placeholder")}
                       className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none"
                       style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff" }}
                     />
                   </div>
 
-                  {/* Compliance */}
                   <div>
-                    <div className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>Compliance (opcional)</div>
+                    <div className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.dialer.compliance")}</div>
                     <div className="space-y-1.5">
                       {[
                         { key: "usedBriefing", label: "Usei o briefing" },
@@ -407,9 +399,8 @@ export default function Dialer() {
                     </div>
                   </div>
 
-                  {/* Sequences */}
                   <div>
-                    <div className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>Acionar sequência (opcional)</div>
+                    <div className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.dialer.sequence")}</div>
                     <div className="space-y-1.5">
                       {[
                         { key: "billChase", label: "Iniciar Bill Chase" },
@@ -437,7 +428,7 @@ export default function Dialer() {
                     className="px-4 py-2.5 rounded-xl text-sm"
                     style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}
                   >
-                    Cancelar
+                    {t("salesos.common.cancel")}
                   </button>
                   <button
                     onClick={() => { if (formValid(form)) setSubmitted(true); }}
@@ -448,7 +439,7 @@ export default function Dialer() {
                       color: formValid(form) ? "#fff" : "rgba(255,255,255,0.3)",
                     }}
                   >
-                    Salvar e Próxima Chamada →
+                    {t("salesos.dialer.save_next")}
                   </button>
                 </div>
               </motion.div>
@@ -462,21 +453,23 @@ export default function Dialer() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="fixed inset-0 z-50 flex items-center justify-center"
-              style={{ background: "rgba(0,0,0,0.9)" }}
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4"
+              style={{ background: "#0f0e2a" }}
             >
-              <div className="text-center">
-                <CheckCircle size={48} className="mx-auto mb-4" style={{ color: "#22c55e" }} />
-                <div className="text-xl font-bold mb-2" style={{ color: "#fff" }}>Chamada registrada!</div>
-                <div className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.5)" }}>Próxima chamada carregando...</div>
-                <button
-                  onClick={() => { setSubmitted(false); setCallState("pre_call"); setScriptViewed(false); setForm(defaultForm); setMuted(false); }}
-                  className="px-6 py-3 rounded-xl text-sm font-semibold"
-                  style={{ background: "#9e3ffd", color: "#fff" }}
-                >
-                  Próxima Chamada →
-                </button>
+              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", bounce: 0.4 }}>
+                <CheckCircle size={56} style={{ color: "#22c55e" }} />
+              </motion.div>
+              <div className="text-xl font-bold" style={{ color: "#fff" }}>
+                {form.outcome === "Decisor Alcançado" ? "Ótimo trabalho!" : "Registrado."}
               </div>
+              <div className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{lead.company} · {form.outcome}</div>
+              <button
+                onClick={() => { setSubmitted(false); setCallState("pre_call"); setScriptViewed(false); setForm(defaultForm); setMuted(false); navigate("/sales-os/queue"); }}
+                className="mt-2 px-6 py-3 rounded-2xl text-sm font-bold"
+                style={{ background: "#9e3ffd", color: "#fff" }}
+              >
+                Próxima Chamada →
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

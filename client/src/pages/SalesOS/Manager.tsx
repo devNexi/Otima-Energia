@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { SalesOSLayout } from "@/components/sales/SalesOSLayout";
 import { HuddleMode } from "@/components/sales/HuddleMode";
 import { mockLeads, priorityConfig } from "@/data/mockLeads";
+import { useI18n } from "@/lib/i18n";
 import {
   AlertTriangle, Phone, Clock, Users, FileText, TrendingUp,
   ChevronDown, ChevronUp, ExternalLink, RefreshCw, CheckCircle,
@@ -11,17 +12,6 @@ import {
 } from "lucide-react";
 
 const REPS = ["Elayne Nunes", "Thaina Domet"];
-
-const STAT_CHIPS = [
-  { label: "Chamadas Hoje", value: 21, color: "#9e3ffd", icon: <Phone size={12} /> },
-  { label: "DMs Alcançados", value: 7, color: "#22c55e", icon: <Users size={12} /> },
-  { label: "Contas Solicitadas", value: 5, color: "#f59e0b", icon: <FileText size={12} /> },
-  { label: "Contas Recebidas", value: 2, color: "#3b82f6", icon: <FileText size={12} /> },
-  { label: "Propostas em Chase", value: 2, color: "#ef4444", icon: <TrendingUp size={12} /> },
-  { label: "Leads Ativos", value: mockLeads.length, color: "#c88ff5", icon: <Users size={12} /> },
-  { label: "Callbacks Pendentes", value: 7, color: "#f59e0b", icon: <Clock size={12} /> },
-  { label: "Respostas Humanas", value: mockLeads.filter(l => l.human_response_required).length, color: "#ef4444", icon: <MessageSquare size={12} /> },
-];
 
 interface SectionProps {
   title: string;
@@ -31,9 +21,10 @@ interface SectionProps {
   issueLabel: (lead: typeof mockLeads[0]) => string;
   onOpen: (id: string) => void;
   showApprove?: boolean;
+  labels: { open: string; reassign: string; approveLoss: string; coachingPlaceholder: string; send: string; sent: string; noItems: string };
 }
 
-function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, onOpen, showApprove }: SectionProps) {
+function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, onOpen, showApprove, labels }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const [coaching, setCoaching] = useState<Record<string, string>>({});
   const [sent, setSent] = useState<Set<string>>(new Set());
@@ -64,7 +55,7 @@ function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, 
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
             <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               {leads.length === 0 && (
-                <div className="px-5 py-4 text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Nenhum item nesta categoria.</div>
+                <div className="px-5 py-4 text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>{labels.noItems}</div>
               )}
               {leads.map(lead => {
                 const pConf = priorityConfig[lead.priority];
@@ -88,25 +79,24 @@ function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, 
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button onClick={() => onOpen(lead.id)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(158,63,253,0.15)", color: "#c88ff5", border: "1px solid rgba(158,63,253,0.25)" }}>
-                          <ExternalLink size={10} /> Abrir
+                          <ExternalLink size={10} /> {labels.open}
                         </button>
                         <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                          <RefreshCw size={10} /> Reatribuir
+                          <RefreshCw size={10} /> {labels.reassign}
                         </button>
                         {showApprove && (
                           <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
-                            <CheckCircle size={10} /> Aprovar Perda
+                            <CheckCircle size={10} /> {labels.approveLoss}
                           </button>
                         )}
                       </div>
                     </div>
 
-                    {/* Coaching note */}
                     <div className="flex gap-2 items-center mt-2">
                       <input
                         value={coaching[lead.id] ?? ""}
                         onChange={e => setCoaching(c => ({ ...c, [lead.id]: e.target.value }))}
-                        placeholder="Enviar nota de coaching para o rep..."
+                        placeholder={labels.coachingPlaceholder}
                         className="flex-1 px-3 py-1.5 rounded-lg text-xs outline-none"
                         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
                       />
@@ -120,7 +110,7 @@ function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, 
                           border: `1px solid ${sent.has(lead.id) ? "rgba(34,197,94,0.25)" : "rgba(158,63,253,0.25)"}`,
                         }}
                       >
-                        {sent.has(lead.id) ? "✓ Enviado" : "Enviar"}
+                        {sent.has(lead.id) ? labels.sent : labels.send}
                       </button>
                     </div>
                   </div>
@@ -134,7 +124,7 @@ function ManagerSection({ title, color, leads, defaultOpen = false, issueLabel, 
   );
 }
 
-function RepPerformanceCard({ rep }: { rep: string }) {
+function RepPerformanceCard({ rep, labels }: { rep: string; labels: { qaFlags: string; renanAction: string; overdue: string; sendNote: string; sent: string } }) {
   const leads = mockLeads.filter(l => l.assigned_to === rep);
   const overdue = leads.filter(l => l.next_action_overdue);
   const [coaching, setCoaching] = useState("");
@@ -167,16 +157,13 @@ function RepPerformanceCard({ rep }: { rep: string }) {
           </div>
           <div>
             <div className="font-bold text-sm" style={{ color: "#fff" }}>{rep}</div>
-            <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{leads.length} leads · {overdue.length} atrasados</div>
+            <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{leads.length} leads · {overdue.length} {labels.overdue}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <BarChart3 size={14} style={{ color: "#9e3ffd" }} />
-        </div>
+        <BarChart3 size={14} style={{ color: "#9e3ffd" }} />
       </div>
 
       <div className="px-5 py-4 space-y-4">
-        {/* Stats row */}
         <div className="grid grid-cols-5 gap-2">
           {Object.entries(stats).map(([k, v]) => (
             <div key={k} className="text-center rounded-lg py-2" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -186,9 +173,8 @@ function RepPerformanceCard({ rep }: { rep: string }) {
           ))}
         </div>
 
-        {/* SOP QA flags */}
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>QA Flags de Hoje — SOP-09</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>{labels.qaFlags}</div>
           <div className="space-y-1.5">
             {sopFlags.map((flag, i) => (
               <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
@@ -199,13 +185,11 @@ function RepPerformanceCard({ rep }: { rep: string }) {
           </div>
         </div>
 
-        {/* Renan action */}
         <div className="rounded-xl p-3" style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}>
-          <div className="text-xs font-semibold mb-1" style={{ color: "#9e3ffd" }}>Renan deve fazer isso agora:</div>
+          <div className="text-xs font-semibold mb-1" style={{ color: "#9e3ffd" }}>{labels.renanAction}</div>
           <div className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{renanAction}</div>
         </div>
 
-        {/* Send note */}
         <div className="flex gap-2">
           <input
             value={coaching}
@@ -220,7 +204,7 @@ function RepPerformanceCard({ rep }: { rep: string }) {
             className="px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
             style={{ background: sent ? "rgba(34,197,94,0.15)" : "rgba(158,63,253,0.2)", color: sent ? "#22c55e" : "#c88ff5" }}
           >
-            {sent ? "✓ Enviado" : "Enviar Nota"}
+            {sent ? labels.sent : labels.sendNote}
           </button>
         </div>
       </div>
@@ -231,6 +215,36 @@ function RepPerformanceCard({ rep }: { rep: string }) {
 export default function Manager() {
   const [, navigate] = useLocation();
   const [huddleOpen, setHuddleOpen] = useState(false);
+  const { t } = useI18n();
+
+  const STAT_CHIPS = [
+    { label: t("salesos.manager.stat_calls"), value: 21, color: "#9e3ffd", icon: <Phone size={12} /> },
+    { label: t("salesos.manager.stat_dms"), value: 7, color: "#22c55e", icon: <Users size={12} /> },
+    { label: t("salesos.manager.stat_requested"), value: 5, color: "#f59e0b", icon: <FileText size={12} /> },
+    { label: t("salesos.manager.stat_received"), value: 2, color: "#3b82f6", icon: <FileText size={12} /> },
+    { label: t("salesos.manager.stat_proposals"), value: 2, color: "#ef4444", icon: <TrendingUp size={12} /> },
+    { label: t("salesos.manager.stat_active"), value: mockLeads.length, color: "#c88ff5", icon: <Users size={12} /> },
+    { label: t("salesos.manager.stat_callbacks"), value: 7, color: "#f59e0b", icon: <Clock size={12} /> },
+    { label: t("salesos.manager.stat_replies"), value: mockLeads.filter(l => l.human_response_required).length, color: "#ef4444", icon: <MessageSquare size={12} /> },
+  ];
+
+  const sectionLabels = {
+    open: t("salesos.manager.open"),
+    reassign: t("salesos.manager.reassign"),
+    approveLoss: t("salesos.manager.approve_loss"),
+    coachingPlaceholder: t("salesos.manager.coaching_placeholder"),
+    send: t("salesos.common.send"),
+    sent: t("salesos.manager.sent"),
+    noItems: t("salesos.manager.no_items"),
+  };
+
+  const repLabels = {
+    qaFlags: t("salesos.manager.qa_flags"),
+    renanAction: t("salesos.manager.renan_action"),
+    overdue: t("salesos.manager.leads_overdue"),
+    sendNote: t("salesos.manager.send_note"),
+    sent: t("salesos.manager.sent"),
+  };
 
   function openLead(id: string) { navigate(`/sales-os/leads/${id}`); }
 
@@ -247,11 +261,10 @@ export default function Manager() {
         </AnimatePresence>
 
         <div className="px-6 py-5">
-          {/* Header */}
           <div className="flex items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "#fff" }}>Gerente Console</h1>
-              <div className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>Visão geral · Renan · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</div>
+              <h1 className="text-xl font-bold" style={{ color: "#fff" }}>{t("salesos.manager.title")}</h1>
+              <div className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.manager.overview")} · Renan · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</div>
             </div>
             <div className="flex gap-2">
               <button
@@ -259,18 +272,17 @@ export default function Manager() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)", color: "#fff" }}
               >
-                <Play size={13} /> Iniciar Huddle das 9h
+                <Play size={13} /> {t("salesos.manager.huddle")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                Relatório das 16h
+                {t("salesos.manager.report_4pm")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                Relatório EOD
+                {t("salesos.manager.report_eod")}
               </button>
             </div>
           </div>
 
-          {/* Stat chips */}
           <div className="flex flex-wrap gap-3 mb-8">
             {STAT_CHIPS.map(chip => (
               <div key={chip.label} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -281,55 +293,58 @@ export default function Manager() {
             ))}
           </div>
 
-          {/* Main sections */}
           <div className="space-y-4 mb-8">
             <ManagerSection
-              title="🔴 Fila Suja — Sem Próxima Ação"
+              title={t("salesos.manager.section_dirty")}
               color="#ef4444"
               leads={noNextAction.slice(0, 4)}
               defaultOpen
               issueLabel={l => `Próxima ação atrasada ${l.next_action_overdue_days ?? "?"}d — sem data`}
               onOpen={openLead}
+              labels={sectionLabels}
             />
             <ManagerSection
-              title="🟠 Callbacks Perdidos"
+              title={t("salesos.manager.section_callbacks")}
               color="#f97316"
               leads={lostCallbacks}
               issueLabel={l => `Callback prometido — ${l.next_action_date}`}
               onOpen={openLead}
+              labels={sectionLabels}
             />
             <ManagerSection
-              title="🟠 Decisores Alcançados Sem Pedido de Conta"
+              title={t("salesos.manager.section_nodm")}
               color="#f59e0b"
               leads={dmNoRequest}
               issueLabel={l => `DM ${l.dm_status} há ${l.last_contact ?? "?"} sem conta solicitada`}
               onOpen={openLead}
+              labels={sectionLabels}
             />
             <ManagerSection
-              title="🟡 Perdidos Aguardando Aprovação Renan"
+              title={t("salesos.manager.section_lost")}
               color="#eab308"
               leads={mockLeads.filter(l => l.priority === "P8")}
               issueLabel={() => "20+ tentativas — aguardando decisão estratégica"}
               onOpen={openLead}
               showApprove
+              labels={sectionLabels}
             />
             <ManagerSection
-              title="🔵 Leads Parados 48h+"
+              title={t("salesos.manager.section_stale")}
               color="#3b82f6"
               leads={stale48h}
               issueLabel={l => `Parado ${l.last_contact ?? "?"} sem ação`}
               onOpen={openLead}
+              labels={sectionLabels}
             />
           </div>
 
-          {/* Rep performance */}
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 size={16} style={{ color: "#9e3ffd" }} />
-              <h2 className="font-bold" style={{ color: "#fff" }}>📊 Desempenho de Hoje por Rep</h2>
+              <h2 className="font-bold" style={{ color: "#fff" }}>{t("salesos.manager.perf_title")}</h2>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {REPS.map(rep => <RepPerformanceCard key={rep} rep={rep} />)}
+              {REPS.map(rep => <RepPerformanceCard key={rep} rep={rep} labels={repLabels} />)}
             </div>
           </div>
         </div>

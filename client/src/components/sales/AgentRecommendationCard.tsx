@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Zap, CheckCircle, XCircle, ChevronRight } from "lucide-react";
 import type { AgentRecommendation } from "@/data/mockLeads";
+import { useI18n } from "@/lib/i18n";
 
 const confidenceColors = {
   Alta: { border: "#22c55e", badge: "bg-green-500/20 text-green-400 border border-green-500/30" },
@@ -17,13 +18,14 @@ interface Props {
 
 export function AgentRecommendationCard({ recommendation, compact = false, onPrimary, onOverride }: Props) {
   const conf = confidenceColors[recommendation.confidence];
+  const { t } = useI18n();
 
   if (compact) {
     return (
       <div className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg" style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}>
         <Zap size={12} style={{ color: "#9e3ffd", flexShrink: 0 }} />
         <span style={{ color: "rgba(255,255,255,0.7)" }}>
-          Recomendação: <strong style={{ color: "#c88ff5" }}>{recommendation.action}</strong>
+          {t("salesos.agent.recommendation")}: <strong style={{ color: "#c88ff5" }}>{recommendation.action}</strong>
         </span>
         <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ml-auto ${conf.badge}`}>
           {recommendation.confidence}
@@ -34,7 +36,7 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
             className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold shrink-0"
             style={{ background: "#9e3ffd", color: "#fff" }}
           >
-            Executar <ChevronRight size={10} />
+            {t("salesos.agent.execute")} <ChevronRight size={10} />
           </button>
         )}
       </div>
@@ -53,7 +55,7 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
           <Zap size={16} style={{ color: conf.border, flexShrink: 0 }} />
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider mb-0.5" style={{ color: conf.border }}>
-              Recomendação do Agente
+              {t("salesos.agent.full_title")}
             </div>
             <div className="font-bold" style={{ color: "#fff", fontSize: 15 }}>{recommendation.action}</div>
           </div>
@@ -63,12 +65,10 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
         </span>
       </div>
 
-      {/* Style */}
       <div className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.5)" }}>
-        Estilo: <span style={{ color: "rgba(255,255,255,0.7)" }}>{recommendation.style}</span>
+        {t("salesos.agent.style")} <span style={{ color: "rgba(255,255,255,0.7)" }}>{recommendation.style}</span>
       </div>
 
-      {/* Preconditions */}
       <div className="space-y-1.5 mb-4">
         {recommendation.preconditions.map((p, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
@@ -80,13 +80,11 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
         ))}
       </div>
 
-      {/* Next step */}
       <div className="text-xs rounded-lg p-3 mb-4" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.65)" }}>
-        <span style={{ color: "rgba(255,255,255,0.4)", marginRight: 4 }}>Próximo passo:</span>
+        <span style={{ color: "rgba(255,255,255,0.4)", marginRight: 4 }}>{t("salesos.agent.next_step")}</span>
         {recommendation.next_step}
       </div>
 
-      {/* Actions */}
       <div className="flex gap-2">
         <button
           onClick={onPrimary}
@@ -100,7 +98,7 @@ export function AgentRecommendationCard({ recommendation, compact = false, onPri
           className="px-3 py-2 rounded-lg text-xs font-medium transition-colors"
           style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
         >
-          Substituir com Motivo
+          {t("salesos.agent.override")}
         </button>
       </div>
     </motion.div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { SalesOSLayout } from "@/components/sales/SalesOSLayout";
 import { mockLeads, priorityConfig } from "@/data/mockLeads";
+import { useI18n } from "@/lib/i18n";
 import { MessageSquare, Mail, Clock, AlertTriangle, CheckCircle, Phone, ArrowUpCircle, Eye } from "lucide-react";
 
 const replies = mockLeads.filter(l => l.human_response_required && l.reply_snippet);
@@ -29,11 +30,12 @@ Poderia me passar o nome e telefone do responsável? Prometo não tomar mais do 
 };
 
 function SlaCountdown({ minutes }: { minutes: number }) {
+  const { t } = useI18n();
   const isUrgent = minutes < 30;
   return (
     <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: isUrgent ? "#ef4444" : "#f59e0b" }}>
       <Clock size={12} />
-      {isUrgent ? `⚠ Resposta necessária em ${minutes} min` : `Resposta necessária em ${minutes} min`}
+      {isUrgent ? `${t("salesos.replies.sla_urgent")} ${minutes} ${t("salesos.replies.sla_min")}` : `${t("salesos.replies.sla_normal")} ${minutes} ${t("salesos.replies.sla_min")}`}
     </div>
   );
 }
@@ -42,6 +44,7 @@ export default function Replies() {
   const [, navigate] = useLocation();
   const [responded, setResponded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Record<string, string>>({});
+  const { t } = useI18n();
   const hasSlaBreached = replies.some(l => (l.reply_sla_minutes ?? 60) < 30 && !responded.has(l.id));
 
   function getEditText(lead: typeof replies[0]) {
@@ -51,7 +54,6 @@ export default function Replies() {
   return (
     <SalesOSLayout>
       <div className="h-screen overflow-y-auto">
-        {/* Header banner */}
         <AnimatePresence>
           {hasSlaBreached && (
             <motion.div
@@ -63,22 +65,20 @@ export default function Replies() {
             >
               <AlertTriangle size={16} style={{ color: "#ef4444" }} />
               <span className="text-sm font-semibold" style={{ color: "#fca5a5" }}>
-                Respostas urgentes — SLA próximo do limite. Atenda agora.
+                {t("salesos.replies.urgent_banner")}
               </span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <div className="px-6 py-5">
-          {/* Page header */}
           <div className="mb-6">
-            <h1 className="text-xl font-bold mb-1" style={{ color: "#fff" }}>Respostas Humanas Necessárias</h1>
+            <h1 className="text-xl font-bold mb-1" style={{ color: "#fff" }}>{t("salesos.replies.title")}</h1>
             <div className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-              {replies.filter(l => !responded.has(l.id)).length} pendentes · automações pausadas até resposta manual
+              {replies.filter(l => !responded.has(l.id)).length} {t("salesos.replies.subtitle")}
             </div>
           </div>
 
-          {/* Empty state */}
           {replies.every(l => responded.has(l.id)) && (
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
@@ -86,12 +86,11 @@ export default function Replies() {
               className="flex flex-col items-center justify-center gap-3 py-24"
             >
               <CheckCircle size={40} style={{ color: "#22c55e" }} />
-              <div className="text-lg font-semibold" style={{ color: "#fff" }}>Nenhuma resposta pendente</div>
-              <div className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>✓ Automações ativas. Ótimo trabalho!</div>
+              <div className="text-lg font-semibold" style={{ color: "#fff" }}>{t("salesos.replies.empty")}</div>
+              <div className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>{t("salesos.replies.empty_sub")}</div>
             </motion.div>
           )}
 
-          {/* Reply cards */}
           <div className="space-y-5 max-w-3xl">
             {replies.map(lead => {
               if (responded.has(lead.id)) return null;
@@ -110,7 +109,6 @@ export default function Replies() {
                   className="rounded-2xl overflow-hidden"
                   style={{ border: `1px solid ${sla < 30 ? "rgba(239,68,68,0.35)" : "rgba(255,255,255,0.09)"}`, background: "rgba(255,255,255,0.03)" }}
                 >
-                  {/* Card header */}
                   <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -121,18 +119,15 @@ export default function Replies() {
                           <span className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{lead.company}</span>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
-                          {/* Channel */}
                           <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>
                             {lead.reply_channel === "WhatsApp" ? <MessageSquare size={10} /> : <Mail size={10} />}
                             {lead.reply_channel}
                           </span>
-                          {/* Type */}
                           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: rtConf.bg, color: rtConf.color, border: `1px solid ${rtConf.border}` }}>
                             {rtConf.label}
                           </span>
-                          {/* Automação pausada */}
                           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}>
-                            Automação pausada
+                            {t("salesos.replies.automation_paused")}
                           </span>
                         </div>
                       </div>
@@ -140,24 +135,21 @@ export default function Replies() {
                     </div>
                   </div>
 
-                  {/* Reply snippet */}
                   <div className="px-5 py-4">
-                    <div className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Mensagem recebida:</div>
+                    <div className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.replies.received_msg")}</div>
                     <div className="text-sm rounded-xl px-4 py-3 mb-4 italic" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)" }}>
                       "{lead.reply_snippet}"
                     </div>
 
-                    {/* Recommended action */}
                     <div className="flex items-center gap-2 text-xs mb-3">
-                      <span style={{ color: "rgba(255,255,255,0.35)" }}>Recomendação:</span>
+                      <span style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.replies.recommendation")}</span>
                       <span className="font-semibold" style={{ color: isCallRecommended ? "#ef4444" : "#22c55e" }}>
-                        {isCallRecommended ? "📞 Ligar" : "💬 Responder por mensagem"}
+                        {isCallRecommended ? t("salesos.replies.call_rec") : t("salesos.replies.msg_rec")}
                       </span>
                     </div>
 
-                    {/* Suggested response */}
                     <div className="mb-4">
-                      <div className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>Resposta sugerida (editável):</div>
+                      <div className="text-xs mb-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.replies.suggested")}</div>
                       <textarea
                         value={getEditText(lead)}
                         onChange={e => setEditing(prev => ({ ...prev, [lead.id]: e.target.value }))}
@@ -167,21 +159,20 @@ export default function Replies() {
                       />
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => navigate(`/sales-os/leads/${lead.id}`)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
                         style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
                       >
-                        <Eye size={12} /> Ver Lead
+                        <Eye size={12} /> {t("salesos.replies.view_lead")}
                       </button>
                       <button
                         onClick={() => navigate("/sales-os/dialer")}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
                         style={{ background: "#9e3ffd", color: "#fff" }}
                       >
-                        <Phone size={12} /> Ligar Agora
+                        <Phone size={12} /> {t("salesos.common.call_now")}
                       </button>
                       <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>
                         <MessageSquare size={12} /> WhatsApp
@@ -191,10 +182,10 @@ export default function Replies() {
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ml-auto"
                         style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}
                       >
-                        <CheckCircle size={12} /> Marcar Respondido
+                        <CheckCircle size={12} /> {t("salesos.replies.mark_replied")}
                       </button>
                       <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}>
-                        <ArrowUpCircle size={12} /> Escalar
+                        <ArrowUpCircle size={12} /> {t("salesos.common.escalate")}
                       </button>
                     </div>
                   </div>

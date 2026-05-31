@@ -9,22 +9,15 @@ import { DMEnrichmentPanel } from "@/components/sales/DMEnrichmentPanel";
 import { MemoryPanel } from "@/components/sales/MemoryPanel";
 import { SequenceTriggerPanel } from "@/components/sales/SequenceTriggerPanel";
 import { getLeadById, priorityConfig } from "@/data/mockLeads";
+import { useI18n } from "@/lib/i18n";
 import {
   Phone, MessageCircle, Mail, RotateCcw, Search, ArrowUpCircle,
   Calendar, XCircle, Save, Copy, AlertTriangle, CheckCircle,
-  Clock, FileText, ChevronRight, Zap,
+  Clock, FileText, Zap,
 } from "lucide-react";
 
 type CenterTab = "assistencia" | "whatsapp" | "email" | "cobranca" | "interrupcao";
 type MsgTab = "whatsapp" | "email" | "cobranca" | "interrupcao";
-
-const CENTER_TABS: { key: CenterTab; label: string }[] = [
-  { key: "assistencia", label: "Assistência de Chamada" },
-  { key: "whatsapp", label: "WhatsApp" },
-  { key: "email", label: "Email" },
-  { key: "cobranca", label: "Cobrar Conta" },
-  { key: "interrupcao", label: "Interrupção de Padrão" },
-];
 
 const fastAccessConfig = {
   fast_access: { label: "Acesso Rápido", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.25)" },
@@ -77,13 +70,22 @@ export default function LeadCard() {
   const [centerTab, setCenterTab] = useState<CenterTab>("assistencia");
   const [scriptViewed, setScriptViewed] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { t } = useI18n();
+
+  const CENTER_TABS: { key: CenterTab; label: string }[] = [
+    { key: "assistencia", label: t("salesos.lead.tab_call") },
+    { key: "whatsapp", label: "WhatsApp" },
+    { key: "email", label: "Email" },
+    { key: "cobranca", label: t("salesos.lead.tab_bill") },
+    { key: "interrupcao", label: t("salesos.lead.tab_pattern") },
+  ];
 
   const lead = getLeadById(id ?? "");
   if (!lead) {
     return (
       <SalesOSLayout>
         <div className="flex items-center justify-center h-full" style={{ color: "rgba(255,255,255,0.4)" }}>
-          Lead não encontrado. <button onClick={() => navigate("/sales-os/queue")} className="ml-2 underline" style={{ color: "#9e3ffd" }}>Voltar à fila</button>
+          {t("salesos.lead.not_found")} <button onClick={() => navigate("/sales-os/queue")} className="ml-2 underline" style={{ color: "#9e3ffd" }}>{t("salesos.lead.back_queue")}</button>
         </div>
       </SalesOSLayout>
     );
@@ -96,10 +98,9 @@ export default function LeadCard() {
   return (
     <SalesOSLayout>
       <div className="flex flex-col h-screen overflow-hidden">
-        {/* Page top bar */}
         <div className="shrink-0 px-6 py-3 border-b flex items-center justify-between gap-3" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.2)" }}>
           <button onClick={() => navigate("/sales-os/queue")} className="flex items-center gap-1.5 text-xs transition-colors" style={{ color: "rgba(255,255,255,0.4)" }}>
-            ← Minha Fila
+            {t("salesos.lead.back")}
           </button>
           <div className="flex items-center gap-2">
             <span className={`text-[11px] font-bold px-2 py-0.5 rounded text-white ${pConf.color}`}>{lead.priority}</span>
@@ -112,15 +113,13 @@ export default function LeadCard() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
             style={{ background: "linear-gradient(135deg,#9e3ffd,#df0af2)", color: "#fff" }}
           >
-            <Phone size={14} /> Discar Agora
+            <Phone size={14} /> {t("salesos.lead.dial_now")}
           </button>
         </div>
 
-        {/* Three columns */}
         <div className="flex flex-1 overflow-hidden">
           {/* LEFT COLUMN */}
           <div className="overflow-y-auto p-5 space-y-4" style={{ width: 260, minWidth: 240, borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Company title */}
             <div>
               <h1 className="text-xl font-bold mb-0.5" style={{ color: "#fff" }}>{lead.company}</h1>
               <div className="mb-2">
@@ -129,7 +128,6 @@ export default function LeadCard() {
               <div className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>{lead.city}, {lead.state}</div>
             </div>
 
-            {/* Badges row */}
             <div className="flex flex-wrap gap-1.5">
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {lead.industry_segment}
@@ -141,9 +139,8 @@ export default function LeadCard() {
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${sourceColors[lead.source]}`}>{lead.source}</span>
             </div>
 
-            {/* DM section */}
             <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>Decisor</div>
+              <div className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.common.dm")}</div>
               {lead.dm_name ? (
                 <>
                   <div className="font-bold text-sm" style={{ color: "#fff" }}>{lead.dm_name}</div>
@@ -155,20 +152,19 @@ export default function LeadCard() {
                     <div className="flex items-start gap-1.5 rounded-lg p-2 mt-1" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
                       <AlertTriangle size={11} className="shrink-0 mt-0.5" style={{ color: "#f59e0b" }} />
                       <span className="text-[11px]" style={{ color: "#fcd34d" }}>
-                        Sem rota direta para {lead.dm_name.split(" ")[0]}
+                        {t("salesos.lead.no_direct_route")} {lead.dm_name.split(" ")[0]}
                       </span>
                     </div>
                   )}
                 </>
               ) : (
-                <em className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Não identificado</em>
+                <em className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{t("salesos.lead.not_identified")}</em>
               )}
             </div>
 
-            {/* Phone */}
             {lead.dm_direct_phone_best && (
               <div>
-                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Melhor Contato</div>
+                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.lead.best_contact")}</div>
                 <div className="flex items-center gap-2">
                   <span className="text-base font-bold font-mono" style={{ color: "#fff" }}>{lead.dm_direct_phone_best}</span>
                   {lead.dm_whatsapp_likely === true && (
@@ -179,56 +175,50 @@ export default function LeadCard() {
                   )}
                 </div>
                 {lead.dm_direct_phone_confidence && (
-                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>Confiança: {lead.dm_direct_phone_confidence}%</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{t("salesos.lead.confidence")}: {lead.dm_direct_phone_confidence}%</div>
                 )}
               </div>
             )}
 
-            {/* Bill status */}
             <div>
-              <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Status da Conta</div>
+              <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.lead.bill_status")}</div>
               {lead.bill_status ? (
                 <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
                   {lead.bill_status} {lead.bill_status_date && `· ${lead.bill_status_date}`}
                 </span>
               ) : (
-                <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>Não recebida</span>
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.lead.not_received")}</span>
               )}
             </div>
 
-            {/* Attempt count */}
             <div>
-              <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Tentativas</div>
+              <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.lead.attempts")}</div>
               <div className={`text-sm font-semibold flex items-center gap-1 ${lead.attempt_count >= 19 ? "text-red-400" : lead.attempt_count >= 15 ? "text-amber-400" : ""}`} style={lead.attempt_count < 15 ? { color: "rgba(255,255,255,0.7)" } : {}}>
                 {lead.attempt_count >= 19 && "🚨 "}
                 {lead.attempt_count >= 15 && lead.attempt_count < 19 && <AlertTriangle size={13} />}
-                {lead.attempt_count} tentativas
+                {lead.attempt_count} {t("salesos.common.attempts_label")}
               </div>
             </div>
 
-            {/* Last touch */}
             {lead.last_contact && (
               <div>
-                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Último Contato</div>
+                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>{t("salesos.lead.last_contact")}</div>
                 <div className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>{lead.last_contact}</div>
               </div>
             )}
 
-            {/* Blocker */}
             {lead.blocker && (
               <div className="rounded-xl p-3" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "#f59e0b" }}>Bloqueio Atual</div>
+                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "#f59e0b" }}>{t("salesos.lead.blocker")}</div>
                 <div className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>{lead.blocker}</div>
               </div>
             )}
 
-            {/* Priority score */}
             <div className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "rgba(158,63,253,0.08)", border: "1px solid rgba(158,63,253,0.2)" }}>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Score</span>
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>{t("salesos.common.score")}</span>
               <span className="text-lg font-bold" style={{ color: "#c88ff5" }}>{lead.priority_score}<span className="text-xs font-normal opacity-50">/100</span></span>
             </div>
 
-            {/* Agent rec (full) */}
             <AgentRecommendationCard
               recommendation={lead.agent_recommendation}
               onPrimary={() => navigate("/sales-os/dialer")}
@@ -238,7 +228,6 @@ export default function LeadCard() {
 
           {/* CENTER COLUMN */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Tabs */}
             <div className="shrink-0 flex border-b overflow-x-auto" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
               {CENTER_TABS.map(tab => (
                 <button
@@ -256,7 +245,6 @@ export default function LeadCard() {
               ))}
             </div>
 
-            {/* Tab content */}
             <div className="flex-1 overflow-y-auto p-5">
               {centerTab === "assistencia" && (
                 <CallAssistPanel
@@ -270,10 +258,9 @@ export default function LeadCard() {
               )}
             </div>
 
-            {/* Action bar */}
             <div className="shrink-0 px-4 py-3 border-t flex gap-2 flex-wrap" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.2)" }}>
               <button onClick={() => navigate("/sales-os/dialer")} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold" style={{ background: "#9e3ffd", color: "#fff" }}>
-                <Phone size={12} /> Ligar Agora
+                <Phone size={12} /> {t("salesos.common.call_now")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>
                 <MessageCircle size={12} /> WhatsApp
@@ -282,37 +269,36 @@ export default function LeadCard() {
                 <Mail size={12} /> Email
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <RotateCcw size={12} /> Bill Chase
+                <RotateCcw size={12} /> {t("salesos.lead.bill_chase")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <Search size={12} /> Enriquecer
+                <Search size={12} /> {t("salesos.lead.enrich")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}>
-                <ArrowUpCircle size={12} /> Escalar Renan
+                <ArrowUpCircle size={12} /> {t("salesos.lead.escalate_renan")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <Calendar size={12} /> Callback
+                <Calendar size={12} /> {t("salesos.lead.callback")}
               </button>
               <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(239,68,68,0.08)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.2)" }}>
-                <XCircle size={12} /> Perdido
+                <XCircle size={12} /> {t("salesos.lead.lost")}
               </button>
               <button
                 onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs ml-auto"
                 style={{ background: saved ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.05)", color: saved ? "#22c55e" : "rgba(255,255,255,0.55)", border: `1px solid ${saved ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.1)"}` }}
               >
-                <Save size={12} /> {saved ? "Salvo!" : "Salvar no Zoho"}
+                <Save size={12} /> {saved ? t("salesos.lead.saved") : t("salesos.lead.save_zoho")}
               </button>
             </div>
           </div>
 
           {/* RIGHT COLUMN */}
           <div className="overflow-y-auto p-4 space-y-4" style={{ width: 280, minWidth: 260, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Activity timeline */}
             <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={13} style={{ color: "#9e3ffd" }} />
-                <span className="text-sm font-semibold" style={{ color: "#fff" }}>Timeline</span>
+                <span className="text-sm font-semibold" style={{ color: "#fff" }}>{t("salesos.lead.timeline")}</span>
               </div>
               <div className="space-y-0">
                 {lead.activity_timeline.map((entry, i) => (
@@ -338,10 +324,8 @@ export default function LeadCard() {
               </div>
             </div>
 
-            {/* DM Enrichment */}
             <DMEnrichmentPanel lead={lead} />
 
-            {/* SOP Agent Activity */}
             <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-center gap-2 mb-3">
                 <Zap size={13} style={{ color: "#9e3ffd" }} />
@@ -370,10 +354,7 @@ export default function LeadCard() {
               </div>
             </div>
 
-            {/* Sequence triggers */}
             <SequenceTriggerPanel />
-
-            {/* Memory */}
             <MemoryPanel lead={lead} />
           </div>
         </div>
