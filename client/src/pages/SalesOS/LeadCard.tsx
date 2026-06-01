@@ -373,17 +373,13 @@ export default function LeadCard() {
         {/* ── TWO-ZONE CONTENT ──────────────────────────────────────── */}
         <div className="flex">
 
-          {/* LEFT SIDEBAR — independently scrollable, sticky to top */}
+          {/* LEFT SIDEBAR — flows with page, no independent scroll */}
           <div
-            className="p-4 space-y-3 shrink-0 overflow-y-auto"
+            className="p-4 space-y-3 shrink-0"
             style={{
               width: 320,
               background: "#FFFFFF",
               borderRight: "1px solid #E8EAED",
-              position: "sticky",
-              top: 48,
-              height: "calc(100vh - 48px - 52px)",
-              alignSelf: "flex-start",
             }}
           >
             {/* Company info */}

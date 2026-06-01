@@ -133,8 +133,12 @@ export function MessageComposer({ lead, activeTab }: Props) {
       <div className="relative">
         <textarea
           value={text}
-          onChange={e => handleChange(e.target.value)}
-          rows={activeTab === "email" ? 12 : 8}
+          onChange={e => {
+            handleChange(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = e.target.scrollHeight + "px";
+          }}
+          rows={1}
           className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none transition-all"
           style={{
             background: "#FFFFFF",
@@ -143,7 +147,10 @@ export function MessageComposer({ lead, activeTab }: Props) {
             fontFamily: "inherit",
             lineHeight: 1.6,
             boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            overflow: "hidden",
+            height: "auto",
           }}
+          ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
           onFocus={e => { if (!isBlocked) e.target.style.borderColor = "#9e3ffd"; }}
           onBlur={e => { if (!isBlocked) e.target.style.borderColor = "#E8EAED"; }}
           placeholder="Digite sua mensagem..."
