@@ -145,7 +145,7 @@ function CallAssistGrid({ lead }: { lead: Lead }) {
       </div>
       <div className="px-4 pb-4 space-y-2">
         {/* Row 1 — Objetivo da Chamada */}
-        <div className="rounded-lg px-3 py-2.5" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+        <div className="rounded-lg px-3 py-2" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
           <div className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#9CA3AF" }}>🎯 OBJETIVO DA CHAMADA</div>
           <div className="text-sm font-semibold" style={{ color: "#16163f" }}>{lead.call_objective}</div>
         </div>
@@ -158,27 +158,27 @@ function CallAssistGrid({ lead }: { lead: Lead }) {
 
         {/* Row 3 — Diga Isso Primeiro | Aviso de Confiança */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg p-3" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
-            <div className="text-[9px] uppercase tracking-widest font-bold mb-1.5" style={{ color: "#9CA3AF" }}>🗣 DIGA ISSO PRIMEIRO</div>
-            <div className="text-xs leading-snug mb-2" style={{ color: "#374151" }}>{lead.suggested_opening_angle}</div>
+          <div className="rounded-lg p-2.5" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+            <div className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#9CA3AF" }}>🗣 DIGA ISSO PRIMEIRO</div>
+            <div className="text-xs leading-snug mb-1.5" style={{ color: "#374151" }}>{lead.suggested_opening_angle}</div>
             <InlineCopyBtn text={lead.suggested_opening_angle} copyKey="opening" copiedKey={copiedKey} onCopy={copy} />
           </div>
-          <div className="rounded-lg p-3" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
-            <div className="text-[9px] uppercase tracking-widest font-bold mb-1.5" style={{ color: "#d97706" }}>⚠ AVISO DE CONFIANÇA</div>
+          <div className="rounded-lg p-2.5" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+            <div className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#d97706" }}>⚠ AVISO DE CONFIANÇA</div>
             <div className="text-xs leading-snug" style={{ color: "#92400e" }}>{lead.call_trust_warning}</div>
           </div>
         </div>
 
         {/* Row 4 — Primeira Pergunta | Ângulo do Pedido de Conta */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg p-3" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
-            <div className="text-[9px] uppercase tracking-widest font-bold mb-1.5" style={{ color: "#9CA3AF" }}>❓ PRIMEIRA PERGUNTA</div>
-            <div className="text-xs leading-snug mb-2" style={{ color: "#374151" }}>{lead.suggested_first_question}</div>
+          <div className="rounded-lg p-2.5" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+            <div className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#9CA3AF" }}>❓ PRIMEIRA PERGUNTA</div>
+            <div className="text-xs leading-snug mb-1.5" style={{ color: "#374151" }}>{lead.suggested_first_question}</div>
             <InlineCopyBtn text={lead.suggested_first_question} copyKey="q1" copiedKey={copiedKey} onCopy={copy} />
           </div>
-          <div className="rounded-lg p-3" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
-            <div className="text-[9px] uppercase tracking-widest font-bold mb-1.5" style={{ color: "#9CA3AF" }}>💡 ÂNGULO DO PEDIDO DE CONTA</div>
-            <div className="text-xs leading-snug mb-2" style={{ color: "#374151" }}>{lead.suggested_bill_ask_angle}</div>
+          <div className="rounded-lg p-2.5" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+            <div className="text-[9px] uppercase tracking-widest font-bold mb-1" style={{ color: "#9CA3AF" }}>💡 ÂNGULO DO PEDIDO DE CONTA</div>
+            <div className="text-xs leading-snug mb-1.5" style={{ color: "#374151" }}>{lead.suggested_bill_ask_angle}</div>
             <InlineCopyBtn text={lead.suggested_bill_ask_angle} copyKey="bill_ask" copiedKey={copiedKey} onCopy={copy} />
           </div>
         </div>
@@ -340,12 +340,11 @@ export default function LeadCard() {
 
   return (
     <SalesOSLayout>
-      <div className="flex flex-col overflow-hidden" style={{ height: "100vh", background: "#F8F9FC" }}>
-
-        {/* ── HEADER ────────────────────────────────────────────────── */}
+      <>
+        {/* ── HEADER — sticky to viewport top ───────────────────────── */}
         <div
-          className="shrink-0 px-6 py-3 border-b flex items-center justify-between gap-3"
-          style={{ borderColor: "#E8EAED", background: "#FFFFFF" }}
+          className="px-6 py-3 border-b flex items-center justify-between gap-3"
+          style={{ position: "sticky", top: 0, zIndex: 30, borderColor: "#E8EAED", background: "#FFFFFF" }}
         >
           <button
             onClick={() => navigate("/sales-os/queue")}
@@ -372,12 +371,20 @@ export default function LeadCard() {
         </div>
 
         {/* ── TWO-ZONE CONTENT ──────────────────────────────────────── */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex">
 
-          {/* LEFT SIDEBAR — scrollable as one unit */}
+          {/* LEFT SIDEBAR — independently scrollable, sticky to top */}
           <div
-            className="overflow-y-auto p-4 space-y-3 shrink-0"
-            style={{ width: 320, background: "#FFFFFF", borderRight: "1px solid #E8EAED" }}
+            className="p-4 space-y-3 shrink-0 overflow-y-auto"
+            style={{
+              width: 320,
+              background: "#FFFFFF",
+              borderRight: "1px solid #E8EAED",
+              position: "sticky",
+              top: 48,
+              height: "calc(100vh - 48px - 52px)",
+              alignSelf: "flex-start",
+            }}
           >
             {/* Company info */}
             <div className="rounded-xl p-4" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
@@ -525,8 +532,8 @@ export default function LeadCard() {
             />
           </div>
 
-          {/* MAIN AREA — single scrollable column */}
-          <div className="flex-1 overflow-y-auto" style={{ background: "#F8F9FC" }}>
+          {/* MAIN AREA — no internal scroll, page scrolls naturally */}
+          <div className="flex-1" style={{ background: "#F8F9FC", paddingBottom: 52 }}>
 
             {/* ── CALL ASSIST GRID ─────────────────────────────────── */}
             <CallAssistGrid lead={lead} />
@@ -584,10 +591,13 @@ export default function LeadCard() {
           </div>
         </div>
 
-        {/* ── STICKY ACTION BAR ────────────────────────────────────── */}
+        {/* ── STICKY ACTION BAR — fixed to viewport bottom ─────────── */}
         <div
-          className="shrink-0 px-5 py-3 flex items-center gap-2 flex-wrap border-t"
-          style={{ background: "#FFFFFF", borderColor: "#E8EAED", boxShadow: "0 -1px 0 #E8EAED" }}
+          className="px-5 py-3 flex items-center gap-2 flex-wrap border-t"
+          style={{
+            position: "fixed", bottom: 0, left: 220, right: 0, zIndex: 50,
+            background: "#FFFFFF", borderColor: "#E8EAED", boxShadow: "0 -2px 8px rgba(0,0,0,0.07)",
+          }}
         >
           <button
             onClick={openDialer}
@@ -630,7 +640,7 @@ export default function LeadCard() {
           </button>
         </div>
 
-      </div>
+      </>
     </SalesOSLayout>
   );
 }
