@@ -1,0 +1,19 @@
+Three changes only. No other changes.
+1. Remove Agentes SOP tab from rep view
+On the Lead Card bottom tab bar, remove the 'Agentes SOP' tab entirely for users with role = sales rep (Elayne, Thaina). The tab should only be visible for Renan and admin roles. Reps do not need to see backend agent status — the agent outputs already surface in the Call Assist panel where they matter.
+The remaining tabs for reps: Sequências / Enriquecimento DM / Memória / Histórico / Coaching
+2. Remove Manager from rep navigation
+In the sidebar, the 'Manager' or 'Gerente' nav item must not appear for rep-role users. Reps see only: Fila and Respostas. Renan and admin see: Fila, Respostas, Gerente.
+For the prototype, base this on the current logged-in user shown at the bottom of the sidebar. If the user is Renan (Gerente), show Manager. If the user is Elayne or Thaina, hide it. Since we only have Renan in the prototype right now, add a role switcher at the bottom of the sidebar — a small toggle or dropdown: 'Ver como: Renan / Elayne / Thaina' — so we can preview what each role sees without logging in as different users.
+3. Add Coaching tab to Lead Card bottom tabs
+Add a new tab: 'Coaching' — positioned last in the tab bar for reps.
+Content inside the Coaching tab for each lead:
+Top section — 'Meu Foco desta Semana':
+A card showing the rep's current weekly coaching focus. Use mock data. Example: 'Foco: Pedido de conta direto após alcançar o decisor. Elayne alcançou 4 decisores esta semana sem pedir a conta em nenhum.' With a specific tip below: 'Após o decisor atender, use: A forma mais rápida é você me mandar a última conta por WhatsApp — em um minuto vejo se existe algo real.'
+Middle section — 'QA desta Chamada' (specific to this lead):
+If this lead has a call in the activity timeline, show the QA result for the most recent call. Mock data example: 'Chamada de 28/05 — Thaina Domet. Script seguido: ✓. Pedido de conta feito: ✗. Objeção solar tratada: ✓. Nota Renan: Bom progresso no script de abertura, mas a conta não foi pedida após o decisor confirmar disponibilidade.'
+Bottom section — 'Histórico de Coaching' (collapsed by default):
+List of previous weekly coaching summaries, most recent first. Each entry: week date, score (e.g. 8/10), main improvement noted, main focus for next week.
+The Coaching tab is read-only for reps. They cannot edit anything here. Renan writes the notes from the Manager console (that connection is mock for now).
+
+After changes show me: the Lead Card with the corrected tab bar visible, and the sidebar with the role switcher showing rep view (Elayne) with Manager hidden.
