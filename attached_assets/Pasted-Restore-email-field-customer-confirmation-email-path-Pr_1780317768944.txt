@@ -1,0 +1,48 @@
+Restore email field + customer confirmation email path
+Problem
+In the recent form simplification, the email field was removed from /reduza. This broke the customer confirmation email flow — submissions now save to Sheet and trigger internal alerts, but no email is sent to the customer.
+For B2B leads worth R$ 200 each, this leaves customers without confirmation, follow-up channel for proposals, or rich content delivery.
+Required change
+Add email field back to the form as a REQUIRED field. Form now has 6 required fields:
+
+Full name
+Company name
+Corporate email (NEW — required, validate email format)
+WhatsApp/Phone
+State
+Average monthly bill amount
+
+Plus existing optional path: bill upload OR send-later card.
+Field placement
+Position email between Company name and WhatsApp/Phone (its natural location in B2B forms). Use type="email" for native mobile keyboard, with validation for @ and . minimum.
+Placeholder: nome@empresa.com.br
+Customer email flow
+Verify the customer confirmation email path is fully wired:
+
+tipo=completo (bill upload) → send the "Recebemos sua conta de luz e seus dados" variant
+tipo=sem-conta (send later) → send the "Para fazermos sua análise gratuita o mais rápido possível" variant with prominent WhatsApp button
+tipo=caso-especial (sub-R$5k) → send the "Seu caso está um pouco fora do perfil padrão" variant
+
+All three should:
+
+Send FROM marketing@otimaenergia.com (with "Ótima Energia" sender name and logo)
+Include the customer's full name in greeting
+Match the previously designed email template (header with logo, branded container, info boxes per tipo, footer)
+
+Acceptance test
+Repeat the 3 incognito tests for each tipo path:
+
+Submit with bill upload → verify customer email arrives at the submitted email address with tipo=completo variant
+Submit with send-later → verify customer email arrives with tipo=sem-conta variant (prominent WhatsApp CTA)
+Submit with sub-R$5k bracket → verify customer email arrives with tipo=caso-especial variant
+
+For each, verify:
+
+Email arrives within 60 seconds
+Sender shows as "Ótima Energia" with logo (not generic avatar)
+Correct tipo variant copy
+Customer name correctly inserted
+WhatsApp button works (links to wa.me/5521997959777)
+
+Priority
+HIGH — campaigns are paused waiting for this. Once deployed and verified, campaigns can resume. Target deploy: 2-3 hours.

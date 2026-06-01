@@ -176,12 +176,13 @@ function getUTMsFromSession() {
   return utms;
 }
 
-// ─── Form schema — 5 required fields only ────────────────────────────────────
+// ─── Form schema — 6 required fields ─────────────────────────────────────────
 const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório").refine(
     v => v.trim().length >= 2, "Nome obrigatório"
   ),
   empresa: z.string().min(2, "Empresa obrigatória"),
+  email: z.string().email("Informe um e-mail válido"),
   phone: z.string().refine(v => v.replace(/\D/g, "").length === 11, "Informe DDD + 9 dígitos"),
   estado: z.string().min(1, "Estado obrigatório"),
   valorConta: z.string().min(1, "Selecione a faixa da conta"),
@@ -250,6 +251,7 @@ function RedzaInner() {
       const fd = new FormData();
       fd.append("nome", data.nome);
       fd.append("empresa", data.empresa);
+      fd.append("email", data.email);
       fd.append("phone", data.phone);
       fd.append("estado", data.estado);
       fd.append("valorConta", data.valorConta);
@@ -578,7 +580,23 @@ function RedzaInner() {
                   </div>
                 </div>
 
-                {/* Row 2: WhatsApp + Estado */}
+                {/* Row 2: E-mail corporativo — full width */}
+                <div>
+                  <label htmlFor="email" className={labelCls}>E-mail corporativo <span className="text-red-500">*</span></label>
+                  <input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="nome@empresa.com.br"
+                    {...register("email")}
+                    className={inputCls(!!errors.email)}
+                    data-testid="input-email"
+                  />
+                  {errors.email && <p className={errCls} role="alert">{errors.email.message}</p>}
+                </div>
+
+                {/* Row 3: WhatsApp + Estado */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label htmlFor="phone" className={labelCls}>WhatsApp / Telefone <span className="text-red-500">*</span></label>

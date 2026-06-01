@@ -879,10 +879,11 @@ export async function registerRoutes(
         return res.json({ success: true, leadId: "SPAM" });
       }
 
-      // Required field validation (email, cidade, tipoImovel are now optional — collected post-conversion)
+      // Required field validation (cidade, tipoImovel are optional — collected post-conversion)
       const missing = [];
       if (!nome?.trim()) missing.push("nome");
       if (!empresa?.trim()) missing.push("empresa");
+      if (!email?.trim()) missing.push("email");
       if (!phone?.trim()) missing.push("phone");
       if (!estado?.trim()) missing.push("estado");
       if (!valorConta?.trim()) missing.push("valorConta");
