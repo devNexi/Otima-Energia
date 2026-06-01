@@ -170,6 +170,173 @@ function PreviewPanel({ lead }: { lead: Lead | null }) {
   );
 }
 
+// ── Board view helpers ────────────────────────────────────────────────────────
+const BOARD_COLUMNS: { key: string; label: string; color: string; bg: string; border: string }[] = [
+  { key: "novo",            label: "Novo",            color: "#9CA3AF", bg: "#F8F9FC",              border: "#E8EAED" },
+  { key: "em_contato",      label: "Em Prospecção",   color: "#2563eb", bg: "#eff6ff",              border: "#bfdbfe" },
+  { key: "dm_alcancado",    label: "DM Alcançado",    color: "#16a34a", bg: "#f0fdf4",              border: "#bbf7d0" },
+  { key: "aguardando_conta",label: "Aguardando Conta",color: "#d97706", bg: "#fffbeb",              border: "#fde68a" },
+  { key: "proposta",        label: "Proposta Enviada",color: "#7c3aed", bg: "rgba(158,63,253,0.05)",border: "rgba(158,63,253,0.18)" },
+  { key: "bloqueado",       label: "Bloqueado",       color: "#dc2626", bg: "#fef2f2",              border: "#fecaca" },
+];
+
+function getBoardColumn(lead: Lead): string {
+  if (lead.blocker) return "bloqueado";
+  const ls = (lead.lead_status ?? "").toLowerCase();
+  if (ls.includes("proposta")) return "proposta";
+  if (ls.includes("aguardando") || (lead.dialer_queue_type ?? "").includes("bill_chase")) return "aguardando_conta";
+  if (lead.dm_status === "Alcançado") return "dm_alcancado";
+  if (lead.attempt_count > 0) return "em_contato";
+  return "novo";
+}
+
+function BoardView({ leads, onOpen }: { leads: Lead[]; onOpen: (id: string) => void }) {
+  const grouped: Record<string, Lead[]> = {};
+  BOARD_COLUMNS.forEach(c => { grouped[c.key] = []; });
+  leads.forEach(l => { const col = getBoardColumn(l); if (grouped[col]) grouped[col].push(l); });
+
+  return (
+    <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex gap-3 p-4 h-full" style={{ minWidth: BOARD_COLUMNS.length * 220 + 32 }}>
+        {BOARD_COLUMNS.map(col => (
+          <div key={col.key} className="flex flex-col shrink-0" style={{ width: 220 }}>
+            {/* Column header */}
+            <div
+              className="flex items-center justify-between px-3 py-2 rounded-xl mb-2"
+              style={{ background: col.bg, border: `1px solid ${col.border}` }}
+            >
+              <span className="text-xs font-semibold" style={{ color: col.color }}>{col.label}</span>
+              <span
+                className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: col.color + "20", color: col.color }}
+              >
+                {grouped[col.key].length}
+              </span>
+            </div>
+            {/* Cards */}
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {grouped[col.key].map(lead => {
+                const pb = priorityBadge(lead.priority);
+                return (
+                  <motion.div
+                    key={lead.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => onOpen(lead.id)}
+                    className="rounded-xl p-3 cursor-pointer transition-all hover:shadow-md"
+                    style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+                    whileHover={{ y: -2 }}
+                  >
+                    <div className="flex items-start justify-between gap-1 mb-2">
+                      <div className="text-xs font-semibold leading-tight" style={{ color: "#16163f" }}>{lead.company}</div>
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0" style={{ background: pb.bg, color: pb.color, border: `1px solid ${pb.border}` }}>{lead.priority}</span>
+                    </div>
+                    {lead.dm_name && (
+                      <div className="text-[10px] mb-2" style={{ color: "#6B7280" }}>{lead.dm_name}</div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px]" style={{ color: "#9CA3AF" }}>{lead.attempt_count} tentativas</div>
+                      <div className="text-[10px] font-semibold" style={{ color: "#9e3ffd" }}>{lead.priority_score}</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {grouped[col.key].length === 0 && (
+                <div className="flex items-center justify-center h-20 rounded-xl" style={{ border: "1px dashed #E8EAED", color: "#D1D5DB" }}>
+                  <span className="text-xs">Vazio</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline view helpers ──────────────────────────────────────────────────────
+const TIMELINE_SECTIONS: { key: string; label: string; color: string; icon: string }[] = [
+  { key: "vencido",      label: "Vencido",      color: "#dc2626", icon: "⏰" },
+  { key: "hoje",         label: "Hoje",          color: "#9e3ffd", icon: "📅" },
+  { key: "amanha",       label: "Amanhã",        color: "#2563eb", icon: "🗓" },
+  { key: "esta_semana",  label: "Esta Semana",   color: "#d97706", icon: "📆" },
+  { key: "proxima",      label: "Próxima Semana",color: "#6B7280", icon: "🔜" },
+];
+
+function getTimelineSection(lead: Lead): string {
+  if (lead.next_action_overdue) return "vencido";
+  const d = (lead.next_action_date ?? "").toLowerCase();
+  if (d.includes("ontem")) return "vencido";
+  if (d.includes("hoje")) return "hoje";
+  if (d.includes("amanhã") || d.includes("amanha")) return "amanha";
+  // Specific dates — check if within 7 days
+  const match = d.match(/(\d{2})\/(\d{2})/);
+  if (match) {
+    const day = parseInt(match[1]);
+    const now = new Date().getDate();
+    if (day <= now + 7) return "esta_semana";
+    return "proxima";
+  }
+  return "esta_semana";
+}
+
+function TimelineView({ leads, onOpen }: { leads: Lead[]; onOpen: (id: string) => void }) {
+  const grouped: Record<string, Lead[]> = {};
+  TIMELINE_SECTIONS.forEach(s => { grouped[s.key] = []; });
+  leads.forEach(l => { const sec = getTimelineSection(l); if (grouped[sec]) grouped[sec].push(l); });
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      {TIMELINE_SECTIONS.filter(s => grouped[s.key].length > 0).map(sec => (
+        <div key={sec.key}>
+          {/* Section header */}
+          <div className="flex items-center gap-2 mb-2">
+            <span>{sec.icon}</span>
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: sec.color }}>{sec.label}</span>
+            <div className="flex-1 h-px ml-1" style={{ background: sec.color + "30" }} />
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: sec.color + "15", color: sec.color }}>
+              {grouped[sec.key].length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {grouped[sec.key].map(lead => {
+              const pb = priorityBadge(lead.priority);
+              return (
+                <motion.div
+                  key={lead.id}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  onClick={() => onOpen(lead.id)}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                  style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                  whileHover={{ x: 3 }}
+                >
+                  {/* Timeline dot */}
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: sec.color }} />
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-semibold truncate" style={{ color: "#16163f" }}>{lead.company}</span>
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0" style={{ background: pb.bg, color: pb.color, border: `1px solid ${pb.border}` }}>{lead.priority}</span>
+                    </div>
+                    <div className="text-[10px]" style={{ color: "#9CA3AF" }}>{lead.next_action}</div>
+                  </div>
+                  {/* Time */}
+                  <div className="text-[10px] font-medium shrink-0" style={{ color: sec.color }}>
+                    {lead.next_action_date}
+                  </div>
+                  {/* Score */}
+                  <div className="text-xs font-bold shrink-0" style={{ color: "#9e3ffd" }}>{lead.priority_score}</div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type ViewMode = "list" | "board" | "timeline";
 
 export default function Queue() {
@@ -302,41 +469,45 @@ export default function Queue() {
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* List */}
-          <div
-            className="overflow-y-auto p-4 space-y-3"
-            style={{ width: "62%", borderRight: "1px solid #E8EAED" }}
-          >
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-3">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
-                  <AlertTriangle size={24} style={{ color: "#D1D5DB" }} />
+        {/* Main content — switches by viewMode */}
+        {viewMode === "board" && <BoardView leads={filtered} onOpen={id => navigate(`/sales-os/leads/${id}`)} />}
+        {viewMode === "timeline" && <TimelineView leads={filtered} onOpen={id => navigate(`/sales-os/leads/${id}`)} />}
+        {viewMode === "list" && (
+          <div className="flex flex-1 overflow-hidden">
+            {/* List */}
+            <div
+              className="overflow-y-auto p-4 space-y-3"
+              style={{ width: "62%", borderRight: "1px solid #E8EAED" }}
+            >
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 gap-3">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+                    <AlertTriangle size={24} style={{ color: "#D1D5DB" }} />
+                  </div>
+                  <div className="text-sm font-medium" style={{ color: "#9CA3AF" }}>{t("salesos.queue.no_leads")}</div>
                 </div>
-                <div className="text-sm font-medium" style={{ color: "#9CA3AF" }}>{t("salesos.queue.no_leads")}</div>
-              </div>
-            ) : (
-              filtered.map((lead, i) => (
-                <QueueItem
-                  key={lead.id}
-                  lead={lead}
-                  index={i}
-                  selected={lead.id === selectedId}
-                  onClick={() => setSelectedId(lead.id)}
-                />
-              ))
-            )}
-          </div>
+              ) : (
+                filtered.map((lead, i) => (
+                  <QueueItem
+                    key={lead.id}
+                    lead={lead}
+                    index={i}
+                    selected={lead.id === selectedId}
+                    onClick={() => setSelectedId(lead.id)}
+                  />
+                ))
+              )}
+            </div>
 
-          {/* Preview panel — minimal, no internal scroll */}
-          <div
-            className="shrink-0"
-            style={{ width: "38%", background: "#FFFFFF", overflowY: "hidden" }}
-          >
-            <PreviewPanel lead={selectedLead} />
+            {/* Preview panel — minimal, no internal scroll */}
+            <div
+              className="shrink-0"
+              style={{ width: "38%", background: "#FFFFFF", overflowY: "hidden" }}
+            >
+              <PreviewPanel lead={selectedLead} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </SalesOSLayout>
   );

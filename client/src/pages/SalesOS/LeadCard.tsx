@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useLocation } from "wouter";
 import { SalesOSLayout, useViewAs } from "@/components/sales/SalesOSLayout";
@@ -301,6 +301,10 @@ export default function LeadCard() {
   const { toast } = useToast();
   const { viewAs, isRep } = useViewAs();
 
+  useEffect(() => {
+    if (isRep && bottomTab === "sop") setBottomTab("sequencias");
+  }, [isRep]);
+
   function openDialer() {
     toast({ title: "Abrindo discador..." });
   }
@@ -584,7 +588,7 @@ export default function LeadCard() {
               <div className="p-4">
                 {bottomTab === "sequencias" && <SequenceTriggerPanel />}
                 {bottomTab === "dm" && <DMEnrichmentPanel lead={lead} />}
-                {bottomTab === "sop" && <SOPAgentPanel lead={lead} />}
+                {bottomTab === "sop" && !isRep && <SOPAgentPanel lead={lead} />}
                 {bottomTab === "memoria" && <MemoryPanel lead={lead} />}
                 {bottomTab === "historico" && <Timeline lead={lead} />}
               </div>

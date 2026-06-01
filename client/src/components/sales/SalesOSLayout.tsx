@@ -1,6 +1,6 @@
 import { useState, createContext, useContext } from "react";
 import { useLocation, Link } from "wouter";
-import { ListChecks, MessageSquare, BarChart3, GraduationCap, ChevronLeft, Globe, Bell, ChevronDown } from "lucide-react";
+import { ListChecks, MessageSquare, BarChart3, GraduationCap, TrendingUp, ChevronLeft, Globe, Bell, ChevronDown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
 
@@ -39,10 +39,11 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const isRep = currentUser.isRep;
 
   const ALL_NAV = [
-    { path: "/sales-os/queue",    icon: ListChecks,    label: t("salesos.nav.queue") },
-    { path: "/sales-os/replies",  icon: MessageSquare, label: t("salesos.nav.replies"), badge: 3 },
-    { path: "/sales-os/manager",  icon: BarChart3,     label: isRep ? "Meu Painel" : t("salesos.nav.manager") },
-    { path: "/sales-os/coaching", icon: GraduationCap, label: "Coaching" },
+    { path: "/sales-os/queue",       icon: ListChecks,    label: t("salesos.nav.queue") },
+    { path: "/sales-os/replies",     icon: MessageSquare, label: t("salesos.nav.replies"), badge: 3 },
+    { path: "/sales-os/manager",     icon: BarChart3,     label: isRep ? "Meu Painel" : t("salesos.nav.manager") },
+    { path: "/sales-os/coaching",    icon: GraduationCap, label: "Coaching" },
+    ...(isRep ? [{ path: "/sales-os/performance", icon: TrendingUp, label: "Meu Desempenho" }] : []),
   ];
 
   const visibleNav = ALL_NAV;
@@ -127,7 +128,7 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
           </button>
 
           {/* Role switcher — prototype only */}
-          <div className="px-2 pb-3 border-b mb-3" style={{ borderColor: "#E8EAED" }}>
+          {!isRep && <div className="px-2 pb-3 border-b mb-3" style={{ borderColor: "#E8EAED" }}>
             <div
               className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
               style={{ color: "#C4B8D0" }}
@@ -212,7 +213,7 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Rep avatar (mirrors the switcher selection) */}
           <div className="flex items-center gap-2.5 px-2">
