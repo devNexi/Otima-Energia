@@ -879,16 +879,13 @@ export async function registerRoutes(
         return res.json({ success: true, leadId: "SPAM" });
       }
 
-      // Required field validation
+      // Required field validation (email, cidade, tipoImovel are now optional — collected post-conversion)
       const missing = [];
       if (!nome?.trim()) missing.push("nome");
       if (!empresa?.trim()) missing.push("empresa");
-      if (!email?.trim()) missing.push("email");
       if (!phone?.trim()) missing.push("phone");
-      if (!cidade?.trim()) missing.push("cidade");
       if (!estado?.trim()) missing.push("estado");
       if (!valorConta?.trim()) missing.push("valorConta");
-      if (!tipoImovel?.trim()) missing.push("tipoImovel");
       if (missing.length > 0) {
         return res.status(400).json({ success: false, error: `Campos obrigatórios faltando: ${missing.join(", ")}` });
       }

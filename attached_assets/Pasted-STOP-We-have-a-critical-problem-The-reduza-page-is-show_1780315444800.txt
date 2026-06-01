@@ -1,0 +1,86 @@
+STOP. We have a critical problem. The /reduza page is showing a fatal error in incognito — "Something went wrong" with a Reload button. That's a production error. The site is broken for some visitors right now.
+This is bigger than the form issue. Real PPC traffic is hitting this page and bouncing on a broken state. Every ad click on a broken page = wasted money + lost lead + Quality Score damage.
+IMMEDIATE — three things in priority order
+1. URGENT — Pause all 6 campaigns NOW
+While the landing page throws errors, every click is wasted. Pause campaigns until Replit fixes the page.
+Google Ads → Campaigns → Select all 6 NEW campaigns → Edit → Pause selected campaigns.
+This isn't a strategic decision, it's stopping the bleeding. R$ 267/day burning into a broken page.
+2. Send Replit this brief — full diagnosis + fixes
+
+CRITICAL: Multiple landing page bugs blocking lead capture
+Bug 1 — Fatal error on /reduza (in incognito / fresh sessions)
+Severity: CRITICAL — campaigns paused due to this
+The /reduza page is throwing a fatal error and rendering only "Something went wrong. Try refreshing the page. If the problem persists, please send an email to contato@otimaenergia.com" with a Reload page button.
+This happens in incognito mode (fresh session, no cookies). Real users from Google Ads clicks may be hitting this.
+Required investigation:
+
+Check server error logs for the last 24 hours for crashes on the /reduza route
+Check client-side console errors in incognito mode at https://otimaenergia.com/reduza
+Check if any recent deploy broke a dependency, API call, or initial render path
+Check if there's a missing environment variable, broken external API call (Google Analytics, GA4, conversion tracker), or unhandled promise rejection on page load
+
+This is blocking all PPC traffic. Must be diagnosed and fixed before campaigns can resume.
+Bug 2 — "Send Later" path not working
+Severity: HIGH
+When user fills the form and clicks the "Send Later" card (instead of "Submit account now"), the submission does not complete successfully.
+Required investigation:
+
+What HAPPENS when user clicks Send Later? Does form submit? Does it route? Does it error?
+Are required validations from the bill-upload path being incorrectly applied to the no-bill path?
+Is the acknowledgement checkbox required AND being missed by users?
+Does the form route to /obrigado?tipo=sem-conta correctly on success?
+
+Test case to reproduce: in incognito, fill all required fields, click "Send Later" card, click "Receive my free analysis" button, observe behavior.
+Bug 3 — Lost "Under R$5,000" track + GA tracking
+Severity: HIGH — tracking/attribution broken
+The bill amount dropdown previously had a "Caso Especial" option for sub-R$5,000 bills that routed users to /obrigado?tipo=caso-especial.
+The new dropdown shows tracks:
+
+Up to R$3,000 / month
+R$3,000 – R$5,000 / month
+R$5,000 – R$10,000 / month
+R$10,000 – R$30,000 / month
+Above R$30,000 / month
+
+Required clarification:
+
+Are the "Up to R$3,000" and "R$3,000 – R$5,000" options still routing to /obrigado?tipo=caso-especial?
+Is the lead_form_submit_special_case GA4 event still firing for these brackets?
+Is the existing "caso especial" track-specific email variant still being sent for these brackets?
+Are these GA4 events still configured (not imported to Google Ads as Primary, but firing in GA4 for internal tracking)?
+
+If any of this is broken, lead routing logic for sub-R$5k businesses is broken.
+Bug 4 — Verify GA4 events still firing on new design
+Severity: MEDIUM
+The conversion infrastructure is:
+
+lead_form_submit (R$ 200, Primary in Google Ads) — for completed bill upload submissions
+lead_form_submit_no_bill (R$ 60, Primary in Google Ads) — for "Send later" submissions
+lead_form_submit_special_case (GA4 only, not imported to Ads) — for sub-R$5k submissions
+
+Confirm all three events fire correctly on the new form design for the appropriate flow.
+Bug 5 — "FOR COMPANIES WITH ELECTRICITY BILLS STARTING AT R$ 5,000/MONTH" banner
+Severity: LOW — review needed
+The yellow text banner at the top of the hero still shows "FOR COMPANIES WITH ELECTRICITY BILLS STARTING AT R$ 5,000/MONTH" — but the form now offers Under R$3k and R$3k-R$5k tracks. This is contradictory.
+Required decision: Either remove the R$5,000 banner from the hero, OR remove the sub-R$5k tracks from the bill amount dropdown.
+Recommendation: Remove the R$5,000 banner from hero, keep the dropdown options as-is. Sub-R$5k leads filter to /obrigado?tipo=caso-especial which sets accurate expectations on the back end.
+Required deploy order
+
+Bug 1 (fatal error on /reduza) — CRITICAL, fix first, ETA needed urgently
+Bug 2 (Send Later not submitting) — HIGH, fix immediately after Bug 1
+Bug 3 (caso-especial routing for sub-R$5k tracks) — HIGH, fix in same deploy as Bug 2
+Bug 4 (verify all 3 GA4 events firing) — verification, deploy as part of QA
+Bug 5 (contradictory R$5k banner) — LOW, can deploy separately
+
+Acceptance tests before signing off
+For each, do an incognito test submission with UTM:
+https://otimaenergia.com/reduza?utm_source=test&gclid=TEST_FIX_001
+
+✅ Page loads cleanly (no "Something went wrong")
+✅ Form completes with bill upload → routes to /obrigado?tipo=completo → lead_form_submit fires → customer email arrives → internal alert arrives → row in Sheet
+✅ Form completes with "Send Later" → routes to /obrigado?tipo=sem-conta → lead_form_submit_no_bill fires → customer email arrives → internal alert arrives → row in Sheet
+✅ Form completes with "Up to R$3,000" or "R$3,000 – R$5,000" track → routes to /obrigado?tipo=caso-especial → lead_form_submit_special_case fires in GA4 (NOT imported to Ads) → customer email "caso-especial" variant arrives → internal alert arrives → row in Sheet with bill bracket noted
+
+Test on iOS Safari mobile AND Android Chrome mobile, not just desktop.
+Priority
+Campaigns are PAUSED waiting for fix. Every hour delayed = ~R$ 11 in unrecoverable spend pacing + 1-2 leads not captured. Target deploy: within 2-4 hours.

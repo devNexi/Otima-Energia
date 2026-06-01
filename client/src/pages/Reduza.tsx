@@ -70,13 +70,13 @@ const TIPOS_NEGOCIO = [
 ];
 
 const VALORES_CONTA = [
-  "Até R$ 3.000 / mês",
-  "R$ 3.000 – R$ 5.000 / mês",
-  "R$ 5.000 – R$ 10.000 / mês",
-  "R$ 10.000 – R$ 30.000 / mês",
-  "Acima de R$ 30.000 / mês",
+  "Menos de R$ 5.000 (caso especial)",
+  "R$ 5.000 a R$ 10.000",
+  "R$ 10.000 a R$ 30.000",
+  "R$ 30.000 a R$ 80.000",
+  "Mais de R$ 80.000",
 ];
-const CASO_ESPECIAL_VALUES = ["Até R$ 3.000 / mês", "R$ 3.000 – R$ 5.000 / mês"];
+const CASO_ESPECIAL_VALUES = ["Menos de R$ 5.000 (caso especial)"];
 
 const TRUST_BADGES = [
   { icon: <CheckCircle2 className="h-6 w-6" />, title: "100% grátis para sua empresa", sub: "Sem taxa, mensalidade ou comissão." },
@@ -341,7 +341,7 @@ function RedzaInner() {
           {/* Left 3/5 */}
           <div className="md:col-span-3">
             <p className="text-sm md:text-base font-semibold mb-4 tracking-wide" style={{ color: "#FBBF24" }}>
-              PARA EMPRESAS COM CONTA DE LUZ A PARTIR DE R$ 5.000/MÊS
+              MERCADO LIVRE DE ENERGIA — ANÁLISE GRATUITA PARA EMPRESAS
             </p>
             <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">
               Desconto direto na conta de luz da sua empresa.
@@ -662,8 +662,8 @@ function RedzaInner() {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => { setBillChoice("later"); setUploadError(null); setFile(null); }}
-                      onKeyDown={e => e.key === "Enter" && (setBillChoice("later"), setUploadError(null))}
+                      onClick={() => { setBillChoice("later"); setSkipBillAcknowledged(true); setUploadError(null); setFile(null); }}
+                      onKeyDown={e => { if (e.key === "Enter") { setBillChoice("later"); setSkipBillAcknowledged(true); setUploadError(null); } }}
                       className="rounded-xl border-2 p-4 cursor-pointer transition-all"
                       style={{
                         borderColor: billChoice === "later" ? BRAND : "#E2E8F0",
