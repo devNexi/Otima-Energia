@@ -13,6 +13,17 @@ export interface MessageSent {
   sent_at: string;
 }
 
+export interface BuyingSignal {
+  id: string;
+  type: "press" | "expansion" | "hiring" | "sector_pressure" | "supplier_complaint" | "renovation";
+  urgency: "red" | "amber" | "green";
+  title: string;
+  description: string;
+  source: string;
+  date: string;
+  script_copy: string;
+}
+
 export interface AgentRecommendation {
   action: string;
   confidence: "Alta" | "Média" | "Baixa";
@@ -82,6 +93,7 @@ export interface Lead {
   reply_channel: "WhatsApp" | "Email" | null;
   reply_sla_minutes: number | null;
   sop_agent_statuses: { sop: string; status: "Pendente" | "Executando" | "Concluído" | "Erro"; last_run: string | null; output_summary: string | null; confidence: number | null }[];
+  buying_signals?: BuyingSignal[];
 }
 
 export const mockLeads: Lead[] = [
@@ -164,6 +176,28 @@ export const mockLeads: Lead[] = [
     reply_type: "logistics",
     reply_channel: "WhatsApp",
     reply_sla_minutes: 37,
+    buying_signals: [
+      {
+        id: "bs-001-1",
+        type: "press",
+        urgency: "amber",
+        title: "Mencionado na imprensa regional",
+        description: "Hotel Bela Vista destacado em artigo sobre turismo em São Paulo — momento natural para falar em eficiência operacional.",
+        source: "G1 São Paulo",
+        date: "3 dias atrás",
+        script_copy: "Vi que o Hotel Bela Vista foi destaque num artigo sobre turismo em SP esta semana — é exatamente por isso que achei que vale a pena uma análise rápida da conta agora.",
+      },
+      {
+        id: "bs-001-2",
+        type: "sector_pressure",
+        urgency: "red",
+        title: "Custos operacionais do setor hoteleiro em alta",
+        description: "Setor hoteleiro em SP reportando aumento de 18% nos custos operacionais em 2026 — energia é o principal driver.",
+        source: "Abrasel",
+        date: "este mês",
+        script_copy: "Para hotéis em SP, energia costuma ser o custo fixo que mais cresce sem que ninguém perceba — e o setor todo está sofrendo isso agora.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-01 Qualificação Julia", status: "Concluído", last_run: "23/05 11:00", output_summary: "Hotel qualificado. Score 88/100.", confidence: 88 },
       { sop: "SOP-09 Gravação de Chamada", status: "Concluído", last_run: "28/05 10:15", output_summary: "Chamada gravada. QA: script seguido.", confidence: 95 },
@@ -331,6 +365,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-003-1",
+        type: "hiring",
+        urgency: "amber",
+        title: "Nova síndica assumiu o cargo recentemente",
+        description: "Aparecida Rocha assumiu a sindicância há 2 meses — novos síndicos frequentemente revisam contratos de fornecedores como prioridade política.",
+        source: "Ata da Assembleia",
+        date: "2 meses atrás",
+        script_copy: "Entendo que a Sra. Aparecida assumiu recentemente — é exatamente neste momento que faz sentido revisar os contratos de energia, porque o condomínio pode estar pagando mais do que precisa.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-07 Objeção Solar", status: "Concluído", last_run: "18/05 11:15", output_summary: "Objeção solar detectada. Script de neutralização preparado.", confidence: 82 },
       { sop: "SOP-04 Análise de Conta", status: "Concluído", last_run: "20/05 10:30", output_summary: "Conta analisada. GD elegível. Economia: R$4.200/mês.", confidence: 95 },
@@ -412,6 +458,28 @@ export const mockLeads: Lead[] = [
     reply_type: "trust",
     reply_channel: "WhatsApp",
     reply_sla_minutes: 58,
+    buying_signals: [
+      {
+        id: "bs-004-1",
+        type: "hiring",
+        urgency: "amber",
+        title: "Vaga aberta para Coordenador de Infraestrutura",
+        description: "Clínica buscando profissional para gestão de equipamentos e custos operacionais — expansão de capacidade em andamento.",
+        source: "LinkedIn",
+        date: "1 semana atrás",
+        script_copy: "Vi que vocês estão contratando um coordenador de infraestrutura — empresas em crescimento costumam revisar todos os custos fixos, e energia costuma ser onde existe mais espaço.",
+      },
+      {
+        id: "bs-004-2",
+        type: "expansion",
+        urgency: "green",
+        title: "Novo equipamento de ressonância instalado",
+        description: "Clínica adicionou ressonância magnética à operação — equipamento de alta potência que impacta diretamente o consumo elétrico.",
+        source: "Site da clínica",
+        date: "3 semanas atrás",
+        script_copy: "Com a ressonância magnética nova, o consumo elétrico da clínica provavelmente aumentou — é exatamente quando uma análise de GD faz mais sentido.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-01 Qualificação Julia", status: "Concluído", last_run: "25/05 11:00", output_summary: "Clínica qualificada. Carga estimada 35.000 kWh/mês.", confidence: 72 },
       { sop: "SOP-03 Enriquecimento DM", status: "Concluído", last_run: "25/05 11:30", output_summary: "Dr. Figueiredo identificado — LinkedIn e registro CRM.", confidence: 85 },
@@ -576,6 +644,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-006-1",
+        type: "expansion",
+        urgency: "amber",
+        title: "Segunda unidade registrada em São Paulo",
+        description: "Lavanderia registrou nova unidade na capital — empresas em expansão frequentemente revisam contratos operacionais para padronizar custos.",
+        source: "Receita Federal",
+        date: "2 semanas atrás",
+        script_copy: "Vi que vocês abriram uma segunda unidade — é justamente quando faz sentido revisar os custos operacionais fixos. Com duas lavanderias, o potencial de economia na energia dobra.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-07 Objeção Solar", status: "Concluído", last_run: "23/05 10:05", output_summary: "Script de complementaridade preparado. Abordagem: GD noturno + solar diurno.", confidence: 78 },
     ],
@@ -652,6 +732,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-007-1",
+        type: "supplier_complaint",
+        urgency: "red",
+        title: "Avaliações recentes mencionam insatisfação com fornecedores",
+        description: "Google Reviews recentes citam reclamações sobre gestão de custos operacionais — sinal de abertura para revisar contratos de fornecedores.",
+        source: "Google Reviews",
+        date: "5 dias atrás",
+        script_copy: "Estamos em contato com supermercados que estão revisando fornecedores de energia — e pelo perfil de vocês, esse momento pode ser muito oportuno.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-01 Qualificação Julia", status: "Concluído", last_run: "30/05 08:00", output_summary: "Qualificado. Score 78. Câmaras frias detectadas.", confidence: 78 },
       { sop: "SOP-03 Enriquecimento DM", status: "Pendente", last_run: null, output_summary: null, confidence: null },
@@ -812,6 +904,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-009-1",
+        type: "sector_pressure",
+        urgency: "red",
+        title: "Setor frigorífico sob pressão de margens em 2026",
+        description: "Frigoríficos do Sudeste reportando compressão de margens operacionais — energia elétrica representa 25-35% dos custos variáveis do setor.",
+        source: "ABIEC",
+        date: "este mês",
+        script_copy: "O setor frigorífico todo está sob pressão de margem agora — e energia é onde existe a oportunidade mais rápida de recuperar custo sem mudar a operação.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-14 Revisão Estratégica", status: "Pendente", last_run: null, output_summary: null, confidence: null },
       { sop: "SOP-09 Gravação de Chamada", status: "Concluído", last_run: "20/05 14:00", output_summary: "21 chamadas gravadas. QA: padrão repetitivo detectado.", confidence: 35 },
@@ -973,6 +1077,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-011-1",
+        type: "renovation",
+        urgency: "amber",
+        title: "Reforma e ampliação da ala de quartos em andamento",
+        description: "Hotel Mar e Sol em obras de ampliação — projetos de reforma geralmente acompanham revisão de contratos de utilidades antes da inauguração.",
+        source: "Site do hotel",
+        date: "1 mês atrás",
+        script_copy: "Vi que o Hotel Mar e Sol está em reforma — projetos de ampliação são o momento ideal para revisar os contratos de energia antes de inaugurar a nova capacidade.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-03 Enriquecimento DM", status: "Executando", last_run: "28/05 16:00", output_summary: "Buscando WhatsApp direto de Beatriz Carvalho.", confidence: null },
     ],
@@ -1379,6 +1495,18 @@ export const mockLeads: Lead[] = [
     reply_type: null,
     reply_channel: null,
     reply_sla_minutes: null,
+    buying_signals: [
+      {
+        id: "bs-016-1",
+        type: "expansion",
+        urgency: "red",
+        title: "Segunda unidade operacional registrada em Guarulhos",
+        description: "Câmara Fria SP abriu segunda unidade — operações de câmara fria 24/7 têm perfil de consumo que maximiza o retorno de GD ou ACL.",
+        source: "Receita Federal",
+        date: "2 semanas atrás",
+        script_copy: "Com a segunda câmara fria em Guarulhos, o consumo total dobra — e a proposta que preparei já considera as duas unidades. Faz sentido fechar agora antes do prazo.",
+      },
+    ],
     sop_agent_statuses: [
       { sop: "SOP-06 Proposal Chase", status: "Executando", last_run: "28/05 10:00", output_summary: "Chase urgente ativo. Prazo: 3 dias.", confidence: null },
     ],

@@ -4,6 +4,7 @@ import { useParams, useLocation } from "wouter";
 import { SalesOSLayout, useViewAs } from "@/components/sales/SalesOSLayout";
 import { MessageComposer } from "@/components/sales/MessageComposer";
 import { AgentRecommendationCard } from "@/components/sales/AgentRecommendationCard";
+import { LeadIntelligenceCard } from "@/components/sales/LeadIntelligenceCard";
 import { DMEnrichmentPanel } from "@/components/sales/DMEnrichmentPanel";
 import { MemoryPanel } from "@/components/sales/MemoryPanel";
 import { SOPAgentPanel } from "@/components/sales/SOPAgentPanel";
@@ -532,6 +533,9 @@ export default function LeadCard() {
 
           {/* MAIN AREA — no internal scroll, page scrolls naturally */}
           <div className="flex-1" style={{ background: "#F8F9FC", paddingBottom: 52 }}>
+
+            {/* ── LEAD INTELLIGENCE ────────────────────────────────── */}
+            <LeadIntelligenceCard lead={lead} />
 
             {/* ── CALL ASSIST GRID ─────────────────────────────────── */}
             <CallAssistGrid lead={lead} />

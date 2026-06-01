@@ -1,0 +1,68 @@
+You're right, I misunderstood. Market Intelligence isn't a tab buried at the bottom — it's front and centre intelligence that should be immediately visible when a rep opens a lead, because it directly powers the call. The "show me you know me" principle means the rep should feel like an expert on this business before they dial, not after they've scrolled through tabs.
+Looking at the BSG Buying Signals reference — the key concept to borrow is surfacing real-time commercial triggers that make outreach timely and relevant. Not copying the design, but applying the same logic: what happened to this business recently that makes now the right moment to call?
+Here's how this should actually be structured in the girls' view:
+The right UX is a Lead Intelligence Card — visible immediately above the Call Assist panel, always on screen before they dial.
+Not a tab. Not hidden. Right there. Because this is what transforms a cold call into a warm, specific, credible conversation.
+
+Send this to Replit:
+
+Rethinking Market Intelligence entirely. Do not add it as a bottom tab. Remove any Market Intelligence tab if you already added one.
+LEAD INTELLIGENCE CARD — add above Call Assist on the Lead Card
+Between the page header and the Assistência de Chamada section, add a collapsed-by-default card called 'Inteligência do Lead'. It has a chevron to expand. Default state: collapsed but showing a one-line summary teaser so the rep knows it has content. When expanded it shows the full intelligence.
+Why collapsed by default: the rep can open it before calling to prepare, then collapse it and focus on Call Assist during the call. It does not crowd the call view.
+The collapsed teaser line shows: segment chip + trust barrier badge + one buying signal if any exists. Example: 'Hotel · Barreira Alta · 📰 Mencionado na imprensa regional há 3 dias'
+When expanded, show four sections:
+Section 1 — Sobre Este Negócio
+Two to three sentences. What this business is, how it likely operates, what drives its costs, who typically makes decisions. Specific to the segment. Example for Hotel Bela Vista: 'Hotel de médio porte em São Paulo com operação 24h. HVAC, lavanderia e áreas comuns criam carga de consumo constante. Decisões de custo geralmente passam pelo Gerente Geral ou Diretor Financeiro — Carlos Andrade é o perfil certo.'
+Section 2 — Sinais de Compra
+This is the buying signals section. Show 1-3 signals if any exist in mock data, or 'Nenhum sinal recente detectado' if none.
+Each signal is a card with: coloured left border (red = urgent / amber = relevant / green = positive), signal type icon, signal title, one-line description, source and date, and a 'Usar no script' button that copies a ready-made Portuguese sentence referencing that signal.
+Signal types to include in mock data:
+
+Notícia recente: 'Hotel Bela Vista mencionado em artigo sobre turismo em SP — momento natural para falar em eficiência operacional' — source: G1 São Paulo · 3 dias atrás
+Expansão / nova unidade: 'Segunda unidade registrada em Campinas — empresas em expansão frequentemente revisam custos operacionais' — source: Receita Federal · 2 semanas atrás
+Contratação relevante: 'Vaga aberta para Gerente de Operações — novo responsável frequentemente revisa contratos existentes' — source: LinkedIn · 1 semana atrás
+Pressão setorial: 'Setor hoteleiro em SP reportando aumento de 18% nos custos operacionais em 2026' — source: Abrasel · este mês
+Reclamação sobre fornecedor atual: 'Avaliações recentes mencionam problemas com fornecedores de serviços' — source: Google Reviews · 5 dias atrás
+
+The 'Usar no script' button for each signal copies a sentence like: 'Vi que o Hotel Bela Vista foi destaque num artigo sobre turismo em SP esta semana — é exatamente por isso que achei que vale a pena uma análise rápida da conta agora.'
+If no signals: show a grey card 'Nenhum sinal recente. Usar ângulo padrão do segmento.'
+Section 3 — Por Que Agora
+One to two sentences of real commercial context. Not fake urgency. Pull from mock why_this_account_may_be_worth_reviewing_now. Example: 'Para operações hoteleiras, energia tende a ficar como custo tolerado até que pressão de margem force revisão. A combinação de consumo 24h com gestão dividida entre operações e financeiro cria exatamente o tipo de inércia que uma análise rápida de GD pode desfazer.'
+Section 4 — Elegibilidade de Produto
+Three chips side by side:
+
+GD (Geração Distribuída): green 'Elegível' or grey 'Verificar' or red 'Não elegível' — with one-line reason
+ACL (Mercado Livre): purple 'Potencial' if large enough, grey 'Abaixo do threshold' if not — with one-line reason
+Solar: amber 'Já instalado — rodar diagnóstico' if solar in history, green 'Sem solar — GD livre' if not
+
+The 'Usar no script' pattern
+This is the key UX mechanic throughout the Lead Intelligence card. Every piece of intelligence that can be referenced in a call has a small 'Usar no script' button next to it. Clicking it copies a ready-made Portuguese sentence that drops naturally into conversation. This is how the rep 'shows they know them' without having to improvise.
+Examples of what gets copied:
+
+From a buying signal: 'Vi que vocês estão em expansão — é justamente quando faz sentido revisar os custos operacionais fixos.'
+From sector pain: 'Para hotéis em SP, energia costuma ser o custo fixo que mais cresce sem que ninguém perceba.'
+From trust barrier context: 'Sei que recebem muita abordagem de solar — isso não é o que estou propondo. É uma análise de conta, sem compromisso.'
+From why now: 'A janela de análise de GD fecha em breve para empresas com consumo no seu perfil — por isso faz sentido ver isso agora.'
+
+Each copy action flashes green for 1.5 seconds then resets.
+MOCK DATA — add buying signals to at least 8 of the 20 leads
+Give each of these lead types at least one buying signal:
+
+Hotel Bela Vista: press mention + sector cost pressure
+Câmara Fria São Paulo: expansion signal (second unit)
+Condomínio Torres do Parque: new síndico hired
+Clínica Diagnóstica Saúde Plena: new equipment purchased (hiring signal)
+Supermercado Família Unida: supplier complaint signal
+Hotel Mar e Sol: renovation signal
+Lavanderia Industrial Brilho Total: expansion signal
+Frigorifico Sudeste Carnes: sector margin pressure signal
+
+For leads with no signal: leave the buying signals section showing 'Nenhum sinal recente detectado — usar ângulo padrão do segmento.'
+POSITION ON PAGE
+The Lead Intelligence Card sits between the top header bar and the Assistência de Chamada section. It is part of the main content area, not the left sidebar. Full width of the main area. Collapsed by default. Expand arrow right side of the header.
+When collapsed height: 48px showing the teaser line.
+When expanded: full content, no internal scroll, flows naturally into the page.
+DO NOT CHANGE
+Anything else on the Lead Card. All existing tabs, panels, and functionality stay exactly as they are.
+After the change show me: one Lead Card with the intelligence card expanded showing a buying signal, and one Lead Card with it collapsed showing the teaser.
