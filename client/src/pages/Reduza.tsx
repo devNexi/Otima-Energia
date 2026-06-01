@@ -70,10 +70,13 @@ const TIPOS_NEGOCIO = [
 ];
 
 const VALORES_CONTA = [
-  "Menos de R$ 5.000 (caso especial)",
-  "R$ 5.000 a R$ 10.000", "R$ 10.000 a R$ 30.000",
-  "R$ 30.000 a R$ 80.000", "Mais de R$ 80.000",
+  "Até R$ 3.000 / mês",
+  "R$ 3.000 – R$ 5.000 / mês",
+  "R$ 5.000 – R$ 10.000 / mês",
+  "R$ 10.000 – R$ 30.000 / mês",
+  "Acima de R$ 30.000 / mês",
 ];
+const CASO_ESPECIAL_VALUES = ["Até R$ 3.000 / mês", "R$ 3.000 – R$ 5.000 / mês"];
 
 const TRUST_BADGES = [
   { icon: <CheckCircle2 className="h-6 w-6" />, title: "100% grátis para sua empresa", sub: "Sem taxa, mensalidade ou comissão." },
@@ -173,17 +176,14 @@ function getUTMsFromSession() {
   return utms;
 }
 
-// ─── Form schema ─────────────────────────────────────────────────────────────
+// ─── Form schema — 5 required fields only ────────────────────────────────────
 const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório").refine(
     v => v.trim().length >= 2, "Nome obrigatório"
   ),
   empresa: z.string().min(2, "Empresa obrigatória"),
-  email: z.string().email("Email inválido"),
   phone: z.string().refine(v => v.replace(/\D/g, "").length === 11, "Informe DDD + 9 dígitos"),
   estado: z.string().min(1, "Estado obrigatório"),
-  cidade: z.string().min(2, "Cidade obrigatória"),
-  tipoNegocio: z.string().min(1, "Tipo de negócio obrigatório"),
   valorConta: z.string().min(1, "Selecione a faixa da conta"),
   lgpd: z.boolean().refine(v => v === true, "Você precisa aceitar para continuar"),
   honeypot: z.string().max(0),
@@ -194,11 +194,10 @@ type FormValues = z.infer<typeof schema>;
 function RedzaInner() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [showSkipOption, setShowSkipOption] = useState(false);
+  const [billChoice, setBillChoice] = useState<"upload" | "later" | null>(null);
   const [skipBillAcknowledged, setSkipBillAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // Pre-expand the #1 trust objection question by default
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [formStarted, setFormStarted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -232,15 +231,13 @@ function RedzaInner() {
     if (f.size > 10 * 1024 * 1024) { setUploadError("Arquivo muito grande. Máximo 10 MB."); return; }
     setFile(f);
     setUploadError(null);
-    setShowSkipOption(false);
-    // NOTE: bill_upload_added is intentionally NOT fired here.
-    // It fires in onSubmit after the server confirms the upload succeeded.
+    setBillChoice("upload");
   };
 
   const onSubmit = async (data: FormValues) => {
     if (data.honeypot) return;
     if (!file && !skipBillAcknowledged) {
-      setUploadError("Envie sua conta ou confirme que entende que a análise será simplificada.");
+      setUploadError("Escolha uma das opções acima: envie sua conta ou selecione 'Enviar depois'.");
       document.getElementById("upload-zone")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -253,11 +250,8 @@ function RedzaInner() {
       const fd = new FormData();
       fd.append("nome", data.nome);
       fd.append("empresa", data.empresa);
-      fd.append("email", data.email);
       fd.append("phone", data.phone);
       fd.append("estado", data.estado);
-      fd.append("cidade", data.cidade);
-      fd.append("tipoImovel", data.tipoNegocio);
       fd.append("valorConta", data.valorConta);
       fd.append("landingPageUrl", window.location.href);
       fd.append("referrer", document.referrer);
@@ -269,11 +263,9 @@ function RedzaInner() {
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error(result.error || "Erro ao enviar formulário");
 
-      const isCasoEspecial = data.valorConta === "Menos de R$ 5.000 (caso especial)";
+      const isCasoEspecial = CASO_ESPECIAL_VALUES.includes(data.valorConta);
       const tipo = isCasoEspecial ? "caso-especial" : file ? "completo" : "sem-conta";
 
-      // bill_upload_added fires here — only after the server has confirmed the
-      // bill was received and saved (not on file-field interaction).
       if (file) {
         fireEvent("bill_upload_added", { file_type: file.type });
       }
@@ -499,6 +491,12 @@ function RedzaInner() {
               ))}
             </div>
           </div>
+
+          {/* Fix 5 — Secondary CTA after steps */}
+          <div className="text-center mt-12">
+            <PrimaryBtn onClick={scrollToForm} className="text-lg px-8 py-4 shadow-lg" />
+            <p className="text-sm text-slate-500 mt-3">Gratuito, sem compromisso — resposta em até 24h</p>
+          </div>
         </div>
       </section>
 
@@ -580,16 +578,10 @@ function RedzaInner() {
                   </div>
                 </div>
 
-                {/* Row 2: Email + WhatsApp */}
+                {/* Row 2: WhatsApp + Estado */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label htmlFor="email" className={labelCls}>Email corporativo <span className="text-red-500">*</span></label>
-                    <input id="email" type="email" {...register("email")} autoComplete="email" placeholder="maria@empresa.com.br" className={inputCls(!!errors.email)} data-testid="input-email" />
-                    {errors.email && <p className={errCls} role="alert">{errors.email.message}</p>}
-                    <p className="text-xs text-slate-400 mt-1">Use seu email comercial para receber a análise.</p>
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className={labelCls}>Telefone / WhatsApp <span className="text-red-500">*</span></label>
+                    <label htmlFor="phone" className={labelCls}>WhatsApp / Telefone <span className="text-red-500">*</span></label>
                     <input
                       id="phone"
                       type="tel"
@@ -603,10 +595,6 @@ function RedzaInner() {
                     />
                     {errors.phone && <p className={errCls} role="alert">{errors.phone.message}</p>}
                   </div>
-                </div>
-
-                {/* Row 3: Estado + Cidade */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label htmlFor="estado" className={labelCls}>Estado <span className="text-red-500">*</span></label>
                     <select id="estado" {...register("estado")} className={inputCls(!!errors.estado)} data-testid="select-estado">
@@ -615,65 +603,83 @@ function RedzaInner() {
                     </select>
                     {errors.estado && <p className={errCls} role="alert">{errors.estado.message}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="cidade" className={labelCls}>Cidade <span className="text-red-500">*</span></label>
-                    <input id="cidade" {...register("cidade")} autoComplete="address-level2" placeholder="Sua cidade" className={inputCls(!!errors.cidade)} data-testid="input-cidade" />
-                    {errors.cidade && <p className={errCls} role="alert">{errors.cidade.message}</p>}
-                  </div>
                 </div>
 
-                {/* Row 4: Tipo de negócio + Valor da conta */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label htmlFor="tipoNegocio" className={labelCls}>Tipo de negócio <span className="text-red-500">*</span></label>
-                    <select id="tipoNegocio" {...register("tipoNegocio")} className={inputCls(!!errors.tipoNegocio)} data-testid="select-tipo-negocio">
-                      <option value="">Selecione...</option>
-                      {TIPOS_NEGOCIO.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    {errors.tipoNegocio && <p className={errCls} role="alert">{errors.tipoNegocio.message}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="valorConta" className={labelCls}>Valor médio da conta por mês <span className="text-red-500">*</span></label>
-                    <select id="valorConta" {...register("valorConta")} className={inputCls(!!errors.valorConta)} data-testid="select-valor-conta">
-                      <option value="">Selecione a faixa</option>
-                      {VALORES_CONTA.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                    {errors.valorConta && <p className={errCls} role="alert">{errors.valorConta.message}</p>}
-                    <p className="text-xs text-slate-400 mt-1 italic">Atendemos empresas com conta a partir de R$ 5.000/mês. Contas menores podem ser analisadas caso a caso.</p>
-                  </div>
+                {/* Row 3: Valor da conta — full width */}
+                <div>
+                  <label htmlFor="valorConta" className={labelCls}>Valor médio da conta de luz por mês <span className="text-red-500">*</span></label>
+                  <select id="valorConta" {...register("valorConta")} className={inputCls(!!errors.valorConta)} data-testid="select-valor-conta">
+                    <option value="">Selecione a faixa</option>
+                    {VALORES_CONTA.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  {errors.valorConta && <p className={errCls} role="alert">{errors.valorConta.message}</p>}
                 </div>
 
-                {/* File upload */}
+                {/* Fix 1 — Two equally prominent bill paths */}
                 <div id="upload-zone">
-                  <label className={labelCls}>
-                    Anexe sua última conta de luz{" "}
-                    <span className="text-slate-400 font-normal">(recomendado — análise muito mais precisa)</span>
-                  </label>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => fileInputRef.current?.click()}
-                    onKeyDown={e => e.key === "Enter" && fileInputRef.current?.click()}
-                    className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
-                    style={{ borderColor: file ? "#16A34A" : uploadError ? "#DC2626" : "#CBD5E1" }}
-                    data-testid="upload-dropzone"
-                  >
-                    {file ? (
-                      <div className="flex items-center justify-center gap-3 text-green-700">
-                        <CheckCircle className="h-5 w-5 shrink-0" />
-                        <span className="text-sm font-medium truncate max-w-xs">{file.name}</span>
-                        <button type="button" onClick={e => { e.stopPropagation(); setFile(null); }} className="text-slate-400 hover:text-red-500 ml-1 shrink-0" aria-label="Remover arquivo">
-                          <X className="h-4 w-4" />
-                        </button>
+                  <label className={labelCls}>Sua conta de luz</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                    {/* Option A — Upload now */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => { setBillChoice("upload"); fileInputRef.current?.click(); setUploadError(null); }}
+                      onKeyDown={e => e.key === "Enter" && fileInputRef.current?.click()}
+                      className="rounded-xl border-2 p-4 cursor-pointer transition-all"
+                      style={{
+                        borderColor: billChoice === "upload" ? (file ? "#16A34A" : BRAND) : "#E2E8F0",
+                        background: billChoice === "upload" ? (file ? "#F0FDF4" : "#FAF5FF") : "#FAFAFA",
+                      }}
+                      data-testid="upload-dropzone"
+                    >
+                      {file ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-green-700">
+                            <CheckCircle className="h-5 w-5 shrink-0" />
+                            <span className="text-sm font-semibold">Conta anexada</span>
+                          </div>
+                          <span className="text-xs text-slate-500 truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); setFile(null); setBillChoice(null); }}
+                            className="text-xs text-red-500 hover:text-red-700 text-left"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center py-2">
+                          <Upload className="h-7 w-7 mx-auto mb-2" style={{ color: billChoice === "upload" ? BRAND : "#94A3B8" }} />
+                          <p className="text-sm font-semibold text-slate-700">Enviar conta agora</p>
+                          <p className="text-xs text-slate-400 mt-1">PDF ou foto · máx. 10 MB</p>
+                          <p className="text-xs font-medium mt-2" style={{ color: "#16A34A" }}>✓ Análise em até 24h</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Option B — Contact later */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => { setBillChoice("later"); setUploadError(null); setFile(null); }}
+                      onKeyDown={e => e.key === "Enter" && (setBillChoice("later"), setUploadError(null))}
+                      className="rounded-xl border-2 p-4 cursor-pointer transition-all"
+                      style={{
+                        borderColor: billChoice === "later" ? BRAND : "#E2E8F0",
+                        background: billChoice === "later" ? "#FAF5FF" : "#FAFAFA",
+                      }}
+                      data-testid="btn-skip-upload"
+                    >
+                      <div className="text-center py-2">
+                        <MessageSquare className="h-7 w-7 mx-auto mb-2" style={{ color: billChoice === "later" ? BRAND : "#94A3B8" }} />
+                        <p className="text-sm font-semibold text-slate-700">Enviar depois</p>
+                        <p className="text-xs text-slate-400 mt-1 leading-snug">Não tem a conta agora? A Ótima entra em contato para coletar.</p>
+                        <p className="text-xs font-medium mt-2 text-slate-500">Análise em até 48h</p>
                       </div>
-                    ) : (
-                      <div>
-                        <Upload className="h-9 w-9 mx-auto mb-2 text-slate-300" />
-                        <p className="text-sm text-slate-500 font-medium">Clique para enviar ou arraste o arquivo aqui</p>
-                        <p className="text-xs text-slate-400 mt-1">PDF ou foto da fatura · máx. 10 MB</p>
-                      </div>
-                    )}
+                    </div>
                   </div>
+
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -684,37 +690,24 @@ function RedzaInner() {
                     data-testid="input-file"
                   />
 
-                  {/* Skip path */}
-                  {!file && (
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        onClick={() => { setShowSkipOption(v => !v); setUploadError(null); }}
-                        className="text-sm underline underline-offset-2"
-                        style={{ color: BRAND }}
-                        data-testid="btn-skip-upload"
-                      >
-                        Não tenho minha conta agora — quero ser contatado depois
-                      </button>
-                      <div
-                        className="overflow-hidden transition-all duration-300"
-                        style={{ maxHeight: showSkipOption ? 80 : 0 }}
-                      >
-                        <label className="flex items-start gap-3 mt-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={skipBillAcknowledged}
-                            onChange={e => { setSkipBillAcknowledged(e.target.checked); setUploadError(null); }}
-                            className="mt-0.5 h-4 w-4 rounded accent-purple-600"
-                            data-testid="checkbox-skip-bill"
-                          />
-                          <span className="text-sm text-slate-600 leading-snug">
-                            Entendo que sem a conta a análise será simplificada. A Ótima entrará em contato para coletar a conta antes de finalizar.
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
+                  {/* Acknowledgement for Option B */}
+                  <div
+                    className="overflow-hidden transition-all duration-300"
+                    style={{ maxHeight: billChoice === "later" ? 100 : 0 }}
+                  >
+                    <label className="flex items-start gap-3 mt-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={skipBillAcknowledged}
+                        onChange={e => { setSkipBillAcknowledged(e.target.checked); setUploadError(null); }}
+                        className="mt-0.5 h-4 w-4 rounded accent-purple-600"
+                        data-testid="checkbox-skip-bill"
+                      />
+                      <span className="text-sm text-slate-600 leading-snug">
+                        Entendo que sem a conta a análise será simplificada. A Ótima entrará em contato para coletar antes de finalizar.
+                      </span>
+                    </label>
+                  </div>
 
                   {uploadError && (
                     <p className={errCls} role="alert" aria-live="polite">{uploadError}</p>
@@ -736,7 +729,7 @@ function RedzaInner() {
                       data-testid="checkbox-lgpd"
                     />
                     <span className="text-sm text-slate-600 leading-relaxed">
-                      Concordo em compartilhar minha conta de luz e dados de contato para análise de economia, e autorizo a Ótima Energia a entrar em contato comigo por email, telefone ou WhatsApp. Veja nossa{" "}
+                      Autorizo a Ótima Energia a entrar em contato comigo por telefone ou WhatsApp para análise de economia. Veja nossa{" "}
                       <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: BRAND }}>
                         Política de Privacidade
                       </a>. <span className="text-red-500">*</span>
@@ -745,11 +738,22 @@ function RedzaInner() {
                   {errors.lgpd && <p className={errCls} role="alert" aria-live="polite">{errors.lgpd.message}</p>}
                 </div>
 
-                {/* Trust line above button */}
-                <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-slate-500 pt-1">
-                  <span>🔒 Dados protegidos</span>
-                  <span>⏱️ Resposta em até 24h úteis</span>
-                  <span>✓ Sem compromisso</span>
+                {/* Fix 4 — Trust signals near CTA */}
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">23 estados</p>
+                      <p className="text-xs text-slate-500 leading-tight">atendidos</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">24h úteis</p>
+                      <p className="text-xs text-slate-500 leading-tight">análise por especialista</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">100% grátis</p>
+                      <p className="text-xs text-slate-500 leading-tight">sem compromisso</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Error */}

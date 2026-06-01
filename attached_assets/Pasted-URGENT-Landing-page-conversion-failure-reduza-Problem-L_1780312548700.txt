@@ -1,0 +1,78 @@
+URGENT: Landing page conversion failure — /reduza
+Problem
+Live PPC campaign data from May 30 - June 1 shows 29 clicks, 0 form submissions, 0 conversions. ~50% of clicks are from qualified-intent searches that should have converted. The landing page is the bottleneck.
+Required fixes (priority order)
+Fix 1 — Make the "skip bill upload" option clearly visible (CRITICAL)
+Current: Underlined purple text "Não tenho minha conta agora — quero ser contatado depois" looks like a small footnote link. Easy to miss. Users who don't have their bill in hand bounce.
+Required change: Promote this to a SECOND CLEAR PATH at the same visual prominence as the bill upload.
+Specifically, redesign the form's bill section to have TWO equally prominent options:
+[ Option A: Upload your bill ]
+   [drag-drop area]
+   "Recommended — analysis in 24h"
+
+— OR —
+
+[ Option B: Get contacted to send later ]
+   "Don't have your bill right now? Submit your details and we'll
+    contact you to collect it. Analysis in 48h."
+   [Continue without bill button]
+Both options should be visually balanced — neither prominent over the other. Use cards or boxes with equal sizing.
+When user clicks Option B, the acknowledgement checkbox appears inline (current behavior is fine), and the submit button proceeds.
+Fix 2 — Reduce form length (HIGH)
+Current: 9 fields = Name, Company, Email, Phone, State, City, Type of business, Average bill, Bill upload.
+Required: Cut to 5 required fields for initial submission:
+
+Full name (required)
+Company name (required)
+WhatsApp/Phone (required)
+State (required dropdown)
+Average monthly bill (required dropdown)
+
+Move to "after submission" or make optional:
+
+Email — collect on the /obrigado page or via the WhatsApp button
+City — derive from phone area code or ask on follow-up
+Type of business — ask on the /obrigado page or sales call
+Bill upload — keep as optional after the core 5 fields, OR move entirely to /obrigado page as the next action
+
+Fix 3 — Soften the R$5k qualifier (MEDIUM)
+Current: "Average monthly bill amount" dropdown with text saying "We serve companies with bills starting at R$5,000/month. Smaller bills can be analyzed case-by-case basis."
+Problem: This text appears BEFORE the user has invested time in the form. Many sub-R$5k or borderline businesses bail at this point thinking they don't qualify.
+Required change: Remove the "R$5,000/month" qualifier from the inline form text. Keep the bill amount dropdown but with options like:
+
+Até R$3,000 / mês
+R$3,000 - R$5,000 / mês
+R$5,000 - R$10,000 / mês
+R$10,000 - R$30,000 / mês
+Acima de R$30,000 / mês
+
+Show the qualifier ONLY on the /obrigado page after submission (variant tipo=caso-especial which already handles sub-R$5k correctly).
+This lets you capture more leads at the top of funnel, then qualify on the back end. Sub-R$5k leads go to a slower track but aren't lost.
+Fix 4 — Add trust signals near the CTA (MEDIUM)
+Right above the submit button, add small trust signals:
+
+Number of customers / companies served (use a real number if you have one, or omit)
+"23 estados atendidos"
+"Análise por especialista — 24h úteis"
+"Sem custo · Sem compromisso"
+
+Currently these are scattered. Concentrating them near the action button reduces last-second hesitation.
+Fix 5 — Above-the-fold CTA testing
+Current: Hero CTA "Receive my free analysis" is a single button.
+Add: Sticky scroll button or secondary CTA after the "How it works" section. Many users want to read more before committing. Multiple submission points throughout the page = higher conversion.
+Acceptance test
+After deploying:
+
+Submit a test lead in INCOGNITO with UTMs:
+https://otimaenergia.com/reduza?utm_source=test&gclid=TEST_LANDING_FIX_001
+Use Option B (skip bill upload) path
+Verify:
+
+Submit button accepts the form without bill ✓
+Routes to /obrigado?tipo=sem-conta ✓
+Customer email arrives ✓
+Internal alert arrives ✓
+Lead in Sheet shows "Bill Uploaded? = No" or equivalent ✓
+
+
+Mobile rendering check on iOS Safari + Android Chrome
