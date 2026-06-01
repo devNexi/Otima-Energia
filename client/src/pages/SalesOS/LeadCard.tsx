@@ -14,13 +14,12 @@ import {
   Phone, MessageCircle, Mail, RotateCcw, Search, ArrowUpCircle,
   Calendar, XCircle, Save, Copy, AlertTriangle, CheckCircle,
   Clock, FileText, ChevronLeft, User, ChevronDown, ChevronUp,
-  GraduationCap, Target, Star,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@/data/mockLeads";
 
 type MsgTab = "whatsapp" | "email" | "cobranca" | "interrupcao";
-type BottomTab = "sequencias" | "dm" | "sop" | "memoria" | "historico" | "coaching";
+type BottomTab = "sequencias" | "dm" | "sop" | "memoria" | "historico";
 
 const priorityBadge = (priority: string) => {
   const map: Record<string, { bg: string; color: string; border: string }> = {
@@ -290,184 +289,6 @@ function Timeline({ lead }: { lead: Lead }) {
   );
 }
 
-// ── Coaching Panel ────────────────────────────────────────────────────────────
-const COACHING_MOCK: Record<string, {
-  weekFocus: string;
-  focusStat: string;
-  focusTip: string;
-  qa: { date: string; rep: string; items: { label: string; pass: boolean }[]; note: string } | null;
-  history: { week: string; score: string; improvement: string; nextFocus: string }[];
-}> = {
-  Elayne: {
-    weekFocus: "Pedido de conta direto após alcançar o decisor",
-    focusStat: "Elayne alcançou 4 decisores esta semana sem pedir a conta em nenhum.",
-    focusTip: "Após o decisor atender, use: \"A forma mais rápida é você me mandar a última conta por WhatsApp — em um minuto vejo se existe algo real.\"",
-    qa: {
-      date: "28/05",
-      rep: "Elayne Ferreira",
-      items: [
-        { label: "Script seguido", pass: true },
-        { label: "Pedido de conta feito", pass: false },
-        { label: "Objeção solar tratada", pass: true },
-        { label: "Tom consultivo mantido", pass: true },
-      ],
-      note: "Bom progresso no script de abertura, mas a conta não foi pedida mesmo após o decisor confirmar disponibilidade. Foco desta semana deve ser travar o pedido de conta como segundo passo reflexo.",
-    },
-    history: [
-      { week: "19–25 mai", score: "7/10", improvement: "Abertura do script mais fluída, menos hesitação", nextFocus: "Pedido de conta direto após decisor confirmar" },
-      { week: "12–18 mai", score: "6/10", improvement: "Tratamento de objeção solar melhorou", nextFocus: "Checar se é decisor antes de avançar" },
-      { week: "05–11 mai", score: "5/10", improvement: "Cadência de follow-up ficou mais consistente", nextFocus: "Tratar objeção solar com comparação direta" },
-    ],
-  },
-  Thaina: {
-    weekFocus: "Identificação do decisor antes de apresentar produto",
-    focusStat: "Thaina avançou em 6 leads esta semana sem confirmar se estava falando com o decisor.",
-    focusTip: "Na segunda frase, pergunte: \"Você é quem decide sobre custos operacionais na empresa?\" — não avance sem confirmar.",
-    qa: {
-      date: "27/05",
-      rep: "Thaina Domet",
-      items: [
-        { label: "Script seguido", pass: true },
-        { label: "Decisor confirmado", pass: false },
-        { label: "Pedido de conta feito", pass: true },
-        { label: "Objeção solar tratada", pass: false },
-      ],
-      note: "A conta foi pedida, o que é positivo. Mas a qualificação do decisor ainda está fraca — avançar sem confirmar desperdiça tentativas. Próxima semana: confirmar decisor nos primeiros 30 segundos.",
-    },
-    history: [
-      { week: "19–25 mai", score: "8/10", improvement: "Pedido de conta muito mais consistente", nextFocus: "Qualificar decisor antes de avançar" },
-      { week: "12–18 mai", score: "7/10", improvement: "Redução no tempo médio de chamada", nextFocus: "Aumentar taxa de pedido de conta" },
-      { week: "05–11 mai", score: "6/10", improvement: "Script de abertura padronizado", nextFocus: "Tratar objeção solar" },
-    ],
-  },
-  Renan: {
-    weekFocus: "Revisão de pipeline e coaching de SDRs",
-    focusStat: "Semana com foco em qualidade de conversão no pipeline médio.",
-    focusTip: "Priorizar leads P1 e P2 com mais de 10 tentativas sem conta recebida — avaliar troca de abordagem.",
-    qa: null,
-    history: [],
-  },
-};
-
-function CoachingPanel({ viewAs }: { viewAs: string }) {
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const data = COACHING_MOCK[viewAs] ?? COACHING_MOCK.Renan;
-
-  return (
-    <div className="space-y-4">
-      {/* Meu Foco desta Semana */}
-      <div
-        className="rounded-xl p-4"
-        style={{ background: "linear-gradient(135deg, #f5f0ff 0%, #ede9fe 100%)", border: "1px solid #ddd6fe" }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <Target size={15} style={{ color: "#9e3ffd" }} />
-          <span className="text-xs font-bold" style={{ color: "#16163f" }}>Meu Foco desta Semana</span>
-        </div>
-        <p className="text-sm font-semibold mb-1" style={{ color: "#5b21b6" }}>{data.weekFocus}</p>
-        <p className="text-xs mb-3" style={{ color: "#6b7280" }}>{data.focusStat}</p>
-        <div
-          className="rounded-lg p-3"
-          style={{ background: "rgba(158,63,253,0.06)", border: "1px solid rgba(158,63,253,0.15)" }}
-        >
-          <div className="flex items-start gap-1.5">
-            <Star size={12} style={{ color: "#9e3ffd", marginTop: 1, shrink: 0 }} />
-            <p className="text-xs italic" style={{ color: "#4c1d95" }}>{data.focusTip}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* QA desta Chamada */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <GraduationCap size={15} style={{ color: "#6b7280" }} />
-          <span className="text-xs font-bold" style={{ color: "#374151" }}>QA desta Chamada</span>
-        </div>
-        {data.qa ? (
-          <div
-            className="rounded-xl p-4"
-            style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold" style={{ color: "#374151" }}>
-                Chamada de {data.qa.date} — {data.qa.rep}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {data.qa.items.map(item => (
-                <div key={item.label} className="flex items-center gap-1.5">
-                  {item.pass ? (
-                    <CheckCircle size={13} style={{ color: "#16a34a", flexShrink: 0 }} />
-                  ) : (
-                    <XCircle size={13} style={{ color: "#dc2626", flexShrink: 0 }} />
-                  )}
-                  <span className="text-[11px]" style={{ color: item.pass ? "#15803d" : "#b91c1c" }}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-            <div
-              className="rounded-lg p-3"
-              style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}
-            >
-              <div className="text-[10px] font-semibold mb-1" style={{ color: "#9CA3AF" }}>NOTA RENAN</div>
-              <p className="text-xs" style={{ color: "#374151" }}>{data.qa.note}</p>
-            </div>
-          </div>
-        ) : (
-          <div
-            className="rounded-xl p-4 text-center"
-            style={{ background: "#F8F9FC", border: "1px dashed #E8EAED" }}
-          >
-            <p className="text-xs" style={{ color: "#9CA3AF" }}>Nenhuma chamada registrada neste lead ainda.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Histórico de Coaching */}
-      {data.history.length > 0 && (
-        <div>
-          <button
-            onClick={() => setHistoryOpen(o => !o)}
-            className="flex items-center gap-2 w-full text-left"
-          >
-            <span className="text-xs font-bold" style={{ color: "#374151" }}>Histórico de Coaching</span>
-            {historyOpen
-              ? <ChevronUp size={13} style={{ color: "#9CA3AF" }} />
-              : <ChevronDown size={13} style={{ color: "#9CA3AF" }} />
-            }
-          </button>
-          {historyOpen && (
-            <div className="mt-2 space-y-2">
-              {data.history.map((h, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg p-3"
-                  style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-semibold" style={{ color: "#374151" }}>{h.week}</span>
-                    <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: "rgba(158,63,253,0.1)", color: "#9e3ffd" }}
-                    >
-                      {h.score}
-                    </span>
-                  </div>
-                  <p className="text-[11px] mb-0.5" style={{ color: "#6b7280" }}>
-                    <span className="font-medium" style={{ color: "#374151" }}>Melhoria: </span>{h.improvement}
-                  </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    <span className="font-medium" style={{ color: "#374151" }}>Foco seguinte: </span>{h.nextFocus}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function LeadCard() {
   const { id } = useParams<{ id: string }>();
@@ -517,7 +338,6 @@ export default function LeadCard() {
     ...(!isRep ? [{ key: "sop" as BottomTab, label: "Agentes SOP" }] : []),
     { key: "memoria", label: "Memória" },
     { key: "historico", label: "Histórico" },
-    { key: "coaching", label: "Coaching" },
   ];
 
   return (
@@ -763,7 +583,6 @@ export default function LeadCard() {
                 {bottomTab === "sop" && <SOPAgentPanel lead={lead} />}
                 {bottomTab === "memoria" && <MemoryPanel lead={lead} />}
                 {bottomTab === "historico" && <Timeline lead={lead} />}
-                {bottomTab === "coaching" && <CoachingPanel viewAs={viewAs} />}
               </div>
             </div>
 

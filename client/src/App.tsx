@@ -53,6 +53,7 @@ import SalesOSQueue from "@/pages/SalesOS/Queue";
 import SalesOSLeadCard from "@/pages/SalesOS/LeadCard";
 import SalesOSReplies from "@/pages/SalesOS/Replies";
 import SalesOSManager from "@/pages/SalesOS/Manager";
+import SalesOSCoaching from "@/pages/SalesOS/Coaching";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
 import GoogleAdsLaunchPack from "@/pages/GoogleAdsLaunchPack";
@@ -164,6 +165,7 @@ function Router() {
       <Route path="/sales-os/leads/:id" component={SalesOSLeadCard} />
       <Route path="/sales-os/replies" component={SalesOSReplies} />
       <Route path="/sales-os/manager" component={SalesOSManager} />
+      <Route path="/sales-os/coaching" component={SalesOSCoaching} />
 
       <Route component={NotFound} />
     </Switch>

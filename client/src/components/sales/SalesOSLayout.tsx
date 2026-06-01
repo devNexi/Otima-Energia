@@ -1,6 +1,6 @@
 import { useState, createContext, useContext } from "react";
 import { useLocation, Link } from "wouter";
-import { ListChecks, MessageSquare, BarChart3, ChevronLeft, Globe, Bell, ChevronDown } from "lucide-react";
+import { ListChecks, MessageSquare, BarChart3, GraduationCap, ChevronLeft, Globe, Bell, ChevronDown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
 
@@ -39,12 +39,13 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const isRep = currentUser.isRep;
 
   const ALL_NAV = [
-    { path: "/sales-os/queue",   icon: ListChecks,   label: t("salesos.nav.queue")  },
-    { path: "/sales-os/replies", icon: MessageSquare, label: t("salesos.nav.replies"), badge: 3 },
-    { path: "/sales-os/manager", icon: BarChart3,     label: t("salesos.nav.manager"), managerOnly: true },
+    { path: "/sales-os/queue",    icon: ListChecks,    label: t("salesos.nav.queue") },
+    { path: "/sales-os/replies",  icon: MessageSquare, label: t("salesos.nav.replies"), badge: 3 },
+    { path: "/sales-os/manager",  icon: BarChart3,     label: isRep ? "Meu Painel" : t("salesos.nav.manager") },
+    { path: "/sales-os/coaching", icon: GraduationCap, label: "Coaching" },
   ];
 
-  const visibleNav = ALL_NAV.filter(item => !item.managerOnly || !isRep);
+  const visibleNav = ALL_NAV;
 
   return (
     <ViewAsContext.Provider value={{ viewAs, setViewAs, isRep }}>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
-import { SalesOSLayout } from "@/components/sales/SalesOSLayout";
+import { SalesOSLayout, useViewAs } from "@/components/sales/SalesOSLayout";
 import { HuddleMode } from "@/components/sales/HuddleMode";
 import { mockLeads, priorityConfig } from "@/data/mockLeads";
 import { useI18n } from "@/lib/i18n";
@@ -287,10 +287,155 @@ function RepPerformanceCard({ rep, labels }: { rep: string; labels: { qaFlags: s
   );
 }
 
+function RepDashboard({ viewAs }: { viewAs: string }) {
+  const [, navigate] = useLocation();
+  const repName = viewAs === "Elayne" ? "Elayne Nunes" : "Thaina Domet";
+  const myLeads = mockLeads.filter(l => l.assigned_to === repName);
+  const p1p2 = myLeads.filter(l => l.priority === "P1" || l.priority === "P2");
+  const dirty = myLeads.filter(l => !l.next_action || l.next_action_overdue);
+  const overdue = myLeads.filter(l => l.next_action_overdue);
+
+  const stats = viewAs === "Elayne"
+    ? { calls: 12, dms: 4, bills: 3, received: 1 }
+    : { calls: 9, dms: 3, bills: 2, received: 1 };
+
+  function openLead(id: string) { navigate(`/sales-os/leads/${id}`); }
+  const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
+  return (
+    <div className="h-screen overflow-y-auto" style={{ background: "#F8F9FC" }}>
+      {/* Header */}
+      <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
+        <div className="mb-4">
+          <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Meu Painel</h1>
+          <div className="text-sm" style={{ color: "#9CA3AF" }}>{viewAs} · {today}</div>
+        </div>
+        {/* Stats */}
+        <div className="flex flex-wrap gap-3">
+          {[
+            { label: "Chamadas hoje", value: stats.calls, color: "#9e3ffd" },
+            { label: "DMs alcançados", value: stats.dms, color: "#16a34a" },
+            { label: "Contas pedidas", value: stats.bills, color: "#d97706" },
+            { label: "Contas recebidas", value: stats.received, color: "#2563eb" },
+            { label: "Meus leads", value: myLeads.length, color: "#7c3aed" },
+            { label: "Em atraso", value: overdue.length, color: overdue.length > 0 ? "#dc2626" : "#16a34a" },
+          ].map(chip => (
+            <div
+              key={chip.label}
+              className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+              style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+            >
+              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: `${chip.color}15` }}>
+                <div className="w-2 h-2 rounded-full" style={{ background: chip.color }} />
+              </div>
+              <span className="text-lg font-bold" style={{ color: "#16163f" }}>{chip.value}</span>
+              <span className="text-xs" style={{ color: "#9CA3AF" }}>{chip.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-6 py-5 space-y-5">
+        {/* P1/P2 — my priority leads */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+        >
+          <div className="flex items-center gap-3 px-5 py-3.5" style={{ background: "#F8F9FC" }}>
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#dc2626" }} />
+            <span className="font-semibold text-sm" style={{ color: "#16163f" }}>Meus P1 / P2 — Ação Urgente</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#fef2f220", color: "#dc2626", border: "1px solid #fecaca" }}>
+              {p1p2.length}
+            </span>
+          </div>
+          <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+            {p1p2.length === 0 && (
+              <div className="px-5 py-4 text-sm" style={{ color: "#9CA3AF" }}>Nenhum lead P1/P2 no momento.</div>
+            )}
+            {p1p2.map(lead => {
+              const pb = priorityBadge(lead.priority);
+              return (
+                <div key={lead.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: pb.bg, color: pb.color, border: `1px solid ${pb.border}` }}>
+                        {lead.priority}
+                      </span>
+                      <span className="text-sm font-semibold truncate" style={{ color: "#16163f" }}>{lead.dm_name ?? "—"}</span>
+                      <span className="text-xs truncate" style={{ color: "#9CA3AF" }}>· {lead.company}</span>
+                    </div>
+                    <div className="text-xs" style={{ color: "#9CA3AF" }}>
+                      {lead.next_action ? lead.next_action : "Sem próxima ação definida"}
+                      {lead.last_contact && ` · ${lead.last_contact}`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openLead(lead.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
+                    style={{ background: "rgba(158,63,253,0.08)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.2)" }}
+                  >
+                    Abrir
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dirty queue — no next action */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E8EAED", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}
+        >
+          <div className="flex items-center gap-3 px-5 py-3.5" style={{ background: "#F8F9FC" }}>
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#ea580c" }} />
+            <span className="font-semibold text-sm" style={{ color: "#16163f" }}>Sem Próxima Ação</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa" }}>
+              {dirty.length}
+            </span>
+          </div>
+          <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+            {dirty.length === 0 && (
+              <div className="px-5 py-4 text-sm" style={{ color: "#16a34a" }}>✓ Todos os leads têm próxima ação definida.</div>
+            )}
+            {dirty.slice(0, 5).map(lead => {
+              const pb = priorityBadge(lead.priority);
+              return (
+                <div key={lead.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: pb.bg, color: pb.color, border: `1px solid ${pb.border}` }}>
+                        {lead.priority}
+                      </span>
+                      <span className="text-sm font-semibold truncate" style={{ color: "#16163f" }}>{lead.dm_name ?? "—"}</span>
+                      <span className="text-xs" style={{ color: "#9CA3AF" }}>· {lead.company}</span>
+                    </div>
+                    <div className="text-xs" style={{ color: "#ea580c" }}>
+                      {lead.next_action_overdue ? `Ação atrasada ${lead.next_action_overdue_days ?? "?"}d` : "Sem próxima ação"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openLead(lead.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
+                    style={{ background: "rgba(158,63,253,0.08)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.2)" }}
+                  >
+                    Abrir
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Manager() {
   const [, navigate] = useLocation();
   const [huddleOpen, setHuddleOpen] = useState(false);
   const { t } = useI18n();
+  const { viewAs, isRep } = useViewAs();
 
   const STAT_CHIPS = [
     { label: t("salesos.manager.stat_calls"), value: 21, color: "#9e3ffd", icon: <Phone size={14} /> },
@@ -327,6 +472,14 @@ export default function Manager() {
   const lostCallbacks = mockLeads.filter(l => l.next_action_overdue && l.priority === "P1");
   const dmNoRequest = mockLeads.filter(l => l.dm_status === "Alcançado" && !l.bill_status);
   const stale48h = mockLeads.filter(l => l.priority === "P6" || l.priority === "P8");
+
+  if (isRep) {
+    return (
+      <SalesOSLayout>
+        <RepDashboard viewAs={viewAs} />
+      </SalesOSLayout>
+    );
+  }
 
   return (
     <SalesOSLayout>
