@@ -55,6 +55,10 @@ import SalesOSReplies from "@/pages/SalesOS/Replies";
 import SalesOSManager from "@/pages/SalesOS/Manager";
 import SalesOSCoaching from "@/pages/SalesOS/Coaching";
 import SalesOSPerformance from "@/pages/SalesOS/Performance";
+import SalesOSHealth from "@/pages/SalesOS/Health";
+import OscarTargets from "@/pages/SalesOS/Oscar/Targets";
+import OscarPipeline from "@/pages/SalesOS/Oscar/Pipeline";
+import OscarLeadCard from "@/pages/SalesOS/Oscar/LeadCard";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
 import GoogleAdsLaunchPack from "@/pages/GoogleAdsLaunchPack";
@@ -168,6 +172,10 @@ function Router() {
       <Route path="/sales-os/manager" component={SalesOSManager} />
       <Route path="/sales-os/coaching" component={SalesOSCoaching} />
       <Route path="/sales-os/performance" component={SalesOSPerformance} />
+      <Route path="/sales-os/health" component={SalesOSHealth} />
+      <Route path="/sales-os/oscar/targets" component={OscarTargets} />
+      <Route path="/sales-os/oscar/pipeline" component={OscarPipeline} />
+      <Route path="/sales-os/oscar/leads/:id" component={OscarLeadCard} />
 
       <Route component={NotFound} />
     </Switch>

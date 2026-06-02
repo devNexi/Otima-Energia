@@ -9,6 +9,7 @@ import {
   AlertTriangle, Phone, Clock, Users, FileText, TrendingUp,
   ChevronDown, ChevronUp, ExternalLink, RefreshCw, CheckCircle,
   MessageSquare, BarChart3, Play, User,
+  GraduationCap, Copy, Star,
 } from "lucide-react";
 
 const REPS = ["Elayne Nunes", "Thaina Domet"];
@@ -434,6 +435,9 @@ function RepDashboard({ viewAs }: { viewAs: string }) {
 export default function Manager() {
   const [, navigate] = useLocation();
   const [huddleOpen, setHuddleOpen] = useState(false);
+  const [report4pm, setReport4pm] = useState(false);
+  const [reportEod, setReportEod] = useState(false);
+  const [copiedEod, setCopiedEod] = useState(false);
   const { t } = useI18n();
   const { viewAs, isRep } = useViewAs();
 
@@ -472,6 +476,7 @@ export default function Manager() {
   const lostCallbacks = mockLeads.filter(l => l.next_action_overdue && l.priority === "P1");
   const dmNoRequest = mockLeads.filter(l => l.dm_status === "Alcançado" && !l.bill_status);
   const stale48h = mockLeads.filter(l => l.priority === "P6" || l.priority === "P8");
+  const humanReplies = mockLeads.filter(l => l.human_response_required);
 
   if (isRep) {
     return (
@@ -506,14 +511,16 @@ export default function Manager() {
                 <Play size={13} /> {t("salesos.manager.huddle")}
               </button>
               <button
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium"
-                style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}
+                onClick={() => { setReport4pm(p => !p); setReportEod(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: report4pm ? "rgba(158,63,253,0.08)" : "#F8F9FC", color: report4pm ? "#9e3ffd" : "#6B7280", border: `1px solid ${report4pm ? "rgba(158,63,253,0.2)" : "#E8EAED"}` }}
               >
                 {t("salesos.manager.report_4pm")}
               </button>
               <button
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium"
-                style={{ background: "#F8F9FC", color: "#6B7280", border: "1px solid #E8EAED" }}
+                onClick={() => { setReportEod(p => !p); setReport4pm(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: reportEod ? "rgba(158,63,253,0.08)" : "#F8F9FC", color: reportEod ? "#9e3ffd" : "#6B7280", border: `1px solid ${reportEod ? "rgba(158,63,253,0.2)" : "#E8EAED"}` }}
               >
                 {t("salesos.manager.report_eod")}
               </button>
@@ -540,6 +547,131 @@ export default function Manager() {
             ))}
           </div>
         </div>
+
+        {/* Report panels — toggled from header buttons */}
+        <AnimatePresence>
+          {(report4pm || reportEod) && (
+            <motion.div
+              key="report-panel"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+              style={{ background: "#FFFFFF", borderBottom: "1px solid #E8EAED" }}
+            >
+              <div className="px-6 py-5">
+                {report4pm && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Star size={14} style={{ color: "#9e3ffd" }} />
+                      <h3 className="font-bold text-sm" style={{ color: "#16163f" }}>
+                        Relatório das 16h — {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { label: "Fila ainda suja", value: noNextAction.length, color: "#dc2626" },
+                        { label: "Decisores sem conta", value: dmNoRequest.length, color: "#d97706" },
+                        { label: "Callbacks em atraso", value: lostCallbacks.length, color: "#ea580c" },
+                        { label: "Respostas pendentes", value: humanReplies.length, color: "#7c3aed" },
+                      ].map(s => (
+                        <div key={s.label} className="rounded-xl p-3 text-center"
+                          style={{ background: "#F8F9FC", border: `1px solid ${s.color}25` }}>
+                          <div className="text-2xl font-bold mb-0.5" style={{ color: s.color }}>{s.value}</div>
+                          <div className="text-xs" style={{ color: "#9CA3AF" }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                      <div className="text-xs font-semibold mb-1.5" style={{ color: "#d97706" }}>Reps abaixo da meta das 16h</div>
+                      <div className="text-sm" style={{ color: "#374151" }}>
+                        <strong>Thaina</strong> — 9 chamadas realizadas / meta: 20 · Prioridade: fechar 3 callbacks pendentes antes das 17h.
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
+                      <div className="text-xs font-semibold mb-2" style={{ color: "#9CA3AF" }}>Chamadas urgentes para as próximas 2h</div>
+                      <div className="space-y-1.5">
+                        {noNextAction.slice(0, 4).map(l => (
+                          <div key={l.id} className="flex items-center justify-between text-xs py-1">
+                            <span style={{ color: "#374151" }}>{l.company_name}</span>
+                            <span className="px-2 py-0.5 rounded-full font-medium"
+                              style={{ background: "#fef2f2", color: "#dc2626" }}>Urgente</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {reportEod && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <Star size={14} style={{ color: "#9e3ffd" }} />
+                        <h3 className="font-bold text-sm" style={{ color: "#16163f" }}>
+                          Relatório EOD — {new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const txt = `*Relatório EOD — Ótima Energia*\n\n*Equipe*\nElayne: 12 lig · 4 DMs · 3 contas\nThaina: 9 lig · 3 DMs · 2 contas\n\n*Fila suja restante:* ${noNextAction.length} leads\n*Callbacks perdidos:* ${lostCallbacks.length}\n\n*Coaching amanhã:*\n• Thaina — revisão de abertura de script\n• Elayne — trabalhar objeções de custo`;
+                          navigator.clipboard.writeText(txt).then(() => { setCopiedEod(true); setTimeout(() => setCopiedEod(false), 2000); });
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                        style={{ background: copiedEod ? "#dcfce7" : "rgba(158,63,253,0.07)", color: copiedEod ? "#16a34a" : "#9e3ffd", border: `1px solid ${copiedEod ? "#bbf7d0" : "rgba(158,63,253,0.2)"}` }}
+                      >
+                        <Copy size={11} /> {copiedEod ? "Copiado!" : "Copiar para WA"}
+                      </button>
+                    </div>
+                    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #E8EAED" }}>
+                      <table className="w-full text-xs">
+                        <thead style={{ background: "#F8F9FC" }}>
+                          <tr>
+                            {["Rep", "Ligações", "DMs", "Contas Ped.", "Contas Rcvd."].map(h => (
+                              <th key={h} className="px-4 py-2.5 font-semibold text-left first:text-left text-center"
+                                style={{ color: "#9CA3AF" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[{ n: "Elayne", c: 12, d: 4, req: 3, rcvd: 1 }, { n: "Thaina", c: 9, d: 3, req: 2, rcvd: 1 }].map(r => (
+                            <tr key={r.n} style={{ borderTop: "1px solid #F3F4F6" }}>
+                              <td className="px-4 py-2.5 font-medium" style={{ color: "#374151" }}>{r.n}</td>
+                              <td className="text-center px-4 py-2.5 font-bold" style={{ color: "#9e3ffd" }}>{r.c}</td>
+                              <td className="text-center px-4 py-2.5 font-bold" style={{ color: "#16a34a" }}>{r.d}</td>
+                              <td className="text-center px-4 py-2.5 font-bold" style={{ color: "#d97706" }}>{r.req}</td>
+                              <td className="text-center px-4 py-2.5 font-bold" style={{ color: "#2563eb" }}>{r.rcvd}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: "Fila suja restante", value: noNextAction.length, color: "#dc2626" },
+                        { label: "Callbacks perdidos", value: lostCallbacks.length, color: "#ea580c" },
+                        { label: "Respostas pendentes", value: humanReplies.length, color: "#7c3aed" },
+                      ].map(s => (
+                        <div key={s.label} className="rounded-xl p-3 text-center"
+                          style={{ background: "#F8F9FC", border: `1px solid ${s.color}25` }}>
+                          <div className="text-2xl font-bold mb-0.5" style={{ color: s.color }}>{s.value}</div>
+                          <div className="text-xs" style={{ color: "#9CA3AF" }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
+                      <div className="text-xs font-semibold mb-2" style={{ color: "#7c3aed" }}>Coaching de amanhã</div>
+                      <div className="space-y-1 text-xs" style={{ color: "#374151" }}>
+                        <div>• <strong>Thaina</strong> — revisão de abertura de script padrão (SOP 2)</div>
+                        <div>• <strong>Elayne</strong> — técnica de aprofundamento de objeção de custo</div>
+                        <div>• Ambas — role-play de pedido de conta em 1ª ligação</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="px-6 py-5 space-y-5">
           {/* Sections */}
@@ -568,6 +700,13 @@ export default function Manager() {
             onOpen={openLead}
             labels={sectionLabels}
           />
+          {/* Pattern-of-loss note */}
+          <div className="rounded-xl px-4 py-3 flex items-start gap-2.5" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: "#d97706" }} />
+            <p className="text-xs leading-relaxed" style={{ color: "#92400e" }}>
+              Este é o padrão de conversão perdida mais comum. Cada decisor alcançado sem pedido de conta é uma oportunidade desperdiçada — a janela de receptividade fecha em média em 48h.
+            </p>
+          </div>
           <ManagerSection
             title={t("salesos.manager.section_lost")}
             color="#ca8a04"
@@ -585,6 +724,14 @@ export default function Manager() {
             onOpen={openLead}
             labels={sectionLabels}
           />
+          <ManagerSection
+            title="Respostas Humanas Pendentes"
+            color="#7c3aed"
+            leads={humanReplies}
+            issueLabel={l => `Mensagem recebida ${l.last_contact ?? "?"} — aguardando resposta humana`}
+            onOpen={openLead}
+            labels={sectionLabels}
+          />
 
           {/* Rep performance */}
           <div>
@@ -594,6 +741,80 @@ export default function Manager() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {REPS.map(rep => <RepPerformanceCard key={rep} rep={rep} labels={repLabels} />)}
+            </div>
+          </div>
+
+          {/* Coaching overview */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <GraduationCap size={16} style={{ color: "#9e3ffd" }} />
+              <h2 className="font-bold text-base" style={{ color: "#16163f" }}>Visão de Coaching da Equipa</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                {
+                  name: "Elayne Nunes", initial: "E", color: "#9e3ffd", qa: 82,
+                  flags: [
+                    "Chamadas terminando antes de explorar objeções — média 4 min",
+                    "Taxa de identificação de DM baixa nas últimas 3 sessões",
+                  ],
+                  action: [
+                    "Escutar gravação de hoje — abandona objeção prematuramente no 3º min",
+                    "Dar feedback de role-play no coaching das 17h",
+                  ],
+                },
+                {
+                  name: "Thaina Domet", initial: "T", color: "#2563eb", qa: 76,
+                  flags: [
+                    "Taxa de script abaixo de 80% — revisar abertura padrão",
+                    "6 callbacks perdidos esta semana",
+                  ],
+                  action: [
+                    "Revisão de abertura de script amanhã cedo (15 min 1:1)",
+                    "Verificar motivo dos callbacks perdidos — ver fila P1",
+                  ],
+                },
+              ].map(rep => (
+                <div key={rep.name} className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+                  <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                      style={{ background: `${rep.color}20`, color: rep.color }}>
+                      {rep.initial}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-sm" style={{ color: "#16163f" }}>{rep.name}</div>
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold"
+                      style={{ background: rep.qa >= 80 ? "#dcfce7" : "#fef2f2", color: rep.qa >= 80 ? "#16a34a" : "#dc2626" }}>
+                      <Star size={10} /> QA {rep.qa}
+                    </div>
+                  </div>
+                  <div className="px-5 py-4 space-y-3">
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>Pontos de atenção</div>
+                      <div className="space-y-1.5">
+                        {rep.flags.map((f, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs rounded-lg px-2.5 py-2"
+                            style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                            <AlertTriangle size={10} className="shrink-0 mt-0.5" style={{ color: "#d97706" }} />
+                            <span style={{ color: "#374151" }}>{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-3" style={{ background: "rgba(158,63,253,0.05)", border: "1px solid rgba(158,63,253,0.15)" }}>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9e3ffd" }}>
+                        Renan deve fazer agora
+                      </div>
+                      <div className="space-y-1">
+                        {rep.action.map((a, i) => (
+                          <div key={i} className="text-xs" style={{ color: "#374151" }}>→ {a}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

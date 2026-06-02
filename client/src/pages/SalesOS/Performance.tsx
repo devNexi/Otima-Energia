@@ -118,12 +118,98 @@ export default function Performance() {
   const coaching = viewAs === "Thaina" ? THAINA_COACHING : ELAYNE_COACHING;
 
   if (!isRep) {
+    const elayne = mockRepStats["Elayne Nunes"];
+    const thaina  = mockRepStats["Thaina Domet"];
+    const teamCalls = elayne.calls + thaina.calls;
+    const teamDMs   = elayne.dmsReached + thaina.dmsReached;
+    const teamBills = elayne.billsRequested + thaina.billsRequested;
+    const teamRcvd  = elayne.billsReceived + thaina.billsReceived;
+    const teamQA    = Math.round((82 + 76) / 2);
+    const teamGoal  = { calls: 220, dms: 85, bills: 38 };
+    const callPct = Math.min(Math.round((teamCalls / teamGoal.calls) * 100), 100);
     return (
       <SalesOSLayout>
-        <div className="flex flex-col items-center justify-center h-full gap-4" style={{ color: "#9CA3AF" }}>
-          <TrendingUp size={36} style={{ color: "#E8EAED" }} />
-          <div className="text-sm font-medium">Selecione uma rep para ver o desempenho</div>
-          <div className="text-xs">Use "Ver como" para visualizar como Elayne ou Thaina</div>
+        <div className="h-full overflow-y-auto" style={{ background: "#F8F9FC" }}>
+          <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Meu Desempenho</h1>
+                <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Renan · Equipe · {today}</div>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold"
+                style={{ background: "rgba(158,63,253,0.08)", color: "#9e3ffd", border: "1px solid rgba(158,63,253,0.2)" }}>
+                <Award size={14} /> QA Médio: {teamQA}/100
+              </div>
+            </div>
+          </div>
+          <div className="p-6 space-y-6 max-w-4xl">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Equipe — Esta Semana</div>
+              <div className="grid grid-cols-4 gap-3">
+                <StatCard icon={<Phone size={16} />} value={teamCalls} label="Chamadas (equipe)" color="#9e3ffd" pct={12} />
+                <StatCard icon={<Users size={16} />} value={teamDMs}   label="DMs alcançados" color="#16a34a" pct={7} />
+                <StatCard icon={<FileText size={16} />} value={teamBills} label="Contas solicitadas" color="#d97706" />
+                <StatCard icon={<FileCheck size={16} />} value={teamRcvd} label="Contas recebidas" color="#2563eb"
+                  sub={`${teamBills > 0 ? Math.round((teamRcvd / teamBills) * 100) : 0}% taxa`} />
+              </div>
+            </div>
+            <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <Target size={15} style={{ color: "#9e3ffd" }} />
+                <span className="text-sm font-semibold" style={{ color: "#16163f" }}>Meta Semanal da Equipe</span>
+                <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: callPct >= 80 ? "#dcfce7" : callPct >= 60 ? "#fffbeb" : "#fef2f2", color: callPct >= 80 ? "#16a34a" : callPct >= 60 ? "#d97706" : "#dc2626" }}>
+                  {callPct}% atingido
+                </span>
+              </div>
+              <div className="space-y-4">
+                <GoalBar label="Chamadas" current={teamCalls} goal={teamGoal.calls} color="#9e3ffd" />
+                <GoalBar label="DMs Alcançados" current={teamDMs} goal={teamGoal.dms} color="#16a34a" />
+                <GoalBar label="Contas Coletadas" current={teamRcvd} goal={teamGoal.bills} color="#2563eb" />
+              </div>
+            </div>
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              {[
+                { name: "Elayne Nunes", s: elayne, coaching: ELAYNE_COACHING, color: "#9e3ffd" },
+                { name: "Thaina Domet", s: thaina, coaching: THAINA_COACHING, color: "#2563eb" },
+              ].map(rep => (
+                <div key={rep.name} className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+                  <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+                      style={{ background: `${rep.color}20`, color: rep.color }}>
+                      {rep.name[0]}
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm" style={{ color: "#16163f" }}>{rep.name}</div>
+                      <div className="text-xs" style={{ color: "#9CA3AF" }}>QA: {rep.coaching.qaScore}/100</div>
+                    </div>
+                  </div>
+                  <div className="px-5 py-4 space-y-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: "Lig.", value: rep.s.calls, c: rep.color },
+                        { label: "DMs",  value: rep.s.dmsReached, c: "#16a34a" },
+                        { label: "Contas", value: rep.s.billsRequested, c: "#d97706" },
+                        { label: "Rcvd", value: rep.s.billsReceived, c: "#2563eb" },
+                      ].map(stat => (
+                        <div key={stat.label} className="rounded-xl p-2 text-center" style={{ background: "#F8F9FC" }}>
+                          <div className="text-base font-bold" style={{ color: stat.c }}>{stat.value}</div>
+                          <div className="text-[10px]" style={{ color: "#9CA3AF" }}>{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {rep.coaching.flags.map((f, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs rounded-lg px-2.5 py-2"
+                        style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                        <AlertTriangle size={11} className="shrink-0 mt-0.5" style={{ color: "#d97706" }} />
+                        <span style={{ color: "#374151" }}>{f.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </SalesOSLayout>
     );

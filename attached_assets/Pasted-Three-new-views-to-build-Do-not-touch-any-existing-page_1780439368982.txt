@@ -1,0 +1,66 @@
+Three new views to build. Do not touch any existing pages.
+PART 1 — RENAN'S MANAGER VIEW
+When role is Gerente, the Manager page shows a completely different layout to the rep view. Build this now.
+Page title: Console do Gerente. Subtitle: today's date. Three action buttons top right: 'Iniciar Huddle das 9h' (purple, prominent) / 'Relatório das 16h' / 'Relatório EOD'.
+Team stats strip — 8 stat chips in a row: Chamadas Hoje / DMs Alcançados / Contas Solicitadas / Contas Recebidas / Callbacks Perdidos / Leads Parados / Perdidos Pendentes / Sem Próxima Ação. Mock numbers. Each chip: icon left, large number, label below, subtle trend arrow.
+Rep performance cards — two cards side by side. One for Elayne, one for Thaina. Each card: rep name + initials avatar circle in #9e3ffd background. 2x2 grid of today's stats inside: Chamadas / DMs / Contas Solicitadas / Contas Recebidas. Small progress bar for each vs daily target. QA score badge bottom right. Red coaching flag count badge top right if any flags exist. Two buttons: 'Ver Coaching' and 'Enviar Nota' — Enviar Nota opens an inline text field to send a coaching message to the rep.
+Six accordion sections — each collapsible with count badge and chevron:
+Section 1 — Fila Suja (no next action): list each contact with name + company + owner + days overdue. Per row: 'Abrir' button + 'Reatribuir' button + inline coaching note field with Send button.
+Section 2 — Callbacks Perdidos: callbacks due today not completed. Name + company + owner + how overdue + 'Abrir' button.
+Section 3 — Decisores Sem Pedido de Conta: DM reached but no bill requested after 24h. Name + company + owner + time since DM contact + 'Abrir' button. Add a yellow agent note below the list: 'Este é o padrão de conversão perdida mais comum. Cada decisor alcançado sem pedido de conta é uma oportunidade desperdiçada.'
+Section 4 — Perdidos Aguardando Aprovação: lost records created by reps. Name + company + rep + loss reason + attempt count + 'Aprovar' button (green) + 'Reabrir' button (amber).
+Section 5 — Leads Parados 48h+: active contacts not touched. Name + company + owner + last touch date + 'Abrir' button.
+Section 6 — Respostas Humanas Pendentes: human reply required not yet responded. Name + company + reply snippet + SLA countdown + 'Ver Resposta' button.
+Coaching Overview section below the accordions. Header: 'Visão de Coaching da Equipa'.
+For each rep: a coaching summary card. This week's QA score with trend. Top 3 coaching flags this week — specific, named. Below each rep card: a highlighted box 'Renan deve fazer agora:' with one specific AI-generated action. Example for Elayne: 'Fazer roleplay de pedido de conta no huddle de amanhã — 6 decisores alcançados sem pedido de conta esta semana.' Example for Thaina: 'Verificar uso do briefing — apenas 45% das chamadas com script visualizado esta semana.'
+Reports section — two report buttons that generate mock report panels:
+'Relatório das 16h' button opens a panel showing: fila ainda suja count / contas não perseguidas / callbacks ainda em atraso / reps abaixo da meta / lista de chamadas urgentes antes do fim do dia. Clean card layout.
+'Relatório EOD' button opens a panel showing: chamadas totais por rep / DMs alcançados / contas solicitadas / contas recebidas / callbacks perdidos / fila suja restante / top 3 flags de coaching para amanhã. Clean card layout with a 'Copiar para WhatsApp' button that copies a formatted summary.
+Huddle Mode — the existing huddle modal is already built. Keep it. Make sure all 4 sections work and the timer counts down from 15 minutes.
+Add Meu Desempenho to Renan's sidebar as well — but showing team-level stats, not individual. Renan's version shows: team total calls / team DMs / team bills / team QA average / combined goal tracker.
+
+PART 2 — OSCAR'S PORTAL VIEW
+Add a new role: 'parceiro' (partner). Oscar uses this role. Add it to the VER COMO switcher.
+When role is parceiro, show a completely different sidebar and page set. Oscar never sees the girls' queue, replies, manager, or coaching pages.
+Oscar's sidebar: Meus Alvos / Pipeline de Agentes / (language toggle at bottom)
+Meus Alvos page — Oscar's prospecting queue. This is where his Google Sheets leads will eventually be pulled. For now use mock data representing businesses Oscar is targeting as potential Otima licensees — these are business owners or regional operators, not energy end-customers.
+Mock data for Oscar: 8-10 companies. Each should be a business type that could plausibly become an Otima energy agent — accountancy firms, business consultancies, regional brokers, financial advisors, property management companies. Give them realistic Brazilian names, cities, owner names, status.
+Each card in Oscar's queue shows: company name + city/state + business type + owner name + current status chip (Não contatado / Em contato / Reunião Marcada / Proposta Enviada / Agente Ativo) + last contact date + notes preview.
+No priority P1-P8 system for Oscar. Simple status-based ordering: Reunião Marcada first, then Em contato, then Não contatado.
+Action buttons per card: 'Enriquecer' (triggers enrichment flow) / 'Abrir' (opens lead card) / 'WhatsApp' / 'Email'.
+Oscar's Lead Card — when Oscar clicks a lead, open a simplified lead card. Two column layout.
+Left column: company name, CNPJ, city/state, business type, owner name + role, best contact number + WhatsApp flag, status chip, last contact, notes field (editable), score.
+Right column tabs: Inteligência do Negócio / Enriquecimento DM / Mensagens / Histórico
+Inteligência do Negócio tab: business summary (what this company does, how it makes money, why they might be interested in becoming an Otima agent — different framing to the energy sales intel). Why this target makes sense as an Otima agent: client portfolio size, existing trust relationships, revenue model alignment. Buying signals: expansion signals, new hires, business growth indicators — same signal types but interpreted through the lens of 'would this person want a new revenue stream?'
+Enriquecimento DM tab: same DM enrichment panel as the girls — State A (no direct route, find button), State B (found with confidence and route type), State C (not found, fallback). Oscar uses this to find the owner's direct number before calling.
+Mensagens tab: message composer with Oscar-specific templates. Not energy sales scripts. Licensee prospecting templates:
+
+Primeiro contacto: introduce Otima Agente opportunity
+Follow-up: value proposition reinforcement
+Proposta: invite to formal conversation
+Pattern interrupt: short, sharp re-engagement
+
+Each template pre-filled with Portuguese copy specific to the licensee pitch. Same banned phrase detection, same 'Usar este ângulo' buttons, same style/CTA labels.
+Histórico tab: interaction timeline. Same design as girls' timeline.
+No Call Assist panel. No energy sales objection scripts. No bill status. No Zoho fields. Oscar has his own clean workflow.
+Pipeline de Agentes page — simple kanban. Five columns: Prospecção / Em Conversa / Reunião / Proposta Ótima Agente / Agente Ativo. Cards show: company name, owner name, city, last contact date, estimated portfolio size (mock). Drag between columns not required for prototype — just display.
+Note for devs (add as a comment in the Oscar page files): Oscar's leads currently live in Google Sheets. In production, Meus Alvos will be populated via Google Sheets API read. The mock data structure mirrors what the Sheets columns will contain. Enrichment triggers SOP 1 and SOP 13 against the lead record. Results write back to the Sheets row via API.
+
+PART 3 — FOUNDER HEALTH PAGE
+New page at /sales-os/health. Visible only when role is Fundador. Sidebar label: Saúde.
+Ten metric cards in a 2x5 grid:
+
+Saúde da Fila: % of P1-P3 contacts actioned today. Progress ring.
+Pipeline Julia: new leads this week. Number + trend.
+Leads Parados: count untouched 48h+. Red if above 10.
+Callbacks em Atraso: total overdue across both reps.
+Contas Solicitadas: today / this week.
+Contas Recebidas: today / this week + conversion rate %.
+Decisores Alcançados: today / this week.
+Valor Bloqueado: 'R$ estimado em Conta Solicitada sem resposta'. Mock R$ value.
+SLA de Respostas Violados: count this week.
+Agentes SOP: X de 14 agentes funcionando / X com erros.
+
+Below the grid: Top 5 Ações de Receita. Numbered list. Each item: company name + specific action + one-line reason. Agent-generated language. Example: '1. Câmara Fria São Paulo — Chase de proposta urgente: prazo vence em 72h, R$45k bloqueado. Rodrigo Teixeira receptivo mas aguardando decisão dos sócios.'
+Below that: two side-by-side cards. Left: Rep Performance Summary (Elayne and Thaina stats side by side, this week). Right: Pipeline Health (leads by stage as a horizontal bar chart or stacked count).
+After building show me: Renan's Manager Console, Oscar's Meus Alvos page, Oscar's lead card with Inteligência do Negócio tab open, and the Founder Health page.
