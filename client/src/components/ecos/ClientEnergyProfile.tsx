@@ -917,7 +917,7 @@ export function ClientEnergyProfile({ client, onClose }: ClientEnergyProfileProp
                           )}
 
                           <div className="mt-2 text-sm text-gray-600">
-                            <strong>{language === "pt" ? "Recomendação:" : "Recommendation:"}</strong> {entry.recommendation}
+                            <strong>Recomendação:</strong> {entry.recommendation}
                           </div>
                         </div>
                       ))}

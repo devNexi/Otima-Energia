@@ -29,11 +29,19 @@ const USERS: { name: ViewAsUser; initial: string; role: string; isRep: boolean }
   { name: "Thaina", initial: "T", role: "SDR",      isRep: true  },
 ];
 
+// Module-level singleton — persists viewAs across SalesOSLayout unmount/remount on page navigation
+let _globalViewAs: ViewAsUser = "Renan";
+
 export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t, language, setLanguage } = useI18n();
-  const [viewAs, setViewAs] = useState<ViewAsUser>("Renan");
+  const [viewAs, _rawSetViewAs] = useState<ViewAsUser>(_globalViewAs);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const setViewAs = (v: ViewAsUser) => {
+    _globalViewAs = v;
+    _rawSetViewAs(v);
+  };
 
   const currentUser = USERS.find(u => u.name === viewAs) ?? USERS[0];
   const isRep = currentUser.isRep;
