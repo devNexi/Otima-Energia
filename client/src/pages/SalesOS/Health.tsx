@@ -11,8 +11,6 @@ import {
   ArrowUp, ArrowDown, Minus, AlertCircle as SopAlert, ExternalLink,
 } from "lucide-react";
 
-const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-
 function ProgressRing({ pct, size = 56, stroke = 5, color = "#9e3ffd" }: { pct: number; size?: number; stroke?: number; color?: string }) {
   const r = (size - stroke * 2) / 2;
   const circ = 2 * Math.PI * r;
@@ -169,29 +167,34 @@ function TrendBadge({ now, prev }: { now: number; prev: number }) {
 }
 
 export default function Health() {
+  return <SalesOSLayout><HealthContent /></SalesOSLayout>;
+}
+
+function HealthContent() {
   const { isRep, isFounder } = useViewAs();
   const [tab] = useState("health");
 
+  const todayDate = isFounder
+    ? new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
+    : new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
   if (isRep) {
     return (
-      <SalesOSLayout>
-        <div className="flex flex-col items-center justify-center h-full gap-3">
-          <Lock size={28} style={{ color: "#E8EAED" }} />
-          <p className="text-sm" style={{ color: "#9CA3AF" }}>Acesso restrito ao Fundador.</p>
-        </div>
-      </SalesOSLayout>
+      <div className="flex flex-col items-center justify-center h-full gap-3">
+        <Lock size={28} style={{ color: "#E8EAED" }} />
+        <p className="text-sm" style={{ color: "#9CA3AF" }}>Acesso restrito ao Fundador.</p>
+      </div>
     );
   }
 
   return (
-    <SalesOSLayout>
-      <div className="h-screen overflow-y-auto" style={{ background: "#F8F9FC" }}>
+    <div className="h-screen overflow-y-auto" style={{ background: "#F8F9FC" }}>
         {/* Header */}
         <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>{isFounder ? "System Health" : "Saúde do Sistema"}</h1>
-              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>{isFounder ? "Callum" : "Renan"} · {today}</div>
+              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>{isFounder ? "Callum" : "Renan"} · {todayDate}</div>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold"
               style={{ background: queueHealth >= 80 ? "#f0fdf4" : "#fef2f2", color: queueHealth >= 80 ? "#16a34a" : "#dc2626", border: `1px solid ${queueHealth >= 80 ? "#bbf7d0" : "#fecaca"}` }}>
@@ -614,6 +617,5 @@ export default function Health() {
           )}
         </div>
       </div>
-    </SalesOSLayout>
   );
 }
