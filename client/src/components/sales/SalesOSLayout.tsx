@@ -43,43 +43,43 @@ const USERS: { name: ViewAsUser; initial: string; role: string; isRep: boolean; 
 let _globalViewAs: ViewAsUser = "Renan";
 let _globalMirroredByFounder = false;
 
-// Founder nav — all items grouped by section
+// Founder nav — all items grouped by section (English only)
 const FOUNDER_NAV_SECTIONS: { label: string; items: { path: string; icon: React.ElementType; label: string; badge?: number }[] }[] = [
   {
-    label: "VENDAS",
+    label: "SALES",
     items: [
-      { path: "/sales-os/queue",       icon: ListChecks,    label: "Fila" },
-      { path: "/sales-os/replies",     icon: MessageSquare, label: "Respostas", badge: 3 },
-      { path: "/sales-os/performance", icon: TrendingUp,    label: "Meu Desempenho" },
+      { path: "/sales-os/queue",       icon: ListChecks,    label: "Queue" },
+      { path: "/sales-os/replies",     icon: MessageSquare, label: "Replies", badge: 3 },
+      { path: "/sales-os/performance", icon: TrendingUp,    label: "My Performance" },
     ],
   },
   {
-    label: "GESTÃO",
+    label: "MANAGEMENT",
     items: [
-      { path: "/sales-os/manager",  icon: BarChart3,     label: "Console do Gerente" },
+      { path: "/sales-os/manager",  icon: BarChart3,     label: "Manager Console" },
       { path: "/sales-os/coaching", icon: GraduationCap, label: "Coaching" },
     ],
   },
   {
-    label: "SISTEMA",
+    label: "SYSTEM",
     items: [
-      { path: "/sales-os/health", icon: Heart, label: "Saúde" },
+      { path: "/sales-os/health", icon: Heart, label: "Health" },
     ],
   },
   {
-    label: "PARCEIROS",
+    label: "PARTNERS",
     items: [
-      { path: "/sales-os/oscar/targets",  icon: Target,    label: "Meus Alvos" },
-      { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Pipeline de Agentes" },
+      { path: "/sales-os/oscar/targets",  icon: Target,    label: "My Targets" },
+      { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Agent Pipeline" },
     ],
   },
   {
-    label: "FINANCEIRO",
+    label: "FINANCE",
     items: [
-      { path: "/sales-os/finance/receita",  icon: DollarSign, label: "Receita" },
+      { path: "/sales-os/finance/receita",  icon: DollarSign, label: "Revenue" },
       { path: "/sales-os/finance/pl",       icon: LineChart,  label: "P&L" },
-      { path: "/sales-os/finance/previsao", icon: Compass,    label: "Previsão" },
-      { path: "/sales-os/finance/decisoes", icon: Lightbulb,  label: "Decisões" },
+      { path: "/sales-os/finance/previsao", icon: Compass,    label: "Forecast" },
+      { path: "/sales-os/finance/decisoes", icon: Lightbulb,  label: "Decisions" },
     ],
   },
 ];

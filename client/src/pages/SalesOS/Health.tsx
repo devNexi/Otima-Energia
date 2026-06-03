@@ -80,64 +80,64 @@ const teamBills = elayne.billsRequested + thaina.billsRequested;
 
 const TOP5_ACTIONS = [
   {
-    rank: 1,
-    company: "Câmara Fria São Paulo Ltda",
-    action: "Chase de proposta urgente",
-    reason: "Prazo vence em 72h, R$45k bloqueado. Rodrigo Teixeira receptivo mas aguardando decisão dos sócios.",
-    value: "R$ 45k",
-    color: "#dc2626",
+    rank: 1, company: "Câmara Fria São Paulo Ltda",
+    action:     "Chase de proposta urgente",
+    actionEn:   "Urgent proposal chase",
+    reason:     "Prazo vence em 72h, R$45k bloqueado. Rodrigo Teixeira receptivo mas aguardando decisão dos sócios.",
+    reasonEn:   "Deadline in 72h, R$45k blocked. Rodrigo Teixeira receptive but waiting on partners' decision.",
+    value: "R$ 45k", color: "#dc2626",
   },
   {
-    rank: 2,
-    company: "Hotel Bela Vista",
-    action: "Pedido de conta — decisor alcançado",
-    reason: "Carlos Andrade confirmou ser decisor há 1d sem pedido de conta. Taxa de conversão cai 80% após 48h.",
-    value: "R$ 28k",
-    color: "#ea580c",
+    rank: 2, company: "Hotel Bela Vista",
+    action:     "Pedido de conta — decisor alcançado",
+    actionEn:   "Bill request — DM reached",
+    reason:     "Carlos Andrade confirmou ser decisor há 1d sem pedido de conta. Taxa de conversão cai 80% após 48h.",
+    reasonEn:   "Carlos Andrade confirmed as DM 1 day ago, no bill request yet. Conversion rate drops 80% after 48h.",
+    value: "R$ 28k", color: "#ea580c",
   },
   {
-    rank: 3,
-    company: "Supermercado Mercantil Norte",
-    action: "Callback prometido — atraso de 2 dias",
-    reason: "Decisor pediu callback às 14h de ontem. Ligação não realizada. Janela de confiança fechando.",
-    value: "R$ 22k",
-    color: "#d97706",
+    rank: 3, company: "Supermercado Mercantil Norte",
+    action:     "Callback prometido — atraso de 2 dias",
+    actionEn:   "Promised callback — 2 days overdue",
+    reason:     "Decisor pediu callback às 14h de ontem. Ligação não realizada. Janela de confiança fechando.",
+    reasonEn:   "DM asked for a callback yesterday at 14:00. Call not made. Trust window closing.",
+    value: "R$ 22k", color: "#d97706",
   },
   {
-    rank: 4,
-    company: "Clínica Médica Horizonte",
-    action: "Resposta humana pendente — SLA 24h",
-    reason: "Mensagem recebida ontem às 11h sem resposta. SLA de resposta violado. Risco de perda de interesse.",
-    value: "R$ 18k",
-    color: "#2563eb",
+    rank: 4, company: "Clínica Médica Horizonte",
+    action:     "Resposta humana pendente — SLA 24h",
+    actionEn:   "Human reply pending — SLA 24h",
+    reason:     "Mensagem recebida ontem às 11h sem resposta. SLA de resposta violado. Risco de perda de interesse.",
+    reasonEn:   "Message received yesterday at 11:00 with no reply. Response SLA breached. Risk of losing interest.",
+    value: "R$ 18k", color: "#2563eb",
   },
   {
-    rank: 5,
-    company: "Indústria Metalúrgica Sorocaba",
-    action: "Reativar lead parado há 5 dias",
-    reason: "Lead P6 sem ação. Perfil de consumo elegível para ACL Direto. Thaina tem slot disponível hoje.",
-    value: "R$ 15k",
-    color: "#7c3aed",
+    rank: 5, company: "Indústria Metalúrgica Sorocaba",
+    action:     "Reativar lead parado há 5 dias",
+    actionEn:   "Reactivate lead stalled for 5 days",
+    reason:     "Lead P6 sem ação. Perfil de consumo elegível para ACL Direto. Thaina tem slot disponível hoje.",
+    reasonEn:   "P6 lead with no action. Consumption profile eligible for ACL Direct. Thaina has a slot today.",
+    value: "R$ 15k", color: "#7c3aed",
   },
 ];
 
 const PIPELINE_STAGES = [
-  { label: "Novo / Julia", count: mockLeads.filter(l => l.priority === "P7").length, color: "#7c3aed" },
-  { label: "Decisor ID",   count: mockLeads.filter(l => l.priority === "P4" || l.priority === "P5").length, color: "#2563eb" },
-  { label: "Decisor Alc.", count: mockLeads.filter(l => l.dm_status === "Alcançado").length, color: "#d97706" },
-  { label: "Conta Ped.",   count: mockLeads.filter(l => l.bill_status).length, color: "#ea580c" },
-  { label: "Parado 48h+",  count: mockLeads.filter(l => l.priority === "P6" || l.priority === "P8").length, color: "#9CA3AF" },
+  { label: "Novo / Julia", labelEn: "New / Julia",       count: mockLeads.filter(l => l.priority === "P7").length, color: "#7c3aed" },
+  { label: "Decisor ID",   labelEn: "DM Identified",     count: mockLeads.filter(l => l.priority === "P4" || l.priority === "P5").length, color: "#2563eb" },
+  { label: "Decisor Alc.", labelEn: "DM Reached",        count: mockLeads.filter(l => l.dm_status === "Alcançado").length, color: "#d97706" },
+  { label: "Conta Ped.",   labelEn: "Bill Requested",    count: mockLeads.filter(l => l.bill_status).length, color: "#ea580c" },
+  { label: "Parado 48h+",  labelEn: "Stalled 48h+",     count: mockLeads.filter(l => l.priority === "P6" || l.priority === "P8").length, color: "#9CA3AF" },
 ];
 const maxPipeline = Math.max(...PIPELINE_STAGES.map(s => s.count), 1);
 
 // ── Founder-only data ──────────────────────────────────────────────────────
 
-const OSCAR_STAGES: { status: OscarLead["status"]; label: string; color: string }[] = [
-  { status: "Não contatado",   label: "Prospecção",            color: "#6b7280" },
-  { status: "Em contato",      label: "Em Conversa",           color: "#d97706" },
-  { status: "Reunião Marcada", label: "Reunião",               color: "#7c3aed" },
-  { status: "Proposta Enviada",label: "Proposta Ótima Agente", color: "#2563eb" },
-  { status: "Agente Ativo",    label: "Agente Ativo",          color: "#16a34a" },
+const OSCAR_STAGES: { status: OscarLead["status"]; label: string; labelEn: string; color: string }[] = [
+  { status: "Não contatado",   label: "Prospecção",            labelEn: "Prospecting",     color: "#6b7280" },
+  { status: "Em contato",      label: "Em Conversa",           labelEn: "In Conversation",  color: "#d97706" },
+  { status: "Reunião Marcada", label: "Reunião",               labelEn: "Meeting Scheduled",color: "#7c3aed" },
+  { status: "Proposta Enviada",label: "Proposta Ótima Agente", labelEn: "Proposal Sent",    color: "#2563eb" },
+  { status: "Agente Ativo",    label: "Agente Ativo",          labelEn: "Active Agent",     color: "#16a34a" },
 ];
 
 const WEEKLY_TRENDS = {
@@ -146,11 +146,11 @@ const WEEKLY_TRENDS = {
 };
 
 const CALLUM_DECISIONS = [
-  { id: "d1", title: "Câmara Fria São Paulo — proposta vence em 72h", desc: "R$45k bloqueado. Rodrigo Teixeira receptivo, aguardando decisão dos sócios. Risco de perda sem ação.", value: "R$ 45k", color: "#dc2626", type: "deal" },
-  { id: "d2", title: "Hotel Bela Vista — decisor alcançado há 1d sem pedido", desc: "R$28k. Janela de receptividade fecha em 48h. Elayne ou Renan precisa agir hoje.", value: "R$ 28k", color: "#ea580c", type: "deal" },
-  { id: "d3", title: "Supermercado Mercantil Norte — callback prometido há 2d", desc: "R$22k. Decisor aguardava retorno de ontem às 14h. Ligação não realizada.", value: "R$ 22k", color: "#d97706", type: "deal" },
-  { id: "d4", title: "SOP 7 (Enriquecimento) — timeout recorrente 3× em 24h", desc: "Afeta enriquecimento de leads entrando na fila. API respondendo lentamente. Verificar quota.", value: null, color: "#7c3aed", type: "sop" },
-  { id: "d5", title: "SOP 11 (ECOS) — erro de configuração", desc: "Geração de ECOS falhando para leads acima de R$50k/ano. Último erro: config PRC não encontrada.", value: null, color: "#7c3aed", type: "sop" },
+  { id: "d1", title: "Câmara Fria São Paulo — proposal expires in 72h", desc: "R$45k blocked. Rodrigo Teixeira is receptive but waiting on partners' decision. At risk without action.", value: "R$ 45k", color: "#dc2626", type: "deal" },
+  { id: "d2", title: "Hotel Bela Vista — decision-maker reached, no bill request yet", desc: "R$28k. Receptivity window closes in 48h. Elayne or Renan must act today.", value: "R$ 28k", color: "#ea580c", type: "deal" },
+  { id: "d3", title: "Supermercado Mercantil Norte — promised callback 2 days overdue", desc: "R$22k. Decision-maker expected a call back yesterday at 14:00. Call not made.", value: "R$ 22k", color: "#d97706", type: "deal" },
+  { id: "d4", title: "SOP 7 (Enrichment) — recurring timeout 3× in 24h", desc: "Affects enrichment of leads entering the queue. API responding slowly. Check quota.", value: null, color: "#7c3aed", type: "sop" },
+  { id: "d5", title: "SOP 11 (ECOS) — configuration error", desc: "ECOS generation failing for leads above R$50k/year. Last error: PRC config not found.", value: null, color: "#7c3aed", type: "sop" },
 ];
 
 function TrendBadge({ now, prev }: { now: number; prev: number }) {
@@ -190,13 +190,13 @@ export default function Health() {
         <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Saúde do Sistema</h1>
+              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>{isFounder ? "System Health" : "Saúde do Sistema"}</h1>
               <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>{isFounder ? "Callum" : "Renan"} · {today}</div>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold"
               style={{ background: queueHealth >= 80 ? "#f0fdf4" : "#fef2f2", color: queueHealth >= 80 ? "#16a34a" : "#dc2626", border: `1px solid ${queueHealth >= 80 ? "#bbf7d0" : "#fecaca"}` }}>
               <Activity size={14} />
-              Fila {queueHealth}% saudável
+              {isFounder ? `Queue ${queueHealth}% healthy` : `Fila ${queueHealth}% saudável`}
             </div>
           </div>
         </div>
@@ -205,72 +205,74 @@ export default function Health() {
           {/* 10 metric cards — 2×5 grid */}
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>
-              Métricas de Hoje
+              {isFounder ? "Today's Metrics" : "Métricas de Hoje"}
             </div>
             <div className="grid grid-cols-5 gap-3">
               <MetricCard
                 icon={<Activity size={15} />} color="#9e3ffd"
-                title="Saúde da Fila"
+                title={isFounder ? "Queue Health" : "Saúde da Fila"}
                 main={`${queueHealth}%`}
-                sub={`${p1p3Actioned}/${p1p3.length} P1-P3 accionados`}
+                sub={isFounder ? `${p1p3Actioned}/${p1p3.length} P1-P3 actioned` : `${p1p3Actioned}/${p1p3.length} P1-P3 accionados`}
                 ring={queueHealth}
               />
               <MetricCard
                 icon={<TrendingUp size={15} />} color="#7c3aed"
-                title="Pipeline Julia"
+                title={isFounder ? "Julia Pipeline" : "Pipeline Julia"}
                 main={String(mockLeads.filter(l => l.priority === "P7").length)}
-                sub="novos esta semana"
+                sub={isFounder ? "new this week" : "novos esta semana"}
               />
               <MetricCard
                 icon={<AlertTriangle size={15} />} color="#dc2626"
-                title="Leads Parados"
+                title={isFounder ? "Stalled Leads" : "Leads Parados"}
                 main={String(noNextAction.length)}
-                sub="sem ação 48h+"
+                sub={isFounder ? "no action 48h+" : "sem ação 48h+"}
                 alert={noNextAction.length > 10}
               />
               <MetricCard
                 icon={<Clock size={15} />} color="#ea580c"
-                title="Callbacks em Atraso"
+                title={isFounder ? "Overdue Callbacks" : "Callbacks em Atraso"}
                 main={String(overdue.length)}
-                sub="no total da equipe"
+                sub={isFounder ? "team total" : "no total da equipe"}
                 alert={overdue.length > 5}
               />
               <MetricCard
                 icon={<FileText size={15} />} color="#d97706"
-                title="Contas Solicitadas"
+                title={isFounder ? "Bills Requested" : "Contas Solicitadas"}
                 main={String(teamBills)}
-                sub="hoje / esta semana"
+                sub={isFounder ? "today / this week" : "hoje / esta semana"}
               />
               <MetricCard
                 icon={<CheckCircle size={15} />} color="#16a34a"
-                title="Contas Recebidas"
+                title={isFounder ? "Bills Received" : "Contas Recebidas"}
                 main={String(elayne.billsReceived + thaina.billsReceived)}
-                sub={`${Math.round(((elayne.billsReceived + thaina.billsReceived) / Math.max(teamBills,1)) * 100)}% taxa de conversão`}
+                sub={isFounder
+                  ? `${Math.round(((elayne.billsReceived + thaina.billsReceived) / Math.max(teamBills,1)) * 100)}% conversion rate`
+                  : `${Math.round(((elayne.billsReceived + thaina.billsReceived) / Math.max(teamBills,1)) * 100)}% taxa de conversão`}
               />
               <MetricCard
                 icon={<Users size={15} />} color="#2563eb"
-                title="Decisores Alcançados"
+                title={isFounder ? "DMs Reached" : "Decisores Alcançados"}
                 main={String(teamDMs)}
-                sub="hoje / esta semana"
+                sub={isFounder ? "today / this week" : "hoje / esta semana"}
               />
               <MetricCard
                 icon={<DollarSign size={15} />} color="#7c3aed"
-                title="Valor Bloqueado"
+                title={isFounder ? "Blocked Value" : "Valor Bloqueado"}
                 main="R$ 128k"
-                sub="em Conta Solicitada sem resposta"
+                sub={isFounder ? "in Bill Requested with no response" : "em Conta Solicitada sem resposta"}
               />
               <MetricCard
                 icon={<AlertCircle size={15} />} color="#dc2626"
-                title="SLA de Respostas"
+                title={isFounder ? "Reply SLA" : "SLA de Respostas"}
                 main={String(humanReplies.length)}
-                sub="violados esta semana"
+                sub={isFounder ? "breached this week" : "violados esta semana"}
                 alert={humanReplies.length > 2}
               />
               <MetricCard
                 icon={<Cpu size={15} />} color="#16a34a"
-                title="Agentes SOP"
-                main="12 de 14"
-                sub="2 com erros — verificar"
+                title={isFounder ? "SOP Agents" : "Agentes SOP"}
+                main={isFounder ? "12 of 14" : "12 de 14"}
+                sub={isFounder ? "2 with errors — check" : "2 com erros — verificar"}
               />
             </div>
           </div>
@@ -279,7 +281,7 @@ export default function Health() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <BarChart3 size={15} style={{ color: "#9e3ffd" }} />
-              <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Top 5 Ações de Receita</h2>
+              <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>{isFounder ? "Top 5 Revenue Actions" : "Top 5 Ações de Receita"}</h2>
             </div>
             <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
               {TOP5_ACTIONS.map((action, i) => (
@@ -297,10 +299,10 @@ export default function Health() {
                       <span className="font-bold text-sm" style={{ color: "#16163f" }}>{action.company}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                         style={{ background: `${action.color}15`, color: action.color }}>
-                        {action.action}
+                        {isFounder ? action.actionEn : action.action}
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{action.reason}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{isFounder ? action.reasonEn : action.reason}</p>
                   </div>
                   <div className="shrink-0 text-sm font-bold" style={{ color: action.color }}>{action.value}</div>
                 </div>
@@ -314,17 +316,17 @@ export default function Health() {
             <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
               <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
                 <Users size={14} style={{ color: "#9e3ffd" }} />
-                <span className="font-semibold text-sm" style={{ color: "#16163f" }}>Desempenho das Reps — Esta Semana</span>
+                <span className="font-semibold text-sm" style={{ color: "#16163f" }}>{isFounder ? "Rep Performance — This Week" : "Desempenho das Reps — Esta Semana"}</span>
               </div>
               <div className="px-5 py-4">
                 <table className="w-full text-xs">
                   <thead>
                     <tr>
                       <th className="text-left pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>Rep</th>
-                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>Lig.</th>
+                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>{isFounder ? "Calls" : "Lig."}</th>
                       <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>DMs</th>
-                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>Contas</th>
-                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>Receb.</th>
+                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>{isFounder ? "Bills" : "Contas"}</th>
+                      <th className="text-center pb-2" style={{ color: "#9CA3AF", fontWeight: 600 }}>{isFounder ? "Rcvd." : "Receb."}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -349,7 +351,7 @@ export default function Health() {
                       </tr>
                     ))}
                     <tr style={{ borderTop: "1px solid #E8EAED" }}>
-                      <td className="pt-2 font-bold text-xs" style={{ color: "#9CA3AF" }}>Total equipe</td>
+                      <td className="pt-2 font-bold text-xs" style={{ color: "#9CA3AF" }}>{isFounder ? "Team Total" : "Total equipe"}</td>
                       <td className="text-center pt-2 font-bold" style={{ color: "#9e3ffd" }}>{teamCalls}</td>
                       <td className="text-center pt-2 font-bold" style={{ color: "#9e3ffd" }}>{teamDMs}</td>
                       <td className="text-center pt-2 font-bold" style={{ color: "#9e3ffd" }}>{teamBills}</td>
@@ -364,12 +366,12 @@ export default function Health() {
             <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
               <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
                 <BarChart3 size={14} style={{ color: "#9e3ffd" }} />
-                <span className="font-semibold text-sm" style={{ color: "#16163f" }}>Saúde do Pipeline por Etapa</span>
+                <span className="font-semibold text-sm" style={{ color: "#16163f" }}>{isFounder ? "Pipeline Health by Stage" : "Saúde do Pipeline por Etapa"}</span>
               </div>
               <div className="px-5 py-4 space-y-3">
                 {PIPELINE_STAGES.map(s => (
                   <div key={s.label} className="flex items-center gap-3">
-                    <div className="text-xs w-24 shrink-0" style={{ color: "#6B7280" }}>{s.label}</div>
+                    <div className="text-xs w-24 shrink-0" style={{ color: "#6B7280" }}>{isFounder ? s.labelEn : s.label}</div>
                     <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "#F3F4F6" }}>
                       <motion.div
                         className="h-full rounded-full"
@@ -389,14 +391,14 @@ export default function Health() {
           {/* ── FOUNDER-ONLY SECTIONS ─────────────────────────────────── */}
           {isFounder && (
             <>
-              {/* 1. Visão Geral da Equipa — week-over-week trends */}
+              {/* 1. Team Overview — week-over-week trends */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Users size={15} style={{ color: "#9e3ffd" }} />
-                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Visão Geral da Equipa</h2>
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Team Overview</h2>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
                     style={{ background: "rgba(158,63,253,0.07)", color: "#9e3ffd" }}>
-                    vs. semana passada
+                    vs. last week
                   </span>
                 </div>
                 <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
@@ -404,7 +406,7 @@ export default function Health() {
                     <thead>
                       <tr style={{ borderBottom: "1px solid #F3F4F6" }}>
                         <th className="text-left px-5 py-3 font-semibold" style={{ color: "#9CA3AF" }}>Rep</th>
-                        {["Ligações", "Decisores", "Contas Ped.", "Contas Rcvd."].map(h => (
+                        {["Calls", "DMs", "Bills Req.", "Bills Rcvd."].map(h => (
                           <th key={h} className="text-center px-3 py-3 font-semibold" style={{ color: "#9CA3AF" }}>{h}</th>
                         ))}
                       </tr>
@@ -456,14 +458,14 @@ export default function Health() {
                 </div>
               </div>
 
-              {/* 2. Pipeline de Agentes Oscar — compact funnel */}
+              {/* 2. Oscar Agent Pipeline — compact funnel */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <GitBranch size={15} style={{ color: "#16a34a" }} />
-                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Pipeline de Agentes — Oscar</h2>
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Oscar Agent Pipeline</h2>
                   <span className="text-xs px-2 py-0.5 rounded-full ml-auto font-medium"
                     style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
-                    {mockOscarLeads.filter(l => l.status === "Agente Ativo").length} ativo
+                    {mockOscarLeads.filter(l => l.status === "Agente Ativo").length} active
                   </span>
                 </div>
                 <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
@@ -477,7 +479,7 @@ export default function Health() {
                         style={{ borderColor: "#F3F4F6" }}
                       >
                         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stage.color }} />
-                        <div className="text-xs font-medium w-40 shrink-0" style={{ color: "#374151" }}>{stage.label}</div>
+                        <div className="text-xs font-medium w-40 shrink-0" style={{ color: "#374151" }}>{stage.labelEn}</div>
                         <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "#F3F4F6" }}>
                           <motion.div
                             className="h-full rounded-full"
@@ -494,43 +496,43 @@ export default function Health() {
                 </div>
               </div>
 
-              {/* 3. Saúde do Sistema */}
+              {/* 3. System Health */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Cpu size={15} style={{ color: "#9e3ffd" }} />
-                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Saúde do Sistema</h2>
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>System Health</h2>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {[
                     {
-                      name: "Julia (Triagem)",
+                      name: "Julia (Triage)",
                       icon: <Zap size={14} />,
-                      status: "Operacional",
-                      detail: "2 leads triados esta semana",
+                      status: "Operational",
+                      detail: "2 leads triaged this week",
                       ok: true,
                       color: "#16a34a",
                     },
                     {
-                      name: "Agentes SOP",
+                      name: "SOP Agents",
                       icon: <Cpu size={14} />,
-                      status: "12 de 14 OK",
-                      detail: "SOP 7 e SOP 11 com erros",
+                      status: "12 of 14 OK",
+                      detail: "SOPs 7 and 11 with errors",
                       ok: false,
                       color: "#dc2626",
                     },
                     {
                       name: "Zoho CRM Sync",
                       icon: <Wifi size={14} />,
-                      status: "Sincronizado",
-                      detail: "Última sync há 4 min",
+                      status: "Synced",
+                      detail: "Last sync 4 min ago",
                       ok: true,
                       color: "#16a34a",
                     },
                     {
-                      name: "Discador PABX",
+                      name: "PABX Dialler",
                       icon: <PhoneCall size={14} />,
-                      status: "Operacional",
-                      detail: "Latência 42ms",
+                      status: "Operational",
+                      detail: "Latency 42ms",
                       ok: true,
                       color: "#16a34a",
                     },
@@ -562,14 +564,14 @@ export default function Health() {
                 </div>
               </div>
 
-              {/* 4. Decisões Pendentes de Callum */}
+              {/* 4. Pending Decisions */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <SopAlert size={15} style={{ color: "#dc2626" }} />
-                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Decisões Pendentes</h2>
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Pending Decisions</h2>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
                     style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
-                    {CALLUM_DECISIONS.length} itens
+                    {CALLUM_DECISIONS.length} items
                   </span>
                 </div>
                 <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
@@ -601,7 +603,7 @@ export default function Health() {
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
                           style={{ background: `${d.color}12`, color: d.color, border: `1px solid ${d.color}30` }}
                         >
-                          <ExternalLink size={10} /> {d.type === "deal" ? "Ver deal" : "Verificar"}
+                          <ExternalLink size={10} /> {d.type === "deal" ? "View deal" : "Check"}
                         </button>
                       </div>
                     </div>
