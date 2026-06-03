@@ -3,6 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   ListChecks, MessageSquare, BarChart3, GraduationCap, TrendingUp,
   ChevronLeft, Globe, Bell, ChevronDown, Heart, Target, GitBranch, Eye,
+  DollarSign, LineChart, Compass, Lightbulb,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
@@ -70,6 +71,15 @@ const FOUNDER_NAV_SECTIONS: { label: string; items: { path: string; icon: React.
     items: [
       { path: "/sales-os/oscar/targets",  icon: Target,    label: "Meus Alvos" },
       { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Pipeline de Agentes" },
+    ],
+  },
+  {
+    label: "FINANCEIRO",
+    items: [
+      { path: "/sales-os/finance/receita",  icon: DollarSign, label: "Receita" },
+      { path: "/sales-os/finance/pl",       icon: LineChart,  label: "P&L" },
+      { path: "/sales-os/finance/previsao", icon: Compass,    label: "Previsão" },
+      { path: "/sales-os/finance/decisoes", icon: Lightbulb,  label: "Decisões" },
     ],
   },
 ];

@@ -1,0 +1,121 @@
+Add Callum as a new role in VER COMO with label 'Fundador' and a green avatar. Also fix Oscar's design and translate remaining Portuguese UI labels. All in one build.
+PART 1 — CALLUM FOUNDER ROLE
+Add 'Callum' to the VER COMO switcher with role 'Fundador'. Green avatar with 'C'.
+When role is Fundador, sidebar shows ALL navigation grouped with subtle section labels:
+VENDAS: Fila / Respostas
+GESTÃO: Console do Gerente / Coaching / Meu Desempenho
+PARCEIROS: Meus Alvos / Pipeline de Agentes
+SISTEMA: Saúde
+FINANCEIRO: Receita / P&L / Previsão / Decisões
+Callum can access every page from every role. When viewing a rep's page or Oscar's page, show a small amber badge in the top right header: 'Visualizando como: [role]'.
+Saúde page in Fundador role shows the existing 10 metric cards and Top 5 Revenue Actions, PLUS four additional sections below:
+Section 1 — Visão Geral da Equipa: rep performance week-over-week comparison table. Elayne and Thaina side by side. Columns: Chamadas / DMs / Contas Solicitadas / Contas Recebidas / QA Score. Each metric shows this week number + trend arrow vs last week.
+Section 2 — Pipeline Oscar: compact view. Targets per stage with count. Agentes ativos highlighted in green. Last activity date. 'Ver Pipeline Completo' button linking to Oscar's Pipeline page.
+Section 3 — Saúde do Sistema: Julia status chip (Ativa/Inativa) + leads released this week. SOP agents: X de 14 funcionando / X com erros. Zoho last sync: timestamp. Dialer: status chip.
+Section 4 — Decisões Pendentes de Callum: short list of items requiring founder attention. High value stalled deals above R$30k. Escalated lost records beyond Renan. SOP agent errors. Each item: description + one action button.
+PART 2 — FINANCE OS (Fundador only)
+Hardcode this as financialConfig:
+Monthly fixed costs:
+Renan R$12,000 / Alexandre R$8,500 / Elayne R$4,500 / Thaina R$4,500 / Fundador R$34,000 / Dev Team R$40,500 (note: reduces to R$20,250 in ~2 months) / Escritório R$6,500 / Tech Stack R$14,000 / Publicidade R$8,000 (inactive) / Oscar R$4,000 / Contabilidade R$1,600.
+Total current burn: R$138,100. Post-dev-reduction burn: R$117,850.
+Cash: R$269,000 current + R$1,000,000 incoming = R$1,269,000 total available.
+Revenue source of truth: Valor Estimado Mensal column from Google Sheets. This IS Ótima's monthly revenue per client. All revenue calculations derive from this field automatically.
+Mock clients — 8 companies with realistic Brazilian business names. Realistic Valor Estimado Mensal ranging R$800 to R$6,500. Mix of payment statuses. Use exact column names: Clientes / Status / Valor Estimado Mensal / Consumo Médio KWh / Consumo Médio R$ / Remuneração Ótima % / Data da Assinatura / Payment Due Date / Faturamento Estimado.
+All calculations derived automatically from data:
+MRR = sum of Valor Estimado Mensal for active signed clients.
+Average revenue per client = MRR divided by active client count.
+Clients needed for break-even = monthly burn divided by average revenue per client.
+Runway = total available cash divided by (monthly burn minus MRR).
+Monthly deficit = monthly burn minus MRR.
+When real Google Sheets API is connected in production every number updates automatically. Nothing hardcoded except cost structure.
+FINANCE PAGE 1 — Receita
+Title: Receita. Subtitle: today's date.
+Four stat cards top row:
+MRR Atual: sum of all active Valor Estimado Mensal. Trend vs last month.
+Receita Recebida Este Mês: mock Cora data — confirmed payments. Green if matches MRR, amber if below.
+Receita Pendente: contracted not yet received. Amber.
+Receita em Atraso: overdue. Red if any.
+Client table: Columns: Cliente / Valor Estimado Mensal / Status / Payment Due / Última Atualização / Faturamento Estimado. Status chips: Em Dia (green) / Pendente (amber) / Em Atraso (red) / Aguardando Início (purple) / Proposta Aceita (blue).
+Cora transactions panel below: title 'Entradas Confirmadas — Cora'. Columns: date / client name / amount / matched to contract. Note below: 'Produção: Cora Statement API com autenticação mTLS. Nubank e Santander = pagamentos de saída, não requerem integração.'
+Pipeline revenue card: 'Receita em Pipeline — Se leads em Conta Solicitada converterem: +R$X estimado/mês.' Calculated from Sales OS mock data.
+FINANCE PAGE 2 — P&L
+Title: P&L — Demonstrativo de Resultados.
+Month selector top right. Current month default.
+Three large summary numbers full width:
+Receita: green. Custos: red. Resultado Líquido: green if positive, large red if negative.
+Two columns:
+Left — Revenue detail: each client / Valor Estimado Mensal / status. MRR total at bottom.
+Right — Cost breakdown: each cost line as a row with category / amount / % of total burn. Dev team shows R$40,500 with green note 'Redução para R$20,250 prevista em ~2 meses'. Advertising shows R$8,000 greyed out 'Inativo — não activar antes de conversão provada'.
+Total burn R$138,100 shown prominently in red.
+6-month bar chart: revenue bars green vs burn line red. Gap shown clearly. Mock data past 5 months showing growth from zero. Month 3 shows burn line dropping when dev costs reduce. Built with recharts.
+Amber info box: 'Em produção: receita via Google Sheets API (Valor Estimado Mensal). Pagamentos confirmados via Cora Statement API.'
+FINANCE PAGE 3 — Previsão
+Title: Previsão — Runway e Cenários.
+Runway card full width prominent:
+Saldo total disponível: R$1,269,000.
+Queima mensal atual: R$138,100.
+Queima pós-redução dev mês 3: R$117,850.
+MRR atual: calculated.
+Deficit mensal: calculated.
+Runway: calculated months shown large. Green above 12 months, amber 6-12, red below 6. With R$1,269,000 this should show green.
+Break-even calculator card:
+Clientes necessários para break-even: burn divided by average Valor Estimado Mensal — calculates automatically from real client data.
+Ao ritmo atual: estimated months.
+Com Sales OS (2 contas/rep/dia): estimated months.
+Label: 'Calculado automaticamente com base no ticket médio real dos seus clientes.'
+Three scenario cards side by side:
+Conservador: current conversion rate 0.6 bills/day total. Month by month revenue. Break-even month shown. Small recharts line chart.
+Base: Sales OS delivers 2 bills/day total within 30 days. Break-even month. Line chart.
+Otimista: 4 bills/day total + Oscar activates 2 agents (+R$8,000/month estimated) + 1 partnership by month 4. Break-even month. Line chart shows revenue crossing burn line. Highlight the crossover point with a dot labelled 'Break-even: Mês X'.
+Milestones card below scenarios:
+
+Sales OS em produção com Zoho integrado — esta semana
+Elayne e Thaina atingem 2 contas/dia — até 30 de junho
+Oscar activa primeiro agente — até 30 de junho
+Dev costs reduzem 50% — até agosto
+Primeira parceria gera fluxo de leads — até julho
+
+FINANCE PAGE 4 — Decisões
+Title: Decisões — Inteligência Financeira.
+Subtitle: 'Recomendações geradas automaticamente com base nos dados reais da empresa.'
+Seven triggered recommendation cards. Each: left border in urgency colour / icon / title / data that triggered it / recommended action button / dismiss button.
+CARD 1 — GREEN — Runway Saudável:
+Trigger: calculated runway from R$1,269,000.
+'Com o investimento confirmado, runway é de [calculated] meses ao ritmo atual. Tempo suficiente para o plano funcionar se a execução for forte.'
+Botão: Ver Previsão Detalhada.
+CARD 2 — RED — Gap MRR vs Break-even:
+Trigger: calculated MRR vs burn.
+'MRR atual de R[calculated]representa[calculated][calculated] representa [calculated]% da queima mensal. São necessários [calculated] clientes ao ticket médio actual de R
+[calculated]representa[calculated][calculated] para break-even. Cada semana de execução forte encurta esse número.'
+Botão: Ver Pipeline de Conversão.
+CARD 3 — AMBER — Decisão de Equipa Pendente:
+Trigger: rep performance below target 2+ weeks.
+'Elayne e Thaina custam R$9,000/mês fixo mais comissões. Sales OS entra em produção esta semana. Dar 3 semanas de operação completa com o sistema ativo antes de qualquer decisão. Threshold claro: 1.5 contas/dia cada com Sales OS funcionando.'
+Botão: Ver Desempenho das Reps. Dismiss: 3 semanas.
+CARD 4 — AMBER — Dev Team Milestone:
+Trigger: dev team is 29% of burn.
+'R$40,500/mês em dev representa 29% da queima total. Redução para R$20,250 prevista em ~2 meses após entrega de Sales OS e MT. Validar timeline de entrega esta semana.'
+Botão: Confirmar Timeline. Dismiss: 2 semanas.
+CARD 5 — GREEN — Oscar Pipeline:
+Trigger: Oscar has meetings scheduled.
+'2 reuniões marcadas com potenciais agentes. Portfólio combinado estimado: ~420 clientes PJ. Primeiro agente ativo = receita recorrente com custo marginal próximo de zero.'
+Botão: Ver Pipeline Oscar.
+CARD 6 — GREEN — Publicidade Pausada:
+Trigger: advertising inactive.
+'R$8,000/mês pausado correctamente. Não activar antes de conversão provada com Sales OS. Sugestão: testar R$2,000/mês quando reps atingirem 1.5 contas/dia consistentemente.'
+Botão: Lembrar em 30 dias.
+CARD 7 — AMBER — Foco em Alto Valor:
+Trigger: calculated from client ticket data.
+'Ticket médio atual: R[calculated]/cliente/me^s.Paraacelerarbreak−even,priorizarprospectscomConsumoMeˊdioR[calculated]/cliente/mês. Para acelerar break-even, priorizar prospects com Consumo Médio R
+[calculated]/cliente/me^s.Paraacelerarbreak−even,priorizarprospectscomConsumoMeˊdioR acima de R$30,000/mês. Cada cliente de alto consumo substitui [calculated] clientes de ticket médio.'
+Botão: Ver Clientes de Alto Valor.
+Settings link bottom of page: 'Configurações Financeiras' opens modal to update cost values, investment timeline, scenario assumptions. Saves to local state.
+PART 3 — OSCAR REDESIGN
+Keep all data and functionality. Change design only to match the rest of the prototype.
+Meus Alvos cards: same rounded-xl white cards shadow-sm hover shadow-md. Left border 4px in status colour — purple Reunião Marcada / blue Proposta Enviada / amber Em contato / green Agente Ativo / grey Não contatado.
+Card layout: top row company name bold + score badge right. Second row business type chip + city + owner name with person icon. Third row portfolio estimate as highlighted stat pill: 'Portfólio estimado: ~300 clientes PJ'. Fourth row status chip + last contact date. Notes preview italic muted if exists. Bottom row action buttons matching girls' style: Enriquecer (purple sparkle icon) / Abrir / WA / Email.
+Filter chips at top: soft fill badge style matching rest of prototype.
+Search bar: identical to girls' queue search bar.
+Pipeline de Agentes: proper kanban board matching girls' Board view. Five columns: Prospecção / Em Conversa / Reunião / Proposta Ótima Agente / Agente Ativo. Column headers with count badges. Compact cards inside each column.
+Oscar's lead card: identical two-column layout to girls' lead card. Same left column design. Same tab switcher style. Enriquecimento DM tab uses the identical DMEnrichmentPanel component. Inteligência do Negócio tab uses same LeadIntelligenceCard component but with licensee-framing: why this business would make a good Otima agent, their client portfolio size, revenue model alignment, buying signals interpreted as 'would this person want a new revenue stream.'
+Mensagens tab: same MessageComposer component but with Oscar-specific templates — Primeiro Contacto Parceria / Follow-Up / Proposta Ótima Agente / Interrupção de Padrão. All Portuguese. Same banned phrase detection. Same style/CTA labels.

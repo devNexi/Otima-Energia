@@ -59,6 +59,10 @@ import SalesOSHealth from "@/pages/SalesOS/Health";
 import OscarTargets from "@/pages/SalesOS/Oscar/Targets";
 import OscarPipeline from "@/pages/SalesOS/Oscar/Pipeline";
 import OscarLeadCard from "@/pages/SalesOS/Oscar/LeadCard";
+import FinanceReceita from "@/pages/SalesOS/Finance/Receita";
+import FinancePL from "@/pages/SalesOS/Finance/PL";
+import FinancePrevisao from "@/pages/SalesOS/Finance/Previsao";
+import FinanceDecisoes from "@/pages/SalesOS/Finance/Decisoes";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
 import GoogleAdsLaunchPack from "@/pages/GoogleAdsLaunchPack";
@@ -176,6 +180,10 @@ function Router() {
       <Route path="/sales-os/oscar/targets" component={OscarTargets} />
       <Route path="/sales-os/oscar/pipeline" component={OscarPipeline} />
       <Route path="/sales-os/oscar/leads/:id" component={OscarLeadCard} />
+      <Route path="/sales-os/finance/receita"  component={FinanceReceita} />
+      <Route path="/sales-os/finance/pl"       component={FinancePL} />
+      <Route path="/sales-os/finance/previsao" component={FinancePrevisao} />
+      <Route path="/sales-os/finance/decisoes" component={FinanceDecisoes} />
 
       <Route component={NotFound} />
     </Switch>
