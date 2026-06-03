@@ -2,8 +2,8 @@ import { useState, createContext, useContext } from "react";
 import { useLocation, Link } from "wouter";
 import {
   ListChecks, MessageSquare, BarChart3, GraduationCap, TrendingUp,
-  ChevronLeft, Globe, Bell, ChevronDown, Heart, Target, GitBranch, Eye,
-  DollarSign, LineChart, Compass, Lightbulb,
+  ChevronLeft, Globe, Bell, ChevronDown, ChevronRight, Heart, Target, GitBranch, Eye,
+  DollarSign, LineChart, Compass, Lightbulb, Users,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
@@ -109,6 +109,7 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const [viewAs, _rawSetViewAs] = useState<ViewAsUser>(_globalViewAs);
   const [mirroredByFounder, _rawSetMirrored] = useState(_globalMirroredByFounder);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [otherViewsOpen, setOtherViewsOpen] = useState(false);
 
   const setViewAs = (v: ViewAsUser) => {
     _globalViewAs = v;
@@ -168,7 +169,9 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   }
 
   const sidebarSubtitle = isFounder ? "Founder OS" : isParceiro ? "Portal Agente" : "Sales OS";
-  const showVerComo = (!isRep && !isParceiro) || mirroredByFounder;
+  // VER COMO shows for manager (Renan) only — Callum uses the "Other Views" sidebar dropdown instead
+  const showVerComo = (!isRep && !isParceiro && !isFounder) || mirroredByFounder;
+  const OTHER_VIEW_USERS = USERS.filter(u => u.name !== "Callum");
 
   return (
     <ViewAsContext.Provider value={{ viewAs, setViewAs, isRep, isParceiro, isFounder }}>
@@ -242,6 +245,55 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                 ))}
+
+                {/* ── Other Views collapsible ─────────────────────────── */}
+                <div>
+                  <div className="px-3 mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: "#C4C8D4" }}>
+                    Other Views
+                  </div>
+                  <button
+                    onClick={() => setOtherViewsOpen(o => !o)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all"
+                    style={{ color: "#6B7280" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <Users size={16} />
+                    <span className="text-sm font-medium flex-1 text-left">Team</span>
+                    {otherViewsOpen
+                      ? <ChevronDown size={13} style={{ color: "#C4C8D4" }} />
+                      : <ChevronRight size={13} style={{ color: "#C4C8D4" }} />}
+                  </button>
+
+                  {otherViewsOpen && (
+                    <div className="mt-0.5 ml-3 pl-3 space-y-0.5" style={{ borderLeft: "2px solid #F0F0F5" }}>
+                      {OTHER_VIEW_USERS.map(u => (
+                        <button
+                          key={u.name}
+                          onClick={() => handlePickUser(u)}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all"
+                          style={{ color: "#6B7280" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                            style={{ background: getGradient(u), color: "#fff" }}
+                          >
+                            {u.initial}
+                          </div>
+                          <span className="font-medium flex-1 text-left">{u.name}</span>
+                          <span
+                            className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={{ background: getRoleBg(u), color: getRoleColor(u) }}
+                          >
+                            {u.role}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-0.5">
