@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { SalesOSLayout, useViewAs } from "@/components/sales/SalesOSLayout";
 import { mockLeads } from "@/data/mockLeads";
 import { mockRepStats } from "@/data/mockLeads";
+import { mockOscarLeads, OscarLead } from "@/data/mockOscarLeads";
 import {
   Activity, TrendingUp, AlertTriangle, Clock, FileText,
   CheckCircle, Users, DollarSign, AlertCircle, Cpu,
-  BarChart3, Lock,
+  BarChart3, Lock, GitBranch, Zap, Wifi, PhoneCall,
+  ArrowUp, ArrowDown, Minus, AlertCircle as SopAlert, ExternalLink,
 } from "lucide-react";
 
 const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -128,8 +130,46 @@ const PIPELINE_STAGES = [
 ];
 const maxPipeline = Math.max(...PIPELINE_STAGES.map(s => s.count), 1);
 
+// ── Founder-only data ──────────────────────────────────────────────────────
+
+const OSCAR_STAGES: { status: OscarLead["status"]; label: string; color: string }[] = [
+  { status: "Não contatado",   label: "Prospecção",            color: "#6b7280" },
+  { status: "Em contato",      label: "Em Conversa",           color: "#d97706" },
+  { status: "Reunião Marcada", label: "Reunião",               color: "#7c3aed" },
+  { status: "Proposta Enviada",label: "Proposta Ótima Agente", color: "#2563eb" },
+  { status: "Agente Ativo",    label: "Agente Ativo",          color: "#16a34a" },
+];
+
+const WEEKLY_TRENDS = {
+  Elayne: { initial: "E", color: "#9e3ffd", tw: { calls: 12, dms: 4, bills: 3, rcvd: 1 }, lw: { calls: 9, dms: 2, bills: 2, rcvd: 1 } },
+  Thaina: { initial: "T", color: "#2563eb", tw: { calls:  9, dms: 3, bills: 2, rcvd: 1 }, lw: { calls: 14, dms: 5, bills: 4, rcvd: 2 } },
+};
+
+const CALLUM_DECISIONS = [
+  { id: "d1", title: "Câmara Fria São Paulo — proposta vence em 72h", desc: "R$45k bloqueado. Rodrigo Teixeira receptivo, aguardando decisão dos sócios. Risco de perda sem ação.", value: "R$ 45k", color: "#dc2626", type: "deal" },
+  { id: "d2", title: "Hotel Bela Vista — decisor alcançado há 1d sem pedido", desc: "R$28k. Janela de receptividade fecha em 48h. Elayne ou Renan precisa agir hoje.", value: "R$ 28k", color: "#ea580c", type: "deal" },
+  { id: "d3", title: "Supermercado Mercantil Norte — callback prometido há 2d", desc: "R$22k. Decisor aguardava retorno de ontem às 14h. Ligação não realizada.", value: "R$ 22k", color: "#d97706", type: "deal" },
+  { id: "d4", title: "SOP 7 (Enriquecimento) — timeout recorrente 3× em 24h", desc: "Afeta enriquecimento de leads entrando na fila. API respondendo lentamente. Verificar quota.", value: null, color: "#7c3aed", type: "sop" },
+  { id: "d5", title: "SOP 11 (ECOS) — erro de configuração", desc: "Geração de ECOS falhando para leads acima de R$50k/ano. Último erro: config PRC não encontrada.", value: null, color: "#7c3aed", type: "sop" },
+];
+
+function TrendBadge({ now, prev }: { now: number; prev: number }) {
+  const diff = now - prev;
+  if (diff > 0) return (
+    <span className="flex items-center gap-0.5 text-[10px] font-bold" style={{ color: "#16a34a" }}>
+      <ArrowUp size={8} />+{diff}
+    </span>
+  );
+  if (diff < 0) return (
+    <span className="flex items-center gap-0.5 text-[10px] font-bold" style={{ color: "#dc2626" }}>
+      <ArrowDown size={8} />{diff}
+    </span>
+  );
+  return <span style={{ color: "#9CA3AF" }}><Minus size={8} /></span>;
+}
+
 export default function Health() {
-  const { isRep } = useViewAs();
+  const { isRep, isFounder } = useViewAs();
   const [tab] = useState("health");
 
   if (isRep) {
@@ -151,7 +191,7 @@ export default function Health() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Saúde do Sistema</h1>
-              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Renan · {today}</div>
+              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>{isFounder ? "Callum" : "Renan"} · {today}</div>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold"
               style={{ background: queueHealth >= 80 ? "#f0fdf4" : "#fef2f2", color: queueHealth >= 80 ? "#16a34a" : "#dc2626", border: `1px solid ${queueHealth >= 80 ? "#bbf7d0" : "#fecaca"}` }}>
@@ -268,7 +308,7 @@ export default function Health() {
             </div>
           </div>
 
-          {/* Rep performance + pipeline health */}
+          {/* Rep performance + pipeline health (always visible) */}
           <div className="grid grid-cols-2 gap-4">
             {/* Rep performance summary */}
             <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
@@ -345,6 +385,231 @@ export default function Health() {
               </div>
             </div>
           </div>
+
+          {/* ── FOUNDER-ONLY SECTIONS ─────────────────────────────────── */}
+          {isFounder && (
+            <>
+              {/* 1. Visão Geral da Equipa — week-over-week trends */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Users size={15} style={{ color: "#9e3ffd" }} />
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Visão Geral da Equipa</h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
+                    style={{ background: "rgba(158,63,253,0.07)", color: "#9e3ffd" }}>
+                    vs. semana passada
+                  </span>
+                </div>
+                <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #F3F4F6" }}>
+                        <th className="text-left px-5 py-3 font-semibold" style={{ color: "#9CA3AF" }}>Rep</th>
+                        {["Ligações", "Decisores", "Contas Ped.", "Contas Rcvd."].map(h => (
+                          <th key={h} className="text-center px-3 py-3 font-semibold" style={{ color: "#9CA3AF" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(["Elayne", "Thaina"] as const).map(name => {
+                        const r = WEEKLY_TRENDS[name];
+                        return (
+                          <tr key={name} style={{ borderBottom: "1px solid #F9FAFB" }}>
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                  style={{ background: `${r.color}20`, color: r.color }}>
+                                  {r.initial}
+                                </div>
+                                <span className="font-semibold" style={{ color: "#16163f" }}>{name}</span>
+                              </div>
+                            </td>
+                            {[
+                              { tw: r.tw.calls,  lw: r.lw.calls  },
+                              { tw: r.tw.dms,   lw: r.lw.dms   },
+                              { tw: r.tw.bills, lw: r.lw.bills  },
+                              { tw: r.tw.rcvd,  lw: r.lw.rcvd   },
+                            ].map((cell, ci) => (
+                              <td key={ci} className="text-center px-3 py-3">
+                                <div className="font-bold" style={{ color: "#16163f" }}>{cell.tw}</div>
+                                <TrendBadge now={cell.tw} prev={cell.lw} />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                      <tr>
+                        <td className="px-5 py-3 font-bold text-xs" style={{ color: "#9CA3AF" }}>Total</td>
+                        {[
+                          { tw: WEEKLY_TRENDS.Elayne.tw.calls  + WEEKLY_TRENDS.Thaina.tw.calls,  lw: WEEKLY_TRENDS.Elayne.lw.calls  + WEEKLY_TRENDS.Thaina.lw.calls  },
+                          { tw: WEEKLY_TRENDS.Elayne.tw.dms    + WEEKLY_TRENDS.Thaina.tw.dms,    lw: WEEKLY_TRENDS.Elayne.lw.dms    + WEEKLY_TRENDS.Thaina.lw.dms    },
+                          { tw: WEEKLY_TRENDS.Elayne.tw.bills  + WEEKLY_TRENDS.Thaina.tw.bills,  lw: WEEKLY_TRENDS.Elayne.lw.bills  + WEEKLY_TRENDS.Thaina.lw.bills  },
+                          { tw: WEEKLY_TRENDS.Elayne.tw.rcvd   + WEEKLY_TRENDS.Thaina.tw.rcvd,   lw: WEEKLY_TRENDS.Elayne.lw.rcvd   + WEEKLY_TRENDS.Thaina.lw.rcvd   },
+                        ].map((cell, ci) => (
+                          <td key={ci} className="text-center px-3 py-3">
+                            <div className="font-bold" style={{ color: "#9e3ffd" }}>{cell.tw}</div>
+                            <TrendBadge now={cell.tw} prev={cell.lw} />
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 2. Pipeline de Agentes Oscar — compact funnel */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <GitBranch size={15} style={{ color: "#16a34a" }} />
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Pipeline de Agentes — Oscar</h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full ml-auto font-medium"
+                    style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+                    {mockOscarLeads.filter(l => l.status === "Agente Ativo").length} ativo
+                  </span>
+                </div>
+                <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+                  {OSCAR_STAGES.map((stage, i) => {
+                    const count = mockOscarLeads.filter(l => l.status === stage.status).length;
+                    const maxCount = Math.max(...OSCAR_STAGES.map(s => mockOscarLeads.filter(l => l.status === s.status).length), 1);
+                    return (
+                      <div
+                        key={stage.status}
+                        className="flex items-center gap-4 px-5 py-3.5 border-b last:border-b-0"
+                        style={{ borderColor: "#F3F4F6" }}
+                      >
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stage.color }} />
+                        <div className="text-xs font-medium w-40 shrink-0" style={{ color: "#374151" }}>{stage.label}</div>
+                        <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "#F3F4F6" }}>
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: stage.color }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(count / maxCount) * 100}%` }}
+                            transition={{ duration: 0.7, delay: i * 0.08 }}
+                          />
+                        </div>
+                        <div className="text-xs font-bold w-5 text-right" style={{ color: stage.color }}>{count}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Saúde do Sistema */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Cpu size={15} style={{ color: "#9e3ffd" }} />
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Saúde do Sistema</h2>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    {
+                      name: "Julia (Triagem)",
+                      icon: <Zap size={14} />,
+                      status: "Operacional",
+                      detail: "2 leads triados esta semana",
+                      ok: true,
+                      color: "#16a34a",
+                    },
+                    {
+                      name: "Agentes SOP",
+                      icon: <Cpu size={14} />,
+                      status: "12 de 14 OK",
+                      detail: "SOP 7 e SOP 11 com erros",
+                      ok: false,
+                      color: "#dc2626",
+                    },
+                    {
+                      name: "Zoho CRM Sync",
+                      icon: <Wifi size={14} />,
+                      status: "Sincronizado",
+                      detail: "Última sync há 4 min",
+                      ok: true,
+                      color: "#16a34a",
+                    },
+                    {
+                      name: "Discador PABX",
+                      icon: <PhoneCall size={14} />,
+                      status: "Operacional",
+                      detail: "Latência 42ms",
+                      ok: true,
+                      color: "#16a34a",
+                    },
+                  ].map(sys => (
+                    <div
+                      key={sys.name}
+                      className="rounded-xl p-4"
+                      style={{
+                        background: "#FFFFFF",
+                        border: sys.ok ? "1px solid #E8EAED" : "1px solid #fecaca",
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ background: `${sys.color}15` }}>
+                          <span style={{ color: sys.color }}>{sys.icon}</span>
+                        </div>
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: `${sys.color}15`, color: sys.color }}
+                        >
+                          {sys.status}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-xs mb-0.5" style={{ color: "#16163f" }}>{sys.name}</div>
+                      <div className="text-[10px]" style={{ color: sys.ok ? "#9CA3AF" : "#dc2626" }}>{sys.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Decisões Pendentes de Callum */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <SopAlert size={15} style={{ color: "#dc2626" }} />
+                  <h2 className="font-bold text-sm" style={{ color: "#16163f" }}>Decisões Pendentes</h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-auto"
+                    style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                    {CALLUM_DECISIONS.length} itens
+                  </span>
+                </div>
+                <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
+                  {CALLUM_DECISIONS.map((d, i) => (
+                    <div
+                      key={d.id}
+                      className="flex items-start gap-4 px-5 py-4 border-b last:border-b-0"
+                      style={{ borderColor: "#F3F4F6", borderLeft: `4px solid ${d.color}` }}
+                    >
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5"
+                        style={{ background: `${d.color}15`, color: d.color }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="font-bold text-xs" style={{ color: "#16163f" }}>{d.title}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={{ background: `${d.color}12`, color: d.color }}>
+                            {d.type === "deal" ? "Deal" : "SOP"}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{d.desc}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {d.value && (
+                          <span className="text-sm font-bold" style={{ color: d.color }}>{d.value}</span>
+                        )}
+                        <button
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ background: `${d.color}12`, color: d.color, border: `1px solid ${d.color}30` }}
+                        >
+                          <ExternalLink size={10} /> {d.type === "deal" ? "Ver deal" : "Verificar"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </SalesOSLayout>
