@@ -43,33 +43,19 @@ const USERS: { name: ViewAsUser; initial: string; role: string; isRep: boolean; 
 let _globalViewAs: ViewAsUser = "Renan";
 let _globalMirroredByFounder = false;
 
-// Founder nav — all items grouped by section (English only)
+// Founder nav — founder-only tools. Rep-level views (Queue, Replies, Performance, Coaching) are
+// accessed via the "Other Views" dropdown by mirroring a specific team member.
 const FOUNDER_NAV_SECTIONS: { label: string; items: { path: string; icon: React.ElementType; label: string; badge?: number }[] }[] = [
   {
-    label: "SALES",
+    label: "OVERVIEW",
     items: [
-      { path: "/sales-os/queue",       icon: ListChecks,    label: "Queue" },
-      { path: "/sales-os/replies",     icon: MessageSquare, label: "Replies", badge: 3 },
-      { path: "/sales-os/performance", icon: TrendingUp,    label: "My Performance" },
-    ],
-  },
-  {
-    label: "MANAGEMENT",
-    items: [
-      { path: "/sales-os/manager",  icon: BarChart3,     label: "Manager Console" },
-      { path: "/sales-os/coaching", icon: GraduationCap, label: "Coaching" },
-    ],
-  },
-  {
-    label: "SYSTEM",
-    items: [
-      { path: "/sales-os/health", icon: Heart, label: "Health" },
+      { path: "/sales-os/health",   icon: Heart,     label: "Health" },
+      { path: "/sales-os/manager",  icon: BarChart3, label: "Manager Console" },
     ],
   },
   {
     label: "PARTNERS",
     items: [
-      { path: "/sales-os/oscar/targets",  icon: Target,    label: "My Targets" },
       { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Agent Pipeline" },
     ],
   },
