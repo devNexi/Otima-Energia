@@ -1,0 +1,111 @@
+Significant changes to the Callum Founder view. Do not touch any other role's pages.
+1. Replace Manager Console in Founder view with CEO Performance view
+When Callum views Manager Console it should NOT show Renan's operational tool (dirty queue, coaching notes, huddle button). That is Renan's tool and stays in Renan's role. In Callum's view, rename this page to 'Desempenho da Equipa' and replace the content entirely with a CEO-level view.
+Desempenho da Equipa page has four sections:
+Section 1 — Renan: Gestor
+Header card for Renan showing: monthly cost R$12,000 / role / time in role.
+Management compliance metrics as progress bars:
+
+Huddle diário realizado: X% das últimas 10 semanas. Target 100%. Mock: 70%.
+EOD report enviado: X% dos últimos 10 dias úteis. Target 100%. Mock: 60%.
+Pontualidade: chegou a tempo X% dos dias. Target 100%. Mock: 75%.
+
+Management output metrics:
+
+Girls' bills per week under his management — trend chart (last 6 weeks)
+QA flags resolved vs created ratio
+Lost approvals actioned within 24h: X%
+
+Renan's own commercial output:
+
+Partnerships meetings booked this month
+Oscar check-ins completed
+Personal conversion (his own leads if any)
+
+Performance verdict card: agent-generated one-line assessment. Example: 'Gestão em desenvolvimento — compliance operacional abaixo do esperado mas output comercial (parcerias) é o ponto mais forte. Foco: disciplina de relatórios.'
+Section 2 — Vendas: Elayne e Thaina
+Side-by-side rep cards. Each: name / monthly cost / weeks in role.
+Key metrics per rep:
+
+Contas por semana (últimas 4 semanas): mini bar chart
+DMs alcançados por semana
+Taxa de conversão DM → conta
+Score QA médio
+Uso do briefing %
+Callbacks perdidos esta semana
+
+Combined team metrics:
+
+Total MRR gerado pelas reps (from client sheet, tagged as rep-sourced)
+Revenue per R$ of salary cost — calculated automatically
+Trend: improving / flat / declining over last 4 weeks
+
+Performance verdict per rep: one line each. Example Elayne: 'Melhorando — pedido de conta mais consistente. Uso do briefing ainda abaixo da meta.' Example Thaina: 'Estável mas abaixo da meta. Padrão de callbacks perdidos persiste.'
+Firing threshold tracker: amber card showing the explicit threshold. 'Threshold: 1.5 contas/dia com Sales OS ativo por 3 semanas consecutivas. Sales OS entra em produção esta semana. Semana 0 de 3.' Updates each week.
+Section 3 — Oscar: Parcerias e Agentes
+Oscar header card: monthly cost R$4,000 + commissions.
+Partnership pipeline table: columns Partner Name / Status / Leads Generated / Leads Converted / Revenue Attributed / ROI. Source column note: 'Em produção: cruzado com coluna Source do Google Sheets quando Alexandre adicionar.' Mock data: 3 partnerships with different performance levels.
+Agent pipeline: targets per stage (Prospecção / Em Conversa / Reunião / Proposta / Ativo). Meetings this week. Expected first agent activation date.
+ROI calculation card: 'Se primeiro agente activar com portfólio médio de 50 clientes: +R$X receita estimada/mês. Payback do custo Oscar em X meses.' Calculated from mock.
+Section 4 — Dev Team
+Monthly cost: R$40,500. Reduction timeline: ~2 months.
+Project milestone tracker: three projects as cards.
+Sales OS: planned delivery this week / status chip (Em progresso / Entregue / Atrasado) / key deliverables checklist (Zoho integration / Call Assist / Queue page / Renan console / Oscar portal / Finance OS).
+MT (Mercado Transparente): planned delivery / status / key deliverables.
+SOP Agents: planned delivery / status / agents built vs total (X de 14).
+Cost per milestone: R$40,500 divided by expected deliverables per month — shows cost efficiency.
+Alert if any project is overdue by more than 1 week: red flag card.
+
+2. Add four new pages to Callum's sidebar under OVERVIEW section
+Page: Parcerias
+Route /sales-os/partnerships. Sidebar label: Parcerias.
+Full partnership ROI dashboard.
+Header: total partnerships active / total revenue attributed to partnerships / % of MRR from partnerships.
+Partnership table: each row is one partnership. Columns: Parceiro / Tipo (indicação / co-venda / agente) / Leads Enviados / Leads Qualificados / Leads Convertidos / Receita Gerada MRR / Receita Pipeline / ROI / Status. Sort by ROI descending.
+Note: 'Em produção: dados cruzados automaticamente com coluna Source do Google Sheets (a ser adicionada por Alexandre).'
+Mock data: 4 partnerships with different performance levels — one high performer, one medium, one just starting, one inactive.
+Below table: Partnership value chart. Bar chart showing revenue contribution per partner. Built with recharts.
+Best partnership insight card: 'Parceria mais rentável: [name] — RXMRRgeradocomcustodeaquisic\ca~odeRX MRR gerado com custo de aquisição de R
+XMRRgeradocomcustodeaquisic\c​a~odeRY. ROI de Xx.'
+Page: Crescimento (Funil)
+Route /sales-os/growth. Sidebar label: Crescimento.
+Conversion funnel showing the full journey. Each stage as a horizontal bar showing absolute number and % conversion from previous stage:
+Leads Julia esta semana → Qualificados → DM Identificado → DM Alcançado → Conta Solicitada → Conta Recebida → Cliente Assinado
+Each stage: count / % from previous / week-over-week trend arrow. The biggest drop-off stage highlighted in amber with label: 'Maior perda aqui — X% de drop-off.'
+Below funnel: 6-week trend chart. Each stage as a line. Shows whether each stage is improving or declining over time. Built with recharts.
+Julia efficiency card: leads released this week / cost per qualified lead (mock R$X) / quality score.
+Sales OS impact tracker: 'Antes Sales OS (semanas 1-2): X contas/semana. Com Sales OS (semanas 3+): Y contas/semana. Melhoria: +Z%.' Will show real impact once live.
+Page: Produto (Dev)
+Route /sales-os/product. Sidebar label: Produto.
+Dev team cost card: R$40,500/month / reduction to R$20,250 in ~2 months / total spent to date (mock).
+Three project cards: Sales OS / MT / SOP Agents. Each card: project name / description / planned delivery date / current status chip / progress bar (% complete mock) / key milestones checklist / blockers if any / cost to date.
+Timeline view below: horizontal timeline showing all three projects with their planned and actual delivery dates. Overlapping where parallel. Highlights any slippage.
+Risk flags: any project overdue by more than 1 week gets a red flag card below the timeline with: project name / days overdue / estimated new delivery / cost impact.
+Page: Equipa (People)
+Route /sales-os/team. Sidebar label: Equipa.
+One card per team member. Sorted by ROI descending.
+Each card: name / role / monthly fixed cost / output metric / revenue attributable / ROI multiple / performance trend chip (Melhorando / Estável / Abaixo / Crítico).
+Elayne: cost R$4,500 / output: X contas/semana / revenue attributable: calculated from client sheet Source tag / ROI: revenue/cost.
+Thaina: same structure.
+Renan: cost R$12,000 / output: team bills per week + partnerships value / ROI: combined output vs cost.
+Oscar: cost R$4,000 / output: pipeline value + agents in progress / ROI: projected.
+Alexandre: cost R$8,500 / output: ops stability / note: 'Ops — ROI indireto via entrega de propostas e suporte ao pipeline.'
+Dev Team: cost R$40,500 / output: milestones delivered / cost per milestone.
+Total team cost card at top: R$138,100 / revenue today R$19,900 / team ROI: 14%. Shows what this number needs to reach for break-even.
+Note at bottom of each card: 'Em produção: receita por pessoa calculada automaticamente quando coluna Source for adicionada ao Google Sheets.'
+
+3. Update Callum's sidebar structure
+OVERVIEW section: Health / Desempenho da Equipa
+VENDAS section: Fila / Respostas (with 'Visualizando como: Rep' amber badge when accessed)
+CRESCIMENTO section: Crescimento / Parcerias
+PESSOAS section: Equipa
+PRODUTO section: Produto
+PARCEIROS section: Agent Pipeline (Oscar's view — amber badge when accessed)
+FINANCEIRO section: Revenue / P&L / Forecast / Decisions
+SISTEMA section: Saúde
+Remove the Team dropdown from the sidebar. Replace with the proper role-switching in VER COMO at the bottom. When Callum clicks into a rep page (Fila, Coaching etc) show amber badge 'Visualizando como: Elayne/Thaina/Renan/Oscar' in the page header.
+
+4. Source column reminder card
+On the Parcerias page and Equipa page, show a persistent amber banner at the top: 'Ação pendente: Alexandre precisa adicionar coluna Source ao Google Sheets dos clientes (valores: Julia / Parceria / Direct / Oscar / Outro). Quando adicionada, todos os cálculos de ROI por fonte ficam automáticos.' This reminds you every time you open these pages until the column exists.
+
+After building show me: Desempenho da Equipa page / Parcerias page / Crescimento funil page / Equipa page / Produto page.

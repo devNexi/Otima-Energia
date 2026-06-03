@@ -1,9 +1,9 @@
 import { useState, createContext, useContext } from "react";
 import { useLocation, Link } from "wouter";
 import {
-  ListChecks, MessageSquare, BarChart3, GraduationCap, TrendingUp,
-  ChevronLeft, Globe, Bell, ChevronDown, ChevronRight, Heart, Target, GitBranch, Eye,
-  DollarSign, LineChart, Compass, Lightbulb, Users,
+  ListChecks, MessageSquare, BarChart3, TrendingUp, GraduationCap,
+  ChevronLeft, Globe, Bell, ChevronDown, Heart, Target, GitBranch, Eye,
+  DollarSign, LineChart, Compass, Lightbulb, Network, Package, Users,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import logoIcon from "@/assets/branding/logo-icon-transparent.png";
@@ -43,24 +43,49 @@ const USERS: { name: ViewAsUser; initial: string; role: string; isRep: boolean; 
 let _globalViewAs: ViewAsUser = "Renan";
 let _globalMirroredByFounder = false;
 
-// Founder nav — founder-only tools. Rep-level views (Queue, Replies, Performance, Coaching) are
-// accessed via the "Other Views" dropdown by mirroring a specific team member.
-const FOUNDER_NAV_SECTIONS: { label: string; items: { path: string; icon: React.ElementType; label: string; badge?: number }[] }[] = [
+type FounderNavItem = { path: string; icon: React.ElementType; label: string; badge?: number; mirrored?: boolean };
+const FOUNDER_NAV_SECTIONS: { label: string; items: FounderNavItem[] }[] = [
   {
     label: "OVERVIEW",
     items: [
-      { path: "/sales-os/health",   icon: Heart,     label: "Health" },
-      { path: "/sales-os/manager",  icon: BarChart3, label: "Manager Console" },
+      { path: "/sales-os/desempenho", icon: Users,    label: "Desempenho da Equipa" },
+      { path: "/sales-os/health",     icon: Heart,    label: "Saúde" },
     ],
   },
   {
-    label: "PARTNERS",
+    label: "VENDAS",
     items: [
-      { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Agent Pipeline" },
+      { path: "/sales-os/queue",   icon: ListChecks,    label: "Fila",     badge: 3, mirrored: true },
+      { path: "/sales-os/replies", icon: MessageSquare, label: "Respostas", badge: 3, mirrored: true },
     ],
   },
   {
-    label: "FINANCE",
+    label: "CRESCIMENTO",
+    items: [
+      { path: "/sales-os/growth",       icon: TrendingUp, label: "Crescimento" },
+      { path: "/sales-os/partnerships", icon: Network,    label: "Parcerias" },
+    ],
+  },
+  {
+    label: "PESSOAS",
+    items: [
+      { path: "/sales-os/team", icon: Users, label: "Equipa" },
+    ],
+  },
+  {
+    label: "PRODUTO",
+    items: [
+      { path: "/sales-os/product", icon: Package, label: "Produto" },
+    ],
+  },
+  {
+    label: "PARCEIROS",
+    items: [
+      { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Agent Pipeline", mirrored: true },
+    ],
+  },
+  {
+    label: "FINANCEIRO",
     items: [
       { path: "/sales-os/finance/receita",  icon: DollarSign, label: "Revenue" },
       { path: "/sales-os/finance/pl",       icon: LineChart,  label: "P&L" },
@@ -95,7 +120,6 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   const [viewAs, _rawSetViewAs] = useState<ViewAsUser>(_globalViewAs);
   const [mirroredByFounder, _rawSetMirrored] = useState(_globalMirroredByFounder);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [otherViewsOpen, setOtherViewsOpen] = useState(false);
 
   const setViewAs = (v: ViewAsUser) => {
     _globalViewAs = v;
@@ -146,7 +170,7 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
     setPickerOpen(false);
 
     if (u.name === "Callum") {
-      navigate("/sales-os/health");
+      navigate("/sales-os/desempenho");
     } else if (u.isParceiro) {
       navigate("/sales-os/oscar/targets");
     } else if (wasPartner || wasFounder) {
@@ -155,9 +179,8 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
   }
 
   const sidebarSubtitle = isFounder ? "Founder OS" : isParceiro ? "Portal Agente" : "Sales OS";
-  // VER COMO shows for manager (Renan) only — Callum uses the "Other Views" sidebar dropdown instead
-  const showVerComo = (!isRep && !isParceiro && !isFounder) || mirroredByFounder;
-  const OTHER_VIEW_USERS = USERS.filter(u => u.name !== "Callum");
+  // VER COMO shows for everyone except reps and partners (they have fixed views)
+  const showVerComo = !isRep && !isParceiro;
 
   return (
     <ViewAsContext.Provider value={{ viewAs, setViewAs, isRep, isParceiro, isFounder }}>
@@ -202,7 +225,7 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
                       {section.label}
                     </div>
                     <div className="space-y-0.5">
-                      {section.items.map(({ path, icon: Icon, label, badge }) => {
+                      {section.items.map(({ path, icon: Icon, label, badge, mirrored }) => {
                         const active = isActive(path);
                         return (
                           <Link key={path} href={path}>
@@ -218,6 +241,9 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
                               )}
                               <Icon size={16} />
                               <span className="text-sm font-medium flex-1">{label}</span>
+                              {mirrored && (
+                                <Eye size={10} style={{ color: "#d97706", opacity: 0.6 }} />
+                              )}
                               {badge !== undefined && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                                   style={{ background: "#ef4444", color: "#fff", minWidth: 18, textAlign: "center" }}>
@@ -232,54 +258,6 @@ export function SalesOSLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 ))}
 
-                {/* ── Other Views collapsible ─────────────────────────── */}
-                <div>
-                  <div className="px-3 mb-1 text-[9px] font-bold uppercase tracking-widest" style={{ color: "#C4C8D4" }}>
-                    Other Views
-                  </div>
-                  <button
-                    onClick={() => setOtherViewsOpen(o => !o)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all"
-                    style={{ color: "#6B7280" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <Users size={16} />
-                    <span className="text-sm font-medium flex-1 text-left">Team</span>
-                    {otherViewsOpen
-                      ? <ChevronDown size={13} style={{ color: "#C4C8D4" }} />
-                      : <ChevronRight size={13} style={{ color: "#C4C8D4" }} />}
-                  </button>
-
-                  {otherViewsOpen && (
-                    <div className="mt-0.5 ml-3 pl-3 space-y-0.5" style={{ borderLeft: "2px solid #F0F0F5" }}>
-                      {OTHER_VIEW_USERS.map(u => (
-                        <button
-                          key={u.name}
-                          onClick={() => handlePickUser(u)}
-                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all"
-                          style={{ color: "#6B7280" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
-                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                        >
-                          <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                            style={{ background: getGradient(u), color: "#fff" }}
-                          >
-                            {u.initial}
-                          </div>
-                          <span className="font-medium flex-1 text-left">{u.name}</span>
-                          <span
-                            className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
-                            style={{ background: getRoleBg(u), color: getRoleColor(u) }}
-                          >
-                            {u.role}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             ) : (
               <div className="space-y-0.5">

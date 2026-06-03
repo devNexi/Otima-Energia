@@ -63,6 +63,11 @@ import FinanceReceita from "@/pages/SalesOS/Finance/Receita";
 import FinancePL from "@/pages/SalesOS/Finance/PL";
 import FinancePrevisao from "@/pages/SalesOS/Finance/Previsao";
 import FinanceDecisoes from "@/pages/SalesOS/Finance/Decisoes";
+import SalesOSDesempenho from "@/pages/SalesOS/Desempenho";
+import SalesOSParcerias from "@/pages/SalesOS/Parcerias";
+import SalesOSCrescimento from "@/pages/SalesOS/Crescimento";
+import SalesOSProduto from "@/pages/SalesOS/Produto";
+import SalesOSEquipa from "@/pages/SalesOS/Equipa";
 import KeywordResearch from "@/pages/KeywordResearch";
 import GoogleAdsDiagnostics from "@/pages/GoogleAdsDiagnostics";
 import GoogleAdsLaunchPack from "@/pages/GoogleAdsLaunchPack";
@@ -184,6 +189,11 @@ function Router() {
       <Route path="/sales-os/finance/pl"       component={FinancePL} />
       <Route path="/sales-os/finance/previsao" component={FinancePrevisao} />
       <Route path="/sales-os/finance/decisoes" component={FinanceDecisoes} />
+      <Route path="/sales-os/desempenho"   component={SalesOSDesempenho} />
+      <Route path="/sales-os/partnerships" component={SalesOSParcerias} />
+      <Route path="/sales-os/growth"       component={SalesOSCrescimento} />
+      <Route path="/sales-os/product"      component={SalesOSProduto} />
+      <Route path="/sales-os/team"         component={SalesOSEquipa} />
 
       <Route component={NotFound} />
     </Switch>
