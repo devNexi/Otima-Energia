@@ -48,44 +48,44 @@ const FOUNDER_NAV_SECTIONS: { label: string; items: FounderNavItem[] }[] = [
   {
     label: "OVERVIEW",
     items: [
-      { path: "/sales-os/desempenho", icon: Users,    label: "Desempenho da Equipa" },
-      { path: "/sales-os/health",     icon: Heart,    label: "Saúde" },
+      { path: "/sales-os/desempenho", icon: Users,    label: "Team Performance" },
+      { path: "/sales-os/health",     icon: Heart,    label: "Health" },
     ],
   },
   {
-    label: "VENDAS",
+    label: "SALES",
     items: [
-      { path: "/sales-os/queue",   icon: ListChecks,    label: "Fila",     badge: 3, mirrored: true },
-      { path: "/sales-os/replies", icon: MessageSquare, label: "Respostas", badge: 3, mirrored: true },
+      { path: "/sales-os/queue",   icon: ListChecks,    label: "Queue",   badge: 3, mirrored: true },
+      { path: "/sales-os/replies", icon: MessageSquare, label: "Replies", badge: 3, mirrored: true },
     ],
   },
   {
-    label: "CRESCIMENTO",
+    label: "GROWTH",
     items: [
-      { path: "/sales-os/growth",       icon: TrendingUp, label: "Crescimento" },
-      { path: "/sales-os/partnerships", icon: Network,    label: "Parcerias" },
+      { path: "/sales-os/growth",       icon: TrendingUp, label: "Growth" },
+      { path: "/sales-os/partnerships", icon: Network,    label: "Partnerships" },
     ],
   },
   {
-    label: "PESSOAS",
+    label: "PEOPLE",
     items: [
-      { path: "/sales-os/team", icon: Users, label: "Equipa" },
+      { path: "/sales-os/team", icon: Users, label: "Team" },
     ],
   },
   {
-    label: "PRODUTO",
+    label: "PRODUCT",
     items: [
-      { path: "/sales-os/product", icon: Package, label: "Produto" },
+      { path: "/sales-os/product", icon: Package, label: "Product" },
     ],
   },
   {
-    label: "PARCEIROS",
+    label: "PARTNERS",
     items: [
       { path: "/sales-os/oscar/pipeline", icon: GitBranch, label: "Agent Pipeline", mirrored: true },
     ],
   },
   {
-    label: "FINANCEIRO",
+    label: "FINANCE",
     items: [
       { path: "/sales-os/finance/receita",  icon: DollarSign, label: "Revenue" },
       { path: "/sales-os/finance/pl",       icon: LineChart,  label: "P&L" },
