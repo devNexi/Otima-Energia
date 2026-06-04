@@ -804,7 +804,7 @@ export default function Manager() {
                     </div>
                     <div className="rounded-xl p-3" style={{ background: "rgba(158,63,253,0.05)", border: "1px solid rgba(158,63,253,0.15)" }}>
                       <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9e3ffd" }}>
-                        Renan deve fazer agora
+                        Renan deve fazer isso agora:
                       </div>
                       <div className="space-y-1">
                         {rep.action.map((a, i) => (

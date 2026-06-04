@@ -46,70 +46,70 @@ const CARDS: {
     id: "runway",
     urgency: "green",
     icon: <CheckCircle size={16} />,
-    title: "Runway is Healthy",
-    trigger: `Calculated runway: ${runway} months with ${fmtBRL(1269000)} available`,
-    body: `With the confirmed investment, runway is ${runway} months at the current burn rate. Enough time for the plan to work if execution is strong. The focus now is accelerating lead conversion before this buffer runs out.`,
-    action: "View Detailed Forecast",
+    title: "Runway Saudável",
+    trigger: `Runway calculado: ${runway} meses com ${fmtBRL(1269000)} disponível`,
+    body: `Com o investimento confirmado, o runway é de ${runway} meses à taxa de queima atual. Tempo suficiente para o plano funcionar se a execução for forte. O foco agora é acelerar a conversão de leads antes que este prazo acabe.`,
+    action: "Ver Previsão Detalhada",
     actionPath: "/sales-os/finance/previsao",
   },
   {
     id: "mrr-gap",
     urgency: "red",
     icon: <AlertTriangle size={16} />,
-    title: "MRR Gap vs Break-Even",
-    trigger: `Current MRR ${fmtBRL(MRR)} = ${pctBurn}% of monthly burn`,
-    body: `Current MRR of ${fmtBRL(MRR)} covers ${pctBurn}% of the monthly burn. ${needed} clients are needed at the current avg. ticket of ${fmtBRL(Math.round(avg))} to break even. ${needed - activeClients} more clients to go. Every week of strong execution shortens that number.`,
-    action: "View Conversion Pipeline",
+    title: "Gap MRR vs Break-Even",
+    trigger: `MRR atual ${fmtBRL(MRR)} = ${pctBurn}% da queima mensal`,
+    body: `MRR atual de ${fmtBRL(MRR)} cobre ${pctBurn}% da queima mensal. São necessários ${needed} clientes ao ticket médio atual de ${fmtBRL(Math.round(avg))} para atingir o break-even. Faltam ${needed - activeClients} clientes. Cada semana de boa execução reduz esse número.`,
+    action: "Ver Pipeline de Conversão",
     actionPath: "/sales-os/health",
   },
   {
     id: "team-decision",
     urgency: "amber",
     icon: <Users size={16} />,
-    title: "Team Decision Pending",
-    trigger: "Rep performance below target for 2+ weeks",
-    body: `Elayne and Thaina cost ${fmtBRL(9000)}/month fixed + commissions. Sales OS goes live this week. Give the system 3 full weeks of operation before making any decision. Clear threshold: 1.5 bills/day each with Sales OS running.`,
-    action: "View Rep Performance",
+    title: "Decisão de Equipa Pendente",
+    trigger: "Desempenho das reps abaixo da meta há 2+ semanas",
+    body: `Elayne e Thaina custam ${fmtBRL(9000)}/mês fixo + comissões. O Sales OS entra em produção esta semana. Dê ao sistema 3 semanas completas de operação antes de tomar qualquer decisão. Critério claro: 1,5 contas/dia cada uma com o Sales OS ativo.`,
+    action: "Ver Desempenho das Reps",
     actionPath: "/sales-os/performance",
-    dismissLabel: "Postpone 3 weeks",
+    dismissLabel: "Adiar 3 semanas",
   },
   {
     id: "dev-milestone",
     urgency: "amber",
     icon: <Zap size={16} />,
     title: "Dev Team Milestone",
-    trigger: `Dev Team = ${devPct}% of total burn (${fmtBRL(40500)}/month)`,
-    body: `${fmtBRL(40500)}/month in dev represents ${devPct}% of total burn. Reduction to ${fmtBRL(20250)} expected in ~2 months after Sales OS and MT delivery. Validate the delivery timeline this week to confirm the runway projection.`,
-    action: "Confirm Timeline",
-    dismissLabel: "Postpone 2 weeks",
+    trigger: `Dev Team = ${devPct}% da queima total (${fmtBRL(40500)}/mês)`,
+    body: `${fmtBRL(40500)}/mês em dev representa ${devPct}% da queima total. Redução para ${fmtBRL(20250)} prevista em ~2 meses após entrega do Sales OS e MT. Valide o cronograma de entrega esta semana para confirmar a projeção de runway.`,
+    action: "Confirmar Cronograma",
+    dismissLabel: "Adiar 2 semanas",
   },
   {
     id: "oscar-pipeline",
     urgency: "green",
     icon: <Target size={16} />,
-    title: "Oscar Pipeline Has Traction",
-    trigger: `${meetingLeads.length} meetings scheduled with potential agents`,
-    body: `${meetingLeads.length} meetings scheduled with potential agents. Combined estimated portfolio: ~${combinedPortfolio.toLocaleString("en-GB")} business clients. First active agent = recurring revenue with near-zero marginal cost. High priority this week.`,
-    action: "View Oscar Pipeline",
+    title: "Pipeline Oscar com Tração",
+    trigger: `${meetingLeads.length} reuniões agendadas com potenciais agentes`,
+    body: `${meetingLeads.length} reuniões agendadas com potenciais agentes. Portfólio combinado estimado: ~${combinedPortfolio.toLocaleString("pt-BR")} clientes empresariais. Primeiro agente ativo = receita recorrente com custo marginal quase zero. Alta prioridade esta semana.`,
+    action: "Ver Pipeline do Oscar",
     actionPath: "/sales-os/oscar/pipeline",
   },
   {
     id: "publicidade",
     urgency: "green",
     icon: <Volume2 size={16} />,
-    title: "Advertising Correctly Paused",
-    trigger: "Advertising: R$8,000/month — inactive",
-    body: `${fmtBRL(8000)}/month correctly paused. Don't activate before proven conversion with Sales OS. Suggested test: ${fmtBRL(2000)}/month when reps consistently hit 1.5 bills/day for 2 weeks straight.`,
-    action: "Remind in 30 days",
+    title: "Publicidade Pausada Corretamente",
+    trigger: "Publicidade: R$8.000/mês — inativa",
+    body: `${fmtBRL(8000)}/mês corretamente pausado. Não ativar antes de conversão comprovada com o Sales OS. Teste sugerido: ${fmtBRL(2000)}/mês quando as reps atingirem 1,5 contas/dia por 2 semanas consecutivas.`,
+    action: "Lembrar em 30 dias",
   },
   {
     id: "alto-valor",
     urgency: "amber",
     icon: <TrendingUp size={16} />,
-    title: "Focus on High-Value Clients",
-    trigger: `Current avg. ticket: ${fmtBRL(Math.round(avg))}/client/month`,
-    body: `Current avg. ticket: ${fmtBRL(Math.round(avg))}/client/month. To accelerate break-even, prioritise prospects with monthly consumption above ${fmtBRL(30000)}. Each high-consumption client replaces up to ${highValueReplacement} avg-ticket clients — ${highValueReplacement}× the runway impact.`,
-    action: "View High-Value Leads",
+    title: "Foco em Clientes de Alto Valor",
+    trigger: `Ticket médio atual: ${fmtBRL(Math.round(avg))}/cliente/mês`,
+    body: `Ticket médio atual: ${fmtBRL(Math.round(avg))}/cliente/mês. Para acelerar o break-even, priorize prospectos com consumo mensal acima de ${fmtBRL(30000)}. Cada cliente de alto consumo substitui até ${highValueReplacement} clientes de ticket médio — ${highValueReplacement}× o impacto no runway.`,
+    action: "Ver Leads de Alto Valor",
     actionPath: "/sales-os/queue",
   },
 ];
@@ -132,26 +132,26 @@ export default function Decisoes() {
         <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Decisions — Financial Intelligence</h1>
+              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Decisões — Inteligência Financeira</h1>
               <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>
-                Recommendations generated automatically from real company data.
+                Recomendações geradas automaticamente a partir de dados reais da empresa.
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full"
                 style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
                 <AlertTriangle size={11} />
-                {CARDS.filter(c => c.urgency === "red").length} critical
+                {CARDS.filter(c => c.urgency === "red").length} crítico
               </div>
               <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full"
                 style={{ background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a" }}>
                 <AlertTriangle size={11} />
-                {CARDS.filter(c => c.urgency === "amber").length} watch
+                {CARDS.filter(c => c.urgency === "amber").length} atenção
               </div>
               <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full"
                 style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
                 <CheckCircle size={11} />
-                {CARDS.filter(c => c.urgency === "green").length} positive
+                {CARDS.filter(c => c.urgency === "green").length} positivo
               </div>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function Decisoes() {
           {dismissed.size > 0 && (
             <div className="text-xs text-center py-2" style={{ color: "#9CA3AF" }}>
               {dismissed.size} card{dismissed.size > 1 ? "s" : ""} archived.{" "}
-              <button onClick={() => setDismissed(new Set())} style={{ color: "#9e3ffd" }}>Restore all</button>
+              <button onClick={() => setDismissed(new Set())} style={{ color: "#9e3ffd" }}>Restaurar todos</button>
             </div>
           )}
 
@@ -181,7 +181,7 @@ export default function Decisoes() {
                       <span className="font-bold text-sm" style={{ color: "#16163f" }}>{card.title}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide"
                         style={{ background: cfg.tagBg, color: cfg.color }}>
-                        {card.urgency === "green" ? "Positive" : card.urgency === "amber" ? "Watch" : "Critical"}
+                        {card.urgency === "green" ? "Positivo" : card.urgency === "amber" ? "Atenção" : "Crítico"}
                       </span>
                     </div>
                     <div className="flex items-start gap-1.5 mb-2">
@@ -205,7 +205,7 @@ export default function Decisoes() {
                       className="flex items-center gap-1 text-[10px] font-medium"
                       style={{ color: "#9CA3AF" }}
                     >
-                      <X size={10} /> {card.dismissLabel ?? "Archive"}
+                      <X size={10} /> {card.dismissLabel ?? "Arquivar"}
                     </button>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export default function Decisoes() {
 
           <div className="text-center pt-2">
             <button className="text-xs underline" style={{ color: "#9CA3AF" }}>
-              Financial Settings — update costs, investment timeline, and scenario assumptions
+              Configurações Financeiras — atualizar custos, cronograma de investimento e premissas dos cenários
             </button>
           </div>
         </div>
