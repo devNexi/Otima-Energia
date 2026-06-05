@@ -70,8 +70,8 @@ export default function PL() {
         <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>P&L — Demonstrativo de Resultados</h1>
-              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Callum · Análise financeira completa</div>
+              <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>P&L — Income Statement</h1>
+              <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Callum · Full financial analysis</div>
             </div>
             <select
               value={selectedMonth}
@@ -113,7 +113,7 @@ export default function PL() {
             {/* Revenue detail */}
             <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
               <div className="px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
-                <div className="font-semibold text-sm" style={{ color: "#16163f" }}>Detalhamento de Receita</div>
+                <div className="font-semibold text-sm" style={{ color: "#16163f" }}>Revenue Detail</div>
               </div>
               <div>
                 {activeClients.map(c => {
@@ -133,7 +133,7 @@ export default function PL() {
                   );
                 })}
                 <div className="flex justify-between px-5 py-3" style={{ background: "#F8F9FC", borderTop: "2px solid #E8EAED" }}>
-                  <span className="font-bold text-sm" style={{ color: "#16163f" }}>MRR Total</span>
+                  <span className="font-bold text-sm" style={{ color: "#16163f" }}>Total MRR</span>
                   <span className="font-bold text-sm" style={{ color: "#16a34a" }}>{fmtBRL(MRR)}</span>
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default function PL() {
             {/* Cost breakdown */}
             <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
               <div className="px-5 py-4 border-b" style={{ borderColor: "#F3F4F6" }}>
-                <div className="font-semibold text-sm" style={{ color: "#16163f" }}>Estrutura de Custos</div>
+                <div className="font-semibold text-sm" style={{ color: "#16163f" }}>Cost Structure</div>
               </div>
               <div>
                 {MONTHLY_COSTS.map(c => (

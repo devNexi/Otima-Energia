@@ -75,8 +75,8 @@ export default function Previsao() {
         {/* Header */}
         <div className="px-6 py-5 border-b" style={{ background: "#FFFFFF", borderColor: "#E8EAED" }}>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Previsão — Runway & Cenários</h1>
-            <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Callum · Projeções baseadas em dados reais</div>
+            <h1 className="text-xl font-bold" style={{ color: "#16163f" }}>Forecast — Runway & Scenarios</h1>
+            <div className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>Callum · Projections based on real data</div>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ export default function Previsao() {
           <div className="rounded-2xl p-6" style={{ background: "#FFFFFF", border: `2px solid ${runwayColor}30`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
             <div className="flex items-center gap-2 mb-5">
               <TrendingUp size={16} style={{ color: runwayColor }} />
-              <span className="font-bold text-base" style={{ color: "#16163f" }}>Runway Atual</span>
+              <span className="font-bold text-base" style={{ color: "#16163f" }}>Current Runway</span>
               <span className="ml-auto px-3 py-1 rounded-full text-sm font-bold"
                 style={{ background: `${runwayColor}15`, color: runwayColor }}>
                 {runway} months
@@ -93,11 +93,11 @@ export default function Previsao() {
             </div>
             <div className="grid grid-cols-5 gap-4">
               {[
-                { label: "Caixa Total Disponível",  value: fmtBRL(CASH_TOTAL),     sub: `${fmtBRL(CASH_CURRENT)} + ${fmtBRL(CASH_INCOMING)} incoming`, color: "#16a34a" },
-                { label: "Queima Mensal",          value: fmtBRL(TOTAL_BURN),     sub: "10 linhas de custo ativas",                                   color: "#dc2626" },
-                { label: "Queima Pós-Dev (Mês 3)", value: fmtBRL(POST_DEV_BURN),  sub: "Após redução dev em agosto",                                  color: "#d97706" },
-                { label: "MRR Atual",              value: fmtBRL(MRR),            sub: `${activeClients} clientes sob contrato`,                      color: "#9e3ffd" },
-                { label: "Déficit Mensal",         value: fmtBRL(deficit),        sub: "Queima − MRR",                                                color: "#dc2626" },
+                { label: "Total Cash Available",  value: fmtBRL(CASH_TOTAL),     sub: `${fmtBRL(CASH_CURRENT)} + ${fmtBRL(CASH_INCOMING)} incoming`, color: "#16a34a" },
+                { label: "Monthly Burn Rate",     value: fmtBRL(TOTAL_BURN),     sub: "10 active cost lines",                                        color: "#dc2626" },
+                { label: "Post-Dev Burn (Mo. 3)", value: fmtBRL(POST_DEV_BURN),  sub: "After dev reduction in August",                               color: "#d97706" },
+                { label: "Current MRR",           value: fmtBRL(MRR),            sub: `${activeClients} clients under contract`,                      color: "#9e3ffd" },
+                { label: "Monthly Deficit",       value: fmtBRL(deficit),        sub: "Burn − MRR",                                                  color: "#dc2626" },
               ].map(item => (
                 <div key={item.label} className="text-center">
                   <div className="text-xl font-bold mb-0.5" style={{ color: item.color }}>{item.value}</div>
@@ -119,22 +119,22 @@ export default function Previsao() {
           <div className="rounded-2xl p-5" style={{ background: "#FFFFFF", border: "1px solid #E8EAED" }}>
             <div className="flex items-center gap-2 mb-4">
               <Target size={15} style={{ color: "#9e3ffd" }} />
-              <span className="font-bold text-sm" style={{ color: "#16163f" }}>Calculadora de Break-Even</span>
+              <span className="font-bold text-sm" style={{ color: "#16163f" }}>Break-Even Calculator</span>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-xl p-4" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
                 <div className="text-2xl font-bold mb-1" style={{ color: "#9e3ffd" }}>{clientsNeeded}</div>
-                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Clientes para Break-Even</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Clients for Break-Even</div>
                 <div className="text-[10px]" style={{ color: "#9CA3AF" }}>Burn ÷ avg. ticket ({fmtBRL(Math.round(avgTicket))})</div>
               </div>
               <div className="rounded-xl p-4" style={{ background: "#F8F9FC", border: "1px solid #E8EAED" }}>
                 <div className="text-2xl font-bold mb-1" style={{ color: "#d97706" }}>~{clientsNeeded - activeClients} months</div>
-                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>No ritmo atual (1/mês)</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>At current pace (1/month)</div>
                 <div className="text-[10px]" style={{ color: "#9CA3AF" }}>{clientsNeeded - activeClients} more clients needed</div>
               </div>
               <div className="rounded-xl p-4" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
                 <div className="text-2xl font-bold mb-1" style={{ color: "#16a34a" }}>~{Math.round((clientsNeeded - activeClients) / 2)} months</div>
-                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>Com Sales OS (2 contas/dia)</div>
+                <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>With Sales OS (2 bills/day)</div>
                 <div className="text-[10px]" style={{ color: "#16a34a" }}>2 new clients/month</div>
               </div>
             </div>
@@ -145,49 +145,49 @@ export default function Previsao() {
 
           {/* Three scenario cards */}
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Cenários de Projeção</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Projection Scenarios</div>
             <div className="grid grid-cols-3 gap-4">
               {[
                 {
-                  title: "Conservador",
-                  desc: "1 novo cliente/mês no ritmo atual",
+                  title: "Conservative",
+                  desc: "1 new client/month at current pace",
                   color: "#d97706",
                   bg: "#fffbeb",
                   border: "#fde68a",
                   rows: consRows,
                   be: consBE,
                   details: [
-                    { label: "Novos clientes/mês",  value: "1" },
-                    { label: "Crescimento MRR/mês",  value: fmtBRL(Math.round(avgTicket)) },
-                    { label: "Break-even",           value: consBE ? `Mês ${consBE}` : "> 24 meses" },
+                    { label: "New clients/month",  value: "1" },
+                    { label: "MRR growth/month",   value: fmtBRL(Math.round(avgTicket)) },
+                    { label: "Break-even",          value: consBE ? `Month ${consBE}` : "> 24 months" },
                   ],
                 },
                 {
                   title: "Base",
-                  desc: "Sales OS entrega 2 contas/dia em 30 dias",
+                  desc: "Sales OS delivers 2 bills/day within 30 days",
                   color: "#9e3ffd",
                   bg: "rgba(158,63,253,0.04)",
                   border: "rgba(158,63,253,0.2)",
                   rows: baseRows,
                   be: baseBE,
                   details: [
-                    { label: "Novos clientes/mês",  value: "2" },
-                    { label: "Crescimento MRR/mês",  value: fmtBRL(Math.round(avgTicket * 2)) },
-                    { label: "Break-even",           value: baseBE ? `Mês ${baseBE}` : "> 24 meses" },
+                    { label: "New clients/month",  value: "2" },
+                    { label: "MRR growth/month",   value: fmtBRL(Math.round(avgTicket * 2)) },
+                    { label: "Break-even",          value: baseBE ? `Month ${baseBE}` : "> 24 months" },
                   ],
                 },
                 {
-                  title: "Otimista",
-                  desc: "4 contas/dia + Oscar 2 agentes + 1 parceria Mês 4",
+                  title: "Optimistic",
+                  desc: "4 bills/day + Oscar 2 agents + 1 partnership Month 4",
                   color: "#16a34a",
                   bg: "#f0fdf4",
                   border: "#bbf7d0",
                   rows: optRows,
                   be: optBE,
                   details: [
-                    { label: "Novos clientes/mês",          value: "4" },
-                    { label: "Agentes Oscar (+R$8k/mês)",    value: "Mês 2" },
-                    { label: "Break-even",                   value: optBE ? `Mês ${optBE} ★` : "> 24 meses" },
+                    { label: "New clients/month",          value: "4" },
+                    { label: "Oscar agents (+R$8k/month)", value: "Month 2" },
+                    { label: "Break-even",                 value: optBE ? `Month ${optBE} ★` : "> 24 months" },
                   ],
                 },
               ].map(sc => (

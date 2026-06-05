@@ -8,3 +8,4 @@
 - [MessageComposer banned phrases](message-composer-banned.md) — 8 banned phrases including Portuguese + English equivalents. Enviar button renders as disabled (cursor not-allowed) when any banned phrase detected; red border on textarea.
 - [SalesOS ViewAs context bug](salesos-viewas-context.md) — useViewAs() must be called INSIDE SalesOSLayout children, not at component top level; use wrapper+inner pattern or avoid calling it at module level.
 - [SalesOS founder nav structure](salesos-founder-nav.md) — FOUNDER_NAV_SECTIONS has mirrored:boolean on items for Fila/Respostas/AgentPipeline; VER COMO shows for !isRep && !isParceiro (includes Callum); new pages: /sales-os/desempenho /partnerships /growth /product /team.
+- [Finance OS language rule](finance-os-language.md) — Finance OS (P&L, Forecast, Decisions, Revenue) is part of Founder OS → 100% English. Only non-Founder pages (Queue, Manager, Replies, Health, Coaching) use Portuguese.
