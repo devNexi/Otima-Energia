@@ -265,6 +265,10 @@ function RedzaInner() {
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error(result.error || "Erro ao enviar formulário");
 
+      if (typeof (window as any).fbq === "function") {
+        (window as any).fbq("track", "Lead");
+      }
+
       const isCasoEspecial = CASO_ESPECIAL_VALUES.includes(data.valorConta);
       const tipo = isCasoEspecial ? "caso-especial" : file ? "completo" : "sem-conta";
 
