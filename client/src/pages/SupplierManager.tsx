@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { SupplierOpsProfile } from "@/components/suppliers/SupplierOpsProfile";
+import { SupplierGdCoverageEditor } from "@/components/suppliers/SupplierGdCoverageEditor";
 import { apiRequest } from "@/lib/queryClient";
 
 type SupplierContact = {
@@ -713,8 +714,15 @@ export default function SupplierManager() {
                   
                   <Separator className="my-4" />
                   
-                  <SupplierOpsProfile 
-                    supplierId={supplier.id} 
+                  <SupplierOpsProfile
+                    supplierId={supplier.id}
+                    supplierName={supplier.name}
+                  />
+
+                  <Separator className="my-4" />
+
+                  <SupplierGdCoverageEditor
+                    supplierId={supplier.id}
                     supplierName={supplier.name}
                   />
                 </CardContent>

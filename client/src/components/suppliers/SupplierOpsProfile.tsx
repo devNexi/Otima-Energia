@@ -109,7 +109,8 @@ export function SupplierOpsProfile({ supplierId, supplierName }: SupplierOpsProf
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Stay 2-col inside the narrow supplier card — md:grid-cols-4 made the chips overlap */}
+        <div className="grid grid-cols-2 gap-3">
           <ContextualTooltip
             tooltipKey="ops_preferred_channel"
             title="Canal Preferido"
