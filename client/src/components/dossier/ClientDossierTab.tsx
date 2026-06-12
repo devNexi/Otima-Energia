@@ -220,11 +220,23 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
   const isLocked = dossier?.status === 'LOCKED';
   const isReady = dossier?.status === 'READY';
 
-  // Check required fields for mark-ready
-  const requiredFields = ['legalName', 'cnpj', 'distributor', 'eligibilityType', 'annualConsumptionMWh'];
-  const missingFields = dossier 
+  // Check required fields for mark-ready.
+  // NOTE: connectionType is required by the backend assembly/RFQ gate
+  // (server/deal-assembly-engine.ts). Keep this list in sync — otherwise a
+  // dossier looks "complete" here but stays blocked when sending the RFQ.
+  const requiredFields = ['legalName', 'cnpj', 'distributor', 'eligibilityType', 'annualConsumptionMWh', 'connectionType'];
+  const FIELD_LABELS: Record<string, string> = {
+    legalName: 'Razão Social',
+    cnpj: 'CNPJ/CPF',
+    distributor: 'Distribuidora',
+    eligibilityType: 'Elegibilidade',
+    annualConsumptionMWh: 'Consumo Anual',
+    connectionType: 'Tipo de Conexão',
+  };
+  const missingFields = dossier
     ? requiredFields.filter(f => !dossier[f])
     : requiredFields;
+  const missingLabels = missingFields.map(f => FIELD_LABELS[f] || f);
 
   return (
     <Card>
@@ -346,9 +358,9 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 </Select>
               </div>
               <div>
-                <Label>Tipo de Conexão</Label>
-                <Select 
-                  value={formData.connectionType || ''} 
+                <Label>Tipo de Conexão *</Label>
+                <Select
+                  value={formData.connectionType || ''}
                   onValueChange={(v) => setFormData({...formData, connectionType: v})}
                 >
                   <SelectTrigger data-testid="select-connection">
@@ -463,7 +475,7 @@ export function ClientDossierTab({ clientId, clientName }: ClientDossierTabProps
                 <div>
                   <p className="font-medium text-yellow-800">Campos obrigatórios faltando</p>
                   <p className="text-sm text-yellow-700">
-                    Preencha os campos obrigatórios para marcar como PRONTO: {missingFields.join(', ')}
+                    Preencha os campos obrigatórios para marcar como PRONTO: {missingLabels.join(', ')}
                   </p>
                 </div>
               </div>
