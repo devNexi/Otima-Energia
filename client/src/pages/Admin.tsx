@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,6 +104,21 @@ function isPessoaFisica(client: any): boolean {
   return doc.length === 11;
 }
 
+// URL path -> active tab. Admin's nav tabs are pure state, so an in-app
+// navigation that changes the URL (e.g. "Criar Negócio com esta Fatura" ->
+// /admin/deals) must re-derive the tab from the path, or the wrong tab stays open.
+const ROUTE_TAB: Record<string, string> = {
+  "/admin/deals": "deals",
+  "/admin/ecos": "ecos-dashboard",
+  "/admin/rfqs": "rfqs",
+  "/admin/ops-dashboard": "ops-dashboard",
+  "/admin/clients": "clients",
+  "/admin/commission": "revenue",
+  "/admin/overview": "overview",
+  "/admin/audit": "audit-trail",
+  "/admin/integrations": "integrations",
+};
+
 export default function Admin({ defaultTab, initialDealId, initialDealTab }: AdminProps) {
   const { toast } = useToast();
   const { t, language, setLanguage } = useI18n();
@@ -143,12 +158,16 @@ export default function Admin({ defaultTab, initialDealId, initialDealTab }: Adm
   } | null>(null);
   
   const [activeTab, setActiveTab] = useState(initialDealId ? "deals" : (defaultTab || "deals"));
-  
+
+  // Subscribe to the URL so the tab follows in-app navigations, not just the
+  // mount-time defaultTab. Without this, navigating to /admin/deals (from the
+  // "Criar Negócio com esta Fatura" button) left the Clients tab showing.
+  const [location] = useLocation();
   useEffect(() => {
-    if (defaultTab && !initialDealId) {
-      setActiveTab(defaultTab);
-    }
-  }, [defaultTab, initialDealId]);
+    if (initialDealId) return;
+    const tab = ROUTE_TAB[location.split("?")[0]] || defaultTab;
+    if (tab) setActiveTab(tab);
+  }, [location, defaultTab, initialDealId]);
   
   const statusLabels: Record<string, string> = {
     prospect: t("status.prospect"),
