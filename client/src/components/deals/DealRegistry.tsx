@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +89,21 @@ export function DealRegistry({ onViewDeal }: DealRegistryProps) {
     volumeType: "flat",
     internalOwner: "Renan"
   });
+
+  // "Criar Negócio com esta Fatura" deep-links here as /admin/deals?clientId=123.
+  // Pre-select that client and open the new-deal dialog, then strip the param so a
+  // refresh/close doesn't re-open it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get("clientId");
+    if (cid) {
+      setNewDealForm(prev => ({ ...prev, clientId: cid }));
+      setNewDealOpen(true);
+      params.delete("clientId");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
+  }, []);
 
   const { data: dealsData, isLoading: dealsLoading } = useQuery({
     queryKey: ["/api/deals"],
