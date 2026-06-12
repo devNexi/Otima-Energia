@@ -96,7 +96,9 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startJobRunner();
-      runAutoSeed();
+      // Supplier baseline seed is opt-in (run once on a fresh DB), NOT every boot —
+      // otherwise it overwrites manually-edited supplier coverage. Set RUN_AUTO_SEED=true to seed.
+      if (process.env.RUN_AUTO_SEED === "true") runAutoSeed();
     },
   );
 })();
