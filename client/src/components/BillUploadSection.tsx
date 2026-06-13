@@ -7,7 +7,6 @@ import {
   Upload, FileText, AlertCircle, CheckCircle, X,
   Loader2, Eye, ExternalLink, AlertTriangle,
 } from "lucide-react";
-import { useLocation } from "wouter";
 
 interface ExtractedFields {
   distributor:       string | null;
@@ -107,7 +106,6 @@ function confidenceLabel(c: number): { text: string; color: string } {
 
 export function BillUploadSection({ clientId, clientName, onClose }: BillUploadSectionProps) {
   const { toast } = useToast();
-  const [, navigate] = useLocation();
   const [uploading, setUploading]     = useState(false);
   const [result, setResult]           = useState<PreviewResult | null>(null);
   const [error, setError]             = useState<string | null>(null);
@@ -307,8 +305,10 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
                 className="bg-violet-600 hover:bg-violet-700 gap-1.5"
                 data-testid="button-create-deal"
                 onClick={() => {
-                  onClose?.();
-                  navigate(`/admin/deals?clientId=${clientId}`);
+                  // Full navigation (not wouter SPA nav): a fresh load of
+                  // /admin/deals reliably opens the Deals tab + new-deal dialog;
+                  // the in-app navigate() wasn't re-driving Admin's tab.
+                  window.location.assign(`/admin/deals?clientId=${clientId}`);
                 }}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
