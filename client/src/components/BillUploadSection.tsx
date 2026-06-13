@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Upload, FileText, AlertCircle, CheckCircle, X,
   Loader2, Eye, ExternalLink, AlertTriangle,
@@ -106,10 +108,13 @@ function confidenceLabel(c: number): { text: string; color: string } {
 
 export function BillUploadSection({ clientId, clientName, onClose }: BillUploadSectionProps) {
   const { toast } = useToast();
+  const { sessionId } = useAuth();
   const [uploading, setUploading]     = useState(false);
   const [result, setResult]           = useState<PreviewResult | null>(null);
   const [error, setError]             = useState<string | null>(null);
   const [progressMsg, setProgressMsg] = useState("Enviando arquivo...");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [creatingDeal, setCreatingDeal] = useState(false);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,6 +123,7 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
     setUploading(true);
     setError(null);
     setResult(null);
+    setSelectedFile(file);
     setProgressMsg("Enviando arquivo...");
 
     try {
@@ -155,8 +161,58 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
   const resetState = () => {
     setResult(null);
     setError(null);
+    setSelectedFile(null);
     const input = document.getElementById("bill-preview-input") as HTMLInputElement | null;
     if (input) input.value = "";
+  };
+
+  // "Criar Negócio com esta Fatura": create the deal for this client AND attach the
+  // already-selected PDF to it in one step, so the bill isn't uploaded twice (#3).
+  // Falls back to the prefilled new-deal dialog if we don't have a PDF in hand.
+  const handleCreateDeal = async () => {
+    const isPdf = !!selectedFile &&
+      (selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf"));
+    if (!isPdf) {
+      window.location.assign(`/admin/deals?clientId=${clientId}`);
+      return;
+    }
+    setCreatingDeal(true);
+    try {
+      const dealJson = await (await apiRequest("POST", "/api/deals", {
+        clientId,
+        submarket: "SE_CO",
+        volumeType: "flat",
+        internalOwner: "Renan",
+      })).json();
+      if (!dealJson?.success || !dealJson?.deal?.id) {
+        throw new Error(dealJson?.error || "Falha ao criar o negócio.");
+      }
+      const dealId = dealJson.deal.id;
+      // GDL track (mirrors the new-deal dialog); non-fatal if it fails.
+      try { await apiRequest("POST", `/api/deals/${dealId}/tracks`, { type: "GDL" }); } catch { /* non-fatal */ }
+      // Attach the bill to the deal (persists + queues parse). Best-effort.
+      try {
+        const fd = new FormData();
+        fd.append("file", selectedFile as File);
+        const r = await fetch(`/api/deals/${dealId}/bills/upload`, {
+          method: "POST",
+          headers: { "x-session-id": sessionId || "" },
+          body: fd,
+          credentials: "include",
+        });
+        if (!r.ok) throw new Error();
+      } catch {
+        toast({
+          title: "Negócio criado",
+          description: "Não consegui anexar a fatura automaticamente — anexe na tela do negócio.",
+          variant: "destructive",
+        });
+      }
+      window.location.assign(`/admin/deals/${dealId}`);
+    } catch (e: any) {
+      setCreatingDeal(false);
+      toast({ title: "Erro ao criar o negócio", description: e?.message || "Tente novamente.", variant: "destructive" });
+    }
   };
 
   return (
@@ -304,15 +360,13 @@ export function BillUploadSection({ clientId, clientName, onClose }: BillUploadS
                 size="sm"
                 className="bg-violet-600 hover:bg-violet-700 gap-1.5"
                 data-testid="button-create-deal"
-                onClick={() => {
-                  // Full navigation (not wouter SPA nav): a fresh load of
-                  // /admin/deals reliably opens the Deals tab + new-deal dialog;
-                  // the in-app navigate() wasn't re-driving Admin's tab.
-                  window.location.assign(`/admin/deals?clientId=${clientId}`);
-                }}
+                disabled={creatingDeal}
+                onClick={handleCreateDeal}
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Criar Negócio com esta Fatura
+                {creatingDeal
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <ExternalLink className="w-3.5 h-3.5" />}
+                {creatingDeal ? "Criando negócio..." : "Criar Negócio com esta Fatura"}
               </Button>
             </div>
           </div>
