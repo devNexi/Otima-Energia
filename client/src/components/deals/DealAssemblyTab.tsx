@@ -499,11 +499,15 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
       setUploadResult(null);
-      uploadBillMutation.mutate(file);
+      // A deal can hold multiple invoices (e.g. one per UC). Upload each
+      // selected PDF sequentially; the endpoint dedups by file content.
+      for (const file of files) {
+        try { await uploadBillMutation.mutateAsync(file); } catch { /* per-file errors surfaced by the mutation */ }
+      }
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -749,6 +753,7 @@ export function DealAssemblyTab({ dealId, onNavigate }: DealAssemblyTabProps) {
             ref={fileInputRef}
             type="file"
             accept=".pdf"
+            multiple
             onChange={handleFileSelect}
             className="hidden"
             data-testid="input-bill-upload"
